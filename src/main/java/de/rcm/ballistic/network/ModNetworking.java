@@ -1,0 +1,215 @@
+package de.rcm.ballistic.network;
+
+import de.rcm.ballistic.BallisticMissiles;
+import de.rcm.ballistic.block.RadarBlockEntity;
+import de.rcm.ballistic.item.TargetDesignatorItem;
+import java.util.ArrayList;
+import java.util.List;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.world.InteractionHand;
+
+public final class ModNetworking {
+	private ModNetworking() {
+	}
+
+	/** Server -> client: a warhead went off, play the visual and audio effects. */
+	public record DetonationPayload(int warhead, double x, double y, double z) implements CustomPacketPayload {
+		public static final Type<DetonationPayload> TYPE = new Type<>(BallisticMissiles.id("detonation"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DetonationPayload> CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_INT, DetonationPayload::warhead,
+			ByteBufCodecs.DOUBLE, DetonationPayload::x,
+			ByteBufCodecs.DOUBLE, DetonationPayload::y,
+			ByteBufCodecs.DOUBLE, DetonationPayload::z,
+			DetonationPayload::new
+		);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: store a target in the held designator. */
+	public record SetTargetPayload(boolean offhand, BlockPos pos, boolean surface) implements CustomPacketPayload {
+		public static final Type<SetTargetPayload> TYPE = new Type<>(BallisticMissiles.id("set_target"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, SetTargetPayload> CODEC = StreamCodec.composite(
+			ByteBufCodecs.BOOL, SetTargetPayload::offhand,
+			BlockPos.STREAM_CODEC, SetTargetPayload::pos,
+			ByteBufCodecs.BOOL, SetTargetPayload::surface,
+			SetTargetPayload::new
+		);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/**
+	 * Client -> server: targeting computer actions on the held designator.
+	 * {@code index} is a list index, or a bit mask of launchers for {@link #FIRE}.
+	 */
+	public record DesignatorActionPayload(boolean offhand, int action, int index, String text) implements CustomPacketPayload {
+		public static final int SAVE_TARGET = 0;
+		public static final int DELETE_SAVED = 1;
+		public static final int TARGET_PLAYER = 2;
+		public static final int UNLINK = 3;
+		public static final int FIRE = 4;
+		public static final int ABORT = 5;
+
+		public static final Type<DesignatorActionPayload> TYPE = new Type<>(BallisticMissiles.id("designator_action"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DesignatorActionPayload> CODEC = StreamCodec.composite(
+			ByteBufCodecs.BOOL, DesignatorActionPayload::offhand,
+			ByteBufCodecs.VAR_INT, DesignatorActionPayload::action,
+			ByteBufCodecs.VAR_INT, DesignatorActionPayload::index,
+			ByteBufCodecs.stringUtf8(64), DesignatorActionPayload::text,
+			DesignatorActionPayload::new
+		);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** One radar track as shown on the scope. */
+	public record TrackInfo(
+		int number, int threatClass, String nameKey, float x, float y, float z, float vx, float vz, float impactX, float impactZ, float impactError,
+		int eta, boolean threat, int age
+	) {
+		static void write(FriendlyByteBuf buf, TrackInfo t) {
+			buf.writeVarInt(t.number);
+			buf.writeVarInt(t.threatClass);
+			buf.writeUtf(t.nameKey, 96);
+			buf.writeFloat(t.x);
+			buf.writeFloat(t.y);
+			buf.writeFloat(t.z);
+			buf.writeFloat(t.vx);
+			buf.writeFloat(t.vz);
+			buf.writeFloat(t.impactX);
+			buf.writeFloat(t.impactZ);
+			buf.writeFloat(t.impactError);
+			buf.writeVarInt(t.eta);
+			buf.writeBoolean(t.threat);
+			buf.writeVarInt(t.age);
+		}
+
+		static TrackInfo read(FriendlyByteBuf buf) {
+			return new TrackInfo(
+				buf.readVarInt(), buf.readVarInt(), buf.readUtf(96), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+				buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readVarInt(), buf.readBoolean(), buf.readVarInt()
+			);
+		}
+	}
+
+	/** Friendly site shown on the scope: 0 radar, 1 air defense, 2 silo. */
+	public record SiteInfo(BlockPos pos, int kind) {
+	}
+
+	/** Server -> client: radar scope picture. {@code open} asks the client to open the scope screen. */
+	public record RadarDataPayload(
+		BlockPos radar, boolean open, int jammedTicks, int range, int protectedRadius, float sweepOffset, List<TrackInfo> tracks, List<SiteInfo> sites,
+		List<BlockPos> interceptors
+	) implements CustomPacketPayload {
+		public static final Type<RadarDataPayload> TYPE = new Type<>(BallisticMissiles.id("radar_data"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, RadarDataPayload> CODEC = StreamCodec.of(RadarDataPayload::write, RadarDataPayload::read);
+
+		private static void write(RegistryFriendlyByteBuf buf, RadarDataPayload p) {
+			buf.writeBlockPos(p.radar);
+			buf.writeBoolean(p.open);
+			buf.writeVarInt(p.jammedTicks);
+			buf.writeVarInt(p.range);
+			buf.writeVarInt(p.protectedRadius);
+			buf.writeFloat(p.sweepOffset);
+			buf.writeVarInt(p.tracks.size());
+			for (TrackInfo t : p.tracks) {
+				TrackInfo.write(buf, t);
+			}
+			buf.writeVarInt(p.sites.size());
+			for (SiteInfo s : p.sites) {
+				buf.writeBlockPos(s.pos());
+				buf.writeVarInt(s.kind());
+			}
+			buf.writeVarInt(p.interceptors.size());
+			for (BlockPos i : p.interceptors) {
+				buf.writeBlockPos(i);
+			}
+		}
+
+		private static RadarDataPayload read(RegistryFriendlyByteBuf buf) {
+			BlockPos radar = buf.readBlockPos();
+			boolean open = buf.readBoolean();
+			int jammed = buf.readVarInt();
+			int range = buf.readVarInt();
+			int protectedRadius = buf.readVarInt();
+			float sweep = buf.readFloat();
+			int n = Math.min(256, buf.readVarInt());
+			List<TrackInfo> tracks = new ArrayList<>(n);
+			for (int i = 0; i < n; i++) {
+				tracks.add(TrackInfo.read(buf));
+			}
+			int m = Math.min(256, buf.readVarInt());
+			List<SiteInfo> sites = new ArrayList<>(m);
+			for (int i = 0; i < m; i++) {
+				sites.add(new SiteInfo(buf.readBlockPos(), buf.readVarInt()));
+			}
+			int k = Math.min(256, buf.readVarInt());
+			List<BlockPos> interceptors = new ArrayList<>(k);
+			for (int i = 0; i < k; i++) {
+				interceptors.add(buf.readBlockPos());
+			}
+			return new RadarDataPayload(radar, open, jammed, range, protectedRadius, sweep, tracks, sites, interceptors);
+		}
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: the radar scope was closed. */
+	public record RadarClosePayload(BlockPos radar) implements CustomPacketPayload {
+		public static final Type<RadarClosePayload> TYPE = new Type<>(BallisticMissiles.id("radar_close"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, RadarClosePayload> CODEC = StreamCodec.composite(
+			BlockPos.STREAM_CODEC, RadarClosePayload::radar, RadarClosePayload::new
+		);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	public static void init() {
+		PayloadTypeRegistry.playS2C().register(DetonationPayload.TYPE, DetonationPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(RadarDataPayload.TYPE, RadarDataPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(SetTargetPayload.TYPE, SetTargetPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(DesignatorActionPayload.TYPE, DesignatorActionPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(RadarClosePayload.TYPE, RadarClosePayload.CODEC);
+
+		ServerPlayNetworking.registerGlobalReceiver(SetTargetPayload.TYPE, (payload, context) -> {
+			BlockPos pos = payload.pos();
+			if (Math.abs(pos.getX()) > 29_999_984 || Math.abs(pos.getZ()) > 29_999_984) {
+				return;
+			}
+			InteractionHand hand = payload.offhand() ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+			TargetDesignatorItem.applyTarget(context.player(), hand, pos, payload.surface());
+		});
+		ServerPlayNetworking.registerGlobalReceiver(DesignatorActionPayload.TYPE, (payload, context) -> {
+			InteractionHand hand = payload.offhand() ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+			TargetDesignatorItem.handleAction(context.player(), hand, payload.action(), payload.index(), payload.text());
+		});
+		ServerPlayNetworking.registerGlobalReceiver(RadarClosePayload.TYPE, (payload, context) -> {
+			if (context.player().level().isLoaded(payload.radar()) && context.player().level().getBlockEntity(payload.radar()) instanceof RadarBlockEntity radar) {
+				radar.removeViewer(context.player().getUUID());
+			}
+		});
+	}
+}

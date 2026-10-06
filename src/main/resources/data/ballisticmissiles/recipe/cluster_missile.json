@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"TTT",
+		"TMT",
+		"TTT"
+	],
+	"key": {
+		"T": "minecraft:tnt",
+		"M": "ballisticmissiles:ballistic_missile"
+	},
+	"result": {
+		"id": "ballisticmissiles:cluster_missile",
+		"count": 1
+	}
+}

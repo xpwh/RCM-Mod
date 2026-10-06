@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"NNN",
+		"NMN",
+		"SFS"
+	],
+	"key": {
+		"N": "minecraft:tnt",
+		"M": "ballisticmissiles:nuclear_missile",
+		"S": "minecraft:nether_star",
+		"F": "minecraft:firework_rocket"
+	},
+	"result": {
+		"id": "ballisticmissiles:mirv_missile",
+		"count": 1
+	}
+}
