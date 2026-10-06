@@ -276,7 +276,7 @@ public final class ClientEffects {
 				double f = 0.35 + 0.65 * k / 6.0;
 				CloudParticle p = cloud(false, c.x, c.y + 0.5, c.z, dir.x * s * f, dir.y * s * f, dir.z * s * f);
 				if (p != null) {
-					p.configure(70 + RANDOM.nextInt(40), size * 0.4F, size * (1.0F + rand()), 0x7A6A58, 0x5E5650, 0.85F)
+					p.configure(70 + RANDOM.nextInt(40), size * 0.4F, size * (1.0F + rand()), 0x5A4C3E, 0x4A443E, 0.9F)
 						.physics(0.975F, -0.035F)
 						.shade(0.75F + rand() * 0.3F);
 				}
@@ -286,6 +286,22 @@ public final class ClientEffects {
 					double f = 0.5 + rand() * 0.6;
 					vanilla(new BlockParticleOption(ParticleTypes.BLOCK, ground), c.x, c.y + 0.5, c.z, dir.x * s * f, dir.y * s * f, dir.z * s * f);
 				}
+			}
+		}
+	}
+
+	/** The dark cloud of dirt, dust and smoke that boils out of a high-explosive blast. */
+	static void dirtBurst(Vec3 c, int count, double speed, double scale) {
+		for (int i = 0; i < count; i++) {
+			Vec3 v = new Vec3(gauss(), Math.abs(gauss()) * 0.8 + 0.15, gauss()).normalize();
+			double sp = speed * (0.4 + rand() * 0.8);
+			CloudParticle p = cloud(false, c.x + v.x, c.y + v.y * 0.5, c.z + v.z, v.x * sp, v.y * sp, v.z * sp);
+			if (p != null) {
+				p.configure(150 + RANDOM.nextInt(80), (float) (2.0 * scale) + 0.8F, (float) ((7.0 + rand() * 4.0) * scale) + 2.0F,
+						mix(0x4A4036, 0x5A5048, rand()), 0x34302C, 0.95F)
+					.physics(0.9F, 0.004F)
+					.litFrom(c.x, c.y, c.z)
+					.turbulence(0.04F);
 			}
 		}
 	}
@@ -375,13 +391,12 @@ public final class ClientEffects {
 			}
 
 			if (t == 0) {
-				fireball(c, 5.0 * s, (int) (70 * s) + 8, (float) (6.0 * s) + 1.5F, 1.1 * s + 0.2, 34);
-				debrisJets(mc, this.pos, (int) (16 * s) + 3, 1.6 * Math.sqrt(s), (float) (2.5 * s) + 0.8F);
-				embers(c, (int) (60 * s) + 6, 0.9 * Math.sqrt(s));
-				for (int i = 0; i < 40 * s; i++) {
-					vanilla(ParticleTypes.LAVA, c.x + gauss() * 2 * s, c.y, c.z + gauss() * 2 * s, 0, 0, 0);
-				}
-				vanilla(s > 0.5 ? ParticleTypes.EXPLOSION_EMITTER : ParticleTypes.EXPLOSION, c.x, c.y, c.z, 0, 0, 0);
+				// like real high explosive: a flash-bright fireball that is gone in half a second,
+				// swallowed by a dark, fast-boiling cloud of dirt and smoke; dirt thrown up in streaks
+				fireball(c, 3.5 * s, (int) (45 * s) + 6, (float) (5.0 * s) + 1.2F, 1.4 * s + 0.3, 12);
+				dirtBurst(c, (int) (45 * s) + 8, 0.9 * Math.sqrt(s), s);
+				debrisJets(mc, this.pos, (int) (22 * s) + 4, 1.9 * Math.sqrt(s), (float) (2.5 * s) + 0.8F);
+				embers(c, (int) (30 * s) + 4, 1.1 * Math.sqrt(s));
 			}
 			if (t >= 1 && t <= 3 && s > 0.5) {
 				shockSphere(c, (3 + t * 5) * s, (int) (30 * s));
@@ -398,7 +413,7 @@ public final class ClientEffects {
 					double oz = gauss() * 3.0 * s;
 					CloudParticle p = cloud(false, c.x + ox, c.y + 1 + rand() * 5 * s, c.z + oz, ox * 0.02, (0.32 + rand() * 0.3) * Math.sqrt(s), oz * 0.02);
 					if (p != null) {
-						p.configure(180 + RANDOM.nextInt(100), (float) (3.5 * s) + 1, (float) ((10.0 + rand() * 4.0) * s) + 2, t < 18 ? 0x5C4434 : 0x4A4642, 0x2E2B28, 0.9F)
+						p.configure(180 + RANDOM.nextInt(100), (float) (3.5 * s) + 1, (float) ((10.0 + rand() * 4.0) * s) + 2, t < 18 ? 0x4A3E32 : 0x3E3A36, 0x2A2826, 0.9F)
 							.physics(0.97F, 0.003F)
 							.litFrom(c.x, c.y + 4 * s + t * 0.3, c.z)
 							.turbulence(0.03F);

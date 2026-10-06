@@ -5,7 +5,7 @@ public enum JetType {
 	/** F-22-style stealth fighter: carpet of ten bombs, then a supersonic dash. */
 	STRIKE("strike_jet", 60.0, 8.0, 10, 0.05),
 	/** A-10-style ground attacker: low and slow, strafes the target with its 30 mm cannon. */
-	WARTHOG("warthog", 28.0, 6.0, 0, 0.6),
+	WARTHOG("warthog", 70.0, 6.0, 0, 0.6),
 	/** B-2-style stealth bomber: very high, drops one MOAB. */
 	SPIRIT("spirit", 130.0, 7.0, 1, 0.02);
 

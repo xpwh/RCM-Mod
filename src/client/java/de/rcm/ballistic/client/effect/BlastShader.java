@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3fc;
 
 /**
- * Drives the {@code blast} screen post effect (shock ring, heat shimmer, exposure flash, bloom,
+ * Drives the {@code blast} screen post effect (dust haze, heat haze, god rays, exposure flash, bloom,
  * shell shock, weapon-specific looks). Post effect uniforms are fixed in their JSON, so the live
  * values are written every frame into a tiny 4x1 texture the shader reads
  * ({@code ballisticmissiles:blast_params}). A post effect that something else switched on
@@ -41,14 +41,14 @@ public final class BlastShader {
 	private static Kind kind = Kind.FIRE;
 	private static int tint = 0xFFB060;
 	private static Vec3 blastPos = Vec3.ZERO;
-	private static int ringAge = -1;
-	private static int ringDuration = 30;
+	/** Dust and smoke haze kicked up by the shock wave (0-1), lingers a few seconds. */
+	private static float dust;
 	private static boolean active;
 
 	private BlastShader() {
 	}
 
-	/** A detonation somewhere: sets the look, the heat column and the shock ring. */
+	/** A detonation somewhere: sets the look and the fireball's heat glow. */
 	public static void blast(Kind newKind, Vec3 pos, double scale, int color) {
 		double distance = ClientEffects.distanceToCamera(Minecraft.getInstance(), pos);
 		double reach = 260.0 * Math.max(0.3, scale);
@@ -56,22 +56,20 @@ public final class BlastShader {
 			return;
 		}
 		float near = (float) Mth.clamp(1.0 - distance / (reach * 3.0), 0.0, 1.0);
-		if (near * scale >= heat * 0.8 || ringAge < 0) {
+		if (near * scale >= heat * 0.8 || heat < 0.05F) {
 			kind = newKind;
 			tint = color;
 			blastPos = pos;
 			heat = Math.max(heat, (float) Math.min(1.0, near * (0.35 + 0.45 * scale)));
 			heatDecay = (float) Mth.clamp(0.9 + 0.045 * scale, 0.9, 0.993);
-			if (distance < reach * 2.0) {
-				ringAge = 0;
-				ringDuration = (int) Mth.clamp(18.0 + 30.0 * scale, 18.0, 80.0);
-			}
 		}
 	}
 
 	/** Shock arriving at the camera (from camera shake). */
 	public static void kick(float amount) {
-		strength = Math.max(strength, Mth.clamp((amount - 0.1F) / 0.9F, 0.0F, 1.0F));
+		float s = Mth.clamp((amount - 0.1F) / 0.9F, 0.0F, 1.0F);
+		strength = Math.max(strength, s);
+		dust = Math.max(dust, s * 0.9F);
 	}
 
 	/** Flash reaching the camera. */
@@ -87,9 +85,7 @@ public final class BlastShader {
 		strength = Math.max(0.0F, strength * 0.93F - 0.004F);
 		exposure = Math.max(0.0F, exposure * 0.9F - 0.004F);
 		heat = Math.max(0.0F, heat * heatDecay - 0.0015F);
-		if (ringAge >= 0 && ++ringAge > ringDuration) {
-			ringAge = -1;
-		}
+		dust = Math.max(0.0F, dust * 0.985F - 0.002F);
 		GameRenderer renderer = mc.gameRenderer;
 		Identifier current = renderer.currentPostEffect();
 		boolean ours = EFFECT.equals(current);
@@ -97,7 +93,7 @@ public final class BlastShader {
 			active = false;
 			return;
 		}
-		boolean wanted = mc.level != null && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || ringAge >= 0 || shellShock() > 0.02F);
+		boolean wanted = mc.level != null && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F);
 		if (!wanted) {
 			if (ours) {
 				renderer.clearPostEffect();
@@ -151,8 +147,7 @@ public final class BlastShader {
 		float rays = onScreen ? Mth.clamp(heat * 1.3F + exposure * 0.6F, 0.0F, 1.0F) : exposure * 0.25F;
 		img.setPixel(1, 0, argb(byteOf(rays), (time & 0xFF) / 255.0F, ((time >> 8) & 0xFF) / 255.0F, heat));
 		img.setPixel(2, 0, 0xFF000000 | (tint & 0xFFFFFF));
-		float ring = ringAge < 0 ? 0.0F : Mth.clamp((ringAge + partialTick) / ringDuration, 0.001F, 1.0F);
-		img.setPixel(3, 0, argb(byteOf(ring), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
+		img.setPixel(3, 0, argb(byteOf(dust), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
 		params.upload();
 	}
 

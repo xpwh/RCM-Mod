@@ -53,12 +53,23 @@ public class JetEntity extends Entity implements AirThreat {
 	private static final EntityDataAccessor<Boolean> DATA_FIRING = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.BOOLEAN);
 	/** A-10 gun run: opens fire this far before the target, ceases this close. */
 	private static final double GUN_OPEN = 170.0;
-	private static final double GUN_CEASE = 45.0;
+	private static final double GUN_CEASE = 55.0;
 	/** Terrain guard: climb gradient being held (decays slowly, so the nose doesn't bob). */
 	private double guardSlope = -1.0;
 	private double pullUp;
 	/** Heading chosen once when the attack is over. */
 	private @Nullable Vec3 egressHeading;
+	/** A-10 pattern: phase, passes flown, ticks in the phase, and the terrain guard it asks for. */
+	private static final int A10_INBOUND = 0;
+	private static final int A10_ATTACK = 1;
+	private static final int A10_REPOSITION = 2;
+	private static final int A10_PASSES = 2;
+	private static final double ROLL_IN = 230.0;
+	private int a10Phase;
+	private int a10Passes;
+	private int a10PhaseAge;
+	private double guardRange;
+	private double guardClearance;
 
 	/** Speed of sound in blocks per tick (343 m/s). */
 	public static final double SOUND_SPEED = 17.15;
@@ -238,14 +249,11 @@ public class JetEntity extends Entity implements AirThreat {
 			double guardRange = lookahead(speed);
 			double guardClearance = type == JetType.WARTHOG ? 8.0 : 12.0;
 			if (type == JetType.WARTHOG) {
-				Vec3 dive = this.gunRun(level, pos, flat);
-				if (dive != null) {
-					desired = dive;
-					// only the ground between us and the aim point matters during the dive
-					double along = (this.target.x - pos.x) * flat.x + (this.target.z - pos.z) * flat.z;
-					guardRange = Math.min(guardRange, Math.max(12.0, along - 35.0));
-					guardClearance = 5.0;
-				}
+				this.guardRange = guardRange;
+				this.guardClearance = guardClearance;
+				desired = this.warthogPattern(level, pos, flat, alt, desired);
+				guardRange = Math.min(guardRange, this.guardRange);
+				guardClearance = this.guardClearance;
 			} else {
 				this.bombRun(level, pos, flat, speed);
 			}
@@ -258,9 +266,9 @@ public class JetEntity extends Entity implements AirThreat {
 				speed = Math.min(DASH_SPEED, speed + ACCELERATION);
 				desired = flat.add(0, 0.38, 0).normalize();
 			} else if (type == JetType.WARTHOG) {
-				// pull off the target in one climbing break turn, then fly straight out
+				// after the last pass: climb away on the break-turn heading
 				if (this.egressHeading == null) {
-					this.egressHeading = new Vec3(flat.x * 0.64 - flat.z * 0.77, 0, flat.z * 0.64 + flat.x * 0.77).normalize();
+					this.egressHeading = flat;
 				}
 				desired = this.egressHeading.add(0, 0.28, 0).normalize();
 			} else {
@@ -396,23 +404,60 @@ public class JetEntity extends Entity implements AirThreat {
 	}
 
 	/**
-	 * A-10 strafing run: dives shallowly onto the target and walks a burst of 30 mm rounds through it,
-	 * about three rounds a tick. Returns the dive direction while the run is on, else null.
+	 * A-10 close air support pattern, flown like the real thing: it arrives at orbit altitude, rolls in
+	 * from about 230 blocks out into a 15-20 degree dive, walks a burst of 30 mm rounds through the
+	 * target, pops flares and breaks away in a climbing turn, swings round and comes in for a second
+	 * pass from a new angle. After the last pass it leaves.
 	 */
-	private @Nullable Vec3 gunRun(ServerLevel level, Vec3 pos, Vec3 flat) {
-		double along = (this.target.x - pos.x) * flat.x + (this.target.z - pos.z) * flat.z;
-		if (along > GUN_OPEN + 120.0) {
-			return null;
+	private Vec3 warthogPattern(ServerLevel level, Vec3 pos, Vec3 flat, double alt, Vec3 cruise) {
+		this.a10PhaseAge++;
+		Vec3 toTarget = new Vec3(this.target.x - pos.x, 0, this.target.z - pos.z);
+		double dist = toTarget.length();
+		Vec3 toDir = dist > 1.0E-3 ? toTarget.scale(1.0 / dist) : flat;
+		if (this.a10Phase == A10_INBOUND) {
+			if (dist < ROLL_IN && flat.dot(toDir) > 0.92) {
+				this.a10Phase = A10_ATTACK;
+				this.a10PhaseAge = 0;
+			} else if (dist < 90.0) {
+				// came in badly lined up: go round again without wasting the pass
+				this.a10Phase = A10_REPOSITION;
+				this.a10PhaseAge = 0;
+				this.egressHeading = flat;
+			}
+			return cruise;
 		}
+		if (this.a10Phase == A10_REPOSITION) {
+			// climbing break away, then swing back round towards the target
+			if (this.a10PhaseAge > 55 || this.egressHeading == null) {
+				this.a10Phase = A10_INBOUND;
+				this.a10PhaseAge = 0;
+				return cruise;
+			}
+			return this.egressHeading.add(0, Mth.clamp((alt - pos.y) * 0.03, -0.1, 0.32), 0).normalize();
+		}
+
+		// attack: dive at an aim point that walks through the target
+		double along = toTarget.dot(flat);
 		if (along < GUN_CEASE) {
 			this.entityData.set(DATA_FIRING, false);
-			this.egress = true;
-			return null;
+			this.releaseFlares(level);
+			this.a10Passes++;
+			double side = this.a10Passes % 2 == 0 ? 1.0 : -1.0;
+			this.egressHeading = new Vec3(flat.x * 0.34 - flat.z * 0.94 * side, 0, flat.z * 0.34 + flat.x * 0.94 * side).normalize();
+			this.a10PhaseAge = 0;
+			if (this.a10Passes >= A10_PASSES) {
+				this.egress = true;
+			} else {
+				this.a10Phase = A10_REPOSITION;
+			}
+			return this.egressHeading.add(0, 0.3, 0).normalize();
 		}
-		// the burst walks along the track through the target
 		double f = Mth.clamp((GUN_OPEN - along) / (GUN_OPEN - GUN_CEASE), 0.0, 1.0);
 		Vec3 aim = this.target.add(flat.scale(-20.0 + 40.0 * f));
 		Vec3 dive = aim.subtract(pos).normalize();
+		// only the ground between us and the aim point matters during the dive
+		this.guardRange = Math.max(12.0, along - 35.0);
+		this.guardClearance = 5.0;
 		if (along > GUN_OPEN) {
 			return dive;
 		}
@@ -536,6 +581,14 @@ public class JetEntity extends Entity implements AirThreat {
 	public void setEngagements(int engagements) {
 		if (engagements > this.engagements && this.flares > 0 && this.level() instanceof ServerLevel level) {
 			this.flares--;
+			this.releaseFlares(level);
+		}
+		this.engagements = engagements;
+	}
+
+	/** Flare salvo: burning decoys tumbling out behind the tail. */
+	private void releaseFlares(ServerLevel level) {
+		{
 			this.lastFlareTick = this.tickCount;
 			Vec3 tail = this.position().add(0, 0.5, 0).subtract(this.getDir().scale(5.0));
 			for (int i = 0; i < 12; i++) {
@@ -544,7 +597,6 @@ public class JetEntity extends Entity implements AirThreat {
 			}
 			level.playSound(null, tail.x, tail.y, tail.z, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.HOSTILE, 6.0F, 0.6F);
 		}
-		this.engagements = engagements;
 	}
 
 	@Override
