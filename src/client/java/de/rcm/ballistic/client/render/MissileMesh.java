@@ -41,6 +41,9 @@ public final class MissileMesh {
 	public static final MissileMesh BOMBLET = buildBomblet();
 	public static final MissileMesh REENTRY_VEHICLE = buildReentryVehicle();
 	public static final MissileMesh INTERCEPTOR = buildInterceptor();
+	public static final MissileMesh DRONE = buildDrone();
+	public static final MissileMesh DRONE_PROP = buildDronePropeller();
+	public static final MissileMesh AERIAL_BOMB = buildAerialBomb();
 
 	/** Length of the cruise missile booster hanging below the airframe. */
 	public static final float CRUISE_BOOSTER_LENGTH = 1.25F;
@@ -59,6 +62,7 @@ public final class MissileMesh {
 			case HEAVY_ICBM -> HEAVY_ICBM;
 			case CRUISE -> CRUISE;
 			case HYPERSONIC -> HYPERSONIC;
+			case DRONE -> DRONE;
 			default -> TACTICAL;
 		};
 	}
@@ -117,6 +121,16 @@ public final class MissileMesh {
 		b.radialBox(Mth.HALF_PI, R, 0.07F, 0.12F, 2.05F, 2.22F, Skin.METAL);
 		b.radialBox(Mth.HALF_PI, R, 0.07F, 0.12F, 4.75F, 4.92F, Skin.METAL);
 		b.radialBox(-Mth.HALF_PI, R, 0.05F, 0.24F, 1.25F, 1.62F, Skin.DARK);
+		// bolted joint rings between the motor case, the guidance bay and the warhead section
+		b.ring(2.635F, R, 0.018F, 0.06F);
+		b.ring(4.435F, R, 0.018F, 0.06F);
+		b.ring(5.76F, R + 0.012F, 0.02F, 0.08F);
+		// GLONASS/radio antennas on the guidance bay, decoy dispenser hatches, seeker window
+		b.radialBox(Mth.PI / 4, R, 0.16F, 0.035F, 5.0F, 5.12F, Skin.DARK);
+		b.radialBox(Mth.PI + Mth.PI / 4, R, 0.12F, 0.03F, 5.05F, 5.14F, Skin.DARK);
+		b.radialBox(Mth.PI * 0.75F, R, 0.025F, 0.3F, 3.1F, 3.5F, Skin.DARK);
+		b.radialBox(-Mth.PI * 0.25F, R, 0.025F, 0.3F, 3.1F, 3.5F, Skin.DARK);
+		b.radialBox(Mth.HALF_PI, R * 0.62F, 0.02F, 0.16F, 7.4F, 7.58F, Skin.DARK);
 		return b.build();
 	}
 
@@ -147,6 +161,19 @@ public final class MissileMesh {
 		b.radialBox(0.0F, 0.555F, 0.07F, 0.14F, 5.55F, 7.95F, Skin.METAL);
 		b.radialBox(Mth.PI, R, 0.05F, 0.12F, 0.95F, 5.15F, Skin.METAL);
 		b.radialBox(Mth.HALF_PI, 0.505F, 0.05F, 0.2F, 8.6F, 9.0F, Skin.DARK);
+		// interstage separation joints with their linear-shaped-charge bands
+		b.ring(5.26F, 0.59F, 0.02F, 0.1F);
+		b.ring(8.05F, 0.545F, 0.02F, 0.1F);
+		b.ring(9.32F, 0.51F, 0.015F, 0.05F);
+		// aft skirt stiffener ribs and nozzle actuators
+		for (int i = 0; i < 8; i++) {
+			b.radialBox(i * Mth.PI / 4 + Mth.PI / 8, 0.62F, 0.03F, 0.06F, 0.47F, 0.9F, Skin.METAL);
+		}
+		for (int i = 0; i < 4; i++) {
+			b.radialBox(i * Mth.HALF_PI, 0.12F, 0.12F, 0.05F, 0.15F, 0.42F, Skin.DARK);
+		}
+		// post-boost vehicle access doors on the shroud
+		b.radialBox(Mth.PI, 0.5F, 0.012F, 0.22F, 10.0F, 10.3F, Skin.DARK);
 		return b.build();
 	}
 
@@ -181,6 +208,17 @@ public final class MissileMesh {
 		// raceways
 		b.radialBox(Mth.HALF_PI, R, 0.08F, 0.18F, 1.0F, 10.1F, Skin.METAL);
 		b.radialBox(-Mth.HALF_PI, R, 0.06F, 0.12F, 1.0F, 7.3F, Skin.METAL);
+		// turbopumps and propellant feed lines between the engines
+		b.radialBox(Mth.HALF_PI, 0.0F, 0.22F, 0.16F, 0.5F, 0.86F, Skin.DARK);
+		b.radialBox(-Mth.HALF_PI, 0.0F, 0.22F, 0.16F, 0.5F, 0.86F, Skin.DARK);
+		b.radialBox(Mth.PI / 3, 0.1F, 0.08F, 0.06F, 0.55F, 0.8F, Skin.METAL);
+		b.radialBox(-Mth.PI * 2 / 3, 0.1F, 0.08F, 0.06F, 0.55F, 0.8F, Skin.METAL);
+		// stage joint and re-entry vehicle adapter ring
+		b.ring(7.4F, R - 0.02F, 0.025F, 0.12F);
+		b.ring(10.18F, R + 0.01F, 0.02F, 0.08F);
+		// telemetry antennas
+		b.radialBox(Mth.PI, R, 0.2F, 0.03F, 9.5F, 9.62F, Skin.DARK);
+		b.radialBox(0.0F, R, 0.2F, 0.03F, 9.5F, 9.62F, Skin.DARK);
 		return b.build();
 	}
 
@@ -215,6 +253,11 @@ public final class MissileMesh {
 		b.radialBox(-Mth.HALF_PI, R, 0.12F, 0.26F, 1.10F, 1.95F, Skin.METAL);
 		b.radialBox(-Mth.HALF_PI, R + 0.01F, 0.115F, 0.2F, 1.90F, 1.97F, Skin.DARK);
 		b.radialBox(Mth.HALF_PI, R, 0.18F, 0.03F, 3.9F, 4.05F, Skin.METAL);
+		// turbofan exhaust cone, radar altimeter and DSMAC camera windows on the belly
+		b.latheAt(0, 0, 24, new float[][] {{0.0F, 0.13F}, {-0.08F, 0.1F}}, Skin.METAL);
+		b.radialBox(-Mth.HALF_PI, R, 0.01F, 0.12F, 3.3F, 3.42F, Skin.DARK);
+		b.radialBox(-Mth.HALF_PI, R, 0.01F, 0.1F, 4.3F, 4.4F, Skin.DARK);
+		b.ring(4.95F, R, 0.008F, 0.04F);
 		return b.build();
 	}
 
@@ -251,6 +294,10 @@ public final class MissileMesh {
 			b.fin(Mth.PI / 4 + i * Mth.HALF_PI, R - 0.02F, 0.18F, 1.25F, 0.22F, 0.62F, 0.30F, 0.05F);
 		}
 		b.radialBox(0.0F, R, 0.045F, 0.12F, 0.8F, 4.3F, Skin.METAL);
+		// tail cone fairing for the carrier aircraft (left on), aft and mid joints
+		b.ring(0.32F, R, 0.025F, 0.08F);
+		b.ring(4.47F, R, 0.012F, 0.05F);
+		b.radialBox(Mth.PI, R, 0.04F, 0.2F, 2.0F, 2.4F, Skin.DARK);
 		return b.build();
 	}
 
@@ -292,6 +339,70 @@ public final class MissileMesh {
 			b.fin(Mth.PI / 4 + i * Mth.HALF_PI, R - 0.01F, 0.02F, 0.45F, 0.04F, 0.25F, 0.2F, 0.02F);
 			b.fin(Mth.PI / 4 + i * Mth.HALF_PI, R - 0.01F, 1.55F, 1.75F, 1.58F, 1.68F, 0.09F, 0.015F);
 		}
+		// PAC-3 attitude control motors: a ring of tiny solid thrusters behind the seeker
+		for (int i = 0; i < 12; i++) {
+			b.radialBox(i * Mth.TWO_PI / 12, R, 0.018F, 0.03F, 1.8F, 1.86F, Skin.DARK);
+		}
+		b.ring(1.2F, R, 0.008F, 0.03F);
+		return b.build();
+	}
+
+	/**
+	 * Shahed-136-style loitering munition: short fuselage, big cropped delta wing with winglets,
+	 * piston engine and a two-blade pusher propeller at the tail (drawn separately so it can spin).
+	 * Like the cruise missile, local +X/-X carry the wings and +Z points up.
+	 */
+	private static MissileMesh buildDrone() {
+		float L = 3.5F;
+		float R = 0.22F;
+		Builder b = new Builder(L);
+		b.lathe(new float[][] {{0.0F, 0.1F}, {0.12F, 0.16F}, {0.35F, R}, {2.85F, R}}, Skin.BODY);
+		float[][] nose = new float[9][];
+		for (int k = 0; k <= 8; k++) {
+			float f = k / 8.0F;
+			nose[k] = new float[] {2.85F + f * 0.65F, k == 8 ? 0.0F : R * (float) Math.sqrt(1.0 - f * f * 0.97)};
+		}
+		b.lathe(nose, Skin.BODY);
+		// engine cowling and exhaust stubs
+		b.latheAt(0, 0, 24, new float[][] {{0.0F, 0.1F}, {-0.1F, 0.07F}, {-0.16F, 0.04F}}, Skin.METAL);
+		b.radialBox(Mth.PI / 3, 0.15F, 0.06F, 0.05F, 0.1F, 0.3F, Skin.DARK);
+		b.radialBox(Mth.PI * 2 / 3, 0.15F, 0.06F, 0.05F, 0.1F, 0.3F, Skin.DARK);
+		// cropped delta wing, thin, swept back to the tail
+		b.fin(0.0F, R - 0.02F, 0.3F, 2.55F, 0.3F, 0.82F, 1.35F, 0.07F);
+		b.fin(Mth.PI, R - 0.02F, 0.3F, 2.55F, 0.3F, 0.82F, 1.35F, 0.07F);
+		// vertical winglets (fins) at the wing tips, standing up and down
+		b.radialBox(0.0F, R + 1.33F, 0.05F, 0.62F, 0.3F, 0.88F, Skin.DARK);
+		b.radialBox(Mth.PI, R + 1.33F, 0.05F, 0.62F, 0.3F, 0.88F, Skin.DARK);
+		// GPS antenna and warhead fuze probe
+		b.radialBox(Mth.HALF_PI, R, 0.07F, 0.05F, 2.1F, 2.2F, Skin.DARK);
+		b.latheAt(0, 0, 12, new float[][] {{3.46F, 0.025F}, {3.62F, 0.02F}, {3.62F, 0.0F}}, Skin.METAL);
+		return b.build();
+	}
+
+	/** Two-blade pusher propeller, hub at the origin, blades in the XZ plane. */
+	private static MissileMesh buildDronePropeller() {
+		Builder b = new Builder(3.5F);
+		b.latheAt(0, 0, 16, new float[][] {{-0.12F, 0.0F}, {-0.12F, 0.05F}, {0.0F, 0.06F}, {0.02F, 0.0F}}, Skin.METAL);
+		b.radialBox(0.0F, 0.04F, 0.55F, 0.09F, -0.08F, -0.05F, Skin.DARK);
+		b.radialBox(Mth.PI, 0.04F, 0.55F, 0.09F, -0.08F, -0.05F, Skin.DARK);
+		return b.build();
+	}
+
+	/** Mk 82-class low-drag general-purpose bomb with a cruciform conical tail. */
+	private static MissileMesh buildAerialBomb() {
+		float L = 2.2F;
+		float R = 0.18F;
+		Builder b = new Builder(L);
+		b.lathe(new float[][] {{0.0F, 0.07F}, {0.45F, 0.15F}, {0.62F, R}, {1.45F, R}}, Skin.BODY);
+		b.lathe(ogive(1.45F, L, R, 12), Skin.BODY);
+		b.disc(0.0F, 0.07F, true, Skin.DARK);
+		for (int i = 0; i < 4; i++) {
+			b.fin(Mth.PI / 4 + i * Mth.HALF_PI, 0.09F, 0.0F, 0.55F, 0.0F, 0.2F, 0.18F, 0.02F);
+		}
+		// suspension lugs and the nose fuze
+		b.radialBox(Mth.HALF_PI, R, 0.05F, 0.05F, 0.85F, 0.92F, Skin.METAL);
+		b.radialBox(Mth.HALF_PI, R, 0.05F, 0.05F, 1.2F, 1.27F, Skin.METAL);
+		b.latheAt(0, 0, 12, new float[][] {{2.15F, 0.03F}, {2.28F, 0.03F}, {2.28F, 0.0F}}, Skin.METAL);
 		return b.build();
 	}
 
@@ -402,6 +513,13 @@ public final class MissileMesh {
 				case BODY -> this.bodyV(y);
 				default -> start ? METAL_V0 : METAL_V1;
 			};
+		}
+
+		/** Raised metal band around the hull: a joint, clamp ring or bolt circle. */
+		void ring(float y, float radius, float thickness, float height) {
+			this.lathe(new float[][] {
+				{y, radius - 0.005F}, {y, radius + thickness}, {y + height, radius + thickness}, {y + height, radius - 0.005F}
+			}, Skin.METAL);
 		}
 
 		/** Flat disc at height y facing down (or up). */

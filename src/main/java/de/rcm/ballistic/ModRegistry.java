@@ -2,17 +2,22 @@ package de.rcm.ballistic;
 
 import de.rcm.ballistic.block.AirDefenseBlock;
 import de.rcm.ballistic.block.AirDefenseBlockEntity;
+import de.rcm.ballistic.block.CiwsBlock;
+import de.rcm.ballistic.block.CiwsBlockEntity;
 import de.rcm.ballistic.block.LaunchPadBlock;
 import de.rcm.ballistic.block.MissileSiloBlock;
 import de.rcm.ballistic.block.MissileSiloBlockEntity;
 import de.rcm.ballistic.block.RadarBlock;
 import de.rcm.ballistic.block.RadarBlockEntity;
+import de.rcm.ballistic.entity.AerialBombEntity;
 import de.rcm.ballistic.entity.BombletEntity;
 import de.rcm.ballistic.entity.InterceptorEntity;
+import de.rcm.ballistic.entity.JetEntity;
 import de.rcm.ballistic.entity.ReentryVehicleEntity;
 import de.rcm.ballistic.entity.MissileEntity;
 import de.rcm.ballistic.entity.MissileType;
 import de.rcm.ballistic.entity.MobileLauncherEntity;
+import de.rcm.ballistic.item.AirstrikeRadioItem;
 import de.rcm.ballistic.item.GeigerCounterItem;
 import de.rcm.ballistic.item.LauncherLink;
 import de.rcm.ballistic.item.MissileItem;
@@ -111,6 +116,15 @@ public final class ModRegistry {
 		EntityType.Builder.<MobileLauncherEntity>of(MobileLauncherEntity::new, MobCategory.MISC).sized(3.0F, 2.8F).clientTrackingRange(16).updateInterval(1).noLootTable()
 	);
 
+	public static final EntityType<JetEntity> JET = registerEntity(
+		"strike_jet",
+		EntityType.Builder.<JetEntity>of(JetEntity::new, MobCategory.MISC).sized(4.0F, 1.6F).clientTrackingRange(48).updateInterval(1).fireImmune().noLootTable()
+	);
+	public static final EntityType<AerialBombEntity> AERIAL_BOMB = registerEntity(
+		"aerial_bomb",
+		EntityType.Builder.<AerialBombEntity>of(AerialBombEntity::new, MobCategory.MISC).sized(0.45F, 0.45F).clientTrackingRange(24).updateInterval(1).noLootTable()
+	);
+
 	// ---------- Blocks ----------
 	public static final Block LAUNCH_PAD = registerBlock(
 		"launch_pad",
@@ -129,6 +143,12 @@ public final class ModRegistry {
 		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
 	);
 
+	public static final Block CIWS = registerBlock(
+		"ciws",
+		CiwsBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
+	);
+
 	public static final Block MISSILE_SILO = registerBlock(
 		"missile_silo",
 		MissileSiloBlock::new,
@@ -140,6 +160,9 @@ public final class ModRegistry {
 	);
 	public static final BlockEntityType<AirDefenseBlockEntity> AIR_DEFENSE_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("air_defense"), FabricBlockEntityTypeBuilder.create(AirDefenseBlockEntity::new, AIR_DEFENSE).build()
+	);
+	public static final BlockEntityType<CiwsBlockEntity> CIWS_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("ciws"), FabricBlockEntityTypeBuilder.create(CiwsBlockEntity::new, CIWS).build()
 	);
 	public static final BlockEntityType<MissileSiloBlockEntity> MISSILE_SILO_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("missile_silo"), FabricBlockEntityTypeBuilder.create(MissileSiloBlockEntity::new, MISSILE_SILO).build()
@@ -163,6 +186,12 @@ public final class ModRegistry {
 	public static final Item RADAR_ITEM = registerItem("radar", props -> new BlockItem(RADAR, props), new Item.Properties().useBlockDescriptionPrefix());
 	public static final Item AIR_DEFENSE_ITEM = registerItem(
 		"air_defense", props -> new BlockItem(AIR_DEFENSE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
+	);
+	public static final Item CIWS_ITEM = registerItem(
+		"ciws", props -> new BlockItem(CIWS, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
+	);
+	public static final Item AIRSTRIKE_RADIO = registerItem(
+		"airstrike_radio", AirstrikeRadioItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
 	);
 	public static final Item GEIGER_COUNTER = registerItem("geiger_counter", GeigerCounterItem::new, new Item.Properties().stacksTo(1));
 	public static final Item MISSILE_SILO_ITEM = registerItem(
@@ -200,6 +229,9 @@ public final class ModRegistry {
 	public static final SoundEvent RADAR_ALARM = sound("radar.alarm");
 	public static final SoundEvent SAM_LAUNCH = sound("air_defense.launch");
 	public static final SoundEvent GEIGER_CLICK = sound("geiger.click");
+	public static final SoundEvent CIWS_FIRE = sound("ciws.fire");
+	public static final SoundEvent JET_FIGHTER = sound("jet.fighter");
+	public static final SoundEvent BOMB_WHISTLE = sound("bomb.whistle");
 
 	// ---------- Particles ----------
 	public static final SimpleParticleType SMOKE = particle("smoke");
@@ -219,6 +251,8 @@ public final class ModRegistry {
 				output.accept(TARGET_DESIGNATOR);
 				output.accept(RADAR_ITEM);
 				output.accept(AIR_DEFENSE_ITEM);
+				output.accept(CIWS_ITEM);
+				output.accept(AIRSTRIKE_RADIO);
 				output.accept(GEIGER_COUNTER);
 				for (MissileType type : MissileType.values()) {
 					output.accept(missileItem(type));

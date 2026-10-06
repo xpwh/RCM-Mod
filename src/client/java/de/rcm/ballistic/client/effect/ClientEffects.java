@@ -69,6 +69,8 @@ public final class ClientEffects {
 			case INCENDIARY -> new BlastEffect(pos, 0.7);
 			case INCENDIARY_RELEASE -> new IncendiaryReleaseEffect(pos);
 			case ANTI_RADAR -> new BlastEffect(pos, 0.8);
+			case DRONE -> new BlastEffect(pos, 0.55);
+			case AERIAL_BOMB -> new BlastEffect(pos, 0.5);
 			default -> new BlastEffect(pos, 1.0);
 		});
 	}

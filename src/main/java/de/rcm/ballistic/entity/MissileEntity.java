@@ -63,7 +63,6 @@ public class MissileEntity extends Entity implements AirThreat {
 	private static final EntityDataAccessor<Vector3fc> DATA_DIR = SynchedEntityData.defineId(MissileEntity.class, EntityDataSerializers.VECTOR3);
 
 	private static final int CRUISE_BOOST_TICKS = 32;
-	private static final double CRUISE_SPEED = 3.2;
 	private static final double CRUISE_ALTITUDE = 22.0;
 
 	/** Minimum horizontal distance between pad and target. */
@@ -452,7 +451,7 @@ public class MissileEntity extends Entity implements AirThreat {
 		if (age < CRUISE_BOOST_TICKS) {
 			double f = (double) age / CRUISE_BOOST_TICKS;
 			desired = new Vec3(0, 1, 0).lerp(heading.add(0, 0.55, 0).normalize(), Math.min(1.0, f * 1.4));
-			speed = 0.3 + 2.6 * f;
+			speed = (0.3 + 2.6 * f) * Math.min(1.0, this.missileType.cruiseSpeed() / 3.2 + 0.25);
 			turn = 0.18;
 		} else if (horizontal > 75) {
 			double ground = pos.y - CRUISE_ALTITUDE;
@@ -466,15 +465,15 @@ public class MissileEntity extends Entity implements AirThreat {
 			}
 			double climb = Mth.clamp((ground + CRUISE_ALTITUDE - pos.y) * 0.06, -0.35, 0.5);
 			desired = heading.add(0, climb, 0).normalize();
-			speed = CRUISE_SPEED;
+			speed = this.missileType.cruiseSpeed();
 			turn = 0.1;
 		} else if (horizontal > 32) {
 			desired = heading.add(0, 0.6, 0).normalize(); // pop-up
-			speed = CRUISE_SPEED;
+			speed = this.missileType.cruiseSpeed();
 			turn = 0.16;
 		} else {
 			desired = target.subtract(pos).normalize(); // terminal dive
-			speed = CRUISE_SPEED * 1.15;
+			speed = this.missileType.cruiseSpeed() * 1.15;
 			turn = 0.32;
 		}
 
@@ -584,7 +583,7 @@ public class MissileEntity extends Entity implements AirThreat {
 		}
 		if (this.missileType.isCruise()) {
 			Vec3 t = Vec3.atBottomCenterOf(this.getTarget());
-			return (int) (Math.hypot(t.x - this.getX(), t.z - this.getZ()) / CRUISE_SPEED);
+			return (int) (Math.hypot(t.x - this.getX(), t.z - this.getZ()) / this.missileType.cruiseSpeed());
 		}
 		return Math.max(0, this.getTrajectory().duration() - this.stateAge);
 	}

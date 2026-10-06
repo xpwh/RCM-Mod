@@ -1,5 +1,6 @@
 package de.rcm.ballistic;
 
+import de.rcm.ballistic.entity.JetEntity;
 import de.rcm.ballistic.entity.MissileEntity;
 import java.util.function.Consumer;
 import net.minecraft.world.InteractionHand;
@@ -14,6 +15,7 @@ public final class ClientHooks {
 	public static Consumer<InteractionHand> designateLookedAtBlock = hand -> {};
 	public static Consumer<MissileEntity> missileClientTick = missile -> {};
 	public static Consumer<Entity> projectileClientTick = entity -> {};
+	public static Consumer<JetEntity> jetClientTick = jet -> {};
 
 	private ClientHooks() {
 	}

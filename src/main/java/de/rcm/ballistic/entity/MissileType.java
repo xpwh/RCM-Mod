@@ -28,7 +28,12 @@ public enum MissileType {
 	/** ICBM that releases five independently targeted nuclear re-entry vehicles. */
 	MIRV("mirv_missile", Flight.BALLISTIC, Warhead.MIRV, Model.ICBM, 1.1F, 1.4F, 13.7F, 300, 60, 1.45, 1.0, Rarity.EPIC),
 	/** Thermonuclear heavy ICBM (Titan-style, two first-stage engines): the biggest bang in the mod. */
-	HYDROGEN("hydrogen_bomb", Flight.BALLISTIC, Warhead.HYDROGEN, Model.HEAVY_ICBM, 1.35F, 1.75F, 16.8F, 400, 80, 1.5, 1.0, Rarity.EPIC);
+	HYDROGEN("hydrogen_bomb", Flight.BALLISTIC, Warhead.HYDROGEN, Model.HEAVY_ICBM, 1.35F, 1.75F, 16.8F, 400, 80, 1.5, 1.0, Rarity.EPIC),
+	/**
+	 * Loitering kamikaze drone (Shahed-136-style): delta wing, pusher propeller, rocket-assisted
+	 * take-off. Slow and loud, but cheap and hard to see on radar.
+	 */
+	DRONE("kamikaze_drone", Flight.CRUISE, Warhead.DRONE, Model.DRONE, 1.0F, 1.0F, 3.6F, 100, 20, 1.0, 2.2, Rarity.UNCOMMON);
 
 	public enum Flight {
 		BALLISTIC,
@@ -60,7 +65,10 @@ public enum MissileType {
 		INCENDIARY,
 		/** Not a detonation: the incendiary missile opening up. */
 		INCENDIARY_RELEASE,
-		ANTI_RADAR
+		ANTI_RADAR,
+		DRONE,
+		/** Free-fall bomb dropped by an airstrike jet. */
+		AERIAL_BOMB
 	}
 
 	public enum Model {
@@ -68,7 +76,8 @@ public enum MissileType {
 		ICBM(12.0F, 0.6F),
 		HEAVY_ICBM(12.0F, 0.6F),
 		CRUISE(6.0F, 0.3F),
-		HYPERSONIC(8.0F, 0.5F);
+		HYPERSONIC(8.0F, 0.5F),
+		DRONE(3.5F, 0.22F);
 
 		public final float length;
 		public final float radius;
@@ -123,7 +132,7 @@ public enum MissileType {
 
 	/** Strategic missiles are too long for the mobile launcher truck. */
 	public boolean fitsOnTruck() {
-		return this.model == Model.TACTICAL || this.model == Model.CRUISE || this.model == Model.HYPERSONIC;
+		return this.model == Model.TACTICAL || this.model == Model.CRUISE || this.model == Model.HYPERSONIC || this.model == Model.DRONE;
 	}
 
 	/**
@@ -136,6 +145,7 @@ public enum MissileType {
 			case TACTICAL -> 0.55;
 			case HYPERSONIC -> 0.35;
 			case CRUISE -> 0.12;
+			case DRONE -> 0.06;
 		};
 	}
 
@@ -145,7 +155,7 @@ public enum MissileType {
 			return 0.3F; // manoeuvring glide body inside a plasma sheath
 		}
 		return switch (this.model) {
-			case CRUISE -> 0.9F;
+			case CRUISE, DRONE -> 0.9F;
 			case TACTICAL -> 0.8F;
 			case ICBM, HEAVY_ICBM -> 0.65F;
 			case HYPERSONIC -> 0.3F;
@@ -163,5 +173,10 @@ public enum MissileType {
 
 	public boolean isCruise() {
 		return this.flight == Flight.CRUISE;
+	}
+
+	/** Cruise speed in blocks per tick (cruise-profile missiles only). */
+	public double cruiseSpeed() {
+		return 3.2 / this.durationScale;
 	}
 }

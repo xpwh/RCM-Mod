@@ -81,6 +81,7 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			case HEAVY_ICBM -> new float[][] {{0.29F, 0.0F, 0.26F}, {-0.29F, 0.0F, 0.26F}};
 			case CRUISE -> new float[][] {{0.0F, 0.0F, 0.16F}};
 			case HYPERSONIC -> new float[][] {{0.0F, 0.0F, 0.38F}};
+			case DRONE -> new float[0][]; // piston engine and propeller: no exhaust plume
 			default -> new float[][] {{0.0F, 0.0F, 0.45F}};
 		};
 	}
@@ -136,6 +137,15 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		boolean cruise = state.missileType.isCruise();
 		if (cruise && state.engineOn) {
 			collector.submitCustomGeometry(poseStack, bodyType, (pose, consumer) -> MissileMesh.CRUISE_BOOSTER.emit(pose, consumer, light));
+		}
+		if (state.missileType.model == MissileType.Model.DRONE) {
+			// the propeller windmills during the boost and spins up to a blur once the engine runs
+			float spin = state.jet || state.engineOn ? state.engineTime * 2.6F : 0.4F;
+			poseStack.pushPose();
+			poseStack.translate(0.0F, -0.12F, 0.0F);
+			poseStack.mulPose(new Quaternionf().rotationY(spin));
+			collector.submitCustomGeometry(poseStack, bodyType, (pose, consumer) -> MissileMesh.DRONE_PROP.emit(pose, consumer, light));
+			poseStack.popPose();
 		}
 		if (state.plasma > 0.01F) {
 			int a = (int) (Math.min(1.0F, state.plasma) * 255.0F);

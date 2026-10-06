@@ -6,12 +6,17 @@ import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.client.effect.ClientEffects;
 import de.rcm.ballistic.client.effect.MissileClientTicker;
 import de.rcm.ballistic.client.particle.CloudParticle;
+import de.rcm.ballistic.client.render.AerialBombRenderer;
 import de.rcm.ballistic.client.render.BombletRenderer;
+import de.rcm.ballistic.client.render.CiwsRenderer;
+import de.rcm.ballistic.client.render.JetRenderer;
 import de.rcm.ballistic.client.render.MissileRenderer;
 import de.rcm.ballistic.client.render.MobileLauncherRenderer;
 import de.rcm.ballistic.client.screen.RadarScreen;
 import de.rcm.ballistic.client.render.ProjectileRenderer;
 import de.rcm.ballistic.client.screen.TargetScreen;
+import de.rcm.ballistic.client.sound.JetSound;
+import de.rcm.ballistic.entity.JetEntity;
 import de.rcm.ballistic.entity.MissileType;
 import de.rcm.ballistic.client.particle.CloudParticle;
 import de.rcm.ballistic.network.ModNetworking.DetonationPayload;
@@ -26,6 +31,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -35,6 +41,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class BallisticMissilesClient implements ClientModInitializer {
+
 	@Override
 	public void onInitializeClient() {
 		for (MissileType type : MissileType.values()) {
@@ -44,6 +51,9 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModRegistry.REENTRY_VEHICLE, ctx -> new ProjectileRenderer<>(ctx, false));
 		EntityRendererRegistry.register(ModRegistry.INTERCEPTOR, ctx -> new ProjectileRenderer<>(ctx, true));
 		EntityRendererRegistry.register(ModRegistry.MOBILE_LAUNCHER, MobileLauncherRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.JET, JetRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.AERIAL_BOMB, AerialBombRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.CIWS_BE, CiwsRenderer::new);
 
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.SMOKE, CloudParticle.SmokeProvider::new);
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.FIRE, CloudParticle.FireProvider::new);
@@ -73,6 +83,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 
 		ClientHooks.missileClientTick = MissileClientTicker::tick;
 		ClientHooks.projectileClientTick = MissileClientTicker::projectileTick;
+		ClientHooks.jetClientTick = BallisticMissilesClient::jetTick;
 		ClientHooks.openTargetScreen = hand -> Minecraft.getInstance().setScreen(new TargetScreen(hand));
 		ClientHooks.designateLookedAtBlock = BallisticMissilesClient::designate;
 	}
@@ -103,6 +114,22 @@ public class BallisticMissilesClient implements ClientModInitializer {
 			mc.player.displayClientMessage(Component.translatable("message.ballisticmissiles.long_range", (int) Math.hypot(p.x - eye.x, p.z - eye.z)).withStyle(ChatFormatting.GOLD), false);
 		} else {
 			mc.player.displayClientMessage(Component.translatable("message.ballisticmissiles.no_block").withStyle(ChatFormatting.YELLOW), true);
+		}
+	}
+
+	/** Starts the engine sound once and leaves a faint contrail / afterburner smoke behind the jet. */
+	private static void jetTick(JetEntity jet) {
+		Minecraft mc = Minecraft.getInstance();
+		if (jet.tickCount == 1) { // the client entity is created when it comes into tracking range
+			mc.getSoundManager().play(new JetSound(jet));
+		}
+		Vec3 tail = jet.position().add(0, 0.8, 0).subtract(jet.getDir().scale(6.3));
+		if (jet.isAfterburner() || jet.tickCount % 2 == 0) {
+			CloudParticle p = ClientEffects.cloud(false, tail.x, tail.y, tail.z, 0, 0, 0);
+			if (p != null) {
+				p.configure(40 + (int) (ClientEffects.rand() * 30), jet.isAfterburner() ? 1.2F : 0.6F, jet.isAfterburner() ? 3.5F : 2.0F, 0xB8B8B8, 0x9A9A9A, 0.35F)
+					.physics(0.95F, 0.0F);
+			}
 		}
 	}
 

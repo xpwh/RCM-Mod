@@ -65,6 +65,7 @@ public final class DetonationManager {
 			case THERMOBARIC -> FlyingDebris.launch(level, pos, 6.0, 40, 1.5);
 			case CRUISE, ANTI_RADAR -> FlyingDebris.launch(level, pos, 4.5, 24, 1.3);
 			case CLUSTER, INCENDIARY -> FlyingDebris.launch(level, pos, 3.0, 10, 1.0);
+			case DRONE -> FlyingDebris.launch(level, pos, 3.5, 14, 1.1);
 			case BUNKER_BUSTER -> {
 			}
 			default -> FlyingDebris.launch(level, pos, 5.0, 34, 1.5);
@@ -82,6 +83,7 @@ public final class DetonationManager {
 			case BUNKER_BUSTER -> bunkerBuster(level, pos, dir, source);
 			case THERMOBARIC -> thermobaric(level, pos, source);
 			case CRUISE -> highExplosive(level, pos, source, 9.0F, 3, 15);
+			case DRONE -> highExplosive(level, pos, source, 6.5F, 2, 8); // ~50 kg warhead
 			case CLUSTER -> highExplosive(level, pos, source, 6.0F, 1, 8); // hit the ground before opening
 			default -> highExplosive(level, pos, source, 11.0F, 4, 18);
 		}
@@ -246,6 +248,13 @@ public final class DetonationManager {
 		broadcast(level, pos, Warhead.BOMBLET);
 		FlyingDebris.launch(level, pos, 2.0, 2, 0.9);
 		level.explode(source, pos.x, pos.y, pos.z, 3.2F, false, Level.ExplosionInteraction.TNT);
+	}
+
+	/** Free-fall bomb from an airstrike jet (Mk 82-class): a solid blast with a small crater. */
+	public static void detonateAerialBomb(ServerLevel level, Vec3 pos, Entity source) {
+		broadcast(level, pos, Warhead.AERIAL_BOMB);
+		FlyingDebris.launch(level, pos, 3.5, 12, 1.2);
+		highExplosive(level, pos, source, 5.5F, 1, 6);
 	}
 
 	/** Burning sub-munition: splashes fire around the point of impact. */

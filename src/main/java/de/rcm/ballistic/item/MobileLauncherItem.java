@@ -54,5 +54,6 @@ public class MobileLauncherItem extends Item {
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.truck_1").withStyle(ChatFormatting.GOLD));
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.truck_2").withStyle(ChatFormatting.GRAY));
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.truck_3").withStyle(ChatFormatting.GRAY));
+		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.truck_4").withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

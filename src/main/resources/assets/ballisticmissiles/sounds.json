@@ -250,5 +250,32 @@
 				"attenuation_distance": 8
 			}
 		]
+	},
+	"ciws.fire": {
+		"subtitle": "subtitles.ballisticmissiles.ciws",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ciws/fire",
+				"attenuation_distance": 160
+			}
+		]
+	},
+	"jet.fighter": {
+		"subtitle": "subtitles.ballisticmissiles.fighter",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/fighter",
+				"stream": true
+			}
+		]
+	},
+	"bomb.whistle": {
+		"subtitle": "subtitles.ballisticmissiles.bomb_whistle",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bomb/whistle",
+				"attenuation_distance": 96
+			}
+		]
 	}
 }

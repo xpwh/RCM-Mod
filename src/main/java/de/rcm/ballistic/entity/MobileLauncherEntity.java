@@ -32,6 +32,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
@@ -62,6 +63,7 @@ public class MobileLauncherEntity extends Entity {
 	private static final int LOWER_TICKS = 60;
 	private static final double MAX_SPEED = 0.62;
 	private static final float MAX_HEALTH = 80.0F;
+	private static final float REPAIR_PER_INGOT = 16.0F;
 
 	private final InterpolationHandler interpolation = new InterpolationHandler(this, 3);
 	private double speed;
@@ -357,6 +359,23 @@ public class MobileLauncherEntity extends Entity {
 			}
 			return InteractionResult.SUCCESS;
 		}
+		if (stack.is(Items.IRON_INGOT) && this.health < MAX_HEALTH) {
+			if (!this.level().isClientSide()) {
+				this.health = Math.min(MAX_HEALTH, this.health + REPAIR_PER_INGOT);
+				if (!player.getAbilities().instabuild) {
+					stack.shrink(1);
+				}
+				this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ANVIL_USE, SoundSource.NEUTRAL, 0.7F, 1.2F);
+				player.displayClientMessage(this.healthMessage(), true);
+			}
+			return InteractionResult.SUCCESS;
+		}
+		if (stack.isEmpty() && player.isShiftKeyDown() && this.getMissile() == null) {
+			if (!this.level().isClientSide()) {
+				player.displayClientMessage(this.healthMessage(), true);
+			}
+			return InteractionResult.SUCCESS;
+		}
 		if (stack.isEmpty() && player.isShiftKeyDown()) {
 			if (!this.level().isClientSide() && this.getPhase() == DRIVE && this.getMissile() != null) {
 				player.setItemInHand(hand, new ItemStack(ModRegistry.missileItem(this.getMissile())));
@@ -371,6 +390,12 @@ public class MobileLauncherEntity extends Entity {
 			return InteractionResult.SUCCESS;
 		}
 		return InteractionResult.PASS;
+	}
+
+	private Component healthMessage() {
+		int percent = Math.round(this.health / MAX_HEALTH * 100.0F);
+		ChatFormatting color = percent > 60 ? ChatFormatting.GREEN : percent > 25 ? ChatFormatting.GOLD : ChatFormatting.RED;
+		return Component.translatable("message.ballisticmissiles.truck_health", percent).withStyle(color);
 	}
 
 	// ------------------------------------------------------------------ riding

@@ -1,6 +1,7 @@
 package de.rcm.ballistic.client.sound;
 
 import de.rcm.ballistic.entity.MissileEntity;
+import de.rcm.ballistic.entity.MissileType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -43,6 +44,9 @@ public class MissileEngineSound extends AbstractTickableSoundInstance {
 
 	private float basePitch() {
 		var type = this.missile.getMissileType();
+		if (type.model == MissileType.Model.DRONE) {
+			return 0.55F; // the drone's two-stroke drone: low, buzzing "moped" sound
+		}
 		if (type.isCruise()) {
 			return 1.15F;
 		}
