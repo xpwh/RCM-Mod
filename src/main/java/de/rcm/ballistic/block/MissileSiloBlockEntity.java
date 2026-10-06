@@ -8,7 +8,12 @@ import de.rcm.ballistic.entity.MissileType;
 import de.rcm.ballistic.item.TargetData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
@@ -20,6 +25,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -40,6 +46,10 @@ public class MissileSiloBlockEntity extends BlockEntity {
 	private @Nullable TargetData target;
 	private int hatchTimer;
 
+	/** Client: door travel, 0 = closed, 1 = fully open. */
+	public float doorOpen;
+	public float doorOpenO;
+
 	public MissileSiloBlockEntity(BlockPos pos, BlockState state) {
 		super(ModRegistry.MISSILE_SILO_BE, pos, state);
 	}
@@ -57,8 +67,32 @@ public class MissileSiloBlockEntity extends BlockEntity {
 			return false;
 		}
 		this.missile = type;
-		this.setChanged();
+		this.sync();
 		return true;
+	}
+
+	/** Saves and pushes the loaded missile and countdown state to clients (for the renderer). */
+	private void sync() {
+		this.setChanged();
+		if (this.level != null && !this.level.isClientSide()) {
+			this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_CLIENTS);
+		}
+	}
+
+	public static void clientTick(Level level, BlockPos pos, BlockState state, MissileSiloBlockEntity silo) {
+		silo.doorOpenO = silo.doorOpen;
+		boolean open = state.hasProperty(MissileSiloBlock.OPEN) && state.getValue(MissileSiloBlock.OPEN);
+		silo.doorOpen = Mth.clamp(silo.doorOpen + (open ? 1.0F : -1.0F) / 45.0F, 0.0F, 1.0F);
+	}
+
+	@Override
+	public Packet<ClientGamePacketListener> getUpdatePacket() {
+		return ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return this.saveCustomOnly(registries);
 	}
 
 	public @Nullable MissileType unload() {
@@ -67,7 +101,7 @@ public class MissileSiloBlockEntity extends BlockEntity {
 		}
 		MissileType type = this.missile;
 		this.missile = null;
-		this.setChanged();
+		this.sync();
 		return type;
 	}
 
@@ -92,7 +126,7 @@ public class MissileSiloBlockEntity extends BlockEntity {
 		this.target = target;
 		this.counting = true;
 		this.age = 0;
-		this.setChanged();
+		this.sync();
 		return Component.translatable("message.ballisticmissiles.armed", target.describe(), (int) Math.sqrt(dx * dx + dz * dz))
 			.withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
 	}
@@ -104,7 +138,7 @@ public class MissileSiloBlockEntity extends BlockEntity {
 		this.counting = false;
 		this.age = 0;
 		this.setHatch(false);
-		this.setChanged();
+		this.sync();
 		return true;
 	}
 
@@ -160,7 +194,7 @@ public class MissileSiloBlockEntity extends BlockEntity {
 		this.target = null;
 		this.hatchTimer = 160;
 		this.setHatch(true);
-		this.setChanged();
+		this.sync();
 		MissileEntity entity = ModRegistry.missileEntity(type).create(level, EntitySpawnReason.TRIGGERED);
 		if (entity == null || t == null) {
 			return;

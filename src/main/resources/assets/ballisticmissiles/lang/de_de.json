@@ -200,5 +200,6 @@
 	"tooltip.ballisticmissiles.truck_4": "Eisenbarren: reparieren · Schleichen + Klick mit leerer Hand: Zustand prüfen",
 	"subtitles.ballisticmissiles.ciws": "CIWS-Geschütz feuert",
 	"subtitles.ballisticmissiles.fighter": "Kampfjet donnert",
-	"subtitles.ballisticmissiles.bomb_whistle": "Bombe pfeift herab"
+	"subtitles.ballisticmissiles.bomb_whistle": "Bombe pfeift herab",
+	"subtitles.ballisticmissiles.afterburner": "Nachbrenner brüllt"
 }

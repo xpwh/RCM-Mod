@@ -5,6 +5,7 @@ import de.rcm.ballistic.block.AirDefenseBlockEntity;
 import de.rcm.ballistic.block.CiwsBlock;
 import de.rcm.ballistic.block.CiwsBlockEntity;
 import de.rcm.ballistic.block.LaunchPadBlock;
+import de.rcm.ballistic.block.LaunchPadBlockEntity;
 import de.rcm.ballistic.block.MissileSiloBlock;
 import de.rcm.ballistic.block.MissileSiloBlockEntity;
 import de.rcm.ballistic.block.RadarBlock;
@@ -155,6 +156,9 @@ public final class ModRegistry {
 		BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(8.0F, 3600.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()
 	);
 
+	public static final BlockEntityType<LaunchPadBlockEntity> LAUNCH_PAD_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("launch_pad"), FabricBlockEntityTypeBuilder.create(LaunchPadBlockEntity::new, LAUNCH_PAD).build()
+	);
 	public static final BlockEntityType<RadarBlockEntity> RADAR_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("radar"), FabricBlockEntityTypeBuilder.create(RadarBlockEntity::new, RADAR).build()
 	);
@@ -231,6 +235,9 @@ public final class ModRegistry {
 	public static final SoundEvent GEIGER_CLICK = sound("geiger.click");
 	public static final SoundEvent CIWS_FIRE = sound("ciws.fire");
 	public static final SoundEvent JET_FIGHTER = sound("jet.fighter");
+	public static final SoundEvent JET_FIGHTER_FAR = sound("jet.fighter_far");
+	public static final SoundEvent JET_AFTERBURNER = sound("jet.afterburner");
+	public static final SoundEvent JET_BOOM = sound("jet.boom");
 	public static final SoundEvent BOMB_WHISTLE = sound("bomb.whistle");
 
 	// ---------- Particles ----------

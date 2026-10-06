@@ -200,5 +200,6 @@
 	"tooltip.ballisticmissiles.truck_4": "Iron ingot: repair · sneak-click with empty hand: check condition",
 	"subtitles.ballisticmissiles.ciws": "CIWS gun fires",
 	"subtitles.ballisticmissiles.fighter": "Fighter jet roars",
-	"subtitles.ballisticmissiles.bomb_whistle": "Bomb whistles down"
+	"subtitles.ballisticmissiles.bomb_whistle": "Bomb whistles down",
+	"subtitles.ballisticmissiles.afterburner": "Afterburner roars"
 }

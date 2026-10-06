@@ -110,9 +110,11 @@ public class MissileSiloBlock extends Block implements EntityBlock {
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-		if (level.isClientSide() || type != ModRegistry.MISSILE_SILO_BE) {
+		if (type != ModRegistry.MISSILE_SILO_BE) {
 			return null;
 		}
-		return (BlockEntityTicker<T>) (BlockEntityTicker<MissileSiloBlockEntity>) MissileSiloBlockEntity::serverTick;
+		return level.isClientSide()
+			? (BlockEntityTicker<T>) (BlockEntityTicker<MissileSiloBlockEntity>) MissileSiloBlockEntity::clientTick
+			: (BlockEntityTicker<T>) (BlockEntityTicker<MissileSiloBlockEntity>) MissileSiloBlockEntity::serverTick;
 	}
 }

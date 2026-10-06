@@ -1,173 +1,40 @@
 {
 	"parent": "minecraft:block/block",
 	"textures": {
-		"particle": "ballisticmissiles:block/radar_mast",
+		"particle": "ballisticmissiles:block/radar_base",
 		"base": "ballisticmissiles:block/radar_base",
-		"mast": "ballisticmissiles:block/radar_mast",
-		"dish": "ballisticmissiles:block/radar_dish"
+		"top": "ballisticmissiles:block/radar_mast"
 	},
 	"elements": [
 		{
 			"from": [
-				1,
 				0,
-				1
+				0,
+				0
 			],
 			"to": [
-				15,
-				4,
-				15
-			],
-			"faces": {
-				"north": {
-					"texture": "#base"
-				},
-				"south": {
-					"texture": "#base"
-				},
-				"east": {
-					"texture": "#base"
-				},
-				"west": {
-					"texture": "#base"
-				},
-				"up": {
-					"texture": "#base"
-				},
-				"down": {
-					"texture": "#base"
-				}
-			}
-		},
-		{
-			"from": [
-				6.5,
-				4,
-				6.5
-			],
-			"to": [
-				9.5,
-				11,
-				9.5
-			],
-			"faces": {
-				"north": {
-					"texture": "#mast"
-				},
-				"south": {
-					"texture": "#mast"
-				},
-				"east": {
-					"texture": "#mast"
-				},
-				"west": {
-					"texture": "#mast"
-				}
-			}
-		},
-		{
-			"from": [
-				1,
-				9,
-				7
-			],
-			"to": [
-				15,
 				16,
-				8.5
+				16,
+				16
 			],
-			"rotation": {
-				"angle": -22.5,
-				"axis": "x",
-				"origin": [
-					8,
-					11,
-					8
-				]
-			},
 			"faces": {
 				"north": {
-					"texture": "#dish"
+					"texture": "#base"
 				},
 				"south": {
-					"texture": "#mast"
+					"texture": "#base"
 				},
 				"east": {
-					"texture": "#mast",
-					"uv": [
-						0,
-						0,
-						1.5,
-						7
-					]
+					"texture": "#base"
 				},
 				"west": {
-					"texture": "#mast",
-					"uv": [
-						0,
-						0,
-						1.5,
-						7
-					]
+					"texture": "#base"
 				},
 				"up": {
-					"texture": "#mast",
-					"uv": [
-						0,
-						0,
-						14,
-						1.5
-					]
+					"texture": "#top"
 				},
 				"down": {
-					"texture": "#mast",
-					"uv": [
-						0,
-						0,
-						14,
-						1.5
-					]
-				}
-			}
-		},
-		{
-			"from": [
-				7.5,
-				11.5,
-				3
-			],
-			"to": [
-				8.5,
-				12.5,
-				7
-			],
-			"rotation": {
-				"angle": -22.5,
-				"axis": "x",
-				"origin": [
-					8,
-					11,
-					8
-				]
-			},
-			"faces": {
-				"north": {
-					"texture": "#mast"
-				},
-				"south": {
-					"texture": "#mast"
-				},
-				"east": {
-					"texture": "#mast"
-				},
-				"west": {
-					"texture": "#mast"
-				},
-				"up": {
-					"texture": "#mast"
-				},
-				"down": {
-					"texture": "#mast"
+					"texture": "#base"
 				}
 			}
 		}

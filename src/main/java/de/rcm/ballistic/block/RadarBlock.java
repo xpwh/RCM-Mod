@@ -18,18 +18,15 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Early-warning radar. Tracks every missile in flight whose target lies within range, warns nearby
+ * Early-warning radar. The block is the concrete plinth; mast, shelter and the rotating antenna are
+ * drawn by its block entity renderer. Tracks every missile in flight whose target lies within range, warns nearby
  * players and outputs a redstone signal while a threat is inbound.
  */
 public class RadarBlock extends Block implements EntityBlock {
 	public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
-	private static final VoxelShape SHAPE = Shapes.or(Block.box(1, 0, 1, 15, 4, 15), Block.box(6, 4, 6, 10, 12, 10), Block.box(1, 9, 1, 15, 16, 15));
 
 	public RadarBlock(Properties properties) {
 		super(properties);
@@ -39,11 +36,6 @@ public class RadarBlock extends Block implements EntityBlock {
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
 		builder.add(POWERED);
-	}
-
-	@Override
-	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-		return SHAPE;
 	}
 
 	@Override

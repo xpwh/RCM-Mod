@@ -29,25 +29,36 @@ import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Strike fighter called in with the airstrike radio. It comes in from behind the caller, flies a
- * level bomb run over the target and lays a carpet of free-fall bombs along its track, centred on
- * the target, then pulls up in afterburner and leaves. The release point is computed from the
- * bombs' real fall (gravity and drag), so the stick lands where it was ordered.
+ * Stealth strike fighter called in with the airstrike radio. It comes in fast and low from behind
+ * the caller, opens its weapons bay, lays a carpet of free-fall bombs along its track centred on the
+ * target, then lights both afterburners, pulls up and goes supersonic (with a sonic boom). The
+ * release point is computed from the bombs' real fall (gravity and drag), so the stick lands where it
+ * was ordered.
  */
 public class JetEntity extends Entity {
 	private static final EntityDataAccessor<Vector3fc> DATA_DIR = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.VECTOR3);
 	private static final EntityDataAccessor<Float> DATA_BANK = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Integer> DATA_BOMBS = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Float> DATA_SPEED = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Boolean> DATA_BAY = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.BOOLEAN);
 
-	public static final double SPEED = 3.0;
+	/** Speed of sound in blocks per tick (343 m/s). */
+	public static final double SOUND_SPEED = 17.15;
+	/** High-subsonic attack speed (about 600 km/h). */
+	public static final double ATTACK_SPEED = 8.0;
+	/** Supersonic dash after the attack, about Mach 1.3. */
+	public static final double DASH_SPEED = 22.0;
+	private static final double ACCELERATION = 0.45;
 	/** Height of the bomb run above the target. */
 	private static final double RUN_ALTITUDE = 60.0;
 	/** Minimum clearance over terrain on the way in. */
 	private static final double CLEARANCE = 28.0;
 	public static final int BOMBS = 10;
-	private static final int RELEASE_INTERVAL = 3;
-	private static final double SPAWN_BEHIND = 140.0;
+	private static final int RELEASE_INTERVAL = 1;
+	private static final double SPAWN_BEHIND = 320.0;
 	public static final double MAX_RANGE = 1500.0;
+	/** The bay opens this many blocks before the first release. */
+	private static final double BAY_LEAD = 160.0;
 
 	private Vec3 target = Vec3.ZERO;
 	private int bombsLeft = BOMBS;
@@ -55,6 +66,9 @@ public class JetEntity extends Entity {
 	private boolean egress;
 	private int egressAge;
 	private @Nullable UUID caller;
+
+	/** Client only: the listener is inside the trailing Mach cone (the boom has been heard). */
+	public boolean clientInMachCone;
 
 	public JetEntity(EntityType<? extends JetEntity> type, Level level) {
 		super(type, level);
@@ -91,7 +105,7 @@ public class JetEntity extends Entity {
 	/** Seconds until the bombs hit, roughly: flight to the release point plus the fall. */
 	public int etaSeconds() {
 		double run = Math.hypot(this.target.x - this.getX(), this.target.z - this.getZ());
-		return (int) Math.ceil((run / SPEED) / 20.0);
+		return (int) Math.ceil((run / ATTACK_SPEED + 60) / 20.0);
 	}
 
 	@Override
@@ -99,6 +113,8 @@ public class JetEntity extends Entity {
 		builder.define(DATA_DIR, new Vector3f(1, 0, 0));
 		builder.define(DATA_BANK, 0.0F);
 		builder.define(DATA_BOMBS, BOMBS);
+		builder.define(DATA_SPEED, (float) ATTACK_SPEED);
+		builder.define(DATA_BAY, false);
 	}
 
 	public Vec3 getDir() {
@@ -115,12 +131,25 @@ public class JetEntity extends Entity {
 		return this.entityData.get(DATA_BANK);
 	}
 
-	/** Bombs still on the pylons (synced, so the renderer can show them). */
+	/** Current airspeed in blocks per tick. */
+	public float getSpeed() {
+		return this.entityData.get(DATA_SPEED);
+	}
+
+	public float getMach() {
+		return (float) (this.getSpeed() / SOUND_SPEED);
+	}
+
+	/** Bombs still in the bay (synced, so the renderer can show them). */
 	public int getBombsLeft() {
 		return this.entityData.get(DATA_BOMBS);
 	}
 
-	/** Afterburner lights once the stick is gone and the jet climbs out. */
+	public boolean isBayOpen() {
+		return this.entityData.get(DATA_BAY);
+	}
+
+	/** Afterburners light once the stick is gone and the jet climbs out. */
 	public boolean isAfterburner() {
 		return this.getBombsLeft() <= 0;
 	}
@@ -134,16 +163,16 @@ public class JetEntity extends Entity {
 		}
 		Vec3 pos = this.position();
 		Vec3 dir = this.getDir();
-		for (int k = 0; k <= 96; k += 16) {
-			level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(pos.add(dir.scale(k)))), 2);
-		}
-
+		double speed = this.getSpeed();
 		Vec3 flat = new Vec3(dir.x, 0, dir.z).normalize();
 		Vec3 desired;
 		if (!this.egress) {
-			// terrain-following on the way in, level over the target area
+			for (int k = 0; k <= 160; k += 16) {
+				level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(pos.add(flat.scale(k)))), 2);
+			}
+			// terrain following on the way in, level over the target area
 			double alt = this.target.y + RUN_ALTITUDE;
-			for (int k = 0; k <= 64; k += 16) {
+			for (int k = 0; k <= 96; k += 16) {
 				Vec3 probe = pos.add(flat.scale(k));
 				int px = Mth.floor(probe.x);
 				int pz = Mth.floor(probe.z);
@@ -152,37 +181,50 @@ public class JetEntity extends Entity {
 				}
 			}
 			Vec3 toTarget = new Vec3(this.target.x - pos.x, 0, this.target.z - pos.z);
-			Vec3 heading = toTarget.lengthSqr() > 400.0 && this.bombsLeft == BOMBS ? toTarget.normalize() : flat;
+			Vec3 heading = toTarget.lengthSqr() > 900.0 && this.bombsLeft == BOMBS ? toTarget.normalize() : flat;
 			desired = heading.add(0, Mth.clamp((alt - pos.y) * 0.03, -0.25, 0.25), 0).normalize();
-			this.bombRun(level, pos, flat);
+			this.bombRun(level, pos, flat, speed);
 		} else {
+			// afterburner climb-out, accelerating through the sound barrier
 			this.egressAge++;
-			desired = flat.add(0, 0.35, 0).normalize(); // pull up and climb out
-			if (this.egressAge > 200) {
+			speed = Math.min(DASH_SPEED, speed + ACCELERATION);
+			desired = flat.add(0, 0.38, 0).normalize();
+			if (this.egressAge > 160) {
 				this.discard();
 				return;
 			}
 		}
 
-		Vec3 newDir = dir.add(desired.subtract(dir).scale(0.08)).normalize();
+		Vec3 newDir = dir.add(desired.subtract(dir).scale(this.egress ? 0.05 : 0.08)).normalize();
+		Vec3 next = pos.add(newDir.scale(speed));
+		if (!level.isPositionEntityTicking(BlockPos.containing(next))) {
+			if (this.egress) {
+				this.discard(); // flown out of the loaded world
+			}
+			return; // on the way in: wait for the chunk to finish loading
+		}
 		// bank into turns: sign of the heading change around the vertical axis
 		double turn = dir.x * newDir.z - dir.z * newDir.x;
 		float bank = (float) Mth.clamp(turn * 25.0, -1.1, 1.1);
 		this.entityData.set(DATA_BANK, Mth.lerp(0.2F, this.getBank(), bank));
+		this.entityData.set(DATA_SPEED, (float) speed);
 		this.setDir(newDir);
-		this.setPos(pos.add(newDir.scale(SPEED)));
+		this.setPos(next);
 		if (this.tickCount > 6000) {
 			this.discard();
 		}
 	}
 
-	private void bombRun(ServerLevel level, Vec3 pos, Vec3 flat) {
+	private void bombRun(ServerLevel level, Vec3 pos, Vec3 flat, double speed) {
 		double fall = Math.max(1.0, pos.y - this.target.y);
-		double throwDistance = forwardThrow(SPEED, fall);
+		double throwDistance = forwardThrow(speed, fall);
 		// distance of the target ahead of us along the track
 		double along = (this.target.x - pos.x) * flat.x + (this.target.z - pos.z) * flat.z;
-		double halfStick = (BOMBS - 1) * RELEASE_INTERVAL * SPEED * 0.5;
+		double halfStick = (BOMBS - 1) * RELEASE_INTERVAL * speed * 0.5;
 		if (this.bombsLeft == BOMBS && along > throwDistance + halfStick) {
+			if (!this.isBayOpen() && along < throwDistance + halfStick + BAY_LEAD) {
+				this.entityData.set(DATA_BAY, true);
+			}
 			return;
 		}
 		if (this.bombsLeft == BOMBS) {
@@ -197,13 +239,16 @@ public class JetEntity extends Entity {
 			Vec3 side = new Vec3(-flat.z, 0, flat.x).scale((level.getRandom().nextDouble() - 0.5) * 3.0);
 			Vec3 release = pos.add(0, -1.2, 0).add(side);
 			bomb.setPos(release);
-			bomb.setDeltaMovement(flat.scale(SPEED));
+			bomb.setDeltaMovement(flat.scale(speed));
 			level.addFreshEntity(bomb);
-			level.playSound(null, release.x, release.y, release.z, ModRegistry.BOMB_WHISTLE, SoundSource.HOSTILE, 8.0F, 0.9F + level.getRandom().nextFloat() * 0.2F);
+			if (this.bombsLeft % 3 == 0) {
+				level.playSound(null, release.x, release.y, release.z, ModRegistry.BOMB_WHISTLE, SoundSource.HOSTILE, 8.0F, 0.9F + level.getRandom().nextFloat() * 0.2F);
+			}
 		}
 		this.entityData.set(DATA_BOMBS, --this.bombsLeft);
 		if (this.bombsLeft <= 0) {
 			this.egress = true;
+			this.entityData.set(DATA_BAY, false);
 		}
 	}
 

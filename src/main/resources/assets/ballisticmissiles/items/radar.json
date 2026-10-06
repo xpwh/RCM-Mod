@@ -1,6 +1,6 @@
 {
 	"model": {
 		"type": "minecraft:model",
-		"model": "ballisticmissiles:block/radar"
+		"model": "ballisticmissiles:item/radar"
 	}
 }

@@ -77,6 +77,18 @@ public final class BoxMesh {
 			return this;
 		}
 
+		/**
+		 * Any convex six-sided solid: corners 0-3 outline one end, 4-7 the other end in the same order
+		 * (corner i is joined to corner i + 4). Gives tapered noses, swept wings, canted fins.
+		 */
+		public Builder hexa(int patch, Vector3f... corners) {
+			if (corners.length != 8) {
+				throw new IllegalArgumentException("hexa needs 8 corners");
+			}
+			this.cuboid(corners, patch);
+			return this;
+		}
+
 		/** Cylinder around the X axis (a wheel), centred on (cx, cy, cz). */
 		public Builder cylinderX(float cx, float cy, float cz, float radius, float width, int segments, int sidePatch, int capPatch) {
 			float h = width * 0.5F;

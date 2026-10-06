@@ -269,6 +269,32 @@
 			}
 		]
 	},
+	"jet.fighter_far": {
+		"subtitle": "subtitles.ballisticmissiles.fighter",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/fighter_far",
+				"stream": true
+			}
+		]
+	},
+	"jet.afterburner": {
+		"subtitle": "subtitles.ballisticmissiles.afterburner",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/afterburner",
+				"stream": true
+			}
+		]
+	},
+	"jet.boom": {
+		"subtitle": "subtitles.ballisticmissiles.sonic_boom",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/boom"
+			}
+		]
+	},
 	"bomb.whistle": {
 		"subtitle": "subtitles.ballisticmissiles.bomb_whistle",
 		"sounds": [

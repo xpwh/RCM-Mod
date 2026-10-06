@@ -166,6 +166,96 @@ def item_radio():
         img.putpixel((x, y), (200, 205, 210, 255))
     img.save(out("item/airstrike_radio.png"))
 
+# ---------------------------------------------------------------------------------------------- launch site structures
+
+def structures():
+    """Patch atlas for the launch pad complex, silo headworks and radar station (StructureKit)."""
+    n = g.noise(PATCH, PATCH, 2.0, 3)
+    noisy = g2.noisy
+
+    def concrete(base, seed, stains=0.0):
+        img = noisy(base, g.noise(PATCH, PATCH, 3.0, 3), 0.18)
+        d = ImageDraw.Draw(img)
+        rng = random.Random(seed)
+        for _ in range(6):
+            x, y = rng.randrange(16), rng.randrange(16)
+            d.point((x, y), fill=tuple(max(0, c - 25) for c in base) + (255,))
+        if stains:
+            arr = np.asarray(img).astype(np.float64)
+            st = g.noise(PATCH, PATCH, 2.0, 2)
+            arr[..., :3] *= (1.0 - stains * np.clip(st - 0.45, 0, 1)[..., None] * 2)
+            img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
+        return img
+
+    p = {
+        0: concrete((168, 166, 158), 1),
+        1: concrete((120, 118, 112), 2, 0.4),
+        2: noisy((132, 136, 140), n, 0.15),
+        3: noisy((196, 52, 40), n, 0.1),
+        4: noisy((226, 226, 220), n, 0.06),
+        6: noisy((26, 26, 28), n),
+        8: flat((230, 186, 30)),
+        9: noisy((90, 98, 64), n, 0.12),
+        11: flat((255, 244, 200)),
+        12: flat((255, 40, 30)),
+        13: noisy((110, 72, 50), n, 0.3),
+        14: noisy((40, 38, 36), g.noise(PATCH, PATCH, 3.0, 3), 0.35),
+        15: noisy((34, 34, 36), n),
+        17: noisy((52, 52, 54), n, 0.25),
+        19: flat((60, 255, 90)),
+    }
+    hz = Image.new("RGBA", (PATCH, PATCH), (230, 180, 20, 255))
+    d = ImageDraw.Draw(hz)
+    for x in range(-16, 16, 8):
+        d.polygon([(x, 15), (x + 4, 15), (x + 19, 0), (x + 15, 0)], fill=(20, 20, 20, 255))
+    p[5] = hz
+    grating = Image.new("RGBA", (PATCH, PATCH), (70, 72, 74, 255))
+    d = ImageDraw.Draw(grating)
+    for i in range(0, 16, 3):
+        d.line([(i, 0), (i, 15)], fill=(150, 152, 150, 255))
+        d.line([(0, i), (15, i)], fill=(120, 122, 120, 255))
+    p[7] = grating
+    glass = noisy((70, 100, 120), n, 0.2)
+    ImageDraw.Draw(glass).line([(2, 13), (13, 2)], fill=(170, 200, 210, 255))
+    p[10] = glass
+    dish = noisy((214, 216, 212), n, 0.08)
+    d = ImageDraw.Draw(dish)
+    for i in range(0, 16, 4):
+        d.line([(i, 0), (i, 15)], fill=(170, 172, 168, 255))
+        d.line([(0, i), (15, i)], fill=(170, 172, 168, 255))
+    p[16] = dish
+    panel = noisy((120, 126, 112), n, 0.1)
+    d = ImageDraw.Draw(panel)
+    d.rectangle([0, 0, 15, 15], outline=(80, 84, 74, 255))
+    for (x, y) in ((2, 2), (13, 2), (2, 13), (13, 13)):
+        d.point((x, y), fill=(180, 182, 176, 255))
+    d.rectangle([4, 5, 11, 7], fill=(40, 42, 40, 255))
+    d.point((5, 10), fill=(60, 220, 80, 255))
+    d.point((7, 10), fill=(230, 60, 40, 255))
+    p[18] = panel
+    door = noisy((96, 100, 96), n, 0.1)
+    d = ImageDraw.Draw(door)
+    d.rectangle([0, 0, 15, 15], outline=(60, 62, 60, 255))
+    d.line([(8, 1), (8, 14)], fill=(70, 72, 70, 255))
+    d.rectangle([10, 7, 12, 8], fill=(200, 200, 196, 255))
+    p[20] = door
+    vent = noisy((90, 92, 94), n)
+    d = ImageDraw.Draw(vent)
+    for y in range(1, 16, 3):
+        d.line([(1, y), (14, y)], fill=(30, 30, 32, 255))
+    p[21] = vent
+    atlas(p).save(out("entity/structures.png"))
+
+
+def vapor():
+    """Soft white condensation texture for the Mach cone (alpha comes from the vertex colour)."""
+    S = 64
+    nz = g.noise(S, S, 2.5, 4)
+    arr = np.zeros((S, S, 4), dtype=np.float64)
+    arr[..., :3] = 255
+    arr[..., 3] = np.clip(120 + 135 * nz, 0, 255)
+    Image.fromarray(arr.astype(np.uint8), "RGBA").save(out("entity/vapor.png"))
+
 
 if __name__ == "__main__":
     kamikaze_drone()
@@ -174,4 +264,6 @@ if __name__ == "__main__":
     ciws()
     item_missile("kamikaze_drone", (132, 134, 130), (150, 150, 146), (110, 112, 108), [(0.70, 0.74)], False, wings=True)
     item_radio()
+    structures()
+    vapor()
     print("v3 textures ok")
