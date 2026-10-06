@@ -54,6 +54,13 @@ public class InterceptorEntity extends Entity {
 	}
 
 	public static @Nullable InterceptorEntity launch(ServerLevel level, BlockPos battery, Vec3 from, AirThreat target, float killProbability) {
+		return launch(level, battery, from, target, killProbability, null);
+	}
+
+	/** As above, leaving the launcher along {@code launcherDir} (the canister axis) if given. */
+	public static @Nullable InterceptorEntity launch(
+		ServerLevel level, BlockPos battery, Vec3 from, AirThreat target, float killProbability, @Nullable Vec3 launcherDir
+	) {
 		InterceptorEntity e = ModRegistry.INTERCEPTOR.create(level, EntitySpawnReason.TRIGGERED);
 		if (e == null) {
 			return null;
@@ -65,7 +72,7 @@ public class InterceptorEntity extends Entity {
 		Vec3 aim = solveIntercept(from, START_SPEED, target);
 		// the launcher is elevated towards the target, the rest is done by thrust vectoring
 		Vec3 d = aim.subtract(from);
-		Vec3 initial = new Vec3(d.x, Math.max(Math.abs(d.y), Math.hypot(d.x, d.z)) * 1.2, d.z).normalize();
+		Vec3 initial = launcherDir != null ? launcherDir.normalize() : new Vec3(d.x, Math.max(Math.abs(d.y), Math.hypot(d.x, d.z)) * 1.2, d.z).normalize();
 		e.setDir(initial);
 		level.addFreshEntity(e);
 		return e;

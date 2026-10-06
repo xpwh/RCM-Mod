@@ -8,6 +8,7 @@ import de.rcm.ballistic.client.effect.JetClientTicker;
 import de.rcm.ballistic.client.effect.MissileClientTicker;
 import de.rcm.ballistic.client.particle.CloudParticle;
 import de.rcm.ballistic.client.render.AerialBombRenderer;
+import de.rcm.ballistic.client.render.AirDefenseRenderer;
 import de.rcm.ballistic.client.render.BombletRenderer;
 import de.rcm.ballistic.client.render.CiwsRenderer;
 import de.rcm.ballistic.client.render.JetRenderer;
@@ -59,6 +60,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		BlockEntityRenderers.register(ModRegistry.LAUNCH_PAD_BE, LaunchPadRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.MISSILE_SILO_BE, SiloRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.RADAR_BE, RadarRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.AIR_DEFENSE_BE, AirDefenseRenderer::new);
 
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.SMOKE, CloudParticle.SmokeProvider::new);
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.FIRE, CloudParticle.FireProvider::new);

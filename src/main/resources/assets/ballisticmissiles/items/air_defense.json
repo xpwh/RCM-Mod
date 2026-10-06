@@ -1,6 +1,6 @@
 {
 	"model": {
 		"type": "minecraft:model",
-		"model": "ballisticmissiles:block/air_defense"
+		"model": "ballisticmissiles:item/air_defense"
 	}
 }

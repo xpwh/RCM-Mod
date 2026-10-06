@@ -36,6 +36,10 @@ final class StructureKit {
 	static final int GREEN_LAMP = 19;
 	static final int DOOR = 20;
 	static final int VENT = 21;
+	static final int OLIVE_DARK = 22;
+	static final int ARRAY = 23;
+	static final int HAZE = 24;
+	static final int HAZE_DARK = 25;
 
 	private StructureKit() {
 	}

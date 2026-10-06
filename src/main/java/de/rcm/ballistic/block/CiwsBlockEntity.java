@@ -48,7 +48,9 @@ public class CiwsBlockEntity extends BlockEntity {
 	private static final float SLEW_PITCH = 0.16F;
 	private static final float FIRE_CONE = 0.07F;
 	/** Muzzle height above the block origin. */
-	public static final double MUZZLE_Y = 1.45;
+	public static final double MUZZLE_Y = 2.35;
+	/** Distance from the pivot to the muzzles along the barrels. */
+	public static final double BARREL_LENGTH = 2.45;
 
 	private int ammo = MAGAZINE;
 	private int kills;
@@ -208,13 +210,13 @@ public class CiwsBlockEntity extends BlockEntity {
 		gun.barrelSpin += gun.spinSpeed;
 		if (gun.firing) {
 			Vec3 dir = gun.aimDirection(1.0F);
-			Vec3 muzzle = Vec3.atBottomCenterOf(pos).add(0, MUZZLE_Y, 0).add(dir.scale(1.5));
+			Vec3 muzzle = Vec3.atBottomCenterOf(pos).add(0, MUZZLE_Y, 0).add(dir.scale(BARREL_LENGTH));
 			var random = level.getRandom();
 			level.addParticle(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, dir.x * 0.1, dir.y * 0.1 + 0.02, dir.z * 0.1);
 			if (random.nextInt(2) == 0) {
 				// spent brass ejected below the mount
 				Vec3 side = new Vec3(-dir.z, 0, dir.x).normalize();
-				Vec3 eject = Vec3.atBottomCenterOf(pos).add(0, 1.1, 0).add(side.scale(0.35));
+				Vec3 eject = Vec3.atBottomCenterOf(pos).add(0, MUZZLE_Y - 0.4, 0).add(side.scale(0.4));
 				level.addParticle(ParticleTypes.CRIT, eject.x, eject.y, eject.z, side.x * 0.15, 0.1, side.z * 0.15);
 			}
 		}

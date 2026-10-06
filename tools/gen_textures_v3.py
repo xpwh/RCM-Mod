@@ -244,6 +244,16 @@ def structures():
     for y in range(1, 16, 3):
         d.line([(1, y), (14, y)], fill=(30, 30, 32, 255))
     p[21] = vent
+    p[22] = noisy((66, 74, 46), n, 0.12)
+    array = Image.new("RGBA", (PATCH, PATCH), (58, 62, 60, 255))
+    d = ImageDraw.Draw(array)
+    for y in range(1, 16, 3):
+        for x in range(1 + (y // 3) % 2, 16, 3):
+            d.point((x, y), fill=(150, 156, 146, 255))  # radiating elements in a staggered grid
+    d.rectangle([0, 0, 15, 15], outline=(40, 44, 40, 255))
+    p[23] = array
+    p[24] = noisy((150, 156, 160), n, 0.08)
+    p[25] = noisy((104, 110, 114), n, 0.1)
     atlas(p).save(out("entity/structures.png"))
 
 

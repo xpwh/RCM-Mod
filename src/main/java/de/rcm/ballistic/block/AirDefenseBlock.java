@@ -23,10 +23,13 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
-/** Surface-to-air missile battery: automatically fires interceptors at incoming missiles. */
+/**
+ * Surface-to-air missile battery: automatically fires interceptors at incoming missiles. The block is
+ * the launcher's pedestal; trailer, launcher and radar are drawn by the block entity renderer.
+ */
 public class AirDefenseBlock extends Block implements EntityBlock {
 	public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
-	private static final VoxelShape SHAPE = Shapes.or(Block.box(0, 0, 0, 16, 5, 16), Block.box(2, 5, 2, 14, 15, 14));
+	private static final VoxelShape SHAPE = Shapes.block();
 
 	public AirDefenseBlock(Properties properties) {
 		super(properties);
@@ -64,9 +67,11 @@ public class AirDefenseBlock extends Block implements EntityBlock {
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-		if (level.isClientSide() || type != ModRegistry.AIR_DEFENSE_BE) {
+		if (type != ModRegistry.AIR_DEFENSE_BE) {
 			return null;
 		}
-		return (BlockEntityTicker<T>) (BlockEntityTicker<AirDefenseBlockEntity>) AirDefenseBlockEntity::serverTick;
+		return level.isClientSide()
+			? (BlockEntityTicker<T>) (BlockEntityTicker<AirDefenseBlockEntity>) AirDefenseBlockEntity::clientTick
+			: (BlockEntityTicker<T>) (BlockEntityTicker<AirDefenseBlockEntity>) AirDefenseBlockEntity::serverTick;
 	}
 }
