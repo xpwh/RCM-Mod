@@ -3,6 +3,7 @@ package de.rcm.ballistic.client.effect;
 import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.client.particle.CloudParticle;
 import de.rcm.ballistic.client.sound.MissileEngineSound;
+import de.rcm.ballistic.client.sound.MissileFollowSound;
 import de.rcm.ballistic.client.render.MissileMesh;
 import de.rcm.ballistic.entity.InterceptorEntity;
 import de.rcm.ballistic.entity.MissileEntity;
@@ -24,6 +25,19 @@ public final class MissileClientTicker {
 		Minecraft mc = Minecraft.getInstance();
 		int state = missile.getState();
 		float scale = missile.getMissileType().radius / 0.45F;
+
+		// ignition: the launch roar follows the rocket (not left behind on the pad)
+		boolean lit = state == MissileEntity.IGNITION && missile.lastSeenState == MissileEntity.COUNTDOWN
+			|| state == MissileEntity.FLIGHT && missile.lastSeenState == MissileEntity.EJECT;
+		if (state == MissileEntity.EJECT && missile.lastSeenState != MissileEntity.EJECT) {
+			mc.getSoundManager().play(new MissileFollowSound(missile, ModRegistry.IGNITION_SUB, 0.55F, 700.0, 1.2F)); // gas generator
+		}
+		if (lit) {
+			MissileType type = missile.getMissileType();
+			float pitch = type.isCruise() && state == MissileEntity.IGNITION ? 1.25F : type == MissileType.HYDROGEN ? 0.72F : type.isNuclear() ? 0.85F : 1.0F;
+			mc.getSoundManager().play(new MissileFollowSound(missile, ModRegistry.IGNITION, pitch, 900.0, 1.2F));
+			mc.getSoundManager().play(new MissileFollowSound(missile, ModRegistry.IGNITION_SUB, pitch, 1400.0, 1.0F));
+		}
 
 		if (missile.isBoosterBurning() && !missile.engineSoundStarted) {
 			missile.engineSoundStarted = true;

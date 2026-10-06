@@ -54,7 +54,11 @@ public class JetEntity extends Entity implements AirThreat {
 	/** A-10 gun run: opens fire this far before the target, ceases this close. */
 	private static final double GUN_OPEN = 170.0;
 	private static final double GUN_CEASE = 45.0;
-	private boolean pullingUp;
+	/** Terrain guard: climb gradient being held (decays slowly, so the nose doesn't bob). */
+	private double guardSlope = -1.0;
+	private double pullUp;
+	/** Heading chosen once when the attack is over. */
+	private @Nullable Vec3 egressHeading;
 
 	/** Speed of sound in blocks per tick (343 m/s). */
 	public static final double SOUND_SPEED = 17.15;
@@ -254,9 +258,11 @@ public class JetEntity extends Entity implements AirThreat {
 				speed = Math.min(DASH_SPEED, speed + ACCELERATION);
 				desired = flat.add(0, 0.38, 0).normalize();
 			} else if (type == JetType.WARTHOG) {
-				// pull off the target in a climbing break turn
-				Vec3 away = new Vec3(flat.x * 0.5 - flat.z * 0.87, 0, flat.z * 0.5 + flat.x * 0.87);
-				desired = away.add(0, 0.3, 0).normalize();
+				// pull off the target in one climbing break turn, then fly straight out
+				if (this.egressHeading == null) {
+					this.egressHeading = new Vec3(flat.x * 0.64 - flat.z * 0.77, 0, flat.z * 0.64 + flat.x * 0.77).normalize();
+				}
+				desired = this.egressHeading.add(0, 0.28, 0).normalize();
 			} else {
 				desired = flat.add(0, 0.12, 0).normalize(); // the bomber just keeps going, climbing gently
 			}
@@ -267,7 +273,7 @@ public class JetEntity extends Entity implements AirThreat {
 			desired = this.avoidTerrain(level, pos, dir, desired, 12.0, lookahead(speed));
 		}
 
-		double turnRate = this.pullingUp ? 0.22 : this.egress ? 0.05 : 0.08;
+		double turnRate = (this.egress ? 0.06 : 0.08) + 0.12 * this.pullUp;
 		Vec3 newDir = dir.add(desired.subtract(dir).scale(turnRate)).normalize();
 		Vec3 next = pos.add(newDir.scale(speed));
 		// last line of defence: never end a tick inside the terrain
@@ -334,11 +340,14 @@ public class JetEntity extends Entity implements AirThreat {
 		}
 		double horizontal = Math.max(1.0E-3, Math.hypot(desired.x, desired.z));
 		double slope = desired.y / horizontal;
-		this.pullingUp = need > slope && need > -0.05;
-		if (!this.pullingUp) {
+		// hold the required climb and let it go slowly, instead of flicking between climb and descent
+		this.guardSlope = Math.max(need > -0.05 ? need + 0.08 : -1.0, this.guardSlope - 0.012);
+		if (this.guardSlope <= slope) {
+			this.pullUp = Math.max(0.0, this.pullUp - 0.1);
 			return desired;
 		}
-		return wanted.add(0, Math.min(need + 0.08, 1.5), 0).normalize();
+		this.pullUp = Mth.clamp((this.guardSlope - slope) * 2.0, 0.0, 1.0);
+		return wanted.add(0, Math.min(this.guardSlope, 1.5), 0).normalize();
 	}
 
 	private void bombRun(ServerLevel level, Vec3 pos, Vec3 flat, double speed) {

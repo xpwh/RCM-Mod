@@ -36,6 +36,8 @@ public final class BlastShader {
 	private static float strength;
 	private static float exposure;
 	private static float heat;
+	/** Per-tick fade of the fireball glow: small blasts are gone in a second, nukes burn on. */
+	private static float heatDecay = 0.97F;
 	private static Kind kind = Kind.FIRE;
 	private static int tint = 0xFFB060;
 	private static Vec3 blastPos = Vec3.ZERO;
@@ -58,7 +60,8 @@ public final class BlastShader {
 			kind = newKind;
 			tint = color;
 			blastPos = pos;
-			heat = Math.max(heat, (float) Math.min(1.0, near * (0.5 + 0.5 * scale)));
+			heat = Math.max(heat, (float) Math.min(1.0, near * (0.35 + 0.45 * scale)));
+			heatDecay = (float) Mth.clamp(0.9 + 0.045 * scale, 0.9, 0.993);
 			if (distance < reach * 2.0) {
 				ringAge = 0;
 				ringDuration = (int) Mth.clamp(18.0 + 30.0 * scale, 18.0, 80.0);
@@ -83,7 +86,7 @@ public final class BlastShader {
 	public static void tick(Minecraft mc) {
 		strength = Math.max(0.0F, strength * 0.93F - 0.004F);
 		exposure = Math.max(0.0F, exposure * 0.9F - 0.004F);
-		heat = Math.max(0.0F, heat * 0.992F - 0.0015F);
+		heat = Math.max(0.0F, heat * heatDecay - 0.0015F);
 		if (ringAge >= 0 && ++ringAge > ringDuration) {
 			ringAge = -1;
 		}
@@ -125,8 +128,6 @@ public final class BlastShader {
 		int time = (int) ((System.nanoTime() / 10_000_000L) % 65536L); // centiseconds, 16 bit
 		int kindByte = Math.round(kind.ordinal() * 255.0F / 3.0F);
 		img.setPixel(0, 0, argb(kindByte, strength, exposure, shellShock()));
-		img.setPixel(1, 0, (255 << 24) | ((time & 0xFF) << 16) | (((time >> 8) & 0xFF) << 8) | byteOf(heat));
-		img.setPixel(2, 0, 0xFF000000 | (tint & 0xFFFFFF));
 
 		Camera camera = mc.gameRenderer.getMainCamera();
 		Vec3 d = blastPos.add(0.0, 12.0, 0.0).subtract(camera.position());
@@ -146,6 +147,10 @@ public final class BlastShader {
 			sy = (float) (0.5 + 0.5 * y / (z * tanHalf));
 			onScreen = sx > -0.1F && sx < 1.1F && sy > -0.1F && sy < 1.1F;
 		}
+		// light streaming out of the fireball: only while it is in view and still glowing
+		float rays = onScreen ? Mth.clamp(heat * 1.3F + exposure * 0.6F, 0.0F, 1.0F) : exposure * 0.25F;
+		img.setPixel(1, 0, argb(byteOf(rays), (time & 0xFF) / 255.0F, ((time >> 8) & 0xFF) / 255.0F, heat));
+		img.setPixel(2, 0, 0xFF000000 | (tint & 0xFFFFFF));
 		float ring = ringAge < 0 ? 0.0F : Mth.clamp((ringAge + partialTick) / ringDuration, 0.001F, 1.0F);
 		img.setPixel(3, 0, argb(byteOf(ring), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
 		params.upload();

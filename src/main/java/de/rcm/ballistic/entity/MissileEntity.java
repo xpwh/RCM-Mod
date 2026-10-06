@@ -289,7 +289,6 @@ public class MissileEntity extends Entity implements AirThreat {
 		}
 		Vec3 top = this.getSiloTop();
 		if (this.stateAge == 0) {
-			level.playSound(null, top.x, top.y, top.z, ModRegistry.IGNITION_SUB, SoundSource.BLOCKS, 12.0F, 0.55F);
 			level.playSound(null, top.x, top.y, top.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 6.0F, 0.5F);
 		}
 		// gas generator: hard push, then the missile coasts and slows down above the hatch. Under
@@ -320,9 +319,7 @@ public class MissileEntity extends Entity implements AirThreat {
 			this.applyJamming(level);
 			this.trajectory = null;
 			this.setState(FLIGHT);
-			float pitch = this.missileType == MissileType.HYDROGEN ? 0.72F : this.missileType.isNuclear() ? 0.85F : 1.0F;
-			level.playSound(null, next.x, next.y, next.z, ModRegistry.IGNITION, SoundSource.BLOCKS, 16.0F, pitch);
-			level.playSound(null, next.x, next.y, next.z, ModRegistry.IGNITION_SUB, SoundSource.BLOCKS, 16.0F, pitch);
+			// the ignition roar is played client-side, riding along with the missile
 		}
 	}
 
@@ -359,9 +356,7 @@ public class MissileEntity extends Entity implements AirThreat {
 			this.applyJamming(level);
 			this.trajectory = null;
 			this.setState(IGNITION);
-			float pitch = this.missileType.isCruise() ? 1.25F : this.missileType == MissileType.HYDROGEN ? 0.72F : this.missileType.isNuclear() ? 0.85F : 1.0F;
-			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.IGNITION, SoundSource.BLOCKS, 16.0F, pitch);
-			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.IGNITION_SUB, SoundSource.BLOCKS, 16.0F, pitch);
+			// the ignition roar is played client-side, riding along with the missile
 		}
 	}
 
