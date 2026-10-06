@@ -45,6 +45,13 @@ public final class MissileMesh {
 	public static final MissileMesh DRONE_PROP = buildDronePropeller();
 	public static final MissileMesh AERIAL_BOMB = buildAerialBomb();
 	public static final MissileMesh MOAB = buildMoab();
+	public static final MissileMesh BUNKER_BUSTER = buildBunkerBuster();
+	public static final MissileMesh CLUSTER = buildCluster();
+	public static final MissileMesh THERMOBARIC = buildThermobaric();
+	public static final MissileMesh INCENDIARY = buildIncendiary();
+	public static final MissileMesh EMP = buildEmp();
+	public static final MissileMesh ANTIMATTER = buildAntimatter();
+	public static final MissileMesh ANTI_RADAR = buildAntiRadar();
 
 	/** Length of the cruise missile booster hanging below the airframe. */
 	public static final float CRUISE_BOOSTER_LENGTH = 1.25F;
@@ -58,6 +65,24 @@ public final class MissileMesh {
 	}
 
 	public static MissileMesh of(MissileType type) {
+		switch (type) {
+			case BUNKER_BUSTER:
+				return BUNKER_BUSTER;
+			case CLUSTER:
+				return CLUSTER;
+			case THERMOBARIC:
+				return THERMOBARIC;
+			case INCENDIARY:
+				return INCENDIARY;
+			case EMP:
+				return EMP;
+			case ANTIMATTER:
+				return ANTIMATTER;
+			case ANTI_RADAR:
+				return ANTI_RADAR;
+			default:
+				break;
+		}
 		return switch (type.model) {
 			case ICBM -> ICBM;
 			case HEAVY_ICBM -> HEAVY_ICBM;
@@ -132,6 +157,202 @@ public final class MissileMesh {
 		b.radialBox(Mth.PI * 0.75F, R, 0.025F, 0.3F, 3.1F, 3.5F, Skin.DARK);
 		b.radialBox(-Mth.PI * 0.25F, R, 0.025F, 0.3F, 3.1F, 3.5F, Skin.DARK);
 		b.radialBox(Mth.HALF_PI, R * 0.62F, 0.02F, 0.16F, 7.4F, 7.58F, Skin.DARK);
+		return b.build();
+	}
+
+	/** Common solid-rocket motor section (y 0 to {@code top}) of the 9-block tactical family. */
+	private static void tacticalMotor(Builder b, float R, float top) {
+		b.lathe(new float[][] {
+			{0.00F, 0.62F}, {0.45F, 0.60F}, {0.85F, 0.56F}, {1.00F, R},
+			{2.58F, R}, {2.61F, R - 0.012F}, {2.66F, R - 0.012F}, {2.69F, R}, {top, R}
+		}, Skin.BODY);
+		b.lathe(new float[][] {{0.0F, 0.62F}, {0.0F, 0.50F}}, Skin.METAL);
+		b.lathe(new float[][] {{0.38F, 0.21F}, {0.02F, 0.49F}}, Skin.DARK);
+		b.disc(0.38F, 0.21F, true, Skin.DARK);
+		for (int i = 0; i < 4; i++) {
+			b.radialBox(i * Mth.HALF_PI, 0.12F, 0.3F, 0.035F, 0.04F, 0.3F, Skin.DARK);
+		}
+		b.ring(2.635F, R, 0.018F, 0.06F);
+		b.radialBox(0.0F, R, 0.055F, 0.15F, 1.05F, top - 0.1F, Skin.METAL);
+		b.radialBox(Mth.PI, R, 0.055F, 0.15F, 1.05F, top - 0.1F, Skin.METAL);
+	}
+
+	/**
+	 * Earth-penetrator missile (Pershing II / "bunker buster" style): a booster carrying a slim,
+	 * very long hardened-steel penetrator with a sharp point, steered by four canards on the warhead.
+	 */
+	private static MissileMesh buildBunkerBuster() {
+		float L = 9.0F;
+		float R = 0.55F;
+		float P = 0.34F;
+		Builder b = new Builder(L);
+		tacticalMotor(b, R, 5.6F);
+		// bolted adapter cone down to the penetrator, then the thick-walled steel case
+		b.lathe(new float[][] {{5.6F, R}, {5.9F, R}, {6.15F, P + 0.06F}, {6.2F, P}, {7.4F, P}}, Skin.BODY);
+		float[][] point = new float[16][];
+		for (int k = 0; k <= 15; k++) {
+			float f = k / 15.0F;
+			point[k] = new float[] {7.4F + f * 1.6F, k == 15 ? 0.0F : P * (float) Math.pow(1.0F - f, 0.85F)};
+		}
+		b.lathe(point, Skin.BODY);
+		b.ring(5.9F, R, 0.02F, 0.08F);
+		b.ring(6.2F, P, 0.03F, 0.06F); // hardened shoulder collar
+		// big booster fins, steering canards on the penetrator
+		for (int i = 0; i < 4; i++) {
+			float a = Mth.PI / 4 + i * Mth.HALF_PI;
+			b.fin(a, 0.58F, 0.15F, 1.9F, 0.3F, 1.1F, 0.62F, 0.08F);
+			b.fin(a, P - 0.01F, 6.45F, 7.05F, 6.55F, 6.8F, 0.24F, 0.04F);
+		}
+		// laser/GPS seeker window and the fuze access plate
+		b.radialBox(Mth.HALF_PI, P, 0.02F, 0.12F, 6.95F, 7.2F, Skin.DARK);
+		b.radialBox(-Mth.HALF_PI, P, 0.015F, 0.14F, 6.4F, 6.6F, Skin.METAL);
+		return b.build();
+	}
+
+	/** ATACMS-style cluster missile: blunt nose, long dispenser bay with blow-off panels. */
+	private static MissileMesh buildCluster() {
+		float L = 9.0F;
+		float R = 0.55F;
+		Builder b = new Builder(L);
+		tacticalMotor(b, R, 6.6F);
+		float[][] nose = new float[13][];
+		for (int k = 0; k <= 12; k++) {
+			float f = k / 12.0F;
+			nose[k] = new float[] {6.6F + f * 2.4F, k == 12 ? 0.0F : R * (float) Math.sqrt(1.0F - f * f) * (1.0F - 0.25F * f)};
+		}
+		b.lathe(nose, Skin.BODY);
+		// four blow-off panels along the dispenser bay: seams, hinges and the linear charges
+		for (int i = 0; i < 4; i++) {
+			float a = i * Mth.HALF_PI + Mth.PI / 4;
+			b.radialBox(a, R, 0.02F, 0.05F, 3.2F, 5.6F, Skin.DARK);
+			b.radialBox(a + 0.35F, R, 0.025F, 0.08F, 3.4F, 3.55F, Skin.METAL);
+			b.radialBox(a + 0.35F, R, 0.025F, 0.08F, 5.25F, 5.4F, Skin.METAL);
+		}
+		b.ring(3.15F, R, 0.015F, 0.06F);
+		b.ring(5.62F, R, 0.015F, 0.06F);
+		// ATACMS: four clipped-delta control fins right at the tail
+		for (int i = 0; i < 4; i++) {
+			b.fin(Mth.PI / 4 + i * Mth.HALF_PI, 0.58F, 0.05F, 1.25F, 0.1F, 0.55F, 0.55F, 0.07F);
+		}
+		return b.build();
+	}
+
+	/** Fuel-air explosive missile: a fat, round-nosed warhead bulging past the motor, fuze probe. */
+	private static MissileMesh buildThermobaric() {
+		float L = 9.0F;
+		float R = 0.55F;
+		float W = 0.74F;
+		Builder b = new Builder(L);
+		tacticalMotor(b, R, 5.6F);
+		b.lathe(new float[][] {{5.6F, R}, {5.9F, R}, {6.2F, W}, {7.3F, W}}, Skin.BODY);
+		float[][] dome = new float[12][];
+		for (int k = 0; k <= 11; k++) {
+			float f = k / 11.0F;
+			dome[k] = new float[] {7.3F + f * 1.3F, k == 11 ? 0.06F : W * (float) Math.sqrt(1.0F - f * f)};
+		}
+		b.lathe(dome, Skin.BODY);
+		b.latheAt(0, 0, 12, new float[][] {{8.55F, 0.05F}, {8.95F, 0.035F}, {9.0F, 0.0F}}, Skin.METAL); // stand-off fuze probe
+		b.ring(6.2F, W, 0.02F, 0.06F);
+		b.ring(7.25F, W, 0.02F, 0.06F);
+		// fuel fill ports and the cloud-dispersal charge housings
+		for (int i = 0; i < 4; i++) {
+			b.radialBox(i * Mth.HALF_PI, W, 0.03F, 0.14F, 6.6F, 6.78F, Skin.METAL);
+		}
+		for (int i = 0; i < 4; i++) {
+			float a = Mth.PI / 4 + i * Mth.HALF_PI;
+			b.fin(a, 0.58F, 0.25F, 1.55F, 0.35F, 0.95F, 0.40F, 0.07F);
+		}
+		return b.build();
+	}
+
+	/** Incendiary missile: a conical warhead of three canisters, separated by vented rings. */
+	private static MissileMesh buildIncendiary() {
+		float L = 9.0F;
+		float R = 0.55F;
+		Builder b = new Builder(L);
+		tacticalMotor(b, R, 6.0F);
+		b.lathe(new float[][] {{6.0F, R}, {8.7F, 0.07F}, {8.75F, 0.0F}}, Skin.BODY);
+		b.latheAt(0, 0, 12, new float[][] {{8.7F, 0.04F}, {9.0F, 0.03F}, {9.0F, 0.0F}}, Skin.METAL);
+		for (float y : new float[] {4.35F, 5.0F, 5.65F}) {
+			b.ring(y, R, 0.03F, 0.1F);
+			for (int i = 0; i < 8; i++) {
+				b.radialBox(i * Mth.PI / 4, R + 0.03F, 0.01F, 0.06F, y + 0.02F, y + 0.08F, Skin.DARK); // vent slots
+			}
+		}
+		for (int i = 0; i < 4; i++) {
+			float a = Mth.PI / 4 + i * Mth.HALF_PI;
+			b.fin(a, 0.58F, 0.25F, 1.7F, 0.35F, 1.0F, 0.46F, 0.07F);
+		}
+		return b.build();
+	}
+
+	/** EMP missile: blunt dielectric radome over the antenna array, the warhead wrapped in coils. */
+	private static MissileMesh buildEmp() {
+		float L = 9.0F;
+		float R = 0.55F;
+		Builder b = new Builder(L);
+		tacticalMotor(b, R, 7.4F);
+		float[][] dome = new float[12][];
+		for (int k = 0; k <= 11; k++) {
+			float f = k / 11.0F;
+			dome[k] = new float[] {7.4F + f * 1.6F, k == 11 ? 0.0F : R * (float) Math.pow(1.0F - f * f, 0.6F)};
+		}
+		b.lathe(dome, Skin.BODY);
+		for (int k = 0; k < 7; k++) {
+			b.ring(5.95F + k * 0.18F, R, 0.035F, 0.08F); // flux-compression generator coils
+		}
+		for (int i = 0; i < 4; i++) {
+			b.radialBox(i * Mth.HALF_PI + Mth.PI / 4, R + 0.035F, 0.03F, 0.06F, 5.9F, 7.2F, Skin.DARK); // bus bars
+			b.fin(Mth.PI / 4 + i * Mth.HALF_PI, 0.58F, 0.25F, 1.55F, 0.35F, 0.95F, 0.40F, 0.07F);
+		}
+		b.radialBox(Mth.HALF_PI, R, 0.22F, 0.03F, 4.8F, 4.95F, Skin.DARK); // altitude-fuze antennas
+		b.radialBox(-Mth.HALF_PI, R, 0.22F, 0.03F, 4.8F, 4.95F, Skin.DARK);
+		return b.build();
+	}
+
+	/** Antimatter missile: slim body, the Penning-trap warhead held inside three containment rings. */
+	private static MissileMesh buildAntimatter() {
+		float L = 9.0F;
+		float R = 0.55F;
+		float C = 0.42F;
+		Builder b = new Builder(L);
+		tacticalMotor(b, R, 5.6F);
+		b.lathe(new float[][] {{5.6F, R}, {5.9F, C}, {7.6F, C}}, Skin.BODY);
+		float[][] nose = new float[14][];
+		for (int k = 0; k <= 13; k++) {
+			float f = k / 13.0F;
+			nose[k] = new float[] {7.6F + f * 1.4F, k == 13 ? 0.0F : C * (float) Math.pow(1.0F - f, 0.7F)};
+		}
+		b.lathe(nose, Skin.BODY);
+		for (float y : new float[] {6.15F, 6.7F, 7.25F}) {
+			b.lathe(new float[][] {{y, 0.7F}, {y, 0.82F}, {y + 0.16F, 0.82F}, {y + 0.16F, 0.7F}, {y, 0.7F}}, Skin.METAL);
+			for (int i = 0; i < 4; i++) {
+				b.radialBox(i * Mth.HALF_PI, C, 0.3F, 0.05F, y + 0.04F, y + 0.12F, Skin.DARK); // struts
+			}
+		}
+		for (int i = 0; i < 4; i++) {
+			float a = Mth.PI / 4 + i * Mth.HALF_PI;
+			b.fin(a, 0.58F, 0.2F, 1.6F, 0.4F, 1.0F, 0.42F, 0.06F);
+		}
+		return b.build();
+	}
+
+	/** AGM-88 HARM-style anti-radiation missile: slim, double-delta mid-body wings, pointed radome. */
+	private static MissileMesh buildAntiRadar() {
+		float L = 6.0F;
+		float R = 0.2F;
+		Builder b = new Builder(L);
+		b.lathe(new float[][] {{0.0F, 0.15F}, {0.12F, R}, {4.9F, R}}, Skin.BODY);
+		b.lathe(ogive(4.9F, L, R, 14), Skin.BODY);
+		b.lathe(new float[][] {{0.0F, 0.15F}, {0.0F, 0.1F}}, Skin.METAL);
+		b.disc(0.0F, 0.1F, true, Skin.DARK);
+		for (int i = 0; i < 4; i++) {
+			float a = Mth.PI / 4 + i * Mth.HALF_PI;
+			b.fin(a, R - 0.01F, 2.6F, 4.3F, 2.75F, 3.25F, 0.5F, 0.035F); // double-delta control wings
+			b.fin(a, R - 0.01F, 0.08F, 0.75F, 0.12F, 0.42F, 0.32F, 0.03F); // fixed tail fins
+		}
+		b.radialBox(0.0F, R, 0.035F, 0.08F, 0.8F, 2.5F, Skin.METAL);
+		b.ring(4.88F, R, 0.008F, 0.04F);
 		return b.build();
 	}
 
