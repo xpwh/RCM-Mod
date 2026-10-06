@@ -41,9 +41,9 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	private static final int PANEL = 12;
 	private static final int YELLOW = 13;
 
-	private static final BoxMesh AIRFRAME = buildAirframe();
-	/** Bomb stations: x position, two bombs in tandem per station. */
+	/** Bomb stations: x position, two bombs in tandem per station. Must come before the meshes that use it. */
 	private static final float[] STATIONS = {-2.7F, -1.7F, 1.7F, 2.7F};
+	private static final BoxMesh AIRFRAME = buildAirframe();
 	private static final BoxMesh[] BOMBS = buildBombs();
 
 	public JetRenderer(EntityRendererProvider.Context context) {
