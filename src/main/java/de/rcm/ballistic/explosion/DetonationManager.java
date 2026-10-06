@@ -316,6 +316,31 @@ public final class DetonationManager {
 		scorch(level, center, r + 6, random, 0.35F);
 	}
 
+	/**
+	 * GBU-43 "MOAB": about 8 tonnes of explosive. A huge fireball and mushroom cloud, a blast that
+	 * flattens everything for dozens of blocks and throws people around far beyond - but no
+	 * radiation and only a shallow crater (it is an air blast weapon).
+	 */
+	public static void detonateMoab(ServerLevel level, Vec3 pos, @Nullable Entity source) {
+		broadcast(level, pos, Warhead.MOAB);
+		FlyingDebris.launch(level, pos, 14.0, 220, 2.8);
+		highExplosive(level, pos.add(0, 2.0, 0), source, 15.0F, 8, 42);
+		double radius = 80.0;
+		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(pos, pos).inflate(radius))) {
+			double d = e.position().distanceTo(pos);
+			if (d > radius) {
+				continue;
+			}
+			double f = 1.0 - d / radius;
+			e.hurtServer(level, level.damageSources().explosion(source, null), (float) (60.0 * f * f));
+			Vec3 push = e.position().subtract(pos);
+			push = new Vec3(push.x, 0, push.z).normalize().scale(3.0 * f).add(0, 0.5 + f, 0);
+			e.push(push.x, push.y, push.z);
+			e.hurtMarked = true;
+			e.igniteForSeconds((float) (8.0 * f));
+		}
+	}
+
 	/** Burning sub-munition: splashes fire around the point of impact. */
 	public static void detonateIncendiary(ServerLevel level, Vec3 pos, Entity source) {
 		broadcast(level, pos, Warhead.BOMBLET);

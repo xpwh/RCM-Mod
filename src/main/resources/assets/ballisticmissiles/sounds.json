@@ -313,6 +313,33 @@
 			}
 		]
 	},
+	"a10.gun": {
+		"subtitle": "subtitles.ballisticmissiles.a10_gun",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:a10/gun",
+				"attenuation_distance": 400
+			}
+		]
+	},
+	"a10.engine": {
+		"subtitle": "subtitles.ballisticmissiles.a10_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:a10/engine",
+				"stream": true
+			}
+		]
+	},
+	"b2.engine": {
+		"subtitle": "subtitles.ballisticmissiles.b2_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:b2/engine",
+				"stream": true
+			}
+		]
+	},
 	"bomb.whistle": {
 		"subtitle": "subtitles.ballisticmissiles.bomb_whistle",
 		"sounds": [

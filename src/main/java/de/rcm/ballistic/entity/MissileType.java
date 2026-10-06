@@ -85,7 +85,9 @@ public enum MissileType {
 		/** Not a detonation: the moon rocket leaving the sky (the meteors come later). */
 		METEOR,
 		/** One meteor of the shower hitting the ground. */
-		METEOR_IMPACT
+		METEOR_IMPACT,
+		/** The B-2's GBU-43 air blast bomb. */
+		MOAB
 	}
 
 	public enum Model {

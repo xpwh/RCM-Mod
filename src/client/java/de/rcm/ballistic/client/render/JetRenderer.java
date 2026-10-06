@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import de.rcm.ballistic.BallisticMissiles;
 import de.rcm.ballistic.entity.JetEntity;
+import de.rcm.ballistic.entity.JetType;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -40,6 +41,7 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	private static final int RED = 7;
 	private static final int GREEN = 8;
 	private static final int BOMB = 9;
+	private static final int WHITE = 10;
 	private static final int MARKING = 11;
 	private static final int PANEL = 12;
 	private static final int YELLOW = 13;
@@ -51,6 +53,10 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	private static final BoxMesh AIRFRAME = buildAirframe();
 	private static final BoxMesh BAY_DOORS = buildBayDoors();
 	private static final BoxMesh[] BOMBS = buildBombs();
+	private static final BoxMesh WARTHOG = buildWarthog();
+	private static final BoxMesh SPIRIT = buildSpirit();
+	private static final BoxMesh SPIRIT_BAY = buildSpiritBay();
+	private static final RenderType GLOW_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/strike_jet.png"));
 
 	public JetRenderer(EntityRendererProvider.Context context) {
 		super(context);
@@ -58,6 +64,8 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	}
 
 	public static class State extends EntityRenderState {
+		public JetType type = JetType.STRIKE;
+		public boolean firing;
 		public final Quaternionf rotation = new Quaternionf();
 		public int bombs;
 		public boolean bayOpen;
@@ -86,6 +94,8 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 		state.afterburner = entity.isAfterburner();
 		state.mach = entity.getMach();
 		state.time = entity.tickCount + partialTick;
+		state.type = entity.getJetType();
+		state.firing = entity.isFiring();
 	}
 
 	@Override
@@ -94,6 +104,21 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 		poseStack.pushPose();
 		poseStack.translate(0.0F, 0.8F, 0.0F);
 		poseStack.mulPose(state.rotation);
+		if (state.type == JetType.WARTHOG) {
+			this.submitWarthog(state, poseStack, collector, light);
+			poseStack.popPose();
+			super.submit(state, poseStack, collector, camera);
+			return;
+		}
+		if (state.type == JetType.SPIRIT) {
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> SPIRIT.emit(pose, consumer, light));
+			if (state.bayOpen) {
+				collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> SPIRIT_BAY.emit(pose, consumer, light));
+			}
+			poseStack.popPose();
+			super.submit(state, poseStack, collector, camera);
+			return;
+		}
 		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> AIRFRAME.emit(pose, consumer, light));
 		if (state.bayOpen) {
 			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> BAY_DOORS.emit(pose, consumer, light));
@@ -128,6 +153,32 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 		}
 		poseStack.popPose();
 		super.submit(state, poseStack, collector, camera);
+	}
+
+	/** A-10: the airframe, plus muzzle flash and tracer stream while the cannon fires. */
+	private void submitWarthog(State state, PoseStack poseStack, SubmitNodeCollector collector, int light) {
+		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> WARTHOG.emit(pose, consumer, light));
+		if (!state.firing) {
+			return;
+		}
+		float t = state.time;
+		float flash = 0.35F + 0.2F * Mth.sin(t * 11.0F);
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		b.box(-flash, 8.55F, -0.25F - flash, flash, 8.75F + flash * 3.0F, -0.25F + flash, YELLOW);
+		// tracers: every fifth round glows, a dashed stream racing ahead
+		float spacing = 9.0F;
+		float travel = (t * 22.0F) % spacing;
+		for (float y = 10.0F + travel; y < 160.0F; y += spacing) {
+			float wob = Mth.sin(y * 0.7F + t) * 0.08F * (y / 40.0F);
+			b.box(-0.07F + wob, y, -0.32F - wob, 0.07F + wob, y + 3.0F, -0.18F - wob, YELLOW);
+		}
+		BoxMesh glow = b.build();
+		collector.submitCustomGeometry(poseStack, GLOW_TYPE, (pose, consumer) -> glow.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+		poseStack.pushPose();
+		poseStack.translate(0.0F, 8.6F, -0.25F);
+		poseStack.mulPose(new Quaternionf().rotationX(Mth.PI));
+		collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> MissileRenderer.flame(pose, consumer, 0.3F, 1.6F * flash / 0.35F, t, 1.0F));
+		poseStack.popPose();
 	}
 
 	/** A bell of condensed vapour that starts behind the canopy and flares out past the wings. */
@@ -273,6 +324,133 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 		b.box(-0.03F, -3.2F, 0.6F, 0.03F, -2.6F, 0.74F, BLACK);
 		b.box(1.1F, -1.5F, 0.0F, 1.3F, 0.5F, 0.04F, YELLOW);
 		b.box(-1.3F, -1.5F, 0.0F, -1.1F, 0.5F, 0.04F, YELLOW);
+		return b.build();
+	}
+
+	/**
+	 * A-10 Thunderbolt II: straight low wing with wheel pods, the twin turbofans high on the rear
+	 * fuselage, twin tails on a high stabiliser, the GAU-8 muzzle under the nose and a full load of
+	 * stores under the wings.
+	 */
+	private static BoxMesh buildWarthog() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		Vector3f up = v(0, 0, 1);
+		loft(b, GREY,
+			new float[] {8.2F, 0.2F, -0.35F, 0.15F, 0.15F},
+			new float[] {7.0F, 0.5F, -0.65F, 0.45F, 0.45F},
+			new float[] {4.6F, 0.68F, -0.8F, 0.55F, 0.8F},
+			new float[] {1.0F, 0.72F, -0.85F, 0.6F, 0.78F},
+			new float[] {-3.0F, 0.6F, -0.65F, 0.5F, 0.62F},
+			new float[] {-6.6F, 0.36F, -0.38F, 0.3F, 0.42F},
+			new float[] {-7.9F, 0.18F, -0.2F, 0.14F, 0.26F});
+		loft(b, GLASS,
+			new float[] {6.6F, 0.3F, 0.55F, 0.12F, 0.62F},
+			new float[] {5.6F, 0.42F, 0.72F, 0.3F, 1.25F},
+			new float[] {4.0F, 0.42F, 0.78F, 0.28F, 1.2F},
+			new float[] {3.0F, 0.3F, 0.78F, 0.1F, 0.85F});
+		b.beam(v(0.05F, 7.6F, -0.28F), v(0.05F, 8.7F, -0.28F), 0.18F, 0.18F, BLACK); // GAU-8 muzzle
+		for (float s : new float[] {-1.0F, 1.0F}) {
+			// straight wing with a slight dihedral on the outer panel
+			surface(b, GREY, v(s * 0.6F, 1.9F, -0.55F), v(s * 0.6F, -1.8F, -0.55F), 0.32F,
+				v(s * 3.6F, 1.6F, -0.55F), v(s * 3.6F, -1.4F, -0.55F), 0.26F, up);
+			surface(b, GREY, v(s * 3.6F, 1.6F, -0.55F), v(s * 3.6F, -1.4F, -0.55F), 0.26F,
+				v(s * 8.7F, 0.95F, -0.2F), v(s * 8.7F, -0.45F, -0.2F), 0.12F, up);
+			surface(b, DARK_GREY, v(s * 3.7F, -1.35F, -0.55F), v(s * 3.7F, -1.75F, -0.55F), 0.1F,
+				v(s * 8.5F, -0.4F, -0.2F), v(s * 8.5F, -0.7F, -0.2F), 0.06F, up); // ailerons and split-flap airbrakes
+			// main gear pods
+			b.hexa(GREY,
+				v(s * 1.75F, 1.5F, -0.95F), v(s * 2.35F, 1.5F, -0.95F), v(s * 2.35F, 1.5F, -0.6F), v(s * 1.75F, 1.5F, -0.6F),
+				v(s * 1.8F, -0.9F, -0.85F), v(s * 2.3F, -0.9F, -0.85F), v(s * 2.3F, -0.9F, -0.6F), v(s * 1.8F, -0.9F, -0.6F));
+			// turbofan nacelle on its pylon, dark intake, exhaust
+			float nx = s * 1.25F;
+			b.revolve(GREY, v(nx, -0.9F, 1.05F), v(0, -1, 0), new float[][] {
+				{0.0F, 0.0F}, {0.0F, 0.5F}, {0.3F, 0.58F}, {2.0F, 0.55F}, {2.9F, 0.4F}, {3.0F, 0.0F}
+			}, 16);
+			b.revolve(INTAKE, v(nx, -0.88F, 1.05F), v(0, -1, 0), new float[][] {{0.0F, 0.0F}, {0.0F, 0.47F}, {0.02F, 0.47F}, {0.02F, 0.0F}}, 16);
+			b.box(nx - 0.08F, -2.6F, 0.55F, nx + 0.08F, -1.6F, 0.75F, DARK_GREY);
+			// tailplane and twin fins at its tips
+			surface(b, GREY, v(s * 0.3F, -6.3F, 0.35F), v(s * 0.3F, -7.8F, 0.35F), 0.14F,
+				v(s * 3.2F, -6.5F, 0.35F), v(s * 3.2F, -7.7F, 0.35F), 0.1F, up);
+			b.hexa(GREY,
+				v(s * 3.15F, -6.2F, 0.0F), v(s * 3.15F, -7.9F, 0.0F), v(s * 3.25F, -7.9F, 0.0F), v(s * 3.25F, -6.2F, 0.0F),
+				v(s * 3.15F, -6.7F, 2.2F), v(s * 3.15F, -7.8F, 2.2F), v(s * 3.25F, -7.8F, 2.2F), v(s * 3.25F, -6.7F, 2.2F));
+			// stores: Mavericks and bombs on the wing pylons
+			for (float x : new float[] {2.9F, 4.4F, 5.9F}) {
+				float px = s * x;
+				b.box(px - 0.05F, 0.6F, -0.85F, px + 0.05F, -0.2F, -0.6F, DARK_GREY);
+				b.beam(v(px, -1.1F, -1.05F), v(px, 1.3F, -1.05F), x > 5.0F ? 0.3F : 0.36F, x > 5.0F ? 0.3F : 0.36F, x > 5.0F ? WHITE : BOMB);
+			}
+		}
+		b.box(-0.55F, 2.0F, 0.75F, 0.55F, 2.4F, 0.79F, MARKING);
+		b.box(-0.62F, -4.5F, -0.2F, -0.6F, -3.8F, 0.3F, MARKING);
+		return b.build();
+	}
+
+	/**
+	 * B-2 Spirit: a flying wing - straight swept leading edges, the double-W sawtooth trailing edge,
+	 * a blended centre body with the cockpit, and the engine inlets and exhausts buried in the top.
+	 */
+	private static BoxMesh buildSpirit() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		float[] xs = {0.0F, 2.5F, 5.2F, 8.2F, 12.0F};
+		float[] te = {-3.6F, -1.4F, -3.9F, -1.3F, -4.3F};
+		float[] thick = {1.0F, 0.8F, 0.45F, 0.28F, 0.1F};
+		for (float s : new float[] {-1.0F, 1.0F}) {
+			for (int i = 0; i + 1 < xs.length; i++) {
+				float x0 = xs[i] * s;
+				float x1 = xs[i + 1] * s;
+				float le0 = 5.2F - xs[i] * 0.72F;
+				float le1 = 5.2F - xs[i + 1] * 0.72F;
+				float h0 = thick[i] * 0.5F;
+				float h1 = thick[i + 1] * 0.5F;
+				// upper and lower halves: a sharp leading edge, thickest a third of the way back
+				float m0 = le0 + (te[i] - le0) * 0.35F;
+				float m1 = le1 + (te[i + 1] - le1) * 0.35F;
+				b.hexa(DARK_GREY,
+					v(x0, le0, 0.0F), v(x0, m0, 0.0F), v(x0, m0, h0), v(x0, le0, 0.02F),
+					v(x1, le1, 0.0F), v(x1, m1, 0.0F), v(x1, m1, h1), v(x1, le1, 0.02F));
+				b.hexa(DARK_GREY,
+					v(x0, m0, 0.0F), v(x0, te[i], 0.0F), v(x0, te[i], 0.03F), v(x0, m0, h0),
+					v(x1, m1, 0.0F), v(x1, te[i + 1], 0.0F), v(x1, te[i + 1], 0.03F), v(x1, m1, h1));
+				b.hexa(DARK_GREY,
+					v(x0, le0, -0.02F), v(x0, m0, -h0 * 0.6F), v(x0, m0, 0.0F), v(x0, le0, 0.0F),
+					v(x1, le1, -0.02F), v(x1, m1, -h1 * 0.6F), v(x1, m1, 0.0F), v(x1, le1, 0.0F));
+				b.hexa(DARK_GREY,
+					v(x0, m0, -h0 * 0.6F), v(x0, te[i], -0.02F), v(x0, te[i], 0.0F), v(x0, m0, 0.0F),
+					v(x1, m1, -h1 * 0.6F), v(x1, te[i + 1], -0.02F), v(x1, te[i + 1], 0.0F), v(x1, m1, 0.0F));
+			}
+			// buried engine inlets (with their saw-tooth splitters) and the exhaust troughs
+			float ix = s * 2.6F;
+			b.hexa(DARK_GREY,
+				v(ix - 0.9F, 2.2F, 0.4F), v(ix + 0.9F, 2.2F, 0.4F), v(ix + 0.7F, 2.2F, 0.72F), v(ix - 0.7F, 2.2F, 0.72F),
+				v(ix - 0.9F, -0.4F, 0.42F), v(ix + 0.9F, -0.4F, 0.42F), v(ix + 0.7F, -0.4F, 0.62F), v(ix - 0.7F, -0.4F, 0.62F));
+			b.box(ix - 0.62F, 2.18F, 0.42F, ix + 0.62F, 2.22F, 0.68F, INTAKE);
+			b.box(ix - 0.8F, -2.6F, 0.25F, ix + 0.8F, -0.6F, 0.32F, BLACK);
+			// wingtip split rudders
+			b.box(s * 11.2F, -4.0F, -0.04F, s * 11.9F, -3.2F, 0.04F, PANEL);
+		}
+		// blended centre body and the cockpit with its four windows
+		loft(b, DARK_GREY,
+			new float[] {5.3F, 0.05F, 0.0F, 0.02F, 0.05F},
+			new float[] {3.8F, 1.6F, 0.0F, 0.9F, 0.75F},
+			new float[] {1.5F, 1.7F, 0.0F, 1.0F, 0.95F},
+			new float[] {-1.5F, 1.4F, 0.0F, 0.8F, 0.7F},
+			new float[] {-3.4F, 0.6F, 0.0F, 0.3F, 0.15F});
+		b.hexa(BLACK,
+			v(-0.7F, 3.55F, 0.7F), v(0.7F, 3.55F, 0.7F), v(0.55F, 3.2F, 0.84F), v(-0.55F, 3.2F, 0.84F),
+			v(-0.7F, 3.5F, 0.72F), v(0.7F, 3.5F, 0.72F), v(0.55F, 3.15F, 0.86F), v(-0.55F, 3.15F, 0.86F));
+		b.box(-1.2F, 0.0F, 0.94F, 1.2F, 0.08F, 0.96F, PANEL);
+		return b.build();
+	}
+
+	/** B-2 weapons bay doors hanging open under the centre body, the rotary launcher inside. */
+	private static BoxMesh buildSpiritBay() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		for (float s : new float[] {-1.0F, 1.0F}) {
+			b.box(s < 0 ? -1.3F : 1.24F, -1.8F, -1.0F, s < 0 ? -1.24F : 1.3F, 2.0F, -0.1F, DARK_GREY);
+		}
+		b.box(-1.2F, -1.8F, -0.12F, 1.2F, 2.0F, -0.08F, BLACK);
+		b.beam(v(0, -1.6F, -0.5F), v(0, 1.8F, -0.5F), 0.75F, 0.75F, BOMB); // the MOAB in the bay
 		return b.build();
 	}
 

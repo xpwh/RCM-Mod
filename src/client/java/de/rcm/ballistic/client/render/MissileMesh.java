@@ -44,6 +44,7 @@ public final class MissileMesh {
 	public static final MissileMesh DRONE = buildDrone();
 	public static final MissileMesh DRONE_PROP = buildDronePropeller();
 	public static final MissileMesh AERIAL_BOMB = buildAerialBomb();
+	public static final MissileMesh MOAB = buildMoab();
 
 	/** Length of the cruise missile booster hanging below the airframe. */
 	public static final float CRUISE_BOOSTER_LENGTH = 1.25F;
@@ -414,6 +415,32 @@ public final class MissileMesh {
 		return b.build();
 	}
 
+	/**
+	 * GBU-43/B "Mother of All Bombs": a long fat case with a blunt ogive, a boat-tail, four slender
+	 * strakes and the four lattice grid fins that steer it onto the target.
+	 */
+	private static MissileMesh buildMoab() {
+		float L = 7.4F;
+		float R = 0.46F;
+		Builder b = new Builder(L);
+		b.lathe(new float[][] {{0.0F, 0.26F}, {0.5F, 0.36F}, {1.0F, R}, {5.2F, R}}, Skin.BODY);
+		float[][] nose = ogive(5.2F, L, R, 14);
+		nose[nose.length - 1][1] = 0.0F;
+		b.lathe(nose, Skin.BODY);
+		b.disc(0.0F, 0.26F, true, Skin.DARK);
+		for (int i = 0; i < 4; i++) {
+			float a = Mth.PI / 4 + i * Mth.HALF_PI;
+			// long low strakes along the case
+			b.fin(a, R - 0.01F, 1.3F, 4.7F, 1.6F, 4.4F, 0.07F, 0.03F);
+			b.gridFin(a, 0.3F, 1.12F, 0.8F, 0.12F, 0.42F);
+		}
+		// lifting lugs and the nose fuze well
+		b.radialBox(0.0F, R, 0.06F, 0.12F, 3.1F, 3.25F, Skin.METAL);
+		b.radialBox(0.0F, R, 0.06F, 0.12F, 4.0F, 4.15F, Skin.METAL);
+		b.latheAt(0, 0, 12, new float[][] {{7.36F, 0.05F}, {7.5F, 0.05F}, {7.5F, 0.0F}}, Skin.METAL);
+		return b.build();
+	}
+
 	/** Tangent-ogive-like nose: smooth shoulder, sharp tip. */
 	private static float[][] ogive(float y0, float y1, float r0, int steps) {
 		float[][] pts = new float[steps + 1][];
@@ -573,6 +600,55 @@ public final class MissileMesh {
 			this.quad(center, rt0, u0, FIN_V0, rt1, 0.02F, FIN_V0, tt1, 0.02F, FIN_V1, tt0, u0, FIN_V1);
 			this.quad(center, rb0, u0, FIN_V0, tb0, u0, FIN_V1, tb1, 0.02F, FIN_V1, rb1, 0.02F, FIN_V0);
 			this.quad(center, tb0, u1, FIN_V0, tt0, u1, FIN_V1, tt1, u1 - 0.02F, FIN_V1, tb1, u1 - 0.02F, FIN_V0);
+		}
+
+		/**
+		 * Lattice grid fin standing out from the hull at {@code angle}: an outer frame from radius r0 to
+		 * r1, {@code width} wide, with its cells open along the axis (airflow passes through them).
+		 */
+		void gridFin(float angle, float r0, float r1, float width, float y0, float y1) {
+			float t = 0.035F;
+			float w = width / 2;
+			// outer frame
+			this.bar(angle, r0, r0 + t, -w, w, y0, y1);
+			this.bar(angle, r1 - t, r1, -w, w, y0, y1);
+			this.bar(angle, r0, r1, -w, -w + t, y0, y1);
+			this.bar(angle, r0, r1, w - t, w, y0, y1);
+			// diagonal-looking lattice: evenly spaced webs both ways
+			for (int k = 1; k < 5; k++) {
+				float r = Mth.lerp(k / 5.0F, r0, r1);
+				this.bar(angle, r - t * 0.35F, r + t * 0.35F, -w, w, y0 + 0.02F, y1 - 0.02F);
+			}
+			for (int k = 1; k < 4; k++) {
+				float s = Mth.lerp(k / 4.0F, -w, w);
+				this.bar(angle, r0, r1, s - t * 0.35F, s + t * 0.35F, y0 + 0.02F, y1 - 0.02F);
+			}
+			// hinge post into the case
+			this.bar(angle, r0 - 0.12F, r0, -0.04F, 0.04F, y0 + 0.05F, y1 - 0.05F);
+		}
+
+		/** Box spanning radius r0-r1, sideways s0-s1 and height y0-y1 in the frame of {@code angle}. */
+		void bar(float angle, float r0, float r1, float s0, float s1, float y0, float y1) {
+			Vector3f radial = new Vector3f(Mth.cos(angle), 0, Mth.sin(angle));
+			Vector3f tangent = new Vector3f(-Mth.sin(angle), 0, Mth.cos(angle));
+			Vector3f[] c = new Vector3f[8];
+			int i = 0;
+			for (float r : new float[] {r0, r1}) {
+				for (float y : new float[] {y0, y1}) {
+					for (float s : new float[] {s0, s1}) {
+						c[i++] = point(radial, tangent, r, y, s);
+					}
+				}
+			}
+			Vector3f center = point(radial, tangent, (r0 + r1) / 2, (y0 + y1) / 2, (s0 + s1) / 2);
+			float u0 = this.u(Skin.METAL, 0.2F), u1 = this.u(Skin.METAL, 0.8F);
+			float v0 = METAL_V0, v1 = METAL_V1;
+			this.quad(center, c[4], u0, v0, c[6], u0, v1, c[7], u1, v1, c[5], u1, v0);
+			this.quad(center, c[0], u0, v0, c[2], u0, v1, c[6], u1, v1, c[4], u1, v0);
+			this.quad(center, c[1], u0, v0, c[5], u1, v0, c[7], u1, v1, c[3], u0, v1);
+			this.quad(center, c[2], u0, v0, c[3], u1, v0, c[7], u1, v1, c[6], u0, v1);
+			this.quad(center, c[0], u0, v0, c[4], u0, v1, c[5], u1, v1, c[1], u1, v0);
+			this.quad(center, c[0], u0, v0, c[1], u1, v0, c[3], u1, v1, c[2], u0, v1);
 		}
 
 		/** Small rectangular box lying on the hull at {@code angle} (conduits, lugs, vanes, plates). */

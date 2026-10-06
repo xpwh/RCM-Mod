@@ -32,6 +32,7 @@ import de.rcm.ballistic.item.MobileLauncherItem;
 import de.rcm.ballistic.item.SavedTarget;
 import de.rcm.ballistic.item.TargetData;
 import de.rcm.ballistic.item.TargetDesignatorItem;
+import com.mojang.serialization.Codec;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +85,12 @@ public final class ModRegistry {
 			.persistent(SavedTarget.CODEC.listOf())
 			.networkSynchronized(SavedTarget.STREAM_CODEC.apply(ByteBufCodecs.list()))
 			.build()
+	);
+	/** Which aircraft the airstrike radio calls (index into {@link de.rcm.ballistic.item.AirstrikeRadioItem.Mode}). */
+	public static final DataComponentType<Integer> AIRSTRIKE_MODE = Registry.register(
+		BuiltInRegistries.DATA_COMPONENT_TYPE,
+		BallisticMissiles.id("airstrike_mode"),
+		DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build()
 	);
 	public static final DataComponentType<List<LauncherLink>> LINKS = Registry.register(
 		BuiltInRegistries.DATA_COMPONENT_TYPE,
@@ -328,6 +335,9 @@ public final class ModRegistry {
 	public static final SoundEvent JET_AFTERBURNER = sound("jet.afterburner");
 	public static final SoundEvent JET_BOOM = sound("jet.boom");
 	public static final SoundEvent JET_SUB = sound("jet.sub");
+	public static final SoundEvent A10_GUN = sound("a10.gun");
+	public static final SoundEvent A10_ENGINE = sound("a10.engine");
+	public static final SoundEvent B2_ENGINE = sound("b2.engine");
 	public static final SoundEvent BOMB_WHISTLE = sound("bomb.whistle");
 	public static final SoundEvent LASER_BEAM = sound("laser.beam");
 

@@ -5,10 +5,10 @@ import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.defense.AirThreat;
 import de.rcm.ballistic.defense.ThreatTracker;
 import de.rcm.ballistic.explosion.DetonationManager;
-import net.minecraft.core.particles.ParticleTypes;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -23,11 +23,14 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -46,6 +49,11 @@ public class JetEntity extends Entity implements AirThreat {
 	private static final EntityDataAccessor<Integer> DATA_BOMBS = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Float> DATA_SPEED = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Boolean> DATA_BAY = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Integer> DATA_TYPE = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Boolean> DATA_FIRING = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.BOOLEAN);
+	/** A-10 gun run: opens fire this far before the target, ceases this close. */
+	private static final double GUN_OPEN = 170.0;
+	private static final double GUN_CEASE = 45.0;
 
 	/** Speed of sound in blocks per tick (343 m/s). */
 	public static final double SOUND_SPEED = 17.15;
@@ -89,6 +97,14 @@ public class JetEntity extends Entity implements AirThreat {
 	 * out of range.
 	 */
 	public static @Nullable JetEntity callIn(ServerLevel level, ServerPlayer caller, Vec3 target) {
+		return callIn(level, caller, target, JetType.STRIKE, 0.0, 0.0);
+	}
+
+	/**
+	 * Spawns an aircraft of the given type. {@code lateral} shifts both the jet and its aim point
+	 * sideways (formation flying), {@code behind} lets it trail the lead.
+	 */
+	public static @Nullable JetEntity callIn(ServerLevel level, ServerPlayer caller, Vec3 target, JetType type, double lateral, double behind) {
 		Vec3 from = caller.position();
 		Vec3 heading = new Vec3(target.x - from.x, 0, target.z - from.z);
 		double distance = heading.length();
@@ -100,10 +116,15 @@ public class JetEntity extends Entity implements AirThreat {
 		if (jet == null) {
 			return null;
 		}
-		double altitude = Math.max(target.y, from.y) + RUN_ALTITUDE;
-		Vec3 start = new Vec3(from.x, altitude, from.z).subtract(heading.scale(SPAWN_BEHIND));
+		Vec3 side = new Vec3(-heading.z, 0, heading.x).scale(lateral);
+		double altitude = Math.max(target.y, from.y) + type.runAltitude;
+		Vec3 start = new Vec3(from.x, altitude, from.z).subtract(heading.scale(SPAWN_BEHIND + behind)).add(side);
 		jet.setPos(start);
-		jet.target = target;
+		jet.target = target.add(side);
+		jet.entityData.set(DATA_TYPE, type.ordinal());
+		jet.entityData.set(DATA_SPEED, (float) type.attackSpeed);
+		jet.bombsLeft = type.bombs;
+		jet.entityData.set(DATA_BOMBS, type.bombs);
 		jet.caller = caller.getUUID();
 		jet.setDir(heading);
 		level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(start)), 2);
@@ -114,7 +135,7 @@ public class JetEntity extends Entity implements AirThreat {
 	/** Seconds until the bombs hit, roughly: flight to the release point plus the fall. */
 	public int etaSeconds() {
 		double run = Math.hypot(this.target.x - this.getX(), this.target.z - this.getZ());
-		return (int) Math.ceil((run / ATTACK_SPEED + 60) / 20.0);
+		return (int) Math.ceil((run / this.getJetType().attackSpeed + 60) / 20.0);
 	}
 
 	@Override
@@ -124,6 +145,8 @@ public class JetEntity extends Entity implements AirThreat {
 		builder.define(DATA_BOMBS, BOMBS);
 		builder.define(DATA_SPEED, (float) ATTACK_SPEED);
 		builder.define(DATA_BAY, false);
+		builder.define(DATA_TYPE, JetType.STRIKE.ordinal());
+		builder.define(DATA_FIRING, false);
 	}
 
 	public Vec3 getDir() {
@@ -158,9 +181,18 @@ public class JetEntity extends Entity implements AirThreat {
 		return this.entityData.get(DATA_BAY);
 	}
 
-	/** Afterburners light once the stick is gone and the jet climbs out. */
+	public JetType getJetType() {
+		return JetType.byOrdinal(this.entityData.get(DATA_TYPE));
+	}
+
+	/** A-10 cannon firing (synced, for the muzzle flash and tracers). */
+	public boolean isFiring() {
+		return this.entityData.get(DATA_FIRING);
+	}
+
+	/** The fighter lights its afterburners once the stick is gone and it climbs out. */
 	public boolean isAfterburner() {
-		return this.getBombsLeft() <= 0;
+		return this.getJetType() == JetType.STRIKE && this.getBombsLeft() <= 0;
 	}
 
 	@Override
@@ -181,24 +213,41 @@ public class JetEntity extends Entity implements AirThreat {
 				level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(pos.add(flat.scale(k)))), 2);
 			}
 			// terrain following on the way in, level over the target area
-			double alt = this.target.y + RUN_ALTITUDE;
+			JetType type = this.getJetType();
+			double alt = this.target.y + type.runAltitude;
 			for (int k = 0; k <= 96; k += 16) {
 				Vec3 probe = pos.add(flat.scale(k));
 				int px = Mth.floor(probe.x);
 				int pz = Mth.floor(probe.z);
 				if (level.hasChunk(px >> 4, pz >> 4)) {
-					alt = Math.max(alt, level.getHeight(Heightmap.Types.MOTION_BLOCKING, px, pz) + CLEARANCE);
+					alt = Math.max(alt, level.getHeight(Heightmap.Types.MOTION_BLOCKING, px, pz) + (type == JetType.WARTHOG ? 16.0 : CLEARANCE));
 				}
 			}
 			Vec3 toTarget = new Vec3(this.target.x - pos.x, 0, this.target.z - pos.z);
-			Vec3 heading = toTarget.lengthSqr() > 900.0 && this.bombsLeft == BOMBS ? toTarget.normalize() : flat;
+			Vec3 heading = toTarget.lengthSqr() > 900.0 && this.bombsLeft == type.bombs && !this.isFiring() ? toTarget.normalize() : flat;
 			desired = heading.add(0, Mth.clamp((alt - pos.y) * 0.03, -0.25, 0.25), 0).normalize();
-			this.bombRun(level, pos, flat, speed);
+			if (type == JetType.WARTHOG) {
+				Vec3 dive = this.gunRun(level, pos, flat);
+				if (dive != null) {
+					desired = dive;
+				}
+			} else {
+				this.bombRun(level, pos, flat, speed);
+			}
 		} else {
-			// afterburner climb-out, accelerating through the sound barrier
 			this.egressAge++;
-			speed = Math.min(DASH_SPEED, speed + ACCELERATION);
-			desired = flat.add(0, 0.38, 0).normalize();
+			JetType type = this.getJetType();
+			if (type == JetType.STRIKE) {
+				// afterburner climb-out, accelerating through the sound barrier
+				speed = Math.min(DASH_SPEED, speed + ACCELERATION);
+				desired = flat.add(0, 0.38, 0).normalize();
+			} else if (type == JetType.WARTHOG) {
+				// pull off the target in a climbing break turn
+				Vec3 away = new Vec3(flat.x * 0.5 - flat.z * 0.87, 0, flat.z * 0.5 + flat.x * 0.87);
+				desired = away.add(0, 0.3, 0).normalize();
+			} else {
+				desired = flat.add(0, 0.12, 0).normalize(); // the bomber just keeps going, climbing gently
+			}
 			if (this.egressAge > 160) {
 				this.discard();
 				return;
@@ -230,14 +279,15 @@ public class JetEntity extends Entity implements AirThreat {
 		double throwDistance = forwardThrow(speed, fall);
 		// distance of the target ahead of us along the track
 		double along = (this.target.x - pos.x) * flat.x + (this.target.z - pos.z) * flat.z;
-		double halfStick = (BOMBS - 1) * RELEASE_INTERVAL * speed * 0.5;
-		if (this.bombsLeft == BOMBS && along > throwDistance + halfStick) {
+		int bombs = this.getJetType().bombs;
+		double halfStick = (bombs - 1) * RELEASE_INTERVAL * speed * 0.5;
+		if (this.bombsLeft == bombs && along > throwDistance + halfStick) {
 			if (!this.isBayOpen() && along < throwDistance + halfStick + BAY_LEAD) {
 				this.entityData.set(DATA_BAY, true);
 			}
 			return;
 		}
-		if (this.bombsLeft == BOMBS) {
+		if (this.bombsLeft == bombs) {
 			this.tellCaller(level, Component.translatable("message.ballisticmissiles.airstrike_release").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
 		}
 		if (this.releaseTimer-- > 0) {
@@ -248,10 +298,17 @@ public class JetEntity extends Entity implements AirThreat {
 		if (bomb != null) {
 			Vec3 side = new Vec3(-flat.z, 0, flat.x).scale((level.getRandom().nextDouble() - 0.5) * 3.0);
 			Vec3 release = pos.add(0, -1.2, 0).add(side);
+			boolean moab = this.getJetType() == JetType.SPIRIT;
+			if (moab) {
+				bomb.setMoab(true);
+				release = pos.add(0, -2.5, 0);
+			}
 			bomb.setPos(release);
 			bomb.setDeltaMovement(flat.scale(speed));
 			level.addFreshEntity(bomb);
-			if (this.bombsLeft % 3 == 0) {
+			if (moab) {
+				level.playSound(null, release.x, release.y, release.z, ModRegistry.BOMB_WHISTLE, SoundSource.HOSTILE, 16.0F, 0.55F);
+			} else if (this.bombsLeft % 3 == 0) {
 				level.playSound(null, release.x, release.y, release.z, ModRegistry.BOMB_WHISTLE, SoundSource.HOSTILE, 8.0F, 0.9F + level.getRandom().nextFloat() * 0.2F);
 			}
 		}
@@ -260,6 +317,52 @@ public class JetEntity extends Entity implements AirThreat {
 			this.egress = true;
 			this.entityData.set(DATA_BAY, false);
 		}
+	}
+
+	/**
+	 * A-10 strafing run: dives shallowly onto the target and walks a burst of 30 mm rounds through it,
+	 * about three rounds a tick. Returns the dive direction while the run is on, else null.
+	 */
+	private @Nullable Vec3 gunRun(ServerLevel level, Vec3 pos, Vec3 flat) {
+		double along = (this.target.x - pos.x) * flat.x + (this.target.z - pos.z) * flat.z;
+		if (along > GUN_OPEN + 120.0) {
+			return null;
+		}
+		if (along < GUN_CEASE) {
+			this.entityData.set(DATA_FIRING, false);
+			this.egress = true;
+			return null;
+		}
+		// the burst walks along the track through the target
+		double f = Mth.clamp((GUN_OPEN - along) / (GUN_OPEN - GUN_CEASE), 0.0, 1.0);
+		Vec3 aim = this.target.add(flat.scale(-20.0 + 40.0 * f));
+		Vec3 dive = aim.subtract(pos).normalize();
+		if (along > GUN_OPEN) {
+			return dive;
+		}
+		if (!this.isFiring()) {
+			this.entityData.set(DATA_FIRING, true);
+			this.tellCaller(level, Component.translatable("message.ballisticmissiles.a10_guns").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+			level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.A10_GUN, SoundSource.HOSTILE, 30.0F, 1.0F);
+		}
+		var random = level.getRandom();
+		Vec3 muzzle = pos.add(0, 0.6, 0).add(this.getDir().scale(7.5));
+		for (int i = 0; i < 3; i++) {
+			Vec3 spread = aim.add(random.nextGaussian() * 1.6, 0, random.nextGaussian() * 1.6);
+			Vec3 end = muzzle.add(spread.subtract(muzzle).normalize().scale(300.0));
+			var hit = level.clip(new ClipContext(muzzle, end, ClipContext.Block.COLLIDER,
+				ClipContext.Fluid.ANY, this));
+			Vec3 p = hit.getLocation();
+			level.sendParticles(ParticleTypes.EXPLOSION, p.x, p.y, p.z, 1, 0.2, 0.2, 0.2, 0.0);
+			level.sendParticles(ParticleTypes.LARGE_SMOKE, p.x, p.y + 0.3, p.z, 3, 0.4, 0.4, 0.4, 0.02);
+			for (var living : level.getEntitiesOfClass(LivingEntity.class, new AABB(p, p).inflate(2.0))) {
+				living.hurtServer(level, level.damageSources().explosion(this, null), 14.0F);
+			}
+			if (random.nextInt(4) == 0) {
+				level.explode(this, p.x, p.y, p.z, 1.6F, false, Level.ExplosionInteraction.TNT);
+			}
+		}
+		return dive;
 	}
 
 	/** Horizontal distance a bomb released at {@code speed} travels while falling {@code height} blocks. */
@@ -331,10 +434,10 @@ public class JetEntity extends Entity implements AirThreat {
 		return ThreatClass.AIRCRAFT;
 	}
 
-	/** Stealth airframe: smaller on radar than a cruise missile. */
+	/** Stealth airframes are tiny on radar; the A-10 is not. */
 	@Override
 	public double radarCrossSection() {
-		return 0.05;
+		return this.getJetType().radarCrossSection;
 	}
 
 	/** Flares and hard manoeuvring: a fresh flare salvo decoys most missiles. */
@@ -345,7 +448,7 @@ public class JetEntity extends Entity implements AirThreat {
 
 	@Override
 	public String nameKey() {
-		return "entity.ballisticmissiles.strike_jet";
+		return "entity.ballisticmissiles." + this.getJetType().id;
 	}
 
 	@Override

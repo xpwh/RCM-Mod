@@ -1,6 +1,8 @@
 package de.rcm.ballistic.entity;
 
 import de.rcm.ballistic.explosion.DetonationManager;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
@@ -24,6 +26,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
  * as it falls (the renderer points it along its velocity) and explodes on contact.
  */
 public class AerialBombEntity extends Entity {
+	private static final EntityDataAccessor<Boolean> DATA_MOAB = SynchedEntityData.defineId(AerialBombEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final double GRAVITY = 0.05;
 	private static final double DRAG = 0.992;
 
@@ -34,6 +37,16 @@ public class AerialBombEntity extends Entity {
 
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		builder.define(DATA_MOAB, false);
+	}
+
+	/** GBU-43 "MOAB": the 10-tonne air blast bomb dropped by the B-2. */
+	public boolean isMoab() {
+		return this.entityData.get(DATA_MOAB);
+	}
+
+	public void setMoab(boolean moab) {
+		this.entityData.set(DATA_MOAB, moab);
 	}
 
 	@Override
@@ -50,7 +63,11 @@ public class AerialBombEntity extends Entity {
 			boolean entityHit = this.tickCount > 4
 				&& !level.getEntities(this, new AABB(pos, end).inflate(0.5), e -> e instanceof LivingEntity && e.isAlive()).isEmpty();
 			if (hit.getType() != HitResult.Type.MISS || entityHit) {
-				DetonationManager.detonateAerialBomb(level, end, this);
+				if (this.isMoab()) {
+					DetonationManager.detonateMoab(level, end, this);
+				} else {
+					DetonationManager.detonateAerialBomb(level, end, this);
+				}
 				this.discard();
 				return;
 			}

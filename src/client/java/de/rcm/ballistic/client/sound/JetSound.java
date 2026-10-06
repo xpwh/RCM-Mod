@@ -2,6 +2,7 @@ package de.rcm.ballistic.client.sound;
 
 import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.entity.JetEntity;
+import de.rcm.ballistic.entity.JetType;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -45,7 +46,7 @@ public class JetSound extends AbstractTickableSoundInstance {
 	}
 
 	public JetSound(JetEntity jet, Layer layer) {
-		super(sound(layer), SoundSource.HOSTILE, SoundInstance.createUnseededRandom());
+		super(sound(layer, jet.getJetType()), SoundSource.HOSTILE, SoundInstance.createUnseededRandom());
 		this.jet = jet;
 		this.layer = layer;
 		this.looping = true;
@@ -57,9 +58,13 @@ public class JetSound extends AbstractTickableSoundInstance {
 		this.z = jet.getZ();
 	}
 
-	private static SoundEvent sound(Layer layer) {
+	private static SoundEvent sound(Layer layer, JetType type) {
 		return switch (layer) {
-			case NEAR -> ModRegistry.JET_FIGHTER;
+			case NEAR -> switch (type) {
+				case STRIKE -> ModRegistry.JET_FIGHTER;
+				case WARTHOG -> ModRegistry.A10_ENGINE;
+				case SPIRIT -> ModRegistry.B2_ENGINE;
+			};
 			case FAR -> ModRegistry.JET_FIGHTER_FAR;
 			case AFTERBURNER -> ModRegistry.JET_AFTERBURNER;
 			case SUB -> ModRegistry.JET_SUB;

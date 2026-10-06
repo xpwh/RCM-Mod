@@ -71,6 +71,7 @@ public final class ClientEffects {
 			case ANTI_RADAR -> new BlastEffect(pos, 0.8);
 			case DRONE -> new BlastEffect(pos, 0.55);
 			case AERIAL_BOMB -> new BlastEffect(pos, 0.5);
+			case MOAB -> new NukeEffect(pos, 0.42);
 			case TSAR -> new NukeEffect(pos, 2.2);
 			case ANTIMATTER -> new AntimatterEffect(pos);
 			case METEOR_IMPACT -> new BlastEffect(pos, 0.75);
@@ -93,6 +94,7 @@ public final class ClientEffects {
 
 	public static void addShake(float amount) {
 		shake = Math.min(6.0F, Math.max(shake, amount));
+		BlastShader.kick(amount / 1.6F);
 	}
 
 	/** Volume multiplier for all non-explosion sounds (1 = normal). */
@@ -134,6 +136,7 @@ public final class ClientEffects {
 		} else {
 			deafness = Math.max(0.0F, deafness * 0.985F - 0.001F);
 		}
+		BlastShader.tick(mc);
 		if (mc.level == null || mc.player == null) {
 			EFFECTS.clear();
 			return;
@@ -161,6 +164,7 @@ public final class ClientEffects {
 	}
 
 	static void setFlash(float strength, int color) {
+		BlastShader.kick(strength * 0.85F);
 		if (strength > flash) {
 			flash = Math.min(1.0F, strength);
 			flashColor = color;

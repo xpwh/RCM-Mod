@@ -3,6 +3,7 @@ package de.rcm.ballistic.item;
 import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.defense.EmpManager;
 import de.rcm.ballistic.entity.JetEntity;
+import de.rcm.ballistic.entity.JetType;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -29,7 +30,36 @@ import net.minecraft.world.phys.Vec3;
  * and carpet-bombs a strip centred on the target.
  */
 public class AirstrikeRadioItem extends Item {
-	public static final int COOLDOWN_TICKS = 45 * 20;
+	/** What the radio calls in. Sneak + right-click cycles through them. */
+	public enum Mode {
+		CARPET("carpet", JetType.STRIKE, 1, 45),
+		WARTHOG("warthog", JetType.WARTHOG, 1, 40),
+		MOAB("moab", JetType.SPIRIT, 1, 120),
+		FORMATION("formation", JetType.STRIKE, 3, 90);
+
+		public final String key;
+		public final JetType jet;
+		public final int aircraft;
+		public final int cooldownSeconds;
+
+		Mode(String key, JetType jet, int aircraft, int cooldownSeconds) {
+			this.key = key;
+			this.jet = jet;
+			this.aircraft = aircraft;
+			this.cooldownSeconds = cooldownSeconds;
+		}
+
+		public static Mode of(ItemStack stack) {
+			Integer i = stack.get(ModRegistry.AIRSTRIKE_MODE);
+			Mode[] all = values();
+			return i != null && i >= 0 && i < all.length ? all[i] : CARPET;
+		}
+
+		public Component displayName() {
+			return Component.translatable("airstrike.ballisticmissiles.mode." + this.key);
+		}
+	}
+
 	private static final double LOOK_RANGE = 320.0;
 	private static final double DANGER_CLOSE = 24.0;
 
@@ -40,6 +70,15 @@ public class AirstrikeRadioItem extends Item {
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
 		if (!(level instanceof ServerLevel server) || !(player instanceof ServerPlayer serverPlayer)) {
+			return InteractionResult.SUCCESS;
+		}
+		ItemStack radio = player.getItemInHand(hand);
+		Mode mode = Mode.of(radio);
+		if (player.isShiftKeyDown()) {
+			mode = Mode.values()[(mode.ordinal() + 1) % Mode.values().length];
+			radio.set(ModRegistry.AIRSTRIKE_MODE, mode.ordinal());
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.PLAYERS, 0.6F, 1.4F);
+			player.displayClientMessage(Component.translatable("message.ballisticmissiles.airstrike_mode", mode.displayName()).withStyle(ChatFormatting.AQUA), true);
 			return InteractionResult.SUCCESS;
 		}
 		if (EmpManager.isJammed(level, player.blockPosition())) {
@@ -57,19 +96,24 @@ public class AirstrikeRadioItem extends Item {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.airstrike_danger_close", (int) DANGER_CLOSE).withStyle(ChatFormatting.RED), true);
 			return InteractionResult.FAIL;
 		}
-		JetEntity jet = JetEntity.callIn(server, serverPlayer, target);
+		JetEntity jet = JetEntity.callIn(server, serverPlayer, target, mode.jet, 0.0, 0.0);
+		if (jet != null && mode.aircraft > 1) {
+			// wingmen echelon out to both sides and a little behind, widening the carpet
+			JetEntity.callIn(server, serverPlayer, target, mode.jet, 14.0, 22.0);
+			JetEntity.callIn(server, serverPlayer, target, mode.jet, -14.0, 44.0);
+		}
 		if (jet == null) {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.airstrike_out_of_range", (int) JetEntity.MAX_RANGE).withStyle(ChatFormatting.RED), true);
 			return InteractionResult.FAIL;
 		}
 		ItemStack stack = player.getItemInHand(hand);
 		if (!player.getAbilities().instabuild) {
-			player.getCooldowns().addCooldown(stack, COOLDOWN_TICKS);
+			player.getCooldowns().addCooldown(stack, mode.cooldownSeconds * 20);
 		}
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.8F, 0.6F);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.TARGET_LOCK, SoundSource.PLAYERS, 1.0F, 0.8F);
-		player.displayClientMessage(Component.literal("✈ ").append(Component.translatable("message.ballisticmissiles.airstrike_called",
-				(int) target.x, (int) target.y, (int) target.z, (int) distance, jet.etaSeconds()))
+		player.displayClientMessage(Component.literal("✈ ").append(mode.displayName()).append(" – ")
+			.append(Component.translatable("message.ballisticmissiles.airstrike_called", (int) target.x, (int) target.y, (int) target.z, (int) distance, jet.etaSeconds()))
 			.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 		return InteractionResult.SUCCESS;
 	}
@@ -94,8 +138,9 @@ public class AirstrikeRadioItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
+		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.airstrike_mode", Mode.of(stack).displayName()).withStyle(ChatFormatting.AQUA));
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.airstrike_1").withStyle(ChatFormatting.GOLD));
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.airstrike_2").withStyle(ChatFormatting.GRAY));
-		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.airstrike_3", COOLDOWN_TICKS / 20).withStyle(ChatFormatting.DARK_GRAY));
+		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.airstrike_3", Mode.of(stack).cooldownSeconds).withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

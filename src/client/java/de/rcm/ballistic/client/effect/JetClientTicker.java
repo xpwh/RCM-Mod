@@ -4,6 +4,7 @@ import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.client.particle.CloudParticle;
 import de.rcm.ballistic.client.sound.JetSound;
 import de.rcm.ballistic.entity.JetEntity;
+import de.rcm.ballistic.entity.JetType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 
@@ -22,6 +23,12 @@ public final class JetClientTicker {
 		Vec3 dir = jet.getDir();
 		Vec3 center = jet.position().add(0, 0.8, 0);
 		boolean burner = jet.isAfterburner();
+		JetType type = jet.getJetType();
+		// nozzle position (behind, sideways, up) and wingtip half-span of each airframe
+		double tailBack = switch (type) { case STRIKE -> 7.3; case WARTHOG -> 3.9; case SPIRIT -> 2.7; };
+		double tailSide = switch (type) { case STRIKE -> 0.5; case WARTHOG -> 1.25; case SPIRIT -> 2.6; };
+		double tailUp = switch (type) { case STRIKE -> 0.0; case WARTHOG -> 1.05; case SPIRIT -> 0.3; };
+		double tipSpan = switch (type) { case STRIKE -> 5.3; case WARTHOG -> 8.7; case SPIRIT -> 11.8; };
 
 		// hot exhaust haze behind both nozzles
 		Vec3 side = new Vec3(-dir.z, 0, dir.x).normalize();
@@ -29,7 +36,7 @@ public final class JetClientTicker {
 			if (!burner && jet.tickCount % 2 != 0) {
 				continue;
 			}
-			Vec3 tail = center.subtract(dir.scale(7.3)).add(side.scale(0.5 * s));
+			Vec3 tail = center.subtract(dir.scale(tailBack)).add(side.scale(tailSide * s)).add(0, tailUp, 0);
 			CloudParticle p = ClientEffects.cloud(false, tail.x, tail.y, tail.z, 0, 0, 0);
 			if (p != null) {
 				p.configure(30 + (int) (ClientEffects.rand() * 25), burner ? 1.0F : 0.5F, burner ? 3.0F : 1.8F, 0xB0B0B0, 0x959595, burner ? 0.3F : 0.2F)
@@ -39,7 +46,7 @@ public final class JetClientTicker {
 		// wingtip vortices while pulling hard (banked turns, the climb-out)
 		if (Math.abs(jet.getBank()) > 0.35F || burner && jet.getMach() < 1.1F) {
 			for (int s = -1; s <= 1; s += 2) {
-				Vec3 tip = center.subtract(dir.scale(3.4)).add(side.scale(5.3 * s));
+				Vec3 tip = center.subtract(dir.scale(type == JetType.SPIRIT ? 4.0 : 3.4)).add(side.scale(tipSpan * s));
 				CloudParticle p = ClientEffects.cloud(false, tip.x, tip.y, tip.z, 0, 0, 0);
 				if (p != null) {
 					p.configure(14 + (int) (ClientEffects.rand() * 8), 0.25F, 0.6F, 0xF4F4F4, 0xE8E8E8, 0.45F).physics(0.9F, 0.0F);
