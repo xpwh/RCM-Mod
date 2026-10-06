@@ -23,12 +23,6 @@
 			{
 				"name": "ballisticmissiles:missile/ignition",
 				"attenuation_distance": 256
-			},
-			{
-				"name": "minecraft:mob/wither/spawn",
-				"volume": 0.35,
-				"pitch": 0.5,
-				"attenuation_distance": 128
 			}
 		]
 	},
@@ -55,11 +49,6 @@
 			{
 				"name": "ballisticmissiles:explosion/near",
 				"stream": true
-			},
-			{
-				"name": "minecraft:random/explode1",
-				"volume": 0.6,
-				"pitch": 0.5
 			}
 		]
 	},
