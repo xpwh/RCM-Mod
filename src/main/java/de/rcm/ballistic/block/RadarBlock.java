@@ -8,6 +8,8 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -64,6 +66,14 @@ public class RadarBlock extends Block implements EntityBlock {
 			radar.addViewer(serverPlayer);
 		}
 		return InteractionResult.SUCCESS;
+	}
+
+	@Override
+	public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+		super.setPlacedBy(level, pos, state, placer, stack);
+		if (placer != null && level.getBlockEntity(pos) instanceof RadarBlockEntity radar) {
+			radar.setOwner(placer.getUUID());
+		}
 	}
 
 	@Override

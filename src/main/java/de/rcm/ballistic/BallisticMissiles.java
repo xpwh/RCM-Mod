@@ -4,6 +4,7 @@ import de.rcm.ballistic.defense.DefenseNetwork;
 import de.rcm.ballistic.defense.EmpManager;
 import de.rcm.ballistic.defense.ThreatTracker;
 import de.rcm.ballistic.explosion.DetonationManager;
+import de.rcm.ballistic.explosion.RadiationManager;
 import de.rcm.ballistic.launch.RemoteLaunch;
 import de.rcm.ballistic.network.ModNetworking;
 import net.fabricmc.api.ModInitializer;
@@ -27,10 +28,19 @@ public class BallisticMissiles implements ModInitializer {
 		ModNetworking.init();
 		ServerTickEvents.END_WORLD_TICK.register(DetonationManager::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RemoteLaunch::tick);
+		ServerTickEvents.END_WORLD_TICK.register(RadiationManager::tick);
+		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			if (server.getTickCount() % 6000 == 0) {
+				RadiationManager.save(server);
+			}
+		});
+		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
+		ServerLifecycleEvents.SERVER_STOPPING.register(RadiationManager::save);
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ThreatTracker.clear();
 			DefenseNetwork.clear();
 			EmpManager.clear();
+			RadiationManager.clear();
 			RemoteLaunch.clear();
 		});
 		LOGGER.info("Ballistic Missiles geladen - Startrampen bereit.");

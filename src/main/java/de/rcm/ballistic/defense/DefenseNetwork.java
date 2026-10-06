@@ -14,7 +14,8 @@ public final class DefenseNetwork {
 	public enum Kind {
 		RADAR,
 		AIR_DEFENSE,
-		SILO
+		SILO,
+		JAMMER
 	}
 
 	private static final Map<ResourceKey<Level>, Map<BlockPos, Kind>> SITES = new HashMap<>();

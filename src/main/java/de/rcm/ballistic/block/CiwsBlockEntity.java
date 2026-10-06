@@ -3,10 +3,13 @@ package de.rcm.ballistic.block;
 import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.defense.AirThreat;
 import de.rcm.ballistic.defense.DefenseNetwork;
+import de.rcm.ballistic.defense.DefenseOwner;
 import de.rcm.ballistic.defense.EmpManager;
 import de.rcm.ballistic.defense.ThreatTracker;
 import net.minecraft.ChatFormatting;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -28,6 +31,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Phalanx-style close-in weapon system. Its own search-and-track radar picks the nearest missile,
@@ -58,6 +62,7 @@ public class CiwsBlockEntity extends BlockEntity {
 	private int soundTimer;
 	private int syncTimer;
 	private boolean syncedActive;
+	private @Nullable UUID owner;
 
 	// synced to clients
 	private float yaw;
@@ -186,6 +191,9 @@ public class CiwsBlockEntity extends BlockEntity {
 
 	/** In range, above the horizon, coming down inside our zone and not hidden behind terrain. */
 	private boolean engageable(ServerLevel level, AirThreat threat, Vec3 muzzle) {
+		if (DefenseOwner.isFriendly(this.owner, threat)) {
+			return false;
+		}
 		Vec3 p = threat.aimPoint(0);
 		double dist = p.distanceTo(muzzle);
 		if (dist > RANGE * 1.15 || p.y < muzzle.y + 2.0) {
@@ -229,6 +237,12 @@ public class CiwsBlockEntity extends BlockEntity {
 		return new Vec3(Mth.cos(p) * Mth.sin(y), Mth.sin(p), Mth.cos(p) * Mth.cos(y));
 	}
 
+	/** The player who built this defense; their own aircraft are never engaged. */
+	public void setOwner(@Nullable UUID owner) {
+		this.owner = owner;
+		this.setChanged();
+	}
+
 	public boolean isFiring() {
 		return this.firing;
 	}
@@ -269,6 +283,9 @@ public class CiwsBlockEntity extends BlockEntity {
 		super.saveAdditional(output);
 		output.putInt("Ammo", this.ammo);
 		output.putInt("Kills", this.kills);
+		if (this.owner != null) {
+			output.store("Owner", UUIDUtil.CODEC, this.owner);
+		}
 		output.putFloat("Yaw", this.yaw);
 		output.putFloat("Pitch", this.pitch);
 		output.putBoolean("Firing", this.firing);
@@ -280,6 +297,7 @@ public class CiwsBlockEntity extends BlockEntity {
 		super.loadAdditional(input);
 		this.ammo = input.getIntOr("Ammo", MAGAZINE);
 		this.kills = input.getIntOr("Kills", 0);
+		this.owner = input.read("Owner", UUIDUtil.CODEC).orElse(null);
 		this.yaw = input.getFloatOr("Yaw", 0.0F);
 		this.pitch = input.getFloatOr("Pitch", 0.15F);
 		this.firing = input.getBooleanOr("Firing", false);

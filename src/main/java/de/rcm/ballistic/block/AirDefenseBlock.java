@@ -3,6 +3,8 @@ package de.rcm.ballistic.block;
 import de.rcm.ballistic.ModRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -57,6 +59,14 @@ public class AirDefenseBlock extends Block implements EntityBlock {
 			player.displayClientMessage(battery.status(), true);
 		}
 		return InteractionResult.SUCCESS;
+	}
+
+	@Override
+	public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+		super.setPlacedBy(level, pos, state, placer, stack);
+		if (placer != null && level.getBlockEntity(pos) instanceof AirDefenseBlockEntity be) {
+			be.setOwner(placer.getUUID());
+		}
 	}
 
 	@Override

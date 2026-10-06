@@ -11,7 +11,8 @@ public interface AirThreat {
 		BALLISTIC("ballistic"),
 		CRUISE("cruise"),
 		HYPERSONIC("hypersonic"),
-		REENTRY("reentry");
+		REENTRY("reentry"),
+		AIRCRAFT("aircraft");
 
 		public final String key;
 

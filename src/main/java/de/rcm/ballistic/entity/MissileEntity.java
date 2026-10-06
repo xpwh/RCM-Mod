@@ -2,6 +2,7 @@ package de.rcm.ballistic.entity;
 
 import de.rcm.ballistic.ClientHooks;
 import de.rcm.ballistic.ModRegistry;
+import de.rcm.ballistic.block.JammerBlockEntity;
 import de.rcm.ballistic.block.LaunchPadBlock;
 import de.rcm.ballistic.defense.AirThreat;
 import de.rcm.ballistic.defense.DefenseNetwork;
@@ -13,6 +14,7 @@ import de.rcm.ballistic.item.TargetDesignatorItem;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -71,6 +73,10 @@ public class MissileEntity extends Entity implements AirThreat {
 	private final MissileType missileType;
 	private int stateAge;
 	private boolean surfaceTarget;
+	/** Already thrown off by a jammer (it only happens once). */
+	private boolean gpsJammed;
+	/** Ticks since the ejected missile left the water (or the silo). */
+	private int airAge;
 	private @Nullable MissileTrajectory trajectory;
 
 	// ---- client-side bookkeeping (used by the client tick hook) ----
@@ -277,14 +283,32 @@ public class MissileEntity extends Entity implements AirThreat {
 			level.playSound(null, top.x, top.y, top.z, ModRegistry.IGNITION_SUB, SoundSource.BLOCKS, 12.0F, 0.55F);
 			level.playSound(null, top.x, top.y, top.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 6.0F, 0.5F);
 		}
-		// gas generator: hard push, then the missile coasts and slows down above the hatch
-		double vy = Math.max(0.25, 1.5 - this.stateAge * 0.045);
+		// gas generator: hard push, then the missile coasts and slows down above the hatch. Under
+		// water (submarine launch) it rises in a bubble column and only lights its motor once it has
+		// broken the surface.
+		boolean submerged = !level.getFluidState(BlockPos.containing(this.position())).isEmpty();
+		double vy;
+		if (submerged) {
+			vy = 0.7;
+			this.airAge = 0;
+			level.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, this.getX(), this.getY(), this.getZ(), 12, 0.5, 0.8, 0.5, 0.1);
+		} else {
+			if (this.airAge == 0 && this.stateAge > 2 && level.getFluidState(BlockPos.containing(this.position().subtract(0, 1.5, 0))).isSource()) {
+				// broaching: a white plume of spray as the missile leaves the water
+				level.sendParticles(ParticleTypes.SPLASH, this.getX(), this.getY(), this.getZ(), 200, 1.5, 0.5, 1.5, 0.6);
+				level.sendParticles(ParticleTypes.CLOUD, this.getX(), this.getY(), this.getZ(), 40, 1.2, 1.0, 1.2, 0.1);
+				level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_SPLASH, SoundSource.BLOCKS, 8.0F, 0.5F);
+			}
+			vy = Math.max(0.25, 1.5 - this.airAge * 0.045);
+			this.airAge++;
+		}
 		Vec3 next = this.position().add(0, vy, 0);
 		this.stateAge++;
 		this.setPos(next);
-		if (next.y > top.y + 2.5 + this.missileType.length * 0.15 || this.stateAge > 120) {
+		if (!submerged && this.airAge > 3 && (next.y > top.y + 2.5 + this.missileType.length * 0.15 || this.airAge > 120) || this.stateAge > 600) {
 			// the engine lights in mid-air
 			this.entityData.set(DATA_LAUNCH, new Vector3f((float) next.x, (float) next.y, (float) next.z));
+			this.applyJamming(level);
 			this.trajectory = null;
 			this.setState(FLIGHT);
 			float pitch = this.missileType == MissileType.HYDROGEN ? 0.72F : this.missileType.isNuclear() ? 0.85F : 1.0F;
@@ -323,6 +347,7 @@ public class MissileEntity extends Entity implements AirThreat {
 		if (++this.stateAge >= this.missileType.countdownTicks) {
 			Vec3 pos = this.position();
 			this.entityData.set(DATA_LAUNCH, new Vector3f((float) pos.x, (float) pos.y, (float) pos.z));
+			this.applyJamming(level);
 			this.trajectory = null;
 			this.setState(IGNITION);
 			float pitch = this.missileType.isCruise() ? 1.25F : this.missileType == MissileType.HYDROGEN ? 0.72F : this.missileType.isNuclear() ? 0.85F : 1.0F;
@@ -384,6 +409,12 @@ public class MissileEntity extends Entity implements AirThreat {
 		}
 
 		this.setPos(next);
+		if (this.missileType.warhead == MissileType.Warhead.METEOR && this.stateAge > 30 && (next.y > level.getMaxY() + 40 || dirNew.y < 0.0)) {
+			// gone into space: the payload comes back as a meteor shower
+			DetonationManager.meteorShower(level, Vec3.atBottomCenterOf(this.getTarget()), this);
+			this.discard();
+			return;
+		}
 		if (this.missileType.warhead == MissileType.Warhead.CLUSTER && this.stateAge > path.duration() * 0.6 && dirNew.y < -0.3
 			&& next.y - this.getTarget().getY() < 75) {
 			DetonationManager.releaseCluster(level, next, path.velocity(this.stateAge), this);
@@ -437,6 +468,16 @@ public class MissileEntity extends Entity implements AirThreat {
 				horizontal = Math.sqrt(dx * dx + dz * dz);
 				heading = horizontal > 1.0E-3 ? new Vec3(dx / horizontal, 0, dz / horizontal) : heading;
 			}
+		}
+
+		// guidance jamming takes hold as the missile closes in on a jammed area
+		if (horizontal < JammerBlockEntity.RADIUS + 120 && this.stateAge % 10 == 0 && this.missileType.warhead != MissileType.Warhead.ANTI_RADAR) {
+			this.applyJamming(level);
+			target = Vec3.atBottomCenterOf(this.getTarget());
+			dx = target.x - pos.x;
+			dz = target.z - pos.z;
+			horizontal = Math.sqrt(dx * dx + dz * dz);
+			heading = horizontal > 1.0E-3 ? new Vec3(dx / horizontal, 0, dz / horizontal) : heading;
 		}
 
 		// keep the corridor ahead loaded
@@ -507,7 +548,7 @@ public class MissileEntity extends Entity implements AirThreat {
 		Vec3 aim = Vec3.atBottomCenterOf(this.getTarget());
 		BlockPos best = null;
 		double bestScore = Double.MAX_VALUE;
-		for (DefenseNetwork.Kind kind : new DefenseNetwork.Kind[] {DefenseNetwork.Kind.RADAR, DefenseNetwork.Kind.AIR_DEFENSE}) {
+		for (DefenseNetwork.Kind kind : new DefenseNetwork.Kind[] {DefenseNetwork.Kind.RADAR, DefenseNetwork.Kind.AIR_DEFENSE, DefenseNetwork.Kind.JAMMER}) {
 			List<BlockPos> sites = DefenseNetwork.find(level, kind, aim, 128.0);
 			if (!sites.isEmpty()) {
 				// search radars shine brightest, fire-control radars of the batteries come second
@@ -661,6 +702,32 @@ public class MissileEntity extends Entity implements AirThreat {
 	@Override
 	public void destroyByInterceptor(ServerLevel level) {
 		this.intercept(level);
+	}
+
+	/**
+	 * GPS jamming: a missile aimed into a jammer's zone loses its satellite fix and drifts off by
+	 * 25 to 50 blocks. Anti-radiation missiles don't care - they home on the jammer's emissions.
+	 */
+	private void applyJamming(ServerLevel level) {
+		if (this.gpsJammed || this.missileType.warhead == MissileType.Warhead.ANTI_RADAR || !JammerBlockEntity.covers(level, this.getTarget())) {
+			return;
+		}
+		this.gpsJammed = true;
+		BlockPos old = this.getTarget();
+		double angle = level.getRandom().nextDouble() * Mth.TWO_PI;
+		double miss = 25.0 + level.getRandom().nextDouble() * 25.0;
+		int x = old.getX() + (int) Math.round(Math.cos(angle) * miss);
+		int z = old.getZ() + (int) Math.round(Math.sin(angle) * miss);
+		int y = level.hasChunk(x >> 4, z >> 4) ? level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) : old.getY();
+		this.entityData.set(DATA_TARGET, new BlockPos(x, y, z));
+		Component msg = Component.literal("⚡ ").append(Component.translatable("message.ballisticmissiles.jammer_deflect", Component.translatable(this.nameKey())))
+			.withStyle(ChatFormatting.LIGHT_PURPLE);
+		Vec3 o = Vec3.atCenterOf(old);
+		for (ServerPlayer player : level.players()) {
+			if (player.position().distanceToSqr(o) < 250 * 250) {
+				player.displayClientMessage(msg, true);
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------ interaction

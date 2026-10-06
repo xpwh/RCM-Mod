@@ -5,6 +5,7 @@ import de.rcm.ballistic.defense.AirThreat;
 import de.rcm.ballistic.defense.EmpManager;
 import de.rcm.ballistic.defense.ThreatTracker;
 import de.rcm.ballistic.entity.BombletEntity;
+import de.rcm.ballistic.entity.MeteorEntity;
 import de.rcm.ballistic.entity.ReentryVehicleEntity;
 import de.rcm.ballistic.entity.MissileType.Warhead;
 import de.rcm.ballistic.network.ModNetworking.DetonationPayload;
@@ -18,6 +19,7 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -26,6 +28,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Block;
@@ -45,6 +48,7 @@ public final class DetonationManager {
 
 	private static final List<NukeDetonation> NUKES = new ArrayList<>();
 	private static final List<Scheduled> SCHEDULED = new ArrayList<>();
+	private static final List<AntimatterDetonation> ANNIHILATIONS = new ArrayList<>();
 
 	private record Scheduled(ServerLevel level, int[] delay, Runnable action) {
 	}
@@ -60,6 +64,9 @@ public final class DetonationManager {
 		switch (warhead) {
 			case NUCLEAR, MIRV -> FlyingDebris.launch(level, pos, 18.0, 200, 2.8);
 			case HYDROGEN -> FlyingDebris.launch(level, pos, 26.0, 300, 3.4);
+			case TSAR -> FlyingDebris.launch(level, pos, 34.0, 420, 4.0);
+			case ANTIMATTER -> {
+			}
 			case MIRV_WARHEAD, TACTICAL_NUKE -> FlyingDebris.launch(level, pos, 12.0, 120, 2.2);
 			case HYPERSONIC -> FlyingDebris.launch(level, pos, 6.5, 50, 1.9);
 			case THERMOBARIC -> FlyingDebris.launch(level, pos, 6.0, 40, 1.5);
@@ -73,6 +80,8 @@ public final class DetonationManager {
 		switch (warhead) {
 			case NUCLEAR, MIRV -> NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.FISSION));
 			case HYDROGEN -> NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.THERMONUCLEAR));
+			case TSAR -> NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.TSAR));
+			case ANTIMATTER -> ANNIHILATIONS.add(new AntimatterDetonation(level, pos, source));
 			case MIRV_WARHEAD, TACTICAL_NUKE -> NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.TACTICAL));
 			case INCENDIARY -> {
 				highExplosive(level, pos, source, 5.0F, 1, 0);
@@ -257,6 +266,56 @@ public final class DetonationManager {
 		highExplosive(level, pos, source, 5.5F, 1, 6);
 	}
 
+	/**
+	 * The moon rocket has left the sky: some seconds later a shower of meteors comes down around the
+	 * target, the first ones scattered, the last ones dead on.
+	 */
+	public static void meteorShower(ServerLevel level, Vec3 target, @Nullable Entity source) {
+		broadcast(level, target.add(0, 220, 0), Warhead.METEOR);
+		RandomSource random = level.getRandom();
+		int count = 14;
+		for (int i = 0; i < count; i++) {
+			int delay = 120 + i * 9 + random.nextInt(8);
+			double spread = 45.0 * (1.0 - (double) i / count) + 6.0;
+			schedule(level, delay, () -> {
+				MeteorEntity meteor = ModRegistry.METEOR.create(level, EntitySpawnReason.TRIGGERED);
+				if (meteor == null) {
+					return;
+				}
+				double a = random.nextDouble() * Mth.TWO_PI;
+				double r = spread * Math.sqrt(random.nextDouble());
+				Vec3 impact = target.add(Math.cos(a) * r, 0, Math.sin(a) * r);
+				// they come in steep from one side, about 60 degrees, fast
+				Vec3 velocity = new Vec3(1.8, -3.2, 0.6).scale(1.0 + random.nextDouble() * 0.3);
+				Vec3 start = impact.subtract(velocity.scale(220.0 / -velocity.y));
+				meteor.setPos(start);
+				meteor.setDeltaMovement(velocity);
+				meteor.setSize(0.8F + random.nextFloat() * 1.0F);
+				level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(impact)), 2);
+				level.addFreshEntity(meteor);
+			});
+		}
+	}
+
+	/** A meteor hits: blast, a glassy, glowing little crater and fires all around. */
+	public static void meteorImpact(ServerLevel level, Vec3 pos, float size, @Nullable Entity source) {
+		broadcast(level, pos, Warhead.METEOR_IMPACT);
+		FlyingDebris.launch(level, pos, 3.0 + size * 2.0, (int) (10 + 14 * size), 1.3);
+		level.explode(source, pos.x, pos.y, pos.z, 3.5F + 3.0F * size, true, Level.ExplosionInteraction.TNT);
+		BlockPos center = BlockPos.containing(pos);
+		RandomSource random = level.getRandom();
+		int r = (int) (3 + 2 * size);
+		for (int i = 0; i < 30; i++) {
+			BlockPos p = center.offset(random.nextInt(2 * r + 1) - r, -random.nextInt(3) - 1, random.nextInt(2 * r + 1) - r);
+			BlockState state = level.getBlockState(p);
+			if (!state.isAir() && state.getDestroySpeed(level, p) >= 0.0F && state.getBlock().getExplosionResistance() < 1200.0F) {
+				level.setBlock(p, random.nextFloat() < 0.35F ? Blocks.MAGMA_BLOCK.defaultBlockState() : random.nextFloat() < 0.5F
+					? Blocks.BLACKSTONE.defaultBlockState() : Blocks.BASALT.defaultBlockState(), 3);
+			}
+		}
+		scorch(level, center, r + 6, random, 0.35F);
+	}
+
 	/** Burning sub-munition: splashes fire around the point of impact. */
 	public static void detonateIncendiary(ServerLevel level, Vec3 pos, Entity source) {
 		broadcast(level, pos, Warhead.BOMBLET);
@@ -276,7 +335,10 @@ public final class DetonationManager {
 	}
 
 	private static void broadcast(ServerLevel level, Vec3 pos, Warhead warhead) {
-		double range = warhead == Warhead.HYDROGEN ? HYDROGEN_EFFECT_RANGE : warhead == Warhead.BOMBLET ? 600.0 : EFFECT_RANGE;
+		double range = warhead == Warhead.HYDROGEN ? HYDROGEN_EFFECT_RANGE
+			: warhead == Warhead.TSAR ? HYDROGEN_EFFECT_RANGE * 1.4
+			: warhead == Warhead.BOMBLET ? 600.0
+			: EFFECT_RANGE;
 		if (warhead == Warhead.MIRV_WARHEAD) {
 			range = 4000.0;
 		}
@@ -424,6 +486,7 @@ public final class DetonationManager {
 			}
 			due.forEach(s -> s.action().run());
 		}
+		ANNIHILATIONS.removeIf(a -> a.level() == level && a.tick());
 		if (NUKES.isEmpty()) {
 			return;
 		}

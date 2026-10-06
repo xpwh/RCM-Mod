@@ -40,6 +40,10 @@ final class StructureKit {
 	static final int ARRAY = 23;
 	static final int HAZE = 24;
 	static final int HAZE_DARK = 25;
+	static final int BEAM = 26;
+	static final int PURPLE_LAMP = 27;
+	static final int SUB_HULL = 28;
+	static final int MOON_ROCK = 29;
 
 	private StructureKit() {
 	}

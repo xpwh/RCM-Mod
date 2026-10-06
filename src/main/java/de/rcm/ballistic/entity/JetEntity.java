@@ -2,6 +2,10 @@ package de.rcm.ballistic.entity;
 
 import de.rcm.ballistic.ClientHooks;
 import de.rcm.ballistic.ModRegistry;
+import de.rcm.ballistic.defense.AirThreat;
+import de.rcm.ballistic.defense.ThreatTracker;
+import de.rcm.ballistic.explosion.DetonationManager;
+import net.minecraft.core.particles.ParticleTypes;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -12,6 +16,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
@@ -35,7 +40,7 @@ import org.jspecify.annotations.Nullable;
  * release point is computed from the bombs' real fall (gravity and drag), so the stick lands where it
  * was ordered.
  */
-public class JetEntity extends Entity {
+public class JetEntity extends Entity implements AirThreat {
 	private static final EntityDataAccessor<Vector3fc> DATA_DIR = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.VECTOR3);
 	private static final EntityDataAccessor<Float> DATA_BANK = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Integer> DATA_BOMBS = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.INT);
@@ -66,6 +71,10 @@ public class JetEntity extends Entity {
 	private boolean egress;
 	private int egressAge;
 	private @Nullable UUID caller;
+
+	private int engagements;
+	private int flares = 6;
+	private int lastFlareTick = -1000;
 
 	/** Client only: the listener is inside the trailing Mach cone (the boom has been heard). */
 	public boolean clientInMachCone;
@@ -161,6 +170,7 @@ public class JetEntity extends Entity {
 			ClientHooks.jetClientTick.accept(this);
 			return;
 		}
+		ThreatTracker.report(level, this);
 		Vec3 pos = this.position();
 		Vec3 dir = this.getDir();
 		double speed = this.getSpeed();
@@ -276,6 +286,96 @@ public class JetEntity extends Entity {
 	@Override
 	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
 		return false;
+	}
+
+	// ------------------------------------------------------------------ as a target for air defense
+
+	public @Nullable UUID getCaller() {
+		return this.caller;
+	}
+
+	@Override
+	public Entity asEntity() {
+		return this;
+	}
+
+	@Override
+	public boolean isActiveThreat() {
+		return this.isAlive();
+	}
+
+	@Override
+	public Vec3 aimPoint(int ticksAhead) {
+		return this.position().add(0, 0.8, 0).add(this.getDir().scale(this.getSpeed() * ticksAhead));
+	}
+
+	@Override
+	public Vec3 threatVelocity() {
+		return this.getDir().scale(this.getSpeed());
+	}
+
+	/** A strike aircraft does not hit the ground: defenses engage it over the point it flies across. */
+	@Override
+	public Vec3 predictedImpact() {
+		Vec3 ahead = this.aimPoint(20);
+		return new Vec3(ahead.x, this.target.y, ahead.z);
+	}
+
+	@Override
+	public int etaTicks() {
+		return 20;
+	}
+
+	@Override
+	public ThreatClass threatClass() {
+		return ThreatClass.AIRCRAFT;
+	}
+
+	/** Stealth airframe: smaller on radar than a cruise missile. */
+	@Override
+	public double radarCrossSection() {
+		return 0.05;
+	}
+
+	/** Flares and hard manoeuvring: a fresh flare salvo decoys most missiles. */
+	@Override
+	public float killProbability() {
+		return this.tickCount - this.lastFlareTick < 50 ? 0.2F : 0.6F;
+	}
+
+	@Override
+	public String nameKey() {
+		return "entity.ballisticmissiles.strike_jet";
+	}
+
+	@Override
+	public int getEngagements() {
+		return this.engagements;
+	}
+
+	/** A new missile fired at the jet: the warning receiver triggers a flare salvo. */
+	@Override
+	public void setEngagements(int engagements) {
+		if (engagements > this.engagements && this.flares > 0 && this.level() instanceof ServerLevel level) {
+			this.flares--;
+			this.lastFlareTick = this.tickCount;
+			Vec3 tail = this.position().add(0, 0.5, 0).subtract(this.getDir().scale(5.0));
+			for (int i = 0; i < 12; i++) {
+				level.sendParticles(ParticleTypes.FIREWORK, tail.x, tail.y, tail.z, 4, 1.5, 1.0, 1.5, 0.25);
+				level.sendParticles(ParticleTypes.FLAME, tail.x, tail.y - i * 0.6, tail.z, 3, 1.2, 0.4, 1.2, 0.05);
+			}
+			level.playSound(null, tail.x, tail.y, tail.z, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.HOSTILE, 6.0F, 0.6F);
+		}
+		this.engagements = engagements;
+	}
+
+	@Override
+	public void destroyByInterceptor(ServerLevel level) {
+		Vec3 p = this.position().add(0, 0.8, 0);
+		DetonationManager.intercepted(level, p, this);
+		level.explode(this, p.x, p.y, p.z, 4.0F, true, Level.ExplosionInteraction.NONE);
+		this.tellCaller(level, Component.translatable("message.ballisticmissiles.jet_shot_down").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+		this.discard();
 	}
 
 	@Override

@@ -40,7 +40,9 @@ public class NukeDetonation {
 		/** Classic fission warhead: big, but not world-ending. */
 		FISSION(36, 1200),
 		/** Hydrogen bomb: much larger crater, blast zone and fallout. */
-		THERMONUCLEAR(58, 2400);
+		THERMONUCLEAR(58, 2400),
+		/** Tsar Bomba: the biggest of them all. */
+		TSAR(80, 3600);
 
 		final int craterRadius;
 		final int falloutTicks;
@@ -151,12 +153,21 @@ public class NukeDetonation {
 			if (!(entity instanceof LivingEntity living)) {
 				continue;
 			}
+			// earth and concrete between the fireball and the target soak up the blast
+			int cover = this.shielding(living);
 			double core = this.craterRadius * 0.85;
-			if (d < core) {
+			if (cover >= 12 && d > this.craterRadius * 0.5) {
+				living.hurtServer(this.level, this.level.damageSources().explosion(this.source, null), 2.0F);
+				continue; // safe in a bunker: the ground shakes, nothing more
+			}
+			if (d < core && cover < 6) {
 				living.hurtServer(this.level, this.level.damageSources().explosion(this.source, null), 10000.0F);
 				continue;
 			}
-			double factor = 1.0 - (d - core) / (this.damageRadius - core);
+			double factor = Math.min(1.0, 1.0 - (d - core) / (this.damageRadius - core));
+			if (cover >= 3) {
+				factor *= 0.25;
+			}
 			float damage = (float) (6.0 + 90.0 * Math.pow(factor, 1.4));
 			living.hurtServer(this.level, this.level.damageSources().explosion(this.source, null), damage);
 			living.igniteForSeconds((float) (4.0 + 12.0 * factor));
@@ -220,10 +231,11 @@ public class NukeDetonation {
 		int surface = this.level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
 		topY = Math.min(topY, Math.max(surface, floorY));
 
+		boolean core = d < r * 0.35;
 		for (int y = floorY; y <= topY; y++) {
 			pos.set(x, y, z);
 			BlockState state = this.level.getBlockState(pos);
-			if (state.isAir() || !breakable(state, pos)) {
+			if (state.isAir() || !breakable(state, pos) || !core && isBunker(state)) {
 				continue;
 			}
 			this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
@@ -346,6 +358,42 @@ public class NukeDetonation {
 		}
 	}
 
+	/** Blast-rated construction (reinforced concrete, blast doors) survives everywhere but the core. */
+	private static boolean isBunker(BlockState state) {
+		return state.getBlock().getExplosionResistance() >= 3000.0F;
+	}
+
+	/**
+	 * Cover between ground zero and the entity: counts solid blocks along the line of sight, with
+	 * blast-rated blocks worth four ordinary ones.
+	 */
+	private int shielding(LivingEntity living) {
+		Vec3 eye = living.getEyePosition();
+		Vec3 from = this.exact.add(0, 1.0, 0);
+		double len = eye.distanceTo(from);
+		int steps = Math.min(400, (int) (len * 2));
+		int cover = 0;
+		BlockPos last = null;
+		for (int i = 1; i < steps; i++) {
+			BlockPos p = BlockPos.containing(from.lerp(eye, (double) i / steps));
+			if (p.equals(last)) {
+				continue;
+			}
+			last = p;
+			BlockState state = this.level.getBlockState(p);
+			float resistance = state.getBlock().getExplosionResistance();
+			if (resistance >= 3000.0F) {
+				cover += 4;
+			} else if (resistance >= 6.0F) {
+				cover++;
+			}
+			if (cover >= 12) {
+				break;
+			}
+		}
+		return cover;
+	}
+
 	private boolean breakable(BlockState state, BlockPos pos) {
 		return state.getDestroySpeed(this.level, pos) >= 0.0F && state.getBlock().getExplosionResistance() < 3_000_000.0F;
 	}
@@ -362,6 +410,9 @@ public class NukeDetonation {
 			double d = living.position().distanceTo(this.exact);
 			if (d > radius) {
 				continue;
+			}
+			if (RadiationManager.protection(living) >= 0.9F) {
+				continue; // a full radiation suit keeps the fallout out
 			}
 			int amp = d < this.craterRadius ? 1 : 0;
 			living.addEffect(new MobEffectInstance(MobEffects.WITHER, 80, amp));

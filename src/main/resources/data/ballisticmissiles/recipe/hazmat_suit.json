@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"Y Y",
+		"YLY",
+		"YYY"
+	],
+	"key": {
+		"Y": "minecraft:yellow_wool",
+		"L": "minecraft:leather"
+	},
+	"result": {
+		"id": "ballisticmissiles:hazmat_suit",
+		"count": 1
+	}
+}

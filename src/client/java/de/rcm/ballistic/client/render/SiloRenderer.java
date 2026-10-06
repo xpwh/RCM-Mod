@@ -16,6 +16,7 @@ import static de.rcm.ballistic.client.render.StructureKit.v;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import de.rcm.ballistic.block.MissileSiloBlockEntity;
+import de.rcm.ballistic.block.SubmarineBlock;
 import de.rcm.ballistic.entity.MissileType;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -24,8 +25,10 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -54,6 +57,8 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 		public boolean counting;
 		public @Nullable MissileType missile;
 		public float time;
+		public boolean submarine;
+		public float facingYaw;
 	}
 
 	@Override
@@ -69,6 +74,11 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 		state.counting = silo.isCounting();
 		state.missile = silo.getMissile();
 		state.time = silo.getLevel() == null ? 0.0F : silo.getLevel().getGameTime() + partialTick;
+		state.submarine = state.blockState.getBlock() instanceof SubmarineBlock;
+		if (state.submarine) {
+			Direction facing = state.blockState.getValue(SubmarineBlock.FACING);
+			state.facingYaw = (float) Mth.atan2(facing.getStepX(), facing.getStepZ());
+		}
 	}
 
 	@Override
@@ -76,6 +86,11 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 		int light = state.lightCoords;
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
+		if (state.submarine) {
+			this.submitSubmarine(state, poseStack, collector, light);
+			poseStack.popPose();
+			return;
+		}
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> HEADWORKS.emit(pose, consumer, light));
 
 		// the missile waiting in the shaft: only its nose cone shows above the shaft floor
@@ -103,6 +118,29 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> BEACON_GLOW.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 		}
 		poseStack.popPose();
+	}
+
+	/** Submarine variant: the hull around the block, the live hatch swinging open, the missile in its tube. */
+	private void submitSubmarine(State state, PoseStack poseStack, SubmitNodeCollector collector, int light) {
+		poseStack.mulPose(new Quaternionf().rotationY(state.facingYaw));
+		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> SubmarineModel.HULL.emit(pose, consumer, light));
+		if (Mth.sin(state.time * 0.15F) > 0.6F) {
+			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> SubmarineModel.MAST_LIGHT.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+		}
+		MissileType missile = state.missile;
+		if (missile != null) {
+			MissileMesh mesh = MissileMesh.of(missile);
+			float s = missile.scale;
+			poseStack.pushPose();
+			poseStack.translate(0.0F, SubmarineModel.DECK_Y - 0.2F - mesh.length() * s, 0.0F);
+			poseStack.scale(s, s, s);
+			collector.submitCustomGeometry(poseStack, MissileRenderer.bodyType(missile), (pose, consumer) -> mesh.emit(pose, consumer, light));
+			poseStack.popPose();
+		}
+		// hatch hinged at its aft edge, swinging up to vertical
+		poseStack.translate(0.0F, SubmarineModel.DECK_Y, -0.45F);
+		poseStack.mulPose(new Quaternionf().rotationX(-state.open * 1.75F));
+		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> SubmarineModel.HATCH.emit(pose, consumer, light));
 	}
 
 	@Override

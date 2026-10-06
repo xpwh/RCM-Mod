@@ -11,7 +11,10 @@ import de.rcm.ballistic.client.render.AerialBombRenderer;
 import de.rcm.ballistic.client.render.AirDefenseRenderer;
 import de.rcm.ballistic.client.render.BombletRenderer;
 import de.rcm.ballistic.client.render.CiwsRenderer;
+import de.rcm.ballistic.client.render.JammerRenderer;
 import de.rcm.ballistic.client.render.JetRenderer;
+import de.rcm.ballistic.client.render.LaserRenderer;
+import de.rcm.ballistic.client.render.MeteorRenderer;
 import de.rcm.ballistic.client.render.LaunchPadRenderer;
 import de.rcm.ballistic.client.render.RadarRenderer;
 import de.rcm.ballistic.client.render.SiloRenderer;
@@ -56,11 +59,14 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModRegistry.MOBILE_LAUNCHER, MobileLauncherRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.JET, JetRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.AERIAL_BOMB, AerialBombRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.METEOR, MeteorRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.CIWS_BE, CiwsRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.LAUNCH_PAD_BE, LaunchPadRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.MISSILE_SILO_BE, SiloRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.RADAR_BE, RadarRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.AIR_DEFENSE_BE, AirDefenseRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.LASER_DEFENSE_BE, LaserRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.JAMMER_BE, JammerRenderer::new);
 
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.SMOKE, CloudParticle.SmokeProvider::new);
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.FIRE, CloudParticle.FireProvider::new);

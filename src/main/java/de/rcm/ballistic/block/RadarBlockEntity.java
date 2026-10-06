@@ -20,6 +20,7 @@ import java.util.UUID;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
@@ -32,6 +33,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -84,6 +87,9 @@ public class RadarBlockEntity extends BlockEntity {
 	private int nextNumber = 1;
 	private int alarmCooldown;
 	private int signal;
+	private @Nullable UUID owner;
+	/** Someone else's jammer is close: tracks come out smeared. */
+	private boolean jammed;
 
 	public RadarBlockEntity(BlockPos pos, BlockState state) {
 		super(ModRegistry.RADAR_BE, pos, state);
@@ -104,6 +110,9 @@ public class RadarBlockEntity extends BlockEntity {
 		}
 		DefenseNetwork.register(level, pos, DefenseNetwork.Kind.RADAR);
 		long now = level.getGameTime();
+		if (now % 20 == 0) {
+			radar.jammed = JammerBlockEntity.jamsRadar(level, pos, radar.owner);
+		}
 		int jammed = EmpManager.jammedTicks(level, pos);
 		if (jammed > 0) {
 			radar.tracks.clear();
@@ -205,6 +214,11 @@ public class RadarBlockEntity extends BlockEntity {
 			this.tracks.put(id, track);
 		}
 		track.vel = threat.threatVelocity();
+		if (this.jammed) {
+			// jamming noise: range and bearing jump around, the impact estimate is nearly worthless
+			RandomSource r = level.getRandom();
+			p = p.add(r.nextGaussian() * 30.0, r.nextGaussian() * 8.0, r.nextGaussian() * 30.0);
+		}
 		track.pos = p;
 		track.lastSeen = now;
 		track.paints++;
@@ -224,6 +238,10 @@ public class RadarBlockEntity extends BlockEntity {
 		} else {
 			track.impactError = Math.max(3.0, 160.0 / (1.0 + track.paints * 0.7));
 			track.impact = trueImpact.add(track.errorDir.scale(track.impactError));
+		}
+		if (this.jammed) {
+			track.impactError = Math.min(400.0, track.impactError * 4.0 + 60.0);
+			track.impact = track.impact.add(level.getRandom().nextGaussian() * 60.0, 0, level.getRandom().nextGaussian() * 60.0);
 		}
 		Vec3 here = Vec3.atCenterOf(this.worldPosition);
 		track.threat = Math.hypot(track.impact.x - here.x, track.impact.z - here.z) <= PROTECTED_RADIUS + track.impactError * 0.5;
@@ -290,6 +308,11 @@ public class RadarBlockEntity extends BlockEntity {
 		}
 	}
 
+	public void setOwner(@Nullable UUID owner) {
+		this.owner = owner;
+		this.setChanged();
+	}
+
 	public int comparatorSignal() {
 		return this.signal;
 	}
@@ -347,5 +370,19 @@ public class RadarBlockEntity extends BlockEntity {
 			DefenseNetwork.unregister(this.level, this.worldPosition);
 		}
 		super.setRemoved();
+	}
+
+	@Override
+	protected void saveAdditional(ValueOutput output) {
+		super.saveAdditional(output);
+		if (this.owner != null) {
+			output.store("Owner", UUIDUtil.CODEC, this.owner);
+		}
+	}
+
+	@Override
+	protected void loadAdditional(ValueInput input) {
+		super.loadAdditional(input);
+		this.owner = input.read("Owner", UUIDUtil.CODEC).orElse(null);
 	}
 }

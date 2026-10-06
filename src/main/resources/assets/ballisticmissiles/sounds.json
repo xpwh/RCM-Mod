@@ -295,6 +295,15 @@
 			}
 		]
 	},
+	"laser.beam": {
+		"subtitle": "subtitles.ballisticmissiles.laser",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:laser/beam",
+				"attenuation_distance": 64
+			}
+		]
+	},
 	"bomb.whistle": {
 		"subtitle": "subtitles.ballisticmissiles.bomb_whistle",
 		"sounds": [

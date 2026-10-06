@@ -4,6 +4,11 @@
 		"ballisticmissiles:radar",
 		"ballisticmissiles:air_defense",
 		"ballisticmissiles:missile_silo",
-		"ballisticmissiles:ciws"
+		"ballisticmissiles:ciws",
+		"ballisticmissiles:laser_defense",
+		"ballisticmissiles:jammer",
+		"ballisticmissiles:submarine",
+		"ballisticmissiles:reinforced_concrete",
+		"ballisticmissiles:blast_door"
 	]
 }

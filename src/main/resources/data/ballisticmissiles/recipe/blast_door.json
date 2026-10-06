@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"II",
+		"IR",
+		"II"
+	],
+	"key": {
+		"I": "minecraft:iron_block",
+		"R": "ballisticmissiles:reinforced_concrete"
+	},
+	"result": {
+		"id": "ballisticmissiles:blast_door",
+		"count": 1
+	}
+}

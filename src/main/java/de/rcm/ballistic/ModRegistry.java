@@ -4,16 +4,22 @@ import de.rcm.ballistic.block.AirDefenseBlock;
 import de.rcm.ballistic.block.AirDefenseBlockEntity;
 import de.rcm.ballistic.block.CiwsBlock;
 import de.rcm.ballistic.block.CiwsBlockEntity;
+import de.rcm.ballistic.block.JammerBlock;
+import de.rcm.ballistic.block.JammerBlockEntity;
+import de.rcm.ballistic.block.LaserDefenseBlock;
+import de.rcm.ballistic.block.LaserDefenseBlockEntity;
 import de.rcm.ballistic.block.LaunchPadBlock;
 import de.rcm.ballistic.block.LaunchPadBlockEntity;
 import de.rcm.ballistic.block.MissileSiloBlock;
 import de.rcm.ballistic.block.MissileSiloBlockEntity;
 import de.rcm.ballistic.block.RadarBlock;
 import de.rcm.ballistic.block.RadarBlockEntity;
+import de.rcm.ballistic.block.SubmarineBlock;
 import de.rcm.ballistic.entity.AerialBombEntity;
 import de.rcm.ballistic.entity.BombletEntity;
 import de.rcm.ballistic.entity.InterceptorEntity;
 import de.rcm.ballistic.entity.JetEntity;
+import de.rcm.ballistic.entity.MeteorEntity;
 import de.rcm.ballistic.entity.ReentryVehicleEntity;
 import de.rcm.ballistic.entity.MissileEntity;
 import de.rcm.ballistic.entity.MissileType;
@@ -42,18 +48,27 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DoubleHighBlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.equipment.ArmorMaterial;
+import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.BlockSetType;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 
 public final class ModRegistry {
 	// ---------- Data components ----------
@@ -121,6 +136,10 @@ public final class ModRegistry {
 		"strike_jet",
 		EntityType.Builder.<JetEntity>of(JetEntity::new, MobCategory.MISC).sized(4.0F, 1.6F).clientTrackingRange(48).updateInterval(1).fireImmune().noLootTable()
 	);
+	public static final EntityType<MeteorEntity> METEOR = registerEntity(
+		"meteor",
+		EntityType.Builder.<MeteorEntity>of(MeteorEntity::new, MobCategory.MISC).sized(1.2F, 1.2F).clientTrackingRange(32).updateInterval(1).fireImmune().noLootTable()
+	);
 	public static final EntityType<AerialBombEntity> AERIAL_BOMB = registerEntity(
 		"aerial_bomb",
 		EntityType.Builder.<AerialBombEntity>of(AerialBombEntity::new, MobCategory.MISC).sized(0.45F, 0.45F).clientTrackingRange(24).updateInterval(1).noLootTable()
@@ -150,10 +169,48 @@ public final class ModRegistry {
 		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
 	);
 
+	public static final Block LASER_DEFENSE = registerBlock(
+		"laser_defense",
+		LaserDefenseBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
+	);
+	public static final Block JAMMER = registerBlock(
+		"jammer",
+		JammerBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(4.0F, 600.0F).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
+	);
+
+	/** Blast-rated steel door: opens by hand, survives a nuclear blast outside the crater core. */
+	public static final BlockSetType BLAST_DOOR_TYPE = new BlockSetType(
+		"ballisticmissiles_blast", true, false, false, BlockSetType.PressurePlateSensitivity.MOBS, SoundType.NETHERITE_BLOCK,
+		SoundEvents.IRON_DOOR_CLOSE, SoundEvents.IRON_DOOR_OPEN, SoundEvents.IRON_TRAPDOOR_CLOSE, SoundEvents.IRON_TRAPDOOR_OPEN,
+		SoundEvents.STONE_PRESSURE_PLATE_CLICK_OFF, SoundEvents.STONE_PRESSURE_PLATE_CLICK_ON, SoundEvents.STONE_BUTTON_CLICK_OFF,
+		SoundEvents.STONE_BUTTON_CLICK_ON
+	);
+	public static final Block REINFORCED_CONCRETE = registerBlock(
+		"reinforced_concrete",
+		Block::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(25.0F, 3600.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()
+	);
+	public static final Block BLAST_DOOR = registerBlock(
+		"blast_door",
+		props -> new DoorBlock(BLAST_DOOR_TYPE, props),
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(25.0F, 3600.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()
+			.noOcclusion().pushReaction(PushReaction.BLOCK)
+	);
+
 	public static final Block MISSILE_SILO = registerBlock(
 		"missile_silo",
 		MissileSiloBlock::new,
 		BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(8.0F, 3600.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()
+	);
+
+	/** Ballistic missile submarine lying on the sea floor; works like a silo and fires from underwater. */
+	public static final Block SUBMARINE = registerBlock(
+		"submarine",
+		SubmarineBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(8.0F, 3600.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()
+			.noOcclusion()
 	);
 
 	public static final BlockEntityType<LaunchPadBlockEntity> LAUNCH_PAD_BE = Registry.register(
@@ -168,8 +225,14 @@ public final class ModRegistry {
 	public static final BlockEntityType<CiwsBlockEntity> CIWS_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("ciws"), FabricBlockEntityTypeBuilder.create(CiwsBlockEntity::new, CIWS).build()
 	);
+	public static final BlockEntityType<LaserDefenseBlockEntity> LASER_DEFENSE_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("laser_defense"), FabricBlockEntityTypeBuilder.create(LaserDefenseBlockEntity::new, LASER_DEFENSE).build()
+	);
+	public static final BlockEntityType<JammerBlockEntity> JAMMER_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("jammer"), FabricBlockEntityTypeBuilder.create(JammerBlockEntity::new, JAMMER).build()
+	);
 	public static final BlockEntityType<MissileSiloBlockEntity> MISSILE_SILO_BE = Registry.register(
-		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("missile_silo"), FabricBlockEntityTypeBuilder.create(MissileSiloBlockEntity::new, MISSILE_SILO).build()
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("missile_silo"), FabricBlockEntityTypeBuilder.create(MissileSiloBlockEntity::new, MISSILE_SILO, SUBMARINE).build()
 	);
 
 	// ---------- Items ----------
@@ -194,12 +257,38 @@ public final class ModRegistry {
 	public static final Item CIWS_ITEM = registerItem(
 		"ciws", props -> new BlockItem(CIWS, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
 	);
+	public static final Item LASER_DEFENSE_ITEM = registerItem(
+		"laser_defense", props -> new BlockItem(LASER_DEFENSE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item JAMMER_ITEM = registerItem(
+		"jammer", props -> new BlockItem(JAMMER, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
+	);
 	public static final Item AIRSTRIKE_RADIO = registerItem(
 		"airstrike_radio", AirstrikeRadioItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
 	);
+	public static final Item REINFORCED_CONCRETE_ITEM = registerItem(
+		"reinforced_concrete", props -> new BlockItem(REINFORCED_CONCRETE, props), new Item.Properties().useBlockDescriptionPrefix()
+	);
+	public static final Item BLAST_DOOR_ITEM = registerItem(
+		"blast_door", props -> new DoubleHighBlockItem(BLAST_DOOR, props), new Item.Properties().useBlockDescriptionPrefix()
+	);
+
+	public static final ArmorMaterial HAZMAT_MATERIAL = new ArmorMaterial(
+		15, Map.of(ArmorType.HELMET, 1, ArmorType.CHESTPLATE, 3, ArmorType.LEGGINGS, 2, ArmorType.BOOTS, 1, ArmorType.BODY, 3), 9,
+		SoundEvents.ARMOR_EQUIP_LEATHER, 0.0F, 0.0F, ItemTags.REPAIRS_LEATHER_ARMOR,
+		ResourceKey.create(EquipmentAssets.ROOT_ID, BallisticMissiles.id("hazmat"))
+	);
+	public static final Item HAZMAT_HELMET = registerItem("hazmat_helmet", Item::new, new Item.Properties().humanoidArmor(HAZMAT_MATERIAL, ArmorType.HELMET));
+	public static final Item HAZMAT_SUIT = registerItem("hazmat_suit", Item::new, new Item.Properties().humanoidArmor(HAZMAT_MATERIAL, ArmorType.CHESTPLATE));
+	public static final Item HAZMAT_LEGGINGS = registerItem("hazmat_leggings", Item::new, new Item.Properties().humanoidArmor(HAZMAT_MATERIAL, ArmorType.LEGGINGS));
+	public static final Item HAZMAT_BOOTS = registerItem("hazmat_boots", Item::new, new Item.Properties().humanoidArmor(HAZMAT_MATERIAL, ArmorType.BOOTS));
+
 	public static final Item GEIGER_COUNTER = registerItem("geiger_counter", GeigerCounterItem::new, new Item.Properties().stacksTo(1));
 	public static final Item MISSILE_SILO_ITEM = registerItem(
 		"missile_silo", props -> new BlockItem(MISSILE_SILO, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item SUBMARINE_ITEM = registerItem(
+		"submarine", props -> new BlockItem(SUBMARINE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
 	);
 	public static final Item MOBILE_LAUNCHER_ITEM = registerItem(
 		"mobile_launcher", MobileLauncherItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
@@ -239,6 +328,7 @@ public final class ModRegistry {
 	public static final SoundEvent JET_AFTERBURNER = sound("jet.afterburner");
 	public static final SoundEvent JET_BOOM = sound("jet.boom");
 	public static final SoundEvent BOMB_WHISTLE = sound("bomb.whistle");
+	public static final SoundEvent LASER_BEAM = sound("laser.beam");
 
 	// ---------- Particles ----------
 	public static final SimpleParticleType SMOKE = particle("smoke");
@@ -254,13 +344,22 @@ public final class ModRegistry {
 			.displayItems((params, output) -> {
 				output.accept(LAUNCH_PAD_ITEM);
 				output.accept(MISSILE_SILO_ITEM);
+				output.accept(SUBMARINE_ITEM);
 				output.accept(MOBILE_LAUNCHER_ITEM);
 				output.accept(TARGET_DESIGNATOR);
 				output.accept(RADAR_ITEM);
 				output.accept(AIR_DEFENSE_ITEM);
 				output.accept(CIWS_ITEM);
+				output.accept(LASER_DEFENSE_ITEM);
+				output.accept(JAMMER_ITEM);
 				output.accept(AIRSTRIKE_RADIO);
 				output.accept(GEIGER_COUNTER);
+				output.accept(HAZMAT_HELMET);
+				output.accept(HAZMAT_SUIT);
+				output.accept(HAZMAT_LEGGINGS);
+				output.accept(HAZMAT_BOOTS);
+				output.accept(REINFORCED_CONCRETE_ITEM);
+				output.accept(BLAST_DOOR_ITEM);
 				for (MissileType type : MissileType.values()) {
 					output.accept(missileItem(type));
 				}

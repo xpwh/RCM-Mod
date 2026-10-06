@@ -71,6 +71,10 @@ public final class ClientEffects {
 			case ANTI_RADAR -> new BlastEffect(pos, 0.8);
 			case DRONE -> new BlastEffect(pos, 0.55);
 			case AERIAL_BOMB -> new BlastEffect(pos, 0.5);
+			case TSAR -> new NukeEffect(pos, 2.2);
+			case ANTIMATTER -> new AntimatterEffect(pos);
+			case METEOR_IMPACT -> new BlastEffect(pos, 0.75);
+			case METEOR -> mc -> true;
 			default -> new BlastEffect(pos, 1.0);
 		});
 	}
@@ -656,6 +660,65 @@ public final class ClientEffects {
 				playDistant(mc, ModRegistry.NUKE_SUB, this.pos, (float) (0.8 - this.distance / 6000.0), 1.2F);
 			}
 			return t > Math.max(260, this.soundDelay + 1);
+		}
+	}
+
+	// ------------------------------------------------------------------ antimatter
+
+	/**
+	 * Annihilation: a blinding white flash, then a perfect sphere of light that swells to the size of
+	 * the hole it leaves and collapses in on itself in a shower of violet sparks.
+	 */
+	static final class AntimatterEffect implements Effect {
+		private static final double RADIUS = 30.0;
+		private final Vec3 pos;
+		private final double distance;
+		private final int soundDelay;
+		private int age;
+
+		AntimatterEffect(Vec3 pos) {
+			this.pos = pos;
+			Minecraft mc = Minecraft.getInstance();
+			this.distance = distanceToCamera(mc, pos);
+			this.soundDelay = (int) (this.distance / SPEED_OF_SOUND);
+			setFlash((float) Mth.clamp(1.0 - this.distance / 5000.0, 0.5, 1.0), 0xFFFFFF);
+			addShake((float) Math.max(0.0, 3.0 - this.distance / 150.0));
+		}
+
+		@Override
+		public boolean tick(Minecraft mc) {
+			int t = this.age++;
+			if (t < 18) {
+				// the sphere of light, growing with the annihilation front
+				double r = RADIUS * Math.min(1.0, (t + 1) / 15.0);
+				for (int i = 0; i < 70; i++) {
+					Vec3 v = new Vec3(gauss(), gauss(), gauss()).normalize();
+					Vec3 p = this.pos.add(v.scale(r));
+					CloudParticle c = cloud(true, p.x, p.y, p.z, v.x * 0.2, v.y * 0.2, v.z * 0.2);
+					if (c != null) {
+						c.configure(14 + RANDOM.nextInt(8), 3.5F, 6.0F, 0xFFFFFF, rand() < 0.5F ? 0xB89CFF : 0x8CE8FF, 0.6F).physics(0.9F, 0.0F).wind(0);
+					}
+				}
+			}
+			if (t == 18) {
+				setFlash(0.45F, 0xD8C8FF);
+			}
+			if (t >= 18 && t < 40) {
+				// collapse: sparks rushing back into the void
+				for (int i = 0; i < 40; i++) {
+					Vec3 v = new Vec3(gauss(), gauss(), gauss()).normalize();
+					Vec3 p = this.pos.add(v.scale(RADIUS * (1.0 - (t - 18) / 24.0)));
+					CloudParticle c = cloud(true, p.x, p.y, p.z, -v.x * 1.2, -v.y * 1.2, -v.z * 1.2);
+					if (c != null) {
+						c.configure(10 + RANDOM.nextInt(6), 0.8F, 0.2F, 0xF0E0FF, 0x7A40FF, 0.9F).physics(0.92F, 0.0F).wind(0);
+					}
+				}
+			}
+			if (t == this.soundDelay) {
+				playDistant(mc, ModRegistry.NUKE_NEAR, this.pos, (float) (1.3 - this.distance / 2500.0), 1.6F);
+				playDistant(mc, ModRegistry.NUKE_SUB, this.pos, (float) (1.0 - this.distance / 3000.0), 1.4F);
+			}
+			return t > Math.max(40, this.soundDelay + 1);
 		}
 	}
 

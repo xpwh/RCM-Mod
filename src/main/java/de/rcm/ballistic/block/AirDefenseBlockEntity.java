@@ -3,12 +3,15 @@ package de.rcm.ballistic.block;
 import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.defense.AirThreat;
 import de.rcm.ballistic.defense.DefenseNetwork;
+import de.rcm.ballistic.defense.DefenseOwner;
 import de.rcm.ballistic.defense.EmpManager;
 import de.rcm.ballistic.defense.ThreatTracker;
 import de.rcm.ballistic.entity.InterceptorEntity;
 import de.rcm.ballistic.entity.MissileEntity;
 import net.minecraft.ChatFormatting;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
@@ -28,6 +31,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Surface-to-air missile battery. It defends the area around itself: every missile or re-entry
@@ -63,6 +67,7 @@ public class AirDefenseBlockEntity extends BlockEntity {
 	private int kills;
 	private int misses;
 	private boolean linked;
+	private @Nullable UUID owner;
 	private float targetYaw;
 	private long lastTrack = -100000L;
 	private boolean wasMoving;
@@ -108,6 +113,9 @@ public class AirDefenseBlockEntity extends BlockEntity {
 		AirThreat best = null;
 		int bestEta = Integer.MAX_VALUE;
 		for (AirThreat threat : ThreatTracker.threats(server)) {
+			if (DefenseOwner.isFriendly(battery.owner, threat)) {
+				continue;
+			}
 			Vec3 impact = threat.predictedImpact();
 			if (Math.hypot(impact.x - here.x, impact.z - here.z) > range + 16) {
 				continue; // not heading into our zone
@@ -222,6 +230,12 @@ public class AirDefenseBlockEntity extends BlockEntity {
 		battery.clientElevation += Mth.clamp(battery.elevation - battery.clientElevation, -ELEVATE_RATE, ELEVATE_RATE);
 	}
 
+	/** The player who built this defense; their own aircraft are never engaged. */
+	public void setOwner(@Nullable UUID owner) {
+		this.owner = owner;
+		this.setChanged();
+	}
+
 	public int getAmmo() {
 		return this.ammo;
 	}
@@ -294,6 +308,9 @@ public class AirDefenseBlockEntity extends BlockEntity {
 		output.putInt("Kills", this.kills);
 		output.putInt("Misses", this.misses);
 		output.putFloat("Yaw", this.yaw);
+		if (this.owner != null) {
+			output.store("Owner", UUIDUtil.CODEC, this.owner);
+		}
 		output.putFloat("Elevation", this.elevation);
 	}
 
@@ -305,6 +322,7 @@ public class AirDefenseBlockEntity extends BlockEntity {
 		this.kills = input.getIntOr("Kills", 0);
 		this.misses = input.getIntOr("Misses", 0);
 		this.yaw = input.getFloatOr("Yaw", 0.0F);
+		this.owner = input.read("Owner", UUIDUtil.CODEC).orElse(null);
 		this.elevation = input.getFloatOr("Elevation", 0.0F);
 	}
 

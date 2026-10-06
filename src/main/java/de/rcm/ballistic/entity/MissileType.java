@@ -33,7 +33,18 @@ public enum MissileType {
 	 * Loitering kamikaze drone (Shahed-136-style): delta wing, pusher propeller, rocket-assisted
 	 * take-off. Slow and loud, but cheap and hard to see on radar.
 	 */
-	DRONE("kamikaze_drone", Flight.CRUISE, Warhead.DRONE, Model.DRONE, 1.0F, 1.0F, 3.6F, 100, 20, 1.0, 2.2, Rarity.UNCOMMON);
+	DRONE("kamikaze_drone", Flight.CRUISE, Warhead.DRONE, Model.DRONE, 1.0F, 1.0F, 3.6F, 100, 20, 1.0, 2.2, Rarity.UNCOMMON),
+	/** The largest bomb ever built, on an outsized heavy ICBM: a crater that swallows a village. */
+	TSAR("tsar_bomba", Flight.BALLISTIC, Warhead.TSAR, Model.HEAVY_ICBM, 1.6F, 2.1F, 20.0F, 600, 100, 1.6, 1.15, Rarity.EPIC),
+	/**
+	 * Science fiction: a few micrograms of antimatter in a magnetic trap. Annihilation leaves a
+	 * perfectly round hole - no fire, no debris, no fallout.
+	 */
+	ANTIMATTER("antimatter_missile", Flight.BALLISTIC, Warhead.ANTIMATTER, Model.TACTICAL, 1.05F, 1.3F, 9.5F, 300, 50, 1.2, 0.9, Rarity.EPIC),
+	/** Climbs straight out of the sky; a while later a meteor shower rains down on the target. */
+	MOON("moon_rocket", Flight.BALLISTIC, Warhead.METEOR, Model.ICBM, 1.15F, 1.4F, 14.0F, 400, 80, 4.0, 1.4, Rarity.EPIC),
+	/** Trident-style submarine-launched ballistic missile with a MIRV bus; can be fired from underwater. */
+	SLBM("trident_missile", Flight.BALLISTIC, Warhead.MIRV, Model.ICBM, 0.95F, 1.2F, 11.5F, 300, 50, 1.3, 1.0, Rarity.EPIC);
 
 	public enum Flight {
 		BALLISTIC,
@@ -68,7 +79,13 @@ public enum MissileType {
 		ANTI_RADAR,
 		DRONE,
 		/** Free-fall bomb dropped by an airstrike jet. */
-		AERIAL_BOMB
+		AERIAL_BOMB,
+		TSAR,
+		ANTIMATTER,
+		/** Not a detonation: the moon rocket leaving the sky (the meteors come later). */
+		METEOR,
+		/** One meteor of the shower hitting the ground. */
+		METEOR_IMPACT
 	}
 
 	public enum Model {
@@ -127,7 +144,7 @@ public enum MissileType {
 
 	public boolean isNuclear() {
 		return this.warhead == Warhead.NUCLEAR || this.warhead == Warhead.HYDROGEN || this.warhead == Warhead.MIRV || this.warhead == Warhead.TACTICAL_NUKE
-			|| this.warhead == Warhead.EMP;
+			|| this.warhead == Warhead.EMP || this.warhead == Warhead.TSAR;
 	}
 
 	/** Strategic missiles are too long for the mobile launcher truck. */
