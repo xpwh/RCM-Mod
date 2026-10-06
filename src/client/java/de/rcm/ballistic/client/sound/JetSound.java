@@ -27,10 +27,12 @@ public class JetSound extends AbstractTickableSoundInstance {
 	public enum Layer {
 		NEAR,
 		FAR,
-		AFTERBURNER
+		AFTERBURNER,
+		/** Chest-thumping low end close by (its own instance, so it adds to the per-sound volume cap). */
+		SUB
 	}
 
-	private static final double AUDIBLE_RANGE = 1200.0;
+	private static final double AUDIBLE_RANGE = 1500.0;
 	private static final int MAX_HISTORY = 400;
 
 	private final JetEntity jet;
@@ -60,6 +62,7 @@ public class JetSound extends AbstractTickableSoundInstance {
 			case NEAR -> ModRegistry.JET_FIGHTER;
 			case FAR -> ModRegistry.JET_FIGHTER_FAR;
 			case AFTERBURNER -> ModRegistry.JET_AFTERBURNER;
+			case SUB -> ModRegistry.JET_SUB;
 		};
 	}
 
@@ -119,7 +122,8 @@ public class JetSound extends AbstractTickableSoundInstance {
 		float weight = switch (this.layer) {
 			case NEAR -> near;
 			case FAR -> 0.35F + 0.65F * (1.0F - near);
-			case AFTERBURNER -> s.afterburner() ? 1.0F - 0.6F * smoothstep(100.0F, 700.0F, (float) d) : 0.0F;
+			case AFTERBURNER -> s.afterburner() ? 1.0F - 0.5F * smoothstep(150.0F, 900.0F, (float) d) : 0.0F;
+			case SUB -> 1.0F - smoothstep(60.0F, 450.0F, (float) d);
 		};
 		float ramp = Mth.clamp(this.age / 15.0F, 0.0F, 1.0F);
 		this.volume = Mth.clamp(falloff * weight * ramp, 0.0F, 1.0F);

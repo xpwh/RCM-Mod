@@ -327,6 +327,7 @@ public final class ModRegistry {
 	public static final SoundEvent JET_FIGHTER_FAR = sound("jet.fighter_far");
 	public static final SoundEvent JET_AFTERBURNER = sound("jet.afterburner");
 	public static final SoundEvent JET_BOOM = sound("jet.boom");
+	public static final SoundEvent JET_SUB = sound("jet.sub");
 	public static final SoundEvent BOMB_WHISTLE = sound("bomb.whistle");
 	public static final SoundEvent LASER_BEAM = sound("laser.beam");
 

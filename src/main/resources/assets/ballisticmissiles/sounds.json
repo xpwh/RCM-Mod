@@ -304,6 +304,15 @@
 			}
 		]
 	},
+	"jet.sub": {
+		"subtitle": "subtitles.ballisticmissiles.fighter",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/sub",
+				"stream": true
+			}
+		]
+	},
 	"bomb.whistle": {
 		"subtitle": "subtitles.ballisticmissiles.bomb_whistle",
 		"sounds": [
