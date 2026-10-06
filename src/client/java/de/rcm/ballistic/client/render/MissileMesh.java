@@ -310,6 +310,9 @@ public final class MissileMesh {
 		for (int i = 0; i < 4; i++) {
 			b.fin(i * Mth.HALF_PI, R - 0.01F, 0.0F, 0.2F, 0.0F, 0.12F, 0.1F, 0.015F);
 		}
+		// BLU-97 style: shaped-charge liner ring and the standoff probe on the nose
+		b.ring(0.42F, R, 0.01F, 0.03F);
+		b.latheAt(0, 0, 12, new float[][] {{0.58F, 0.02F}, {0.7F, 0.02F}, {0.7F, 0.0F}}, Skin.METAL);
 		return b.build();
 	}
 
@@ -317,13 +320,18 @@ public final class MissileMesh {
 	private static MissileMesh buildReentryVehicle() {
 		float L = 1.8F;
 		Builder b = new Builder(L);
-		b.lathe(new float[][] {{0.0F, 0.0F}, {0.0F, 0.32F}, {0.08F, 0.33F}, {1.62F, 0.07F}}, Skin.BODY);
-		float[][] tip = new float[5][];
-		for (int k = 0; k <= 4; k++) {
-			double a = Math.toRadians(90.0 * k / 4.0);
-			tip[k] = new float[] {1.62F + 0.13F * (float) Math.sin(a), k == 4 ? 0.0F : 0.07F * (float) Math.cos(a)};
+		// Mk 21-style: slender cone with a slightly bulged base (heat shield), carbon nose tip
+		b.lathe(new float[][] {{0.0F, 0.0F}, {0.0F, 0.26F}, {0.03F, 0.31F}, {0.1F, 0.33F}, {0.9F, 0.2F}, {1.62F, 0.07F}}, Skin.BODY);
+		float[][] tip = new float[7][];
+		for (int k = 0; k <= 6; k++) {
+			double a = Math.toRadians(90.0 * k / 6.0);
+			tip[k] = new float[] {1.62F + 0.13F * (float) Math.sin(a), k == 6 ? 0.0F : 0.07F * (float) Math.cos(a)};
 		}
-		b.lathe(tip, Skin.BODY);
+		b.lathe(tip, Skin.DARK);
+		b.ring(0.12F, 0.325F, 0.008F, 0.03F); // aft closure joint
+		for (int i = 0; i < 4; i++) {
+			b.radialBox(i * Mth.HALF_PI, 0.3F, 0.02F, 0.05F, 0.12F, 0.3F, Skin.METAL); // spin rockets / fairings
+		}
 		return b.build();
 	}
 

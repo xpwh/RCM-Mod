@@ -31,9 +31,8 @@ public class CloudParticle extends SingleQuadParticle {
 	/** Smoke sprites, so fire particles can turn into smoke. Set when the smoke provider is created. */
 	private static @Nullable SpriteSet smokeSprites;
 
-	/** Slow wind every non-fire puff drifts with (blocks/tick). */
-	private static final double WIND_X = 0.018;
-	private static final double WIND_Z = 0.007;
+	/** Mean wind speed at ground level, blocks per tick (about 0.5 m/s). */
+	private static final double WIND_BASE = 0.022;
 
 	private SpriteSet sprites;
 	private int shapes;
@@ -182,6 +181,20 @@ public class CloudParticle extends SingleQuadParticle {
 		this.setSprite(this.sprites.get(s * STAGES + stage, this.shapes * STAGES - 1));
 	}
 
+	/**
+	 * The wind every non-fire puff drifts with, in blocks per tick: a direction that veers slowly over
+	 * the day, gusts every few seconds, and a speed that grows with height (wind shear), so tall smoke
+	 * columns lean over.
+	 */
+	public static double[] wind(long gameTime, double y) {
+		double t = gameTime;
+		double direction = 0.4 + 0.9 * Math.sin(t / 24000.0 * Mth.TWO_PI * 0.7) + 0.25 * Math.sin(t / 3100.0);
+		double gust = 1.0 + 0.35 * Math.sin(t * 0.047) + 0.2 * Math.sin(t * 0.131 + 1.3);
+		double shear = Mth.clamp(1.0 + (y - 70.0) / 110.0, 0.6, 3.2);
+		double speed = WIND_BASE * gust * shear;
+		return new double[] {Math.cos(direction) * speed, Math.sin(direction) * speed};
+	}
+
 	/** Direction the light comes from: the sun by day, the moon at night, always a bit from above. */
 	private Vec3 lightDir() {
 		double phase = (this.level.getDayTime() % 24000L) / 24000.0 * Math.PI * 2.0;
@@ -223,7 +236,16 @@ public class CloudParticle extends SingleQuadParticle {
 		}
 
 		this.xd *= this.friction;
-		this.yd = this.yd * this.friction + this.buoyancy;
+		// hot gas only rises while it is hotter than the air: lift fades over the last part of its life
+		float lift = t < 0.55F ? 1.0F : Math.max(0.0F, 1.0F - (t - 0.55F) / 0.45F);
+		this.yd = this.yd * this.friction + this.buoyancy * lift;
+		// the stable air of the upper atmosphere stops rising plumes: they spread out sideways instead
+		double ceiling = this.level.getMaxY() - 70;
+		if (this.yd > 0 && this.y > ceiling) {
+			this.yd *= 0.82;
+			this.xd *= 1.015;
+			this.zd *= 1.015;
+		}
 		this.zd *= this.friction;
 		double sx = 0;
 		double sz = 0;
@@ -235,7 +257,8 @@ public class CloudParticle extends SingleQuadParticle {
 			sy = Mth.sin(a * 0.7F + this.phaseB) * this.turb * 0.5;
 		}
 		double windRamp = this.wind * Math.min(1.0, this.age / 40.0);
-		this.move(this.xd + sx + WIND_X * windRamp, this.yd + sy, this.zd + sz + WIND_Z * windRamp);
+		double[] w = wind(this.level.getGameTime(), this.y);
+		this.move(this.xd + sx + w[0] * windRamp, this.yd + sy, this.zd + sz + w[1] * windRamp);
 		this.roll += this.spin;
 		this.updateSprite();
 

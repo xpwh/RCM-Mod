@@ -1,5 +1,7 @@
 package de.rcm.ballistic.explosion;
 
+import java.util.HashSet;
+import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
@@ -71,6 +73,9 @@ public class NukeDetonation {
 	private final double phaseC;
 
 	private int age;
+	/** How far the shock front has travelled. */
+	private double shockRadius;
+	private final Set<Integer> shocked = new HashSet<>();
 	private int nextSlice;
 	private int falloutAge = -1;
 
@@ -101,7 +106,7 @@ public class NukeDetonation {
 		if (this.age % 20 == 0) {
 			this.level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, new ChunkPos(this.center), Mth.ceil(this.blastRadius / 16.0) + 1);
 		}
-		if (this.age == 0) {
+		if (this.shockRadius <= this.damageRadius) {
 			this.blastWave();
 		}
 		this.age++;
@@ -137,11 +142,19 @@ public class NukeDetonation {
 
 	// ------------------------------------------------------------------ blast wave
 
+	/**
+	 * The shock front expands from the fireball: supersonic close in, slowing towards the speed of
+	 * sound (17 blocks per tick) further out. Each entity is hit once, when the front reaches it.
+	 */
 	private void blastWave() {
-		AABB box = new AABB(this.center).inflate(this.damageRadius);
+		double inner = this.shockRadius;
+		double speed = 17.15 + 60.0 * Math.exp(-this.age / 6.0);
+		this.shockRadius = this.age == 0 ? Math.max(this.craterRadius * 0.85, speed) : this.shockRadius + speed;
+		double outer = Math.min(this.shockRadius, this.damageRadius);
+		AABB box = new AABB(this.center).inflate(outer);
 		for (Entity entity : this.level.getEntities((Entity) null, box, e -> true)) {
 			double d = entity.position().distanceTo(this.exact);
-			if (d > this.damageRadius) {
+			if (d > outer || d < inner && this.age > 0 || !this.shocked.add(entity.getId())) {
 				continue;
 			}
 			if (entity instanceof ItemEntity || entity instanceof ExperienceOrb) {

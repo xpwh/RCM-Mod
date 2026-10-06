@@ -153,10 +153,19 @@ public class MissileEntity extends Entity implements AirThreat {
 		return this.getLaunchPos();
 	}
 
-	/** Cruise missiles burn their solid booster only during the climb-out. */
+	/**
+	 * Rocket motor running: during ignition, then for a ballistic missile until burnout (after that
+	 * it coasts silently on its arc), for a cruise missile only during the booster climb-out.
+	 */
 	public boolean isBoosterBurning() {
 		int state = this.getState();
-		return state == IGNITION || state == FLIGHT && (!this.missileType.isCruise() || this.clientOrServerAge() < CRUISE_BOOST_TICKS);
+		if (state == IGNITION) {
+			return true;
+		}
+		if (state != FLIGHT) {
+			return false;
+		}
+		return this.missileType.isCruise() ? this.clientOrServerAge() < CRUISE_BOOST_TICKS : this.getTrajectory().boosting(this.clientOrServerAge());
 	}
 
 	public boolean isJetRunning() {

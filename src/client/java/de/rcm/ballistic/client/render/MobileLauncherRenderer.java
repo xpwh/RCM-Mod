@@ -43,7 +43,7 @@ public class MobileLauncherRenderer extends EntityRenderer<MobileLauncherEntity,
 	private static final float RAIL_OFFSET = 0.6F;
 
 	private static final BoxMesh BODY = buildBody();
-	private static final BoxMesh WHEEL = new BoxMesh.Builder().cylinderX(0, 0, 0, WHEEL_RADIUS, 0.5F, 14, TREAD, RIM).build();
+	private static final BoxMesh WHEEL = buildWheel();
 	private static final BoxMesh ERECTOR = buildErector();
 	private static final BoxMesh JACK = new BoxMesh.Builder().box(-0.13F, -1.0F, -0.13F, 0.13F, 0.0F, 0.13F, STEEL).box(-0.3F, -1.08F, -0.3F, 0.3F, -1.0F, 0.3F, BLACK).build();
 
@@ -137,6 +137,23 @@ public class MobileLauncherRenderer extends EntityRenderer<MobileLauncherEntity,
 
 		poseStack.popPose();
 		super.submit(state, poseStack, collector, camera);
+	}
+
+	/** Off-road tyre with a chunky tread, a recessed rim and the central tyre-inflation hub. */
+	private static BoxMesh buildWheel() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		b.cylinderX(0, 0, 0, WHEEL_RADIUS - 0.04F, 0.5F, 24, TREAD, TIRE);
+		// tread lugs, alternating left and right
+		for (int i = 0; i < 16; i++) {
+			float a = i * Mth.TWO_PI / 16;
+			float x = i % 2 == 0 ? -0.12F : 0.12F;
+			float y = Mth.sin(a) * (WHEEL_RADIUS - 0.02F);
+			float z = Mth.cos(a) * (WHEEL_RADIUS - 0.02F);
+			b.beam(new Vector3f(x - 0.12F, y, z), new Vector3f(x + 0.12F, y, z), 0.1F, 0.08F, TREAD);
+		}
+		b.cylinderX(0, 0, 0, 0.36F, 0.54F, 18, RIM, RIM);
+		b.cylinderX(0, 0, 0, 0.12F, 0.6F, 10, STEEL, STEEL);
+		return b.build();
 	}
 
 	/** Chassis, cab and bed in truck space: x across, y up, z forward; origin on the ground. */
