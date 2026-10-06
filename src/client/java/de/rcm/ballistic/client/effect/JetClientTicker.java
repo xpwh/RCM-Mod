@@ -54,6 +54,23 @@ public final class JetClientTicker {
 			}
 		}
 
+		// A-10 cannon: the burst is heard only once its sound has travelled to us (you see the impacts
+		// first, then the BRRRT rolls in), and loud: two layered instances, never distance-faded away
+		boolean firing = jet.isFiring();
+		Vec3 earNow = mc.gameRenderer.getMainCamera().position();
+		if (firing && !jet.clientWasFiring) {
+			jet.clientGunSoundFrom = center.add(dir.scale(7.5));
+			jet.clientGunSoundIn = (int) (jet.clientGunSoundFrom.distanceTo(earNow) / JetEntity.SOUND_SPEED);
+		}
+		jet.clientWasFiring = firing;
+		if (jet.clientGunSoundIn >= 0 && jet.clientGunSoundIn-- == 0) {
+			double d = jet.clientGunSoundFrom.distanceTo(earNow);
+			float volume = (float) Math.max(0.35, 1.25 - d / 1600.0);
+			ClientEffects.playDistant(mc, ModRegistry.A10_GUN, jet.clientGunSoundFrom, volume, 1.0F);
+			ClientEffects.playDistant(mc, ModRegistry.A10_GUN, jet.clientGunSoundFrom, volume, 0.985F);
+			ClientEffects.addShake((float) Math.max(0.0, 1.1 - d / 300.0));
+		}
+
 		// sonic boom: heard the moment the Mach cone trailing the jet sweeps over the listener
 		Vec3 ear = mc.gameRenderer.getMainCamera().position();
 		float mach = jet.getMach();

@@ -54,6 +54,7 @@ public class JetEntity extends Entity implements AirThreat {
 	/** A-10 gun run: opens fire this far before the target, ceases this close. */
 	private static final double GUN_OPEN = 170.0;
 	private static final double GUN_CEASE = 45.0;
+	private boolean pullingUp;
 
 	/** Speed of sound in blocks per tick (343 m/s). */
 	public static final double SOUND_SPEED = 17.15;
@@ -86,6 +87,10 @@ public class JetEntity extends Entity implements AirThreat {
 
 	/** Client only: the listener is inside the trailing Mach cone (the boom has been heard). */
 	public boolean clientInMachCone;
+	/** Client: was the cannon firing last tick, and ticks until its sound reaches the listener. */
+	public boolean clientWasFiring;
+	public int clientGunSoundIn = -1;
+	public Vec3 clientGunSoundFrom = Vec3.ZERO;
 
 	public JetEntity(EntityType<? extends JetEntity> type, Level level) {
 		super(type, level);
@@ -226,14 +231,21 @@ public class JetEntity extends Entity implements AirThreat {
 			Vec3 toTarget = new Vec3(this.target.x - pos.x, 0, this.target.z - pos.z);
 			Vec3 heading = toTarget.lengthSqr() > 900.0 && this.bombsLeft == type.bombs && !this.isFiring() ? toTarget.normalize() : flat;
 			desired = heading.add(0, Mth.clamp((alt - pos.y) * 0.03, -0.25, 0.25), 0).normalize();
+			double guardRange = lookahead(speed);
+			double guardClearance = type == JetType.WARTHOG ? 8.0 : 12.0;
 			if (type == JetType.WARTHOG) {
 				Vec3 dive = this.gunRun(level, pos, flat);
 				if (dive != null) {
 					desired = dive;
+					// only the ground between us and the aim point matters during the dive
+					double along = (this.target.x - pos.x) * flat.x + (this.target.z - pos.z) * flat.z;
+					guardRange = Math.min(guardRange, Math.max(12.0, along - 35.0));
+					guardClearance = 5.0;
 				}
 			} else {
 				this.bombRun(level, pos, flat, speed);
 			}
+			desired = this.avoidTerrain(level, pos, dir, desired, guardClearance, guardRange);
 		} else {
 			this.egressAge++;
 			JetType type = this.getJetType();
@@ -252,10 +264,22 @@ public class JetEntity extends Entity implements AirThreat {
 				this.discard();
 				return;
 			}
+			desired = this.avoidTerrain(level, pos, dir, desired, 12.0, lookahead(speed));
 		}
 
-		Vec3 newDir = dir.add(desired.subtract(dir).scale(this.egress ? 0.05 : 0.08)).normalize();
+		double turnRate = this.pullingUp ? 0.22 : this.egress ? 0.05 : 0.08;
+		Vec3 newDir = dir.add(desired.subtract(dir).scale(turnRate)).normalize();
 		Vec3 next = pos.add(newDir.scale(speed));
+		// last line of defence: never end a tick inside the terrain
+		int nx = Mth.floor(next.x);
+		int nz = Mth.floor(next.z);
+		if (level.hasChunk(nx >> 4, nz >> 4)) {
+			double floor = level.getHeight(Heightmap.Types.MOTION_BLOCKING, nx, nz) + 3.0;
+			if (next.y < floor) {
+				next = new Vec3(next.x, floor, next.z);
+				newDir = new Vec3(newDir.x, Math.max(newDir.y, 0.35), newDir.z).normalize();
+			}
+		}
 		if (!level.isPositionEntityTicking(BlockPos.containing(next))) {
 			if (this.egress) {
 				this.discard(); // flown out of the loaded world
@@ -272,6 +296,49 @@ public class JetEntity extends Entity implements AirThreat {
 		if (this.tickCount > 6000) {
 			this.discard();
 		}
+	}
+
+	/** How far ahead the terrain guard looks: about four seconds of flight. */
+	private static double lookahead(double speed) {
+		return Mth.clamp(speed * 40.0, 120.0, 420.0);
+	}
+
+	/**
+	 * Terrain guard: scans the ground ahead (along the current heading and the one we want) and, if
+	 * the planned path would come closer than {@code clearance} to a hill, ridge or treetop, replaces
+	 * it with a climb steep enough to clear the highest obstacle - pulling up hard while it lasts.
+	 */
+	private Vec3 avoidTerrain(ServerLevel level, Vec3 pos, Vec3 dir, Vec3 desired, double clearance, double range) {
+		Vec3 wanted = new Vec3(desired.x, 0, desired.z);
+		Vec3 current = new Vec3(dir.x, 0, dir.z);
+		if (wanted.lengthSqr() < 1.0E-6) {
+			wanted = current;
+		}
+		if (current.lengthSqr() < 1.0E-6) {
+			current = wanted;
+		}
+		wanted = wanted.normalize();
+		current = current.normalize();
+		double need = Double.NEGATIVE_INFINITY; // climb gradient that clears everything ahead
+		for (double k = 4.0; k <= range; k += 4.0) {
+			for (Vec3 heading : new Vec3[] {wanted, current}) {
+				Vec3 probe = pos.add(heading.scale(k));
+				int px = Mth.floor(probe.x);
+				int pz = Mth.floor(probe.z);
+				if (!level.hasChunk(px >> 4, pz >> 4)) {
+					continue;
+				}
+				double ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING, px, pz);
+				need = Math.max(need, (ground + clearance - pos.y) / k);
+			}
+		}
+		double horizontal = Math.max(1.0E-3, Math.hypot(desired.x, desired.z));
+		double slope = desired.y / horizontal;
+		this.pullingUp = need > slope && need > -0.05;
+		if (!this.pullingUp) {
+			return desired;
+		}
+		return wanted.add(0, Math.min(need + 0.08, 1.5), 0).normalize();
 	}
 
 	private void bombRun(ServerLevel level, Vec3 pos, Vec3 flat, double speed) {
@@ -343,7 +410,6 @@ public class JetEntity extends Entity implements AirThreat {
 		if (!this.isFiring()) {
 			this.entityData.set(DATA_FIRING, true);
 			this.tellCaller(level, Component.translatable("message.ballisticmissiles.a10_guns").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
-			level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.A10_GUN, SoundSource.HOSTILE, 30.0F, 1.0F);
 		}
 		var random = level.getRandom();
 		Vec3 muzzle = pos.add(0, 0.6, 0).add(this.getDir().scale(7.5));
@@ -358,7 +424,7 @@ public class JetEntity extends Entity implements AirThreat {
 			for (var living : level.getEntitiesOfClass(LivingEntity.class, new AABB(p, p).inflate(2.0))) {
 				living.hurtServer(level, level.damageSources().explosion(this, null), 14.0F);
 			}
-			if (random.nextInt(4) == 0) {
+			if (random.nextInt(8) == 0) {
 				level.explode(this, p.x, p.y, p.z, 1.6F, false, Level.ExplosionInteraction.TNT);
 			}
 		}

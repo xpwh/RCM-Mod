@@ -51,6 +51,21 @@ public final class ClientEffects {
 	public static void detonation(int warheadId, Vec3 pos) {
 		Warhead[] all = Warhead.values();
 		Warhead warhead = warheadId >= 0 && warheadId < all.length ? all[warheadId] : Warhead.HIGH_EXPLOSIVE;
+		switch (warhead) {
+			case NUCLEAR, MIRV -> BlastShader.blast(BlastShader.Kind.NUCLEAR, pos, 1.0, 0xFFE2B0);
+			case HYDROGEN -> BlastShader.blast(BlastShader.Kind.NUCLEAR, pos, 1.6, 0xFFE2B0);
+			case TSAR -> BlastShader.blast(BlastShader.Kind.NUCLEAR, pos, 2.2, 0xFFE8C0);
+			case MIRV_WARHEAD, TACTICAL_NUKE -> BlastShader.blast(BlastShader.Kind.NUCLEAR, pos, 0.62, 0xFFE2B0);
+			case ANTIMATTER -> BlastShader.blast(BlastShader.Kind.ANTIMATTER, pos, 1.8, 0xC890FF);
+			case EMP -> BlastShader.blast(BlastShader.Kind.EMP, pos, 0.8, 0x90E0FF);
+			case MOAB -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.9, 0xFFA040);
+			case THERMOBARIC -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.8, 0xFF9030);
+			case INCENDIARY -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.6, 0xFF8020);
+			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, METEOR -> {
+			}
+			case BOMBLET -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.25, 0xFFB060);
+			default -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.5, 0xFFB060);
+		}
 		EFFECTS.add(switch (warhead) {
 			case NUCLEAR -> new NukeEffect(pos, 1.0);
 			case HYDROGEN -> new NukeEffect(pos, 1.6);
@@ -164,7 +179,7 @@ public final class ClientEffects {
 	}
 
 	static void setFlash(float strength, int color) {
-		BlastShader.kick(strength * 0.85F);
+		BlastShader.flash(strength * 0.8F);
 		if (strength > flash) {
 			flash = Math.min(1.0F, strength);
 			flashColor = color;
@@ -175,7 +190,7 @@ public final class ClientEffects {
 	 * Plays a sound positioned towards the source but close to the listener, so distance can be faked
 	 * far beyond the vanilla attenuation range.
 	 */
-	static void playDistant(Minecraft mc, SoundEvent sound, Vec3 source, float volume, float pitch) {
+	public static void playDistant(Minecraft mc, SoundEvent sound, Vec3 source, float volume, float pitch) {
 		if (volume <= 0.01F) {
 			return;
 		}
@@ -188,7 +203,7 @@ public final class ClientEffects {
 		));
 	}
 
-	static double distanceToCamera(Minecraft mc, Vec3 pos) {
+	public static double distanceToCamera(Minecraft mc, Vec3 pos) {
 		return mc.gameRenderer.getMainCamera().position().distanceTo(pos);
 	}
 

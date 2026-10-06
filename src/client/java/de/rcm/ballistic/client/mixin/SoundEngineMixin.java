@@ -25,7 +25,7 @@ public abstract class SoundEngineMixin {
 		Identifier id = sound.getIdentifier();
 		if (BallisticMissiles.MOD_ID.equals(id.getNamespace())) {
 			String path = id.getPath();
-			if (path.startsWith("explosion.") || path.startsWith("nuke.") || path.startsWith("ear.")) {
+			if (path.startsWith("explosion.") || path.startsWith("nuke.") || path.startsWith("ear.") || path.equals("a10.gun")) {
 				return;
 			}
 		}
