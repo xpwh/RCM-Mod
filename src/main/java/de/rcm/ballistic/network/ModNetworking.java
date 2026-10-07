@@ -256,6 +256,46 @@ public final class ModNetworking {
 		}
 	}
 
+	/** One far-away object in the air: entity id, kind (0 missile, 1 warhead, 2 aircraft, 3 rocket). */
+	public record FarTrack(int id, int kind, float x, float y, float z, float vx, float vy, float vz, boolean burning) {
+	}
+
+	/** Server -> client: long-range positions of everything flying (for far-render setups like Distant Horizons). */
+	public record FarTrackPayload(List<FarTrack> tracks) implements CustomPacketPayload {
+		public static final Type<FarTrackPayload> TYPE = new Type<>(BallisticMissiles.id("far_tracks"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, FarTrackPayload> CODEC = StreamCodec.of(FarTrackPayload::write, FarTrackPayload::read);
+
+		private static void write(RegistryFriendlyByteBuf buf, FarTrackPayload p) {
+			buf.writeVarInt(p.tracks.size());
+			for (FarTrack t : p.tracks) {
+				buf.writeVarInt(t.id());
+				buf.writeByte(t.kind());
+				buf.writeFloat(t.x());
+				buf.writeFloat(t.y());
+				buf.writeFloat(t.z());
+				buf.writeFloat(t.vx());
+				buf.writeFloat(t.vy());
+				buf.writeFloat(t.vz());
+				buf.writeBoolean(t.burning());
+			}
+		}
+
+		private static FarTrackPayload read(RegistryFriendlyByteBuf buf) {
+			int n = Math.min(256, buf.readVarInt());
+			List<FarTrack> tracks = new ArrayList<>(n);
+			for (int i = 0; i < n; i++) {
+				tracks.add(new FarTrack(buf.readVarInt(), buf.readByte(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+					buf.readFloat(), buf.readBoolean()));
+			}
+			return new FarTrackPayload(tracks);
+		}
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	public static void init() {
 		PayloadTypeRegistry.playS2C().register(DetonationPayload.TYPE, DetonationPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(RadarDataPayload.TYPE, RadarDataPayload.CODEC);
@@ -263,6 +303,7 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playC2S().register(DesignatorActionPayload.TYPE, DesignatorActionPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(RadarClosePayload.TYPE, RadarClosePayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(CommandDataPayload.TYPE, CommandDataPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(FarTrackPayload.TYPE, FarTrackPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(CommandActionPayload.TYPE, CommandActionPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(CommandActionPayload.TYPE, (payload, context) -> {
 			var player = context.player();

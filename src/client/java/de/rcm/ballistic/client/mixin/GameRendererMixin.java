@@ -12,10 +12,20 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Camera shake from blasts, launches and shockwaves; per-frame blast shader parameters. */
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
+	/**
+	 * Far plane of at least 4 km, so far-away missiles, contrails and mushroom clouds are not clipped
+	 * when the vanilla render distance is low (as with Distant Horizons drawing the far terrain).
+	 */
+	@Inject(method = "getDepthFar", at = @At("RETURN"), cancellable = true)
+	private void ballisticmissiles$farPlane(CallbackInfoReturnable<Float> cir) {
+		cir.setReturnValue(Math.max(cir.getReturnValueF(), 4096.0F));
+	}
+
 	@Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V", at = @At("HEAD"))
 	private void ballisticmissiles$blastShader(DeltaTracker deltaTracker, boolean advance, CallbackInfo ci) {
 		BlastShader.frame(Minecraft.getInstance(), deltaTracker.getGameTimeDeltaPartialTick(false));

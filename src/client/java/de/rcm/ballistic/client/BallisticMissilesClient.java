@@ -93,6 +93,10 @@ public class BallisticMissilesClient implements ClientModInitializer {
 				mc.setScreen(new de.rcm.ballistic.client.screen.CommandScreen(payload));
 			}
 		});
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.FarTrackPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.FarTrackClient.receive(payload));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.FarTrackClient::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FarTrackClient.clear());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientEffects.clear());
 		ClientTickEvents.END_CLIENT_TICK.register(ClientEffects::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(BallisticMissilesClient::debrisTrails);

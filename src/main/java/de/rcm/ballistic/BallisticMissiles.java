@@ -29,6 +29,7 @@ public class BallisticMissiles implements ModInitializer {
 		ServerTickEvents.END_WORLD_TICK.register(DetonationManager::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RemoteLaunch::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RadiationManager::tick);
+		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.defense.FarTracker::tick);
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % 6000 == 0) {
 				RadiationManager.save(server);
