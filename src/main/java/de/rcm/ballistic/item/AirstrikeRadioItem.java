@@ -98,6 +98,19 @@ public class AirstrikeRadioItem extends Item {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.airstrike_no_target").withStyle(ChatFormatting.YELLOW), true);
 			return InteractionResult.FAIL;
 		}
+		InteractionResult result = callMission(server, serverPlayer, mode, target);
+		if (result == InteractionResult.SUCCESS && !player.getAbilities().instabuild) {
+			player.getCooldowns().addCooldown(radio, mode.cooldownSeconds * 20);
+		}
+		return result;
+	}
+
+	/**
+	 * Calls in {@code mode} on {@code target} for {@code player} (also used by the command center).
+	 * Reports to the player; returns SUCCESS if the mission is on its way.
+	 */
+	public static InteractionResult callMission(ServerLevel server, ServerPlayer player, Mode mode, Vec3 target) {
+		Level level = server;
 		double distance = Math.hypot(target.x - player.getX(), target.z - player.getZ());
 		if (distance < DANGER_CLOSE) {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.airstrike_danger_close", (int) DANGER_CLOSE).withStyle(ChatFormatting.RED), true);
@@ -105,12 +118,9 @@ public class AirstrikeRadioItem extends Item {
 		}
 		if (mode.jet == null) {
 			if (mode == Mode.TOMAHAWK) {
-				FireSupport.tomahawkSalvo(server, serverPlayer, target);
+				FireSupport.tomahawkSalvo(server, player, target);
 			} else {
-				FireSupport.artilleryBarrage(server, serverPlayer, target);
-			}
-			if (!player.getAbilities().instabuild) {
-				player.getCooldowns().addCooldown(radio, mode.cooldownSeconds * 20);
+				FireSupport.artilleryBarrage(server, player, target);
 			}
 			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.TARGET_LOCK, SoundSource.PLAYERS, 1.0F, 0.8F);
 			player.displayClientMessage(Component.literal("☄ ").append(mode.displayName()).append(" – ")
@@ -119,19 +129,15 @@ public class AirstrikeRadioItem extends Item {
 				.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 			return InteractionResult.SUCCESS;
 		}
-		JetEntity jet = JetEntity.callIn(server, serverPlayer, target, mode.jet, 0.0, 0.0);
+		JetEntity jet = JetEntity.callIn(server, player, target, mode.jet, 0.0, 0.0);
 		if (jet != null && mode.aircraft > 1) {
 			// wingmen echelon out to both sides and a little behind, widening the carpet
-			JetEntity.callIn(server, serverPlayer, target, mode.jet, 14.0, 22.0);
-			JetEntity.callIn(server, serverPlayer, target, mode.jet, -14.0, 44.0);
+			JetEntity.callIn(server, player, target, mode.jet, 14.0, 22.0);
+			JetEntity.callIn(server, player, target, mode.jet, -14.0, 44.0);
 		}
 		if (jet == null) {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.airstrike_out_of_range", (int) JetEntity.MAX_RANGE).withStyle(ChatFormatting.RED), true);
 			return InteractionResult.FAIL;
-		}
-		ItemStack stack = player.getItemInHand(hand);
-		if (!player.getAbilities().instabuild) {
-			player.getCooldowns().addCooldown(stack, mode.cooldownSeconds * 20);
 		}
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.8F, 0.6F);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.TARGET_LOCK, SoundSource.PLAYERS, 1.0F, 0.8F);

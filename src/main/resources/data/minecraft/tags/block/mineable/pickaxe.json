@@ -12,6 +12,7 @@
 		"ballisticmissiles:blast_door",
 		"ballisticmissiles:iron_dome",
 		"ballisticmissiles:decoy_launcher",
-		"ballisticmissiles:sea_mine"
+		"ballisticmissiles:sea_mine",
+		"ballisticmissiles:command_center"
 	]
 }

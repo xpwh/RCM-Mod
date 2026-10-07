@@ -195,6 +195,11 @@ public final class ModRegistry {
 		props -> new de.rcm.ballistic.block.DefenseSiteBlock(props, () -> ModRegistry.IRON_DOME_BE, de.rcm.ballistic.block.IronDomeBlockEntity::new),
 		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
 	);
+	public static final Block COMMAND_CENTER = registerBlock(
+		"command_center",
+		de.rcm.ballistic.block.CommandCenterBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion().lightLevel(s -> 7)
+	);
 	public static final Block DECOY_LAUNCHER = registerBlock(
 		"decoy_launcher",
 		props -> new de.rcm.ballistic.block.DefenseSiteBlock(props, () -> ModRegistry.DECOY_LAUNCHER_BE, de.rcm.ballistic.block.DecoyLauncherBlockEntity::new),
@@ -251,6 +256,9 @@ public final class ModRegistry {
 	public static final BlockEntityType<de.rcm.ballistic.block.IronDomeBlockEntity> IRON_DOME_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("iron_dome"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.IronDomeBlockEntity::new, IRON_DOME).build()
 	);
+	public static final BlockEntityType<de.rcm.ballistic.block.CommandCenterBlockEntity> COMMAND_CENTER_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("command_center"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.CommandCenterBlockEntity::new, COMMAND_CENTER).build()
+	);
 	public static final BlockEntityType<de.rcm.ballistic.block.DecoyLauncherBlockEntity> DECOY_LAUNCHER_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("decoy_launcher"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.DecoyLauncherBlockEntity::new, DECOY_LAUNCHER).build()
 	);
@@ -294,6 +302,9 @@ public final class ModRegistry {
 	);
 	public static final Item IRON_DOME_ITEM = registerItem(
 		"iron_dome", props -> new BlockItem(IRON_DOME, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item COMMAND_CENTER_ITEM = registerItem(
+		"command_center", props -> new BlockItem(COMMAND_CENTER, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
 	);
 	public static final Item DECOY_LAUNCHER_ITEM = registerItem(
 		"decoy_launcher", props -> new BlockItem(DECOY_LAUNCHER, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
@@ -398,6 +409,7 @@ public final class ModRegistry {
 				output.accept(SUBMARINE_ITEM);
 				output.accept(MOBILE_LAUNCHER_ITEM);
 				output.accept(TARGET_DESIGNATOR);
+				output.accept(COMMAND_CENTER_ITEM);
 				output.accept(RADAR_ITEM);
 				output.accept(AIR_DEFENSE_ITEM);
 				output.accept(CIWS_ITEM);

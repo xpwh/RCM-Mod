@@ -187,12 +187,89 @@ public final class ModNetworking {
 		}
 	}
 
+	/** Server -> client: the command center's situation map. {@code open} asks the client to open it. */
+	public record CommandDataPayload(BlockPos center, boolean open, int range, List<TrackInfo> tracks, List<SiteInfo> sites, int links, int cooldown)
+		implements CustomPacketPayload {
+		public static final Type<CommandDataPayload> TYPE = new Type<>(BallisticMissiles.id("command_data"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, CommandDataPayload> CODEC = StreamCodec.of(CommandDataPayload::write, CommandDataPayload::read);
+
+		private static void write(RegistryFriendlyByteBuf buf, CommandDataPayload p) {
+			buf.writeBlockPos(p.center);
+			buf.writeBoolean(p.open);
+			buf.writeVarInt(p.range);
+			buf.writeVarInt(p.tracks.size());
+			for (TrackInfo t : p.tracks) {
+				TrackInfo.write(buf, t);
+			}
+			buf.writeVarInt(p.sites.size());
+			for (SiteInfo s : p.sites) {
+				buf.writeBlockPos(s.pos());
+				buf.writeVarInt(s.kind());
+			}
+			buf.writeVarInt(p.links);
+			buf.writeVarInt(p.cooldown);
+		}
+
+		private static CommandDataPayload read(RegistryFriendlyByteBuf buf) {
+			BlockPos center = buf.readBlockPos();
+			boolean open = buf.readBoolean();
+			int range = buf.readVarInt();
+			int n = Math.min(256, buf.readVarInt());
+			List<TrackInfo> tracks = new ArrayList<>(n);
+			for (int i = 0; i < n; i++) {
+				tracks.add(TrackInfo.read(buf));
+			}
+			int m = Math.min(512, buf.readVarInt());
+			List<SiteInfo> sites = new ArrayList<>(m);
+			for (int i = 0; i < m; i++) {
+				sites.add(new SiteInfo(buf.readBlockPos(), buf.readVarInt()));
+			}
+			return new CommandDataPayload(center, open, range, tracks, sites, buf.readVarInt(), buf.readVarInt());
+		}
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: an order from the command center. */
+	public record CommandActionPayload(BlockPos center, int action, int x, int z, int mode) implements CustomPacketPayload {
+		public static final int CLOSE = 0;
+		public static final int FIRE_LINKED = 1;
+		public static final int AIRSTRIKE = 2;
+		public static final int ABORT_LINKED = 3;
+
+		public static final Type<CommandActionPayload> TYPE = new Type<>(BallisticMissiles.id("command_action"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, CommandActionPayload> CODEC = StreamCodec.composite(
+			BlockPos.STREAM_CODEC, CommandActionPayload::center,
+			ByteBufCodecs.VAR_INT, CommandActionPayload::action,
+			ByteBufCodecs.VAR_INT, CommandActionPayload::x,
+			ByteBufCodecs.VAR_INT, CommandActionPayload::z,
+			ByteBufCodecs.VAR_INT, CommandActionPayload::mode,
+			CommandActionPayload::new
+		);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	public static void init() {
 		PayloadTypeRegistry.playS2C().register(DetonationPayload.TYPE, DetonationPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(RadarDataPayload.TYPE, RadarDataPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(SetTargetPayload.TYPE, SetTargetPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(DesignatorActionPayload.TYPE, DesignatorActionPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(RadarClosePayload.TYPE, RadarClosePayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(CommandDataPayload.TYPE, CommandDataPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(CommandActionPayload.TYPE, CommandActionPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(CommandActionPayload.TYPE, (payload, context) -> {
+			var player = context.player();
+			if (player.level().isLoaded(payload.center()) && player.level().getBlockEntity(payload.center()) instanceof de.rcm.ballistic.block.CommandCenterBlockEntity center) {
+				center.handleAction(player, payload);
+			}
+		});
 
 		ServerPlayNetworking.registerGlobalReceiver(SetTargetPayload.TYPE, (payload, context) -> {
 			BlockPos pos = payload.pos();

@@ -83,6 +83,14 @@ public class BallisticMissilesClient implements ClientModInitializer {
 				mc.setScreen(new RadarScreen(payload));
 			}
 		});
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.CommandDataPayload.TYPE, (payload, context) -> {
+			Minecraft mc = context.client();
+			if (mc.screen instanceof de.rcm.ballistic.client.screen.CommandScreen screen && screen.centerPos().equals(payload.center())) {
+				screen.update(payload);
+			} else if (payload.open()) {
+				mc.setScreen(new de.rcm.ballistic.client.screen.CommandScreen(payload));
+			}
+		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientEffects.clear());
 		ClientTickEvents.END_CLIENT_TICK.register(ClientEffects::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(BallisticMissilesClient::debrisTrails);
