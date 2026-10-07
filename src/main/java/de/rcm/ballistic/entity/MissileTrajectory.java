@@ -19,7 +19,11 @@ import net.minecraft.world.phys.Vec3;
 public final class MissileTrajectory {
 	/** Fraction of the flight the motor burns. */
 	private static final double BOOST_FRACTION = 0.24;
-	/** The free flight after burnout is this much shorter (faster) than the boost would suggest. */
+	/**
+	 * The free flight is flown in this fraction of the time the parabola would take. The time is
+	 * warped so the missile leaves burnout at the parabola's own speed and keeps getting faster all
+	 * the way down (about 2.6x at the end) instead of being fast from the start.
+	 */
 	private static final double COAST_SPEEDUP = 0.55;
 	/** Time easing of the boost: thrust builds up, the missile creeps off the pad. */
 	private static final double EASE = 1.5;
@@ -33,6 +37,9 @@ public final class MissileTrajectory {
 	private final double gravity;
 	private final int boostTicks;
 	private final int duration;
+	/** Parabola time of the free flight, and the (shorter) real time it is flown in. */
+	private final double coastParam;
+	private final double coastTime;
 	private final Vec3 endVelocity;
 
 	public MissileTrajectory(Vec3 start, Vec3 target, double apexScale, double durationScale) {
@@ -48,8 +55,10 @@ public final class MissileTrajectory {
 		// the lift-off keeps its slow, heavy pace; once up in the air the missile is much faster
 		int full = (int) Math.max(60.0, Mth.clamp(160.0 + horizontal * 0.12, 200.0, 900.0) * durationScale);
 		this.boostTicks = Math.max(30, (int) (full * BOOST_FRACTION));
-		this.duration = this.boostTicks + Math.max(20, (int) ((full - this.boostTicks) * COAST_SPEEDUP));
-		double coast = this.duration - this.boostTicks;
+		double coast = Math.max(20, full - this.boostTicks);
+		this.duration = this.boostTicks + Math.max(12, (int) Math.round(coast * COAST_SPEEDUP));
+		this.coastParam = coast;
+		this.coastTime = this.duration - this.boostTicks;
 
 		// burnout point: high above the pad, a little way downrange
 		double climb = Math.max(20.0, (apexY - start.y) * 0.32);
@@ -91,8 +100,25 @@ public final class MissileTrajectory {
 			double h11 = s3 - s2;
 			return this.start.scale(h00).add(this.m0.scale(h10)).add(this.burnout.scale(h01)).add(this.m1.scale(h11));
 		}
-		double t = tick - this.boostTicks;
+		double t = this.warp(tick - this.boostTicks);
 		return this.burnout.add(this.burnoutVelocity.scale(t)).add(0, -0.5 * this.gravity * t * t, 0);
+	}
+
+	/**
+	 * Real coast time to parabola time: tau = C (k u + (1 - k) u^2) with u = t / D and k = D / C, so
+	 * the speed at burnout is unchanged (no jump, no loop in the boost curve) and rises steadily.
+	 */
+	private double warp(double t) {
+		double u = t / this.coastTime;
+		double k = this.coastTime / this.coastParam;
+		return this.coastParam * (k * u + (1.0 - k) * u * u);
+	}
+
+	/** d(tau)/dt of {@link #warp}. */
+	private double warpRate(double t) {
+		double u = t / this.coastTime;
+		double k = this.coastTime / this.coastParam;
+		return this.coastParam / this.coastTime * (k + 2.0 * (1.0 - k) * u);
 	}
 
 	/** Velocity in blocks per tick. */
@@ -111,8 +137,9 @@ public final class MissileTrajectory {
 			double d11 = 3 * s2 - 2 * s;
 			return this.start.scale(d00).add(this.m0.scale(d10)).add(this.burnout.scale(d01)).add(this.m1.scale(d11)).scale(dsdTick);
 		}
-		double t = tick - this.boostTicks;
-		return this.burnoutVelocity.add(0, -this.gravity * t, 0);
+		double real = tick - this.boostTicks;
+		double t = this.warp(real);
+		return this.burnoutVelocity.add(0, -this.gravity * t, 0).scale(this.warpRate(real));
 	}
 
 	/** Direction the nose points; straight up right at liftoff. */
