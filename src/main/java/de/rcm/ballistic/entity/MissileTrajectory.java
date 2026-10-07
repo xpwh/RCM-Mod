@@ -46,7 +46,11 @@ public final class MissileTrajectory {
 		double dx = target.x - start.x;
 		double dz = target.z - start.z;
 		double horizontal = Math.sqrt(dx * dx + dz * dz);
-		double height = Mth.clamp(150.0 + horizontal * 0.35, 180.0, 1200.0) * apexScale;
+		// every ballistic missile climbs very high - about 350 to 550 blocks above its launch point,
+		// still in sight at full render distance - whatever the range; the moon rocket leaves for space
+		double height = apexScale > 2.0
+			? Mth.clamp(150.0 + horizontal * 0.35, 180.0, 1200.0) * apexScale
+			: Mth.clamp(330.0 + horizontal * 0.03, 330.0, 400.0) * Mth.clamp(apexScale, 0.8, 1.2);
 		double apexY = Math.max(start.y, target.y) + height * 1.15;
 		double nx = horizontal > 1.0E-3 ? dx / horizontal : 0.0;
 		double nz = horizontal > 1.0E-3 ? dz / horizontal : 0.0;
