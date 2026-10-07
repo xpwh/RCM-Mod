@@ -16,6 +16,7 @@ public final class ClientHooks {
 	public static Consumer<MissileEntity> missileClientTick = missile -> {};
 	public static Consumer<Entity> projectileClientTick = entity -> {};
 	public static Consumer<JetEntity> jetClientTick = jet -> {};
+	public static Consumer<de.rcm.ballistic.entity.AerialBombEntity> bombClientTick = bomb -> {};
 
 	private ClientHooks() {
 	}

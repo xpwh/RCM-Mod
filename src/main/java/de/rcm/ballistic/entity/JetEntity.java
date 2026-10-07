@@ -641,11 +641,7 @@ public class JetEntity extends Entity implements AirThreat {
 			bomb.setPos(release);
 			bomb.setDeltaMovement(flat.scale(speed));
 			level.addFreshEntity(bomb);
-			if (moab) {
-				level.playSound(null, release.x, release.y, release.z, ModRegistry.BOMB_WHISTLE, SoundSource.HOSTILE, 16.0F, 0.55F);
-			} else if (this.bombsLeft % 3 == 0) {
-				level.playSound(null, release.x, release.y, release.z, ModRegistry.BOMB_WHISTLE, SoundSource.HOSTILE, 8.0F, 0.9F + level.getRandom().nextFloat() * 0.2F);
-			}
+			// the whistle is played client-side, riding down with the bomb
 		}
 		this.entityData.set(DATA_BOMBS, --this.bombsLeft);
 		if (this.bombsLeft <= 0) {

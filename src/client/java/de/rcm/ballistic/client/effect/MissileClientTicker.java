@@ -169,7 +169,7 @@ public final class MissileClientTicker {
 			double d = mc.gameRenderer.getMainCamera().position().distanceTo(target);
 			if (d < 350) {
 				missile.incomingPlayed = true;
-				ClientEffects.playDistant(mc, ModRegistry.INCOMING, nozzle, (float) (1.0 - d / 450.0), 1.05F);
+				mc.getSoundManager().play(new MissileFollowSound(missile, ModRegistry.INCOMING, 1.05F, 450.0, 1.0F, true));
 			}
 		}
 	}
@@ -256,7 +256,7 @@ public final class MissileClientTicker {
 			double d = mc.gameRenderer.getMainCamera().position().distanceTo(target);
 			if (d < 450) {
 				missile.incomingPlayed = true;
-				ClientEffects.playDistant(mc, ModRegistry.INCOMING, missile.position(), (float) (1.0 - d / 500.0), 1.0F);
+				mc.getSoundManager().play(new MissileFollowSound(missile, ModRegistry.INCOMING, 1.0F, 500.0, 1.0F, true));
 			}
 		}
 	}

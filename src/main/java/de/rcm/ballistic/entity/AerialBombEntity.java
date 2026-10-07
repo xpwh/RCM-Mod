@@ -52,6 +52,9 @@ public class AerialBombEntity extends Entity {
 	@Override
 	public void tick() {
 		super.tick();
+		if (this.level().isClientSide()) {
+			de.rcm.ballistic.ClientHooks.bombClientTick.accept(this);
+		}
 		Vec3 pos = this.position();
 		Vec3 vel = this.getDeltaMovement().scale(DRAG).add(0, -GRAVITY, 0);
 		Vec3 next = pos.add(vel);

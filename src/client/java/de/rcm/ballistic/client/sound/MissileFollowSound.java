@@ -18,9 +18,16 @@ public class MissileFollowSound extends AbstractTickableSoundInstance {
 	private final double audibleRange;
 	private final float falloffPower;
 	private Vec3 last;
+	/** Fly-by sounds die with the missile; launch sounds keep playing where it was. */
+	private boolean stopWithMissile;
 
 	public MissileFollowSound(MissileEntity missile, SoundEvent sound, float pitch, double audibleRange, float falloffPower) {
+		this(missile, sound, pitch, audibleRange, falloffPower, false);
+	}
+
+	public MissileFollowSound(MissileEntity missile, SoundEvent sound, float pitch, double audibleRange, float falloffPower, boolean stopWithMissile) {
 		super(sound, SoundSource.BLOCKS, SoundInstance.createUnseededRandom());
+		this.stopWithMissile = stopWithMissile;
 		this.missile = missile;
 		this.audibleRange = audibleRange;
 		this.falloffPower = falloffPower;
@@ -47,6 +54,10 @@ public class MissileFollowSound extends AbstractTickableSoundInstance {
 
 	@Override
 	public void tick() {
+		if (this.stopWithMissile && this.missile.isRemoved()) {
+			this.stop(); // it has hit: the fly-by is over the moment it explodes
+			return;
+		}
 		if (!this.missile.isRemoved()) {
 			this.last = this.missile.position();
 		}

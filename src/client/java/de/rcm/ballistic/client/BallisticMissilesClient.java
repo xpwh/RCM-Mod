@@ -108,6 +108,13 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientHooks.missileClientTick = MissileClientTicker::tick;
 		ClientHooks.projectileClientTick = MissileClientTicker::projectileTick;
 		ClientHooks.jetClientTick = JetClientTicker::tick;
+		ClientHooks.bombClientTick = bomb -> {
+			// every third bomb of a stick (and always the MOAB) whistles on the way down
+			if (bomb.tickCount == 1 && (bomb.isMoab() || bomb.getId() % 3 == 0)) {
+				float pitch = bomb.isMoab() ? 0.55F : 0.9F + (bomb.getId() % 5) * 0.05F;
+				Minecraft.getInstance().getSoundManager().play(new de.rcm.ballistic.client.sound.EntityFollowSound(bomb, ModRegistry.BOMB_WHISTLE, pitch, bomb.isMoab() ? 400.0 : 220.0));
+			}
+		};
 		ClientHooks.openTargetScreen = hand -> Minecraft.getInstance().setScreen(new TargetScreen(hand));
 		ClientHooks.designateLookedAtBlock = BallisticMissilesClient::designate;
 	}
