@@ -467,6 +467,15 @@ public class MissileEntity extends Entity implements AirThreat {
 	 * {@value #CRUISE_ALTITUDE} blocks up, then a pop-up manoeuvre and a steep terminal dive.
 	 */
 	private void cruiseTick(ServerLevel level) {
+		// a target picked far outside the loaded world: find the real ground height once its chunk
+		// is loaded (the ticket below loads it), so the missile flies into the ground, not thin air
+		if (this.surfaceTarget && this.stateAge % 10 == 0) {
+			TargetData resolved = resolveSurface(level, new TargetData(this.getTarget(), true));
+			if (!resolved.surface()) {
+				this.entityData.set(DATA_TARGET, resolved.pos());
+				this.surfaceTarget = false;
+			}
+		}
 		Vec3 pos = this.position();
 		Vec3 target = Vec3.atBottomCenterOf(this.getTarget());
 		Vec3 dir = this.getFlightDir();

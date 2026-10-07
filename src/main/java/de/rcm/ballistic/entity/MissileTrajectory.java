@@ -46,18 +46,20 @@ public final class MissileTrajectory {
 		double dx = target.x - start.x;
 		double dz = target.z - start.z;
 		double horizontal = Math.sqrt(dx * dx + dz * dz);
-		// every ballistic missile climbs very high - about 350 to 550 blocks above its launch point,
-		// still in sight at full render distance - whatever the range; the moon rocket leaves for space
+		// every ballistic missile climbs very high - roughly 750 to 1300 blocks above its launch
+		// point - whatever the range; the moon rocket leaves for space
 		double height = apexScale > 2.0
 			? Mth.clamp(150.0 + horizontal * 0.35, 180.0, 1200.0) * apexScale
-			: Mth.clamp(330.0 + horizontal * 0.03, 330.0, 400.0) * Mth.clamp(apexScale, 0.8, 1.2);
+			: Mth.clamp(800.0 + horizontal * 0.04, 800.0, 950.0) * Mth.clamp(apexScale, 0.8, 1.2);
 		double apexY = Math.max(start.y, target.y) + height * 1.15;
 		double nx = horizontal > 1.0E-3 ? dx / horizontal : 0.0;
 		double nz = horizontal > 1.0E-3 ? dz / horizontal : 0.0;
 
 		this.start = start;
 		// the lift-off keeps its slow, heavy pace; once up in the air the missile is much faster
-		int full = (int) Math.max(60.0, Mth.clamp(160.0 + horizontal * 0.12, 200.0, 900.0) * durationScale);
+		// a higher arc takes longer, like a real throw (time grows with the square root of the height)
+		double base = Math.max(Mth.clamp(160.0 + horizontal * 0.12, 200.0, 900.0), 13.0 * Math.sqrt(apexY - Math.min(start.y, target.y)));
+		int full = (int) Math.max(60.0, base * durationScale);
 		this.boostTicks = Math.max(30, (int) (full * BOOST_FRACTION));
 		double coast = Math.max(20, full - this.boostTicks);
 		this.duration = this.boostTicks + Math.max(12, (int) Math.round(coast * COAST_SPEEDUP));

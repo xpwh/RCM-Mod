@@ -27,6 +27,7 @@ import org.joml.Vector3f;
 public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRenderer.State> {
 	private static final Identifier FLAME_TEXTURE = BallisticMissiles.id("textures/entity/exhaust_flame.png");
 	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(FLAME_TEXTURE);
+	private static final RenderType GLOW_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/glow.png"));
 	static final RenderType PLASMA_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/plasma.png"));
 	private static final Map<MissileType, RenderType> BODY_TYPES = new EnumMap<>(MissileType.class);
 
@@ -72,6 +73,9 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		public float shakeZ;
 		/** 0..1 glow of the re-entry plasma sheath. */
 		public float plasma;
+		/** Night-time light dot seen from afar: strength (0..1) and distance to the camera. */
+		public float nightGlow;
+		public float distance;
 	}
 
 	/** Nozzle exits per model: {x, z, radius} in model space, all at y = 0. */
@@ -116,6 +120,10 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			state.shakeZ = 0;
 		}
 		state.plasma = entity.getState() == MissileEntity.FLIGHT && !entity.getMissileType().isCruise() ? plasmaIntensity(entity, partialTick) : 0.0F;
+		// at night a burning motor (or the re-entry glow) is seen from far away as an orange point
+		state.distance = (float) Math.sqrt(state.distanceToCameraSq);
+		float burning = state.engineOn ? 1.0F : state.plasma > 0.05F ? state.plasma * 0.9F : 0.0F;
+		state.nightGlow = burning * night(entity.level().getDayTime()) * smoothstep(25.0F, 90.0F, state.distance);
 		if (state.engineOn || state.jet) {
 			// The exhaust lights up the airframe.
 			state.lightCoords = LightTexture.pack(15, LightTexture.sky(state.lightCoords));
@@ -182,7 +190,47 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			}
 		}
 		poseStack.popPose();
+		if (state.nightGlow > 0.01F && camera.orientation != null) {
+			// camera-facing glow at the nozzle, sized with distance so it stays a visible point
+			float r = Math.max(1.5F, state.distance * 0.008F) * (0.9F + 0.1F * Mth.sin(state.engineTime * 1.7F));
+			int alpha = (int) (Mth.clamp(state.nightGlow, 0.0F, 1.0F) * 255.0F);
+			poseStack.pushPose();
+			poseStack.mulPose(camera.orientation);
+			collector.submitCustomGeometry(poseStack, GLOW_TYPE, (pose, consumer) -> {
+				glowQuad(pose, consumer, r, alpha << 24 | 0xFFB060);
+				glowQuad(pose, consumer, r * 2.6F, (alpha / 3) << 24 | 0xFF7A20); // haze around it
+			});
+			poseStack.popPose();
+		}
 		super.submit(state, poseStack, collector, camera);
+	}
+
+	private static void glowQuad(PoseStack.Pose pose, VertexConsumer consumer, float r, int color) {
+		float[][] c = {{-r, -r, 0, 1}, {r, -r, 1, 1}, {r, r, 1, 0}, {-r, r, 0, 0}};
+		for (float[] v : c) {
+			consumer.addVertex(pose, v[0], v[1], 0.0F).setColor(color).setUv(v[2], v[3]).setOverlay(OverlayTexture.NO_OVERLAY)
+				.setLight(LightTexture.FULL_BRIGHT).setNormal(pose, 0.0F, 0.0F, 1.0F);
+		}
+	}
+
+	/** 0 by day, 1 at night, with dusk and dawn in between (day time in ticks). */
+	private static float night(long dayTime) {
+		float t = dayTime % 24000L;
+		if (t < 12000.0F) {
+			return 0.0F;
+		}
+		if (t < 13800.0F) {
+			return (t - 12000.0F) / 1800.0F;
+		}
+		if (t < 22200.0F) {
+			return 1.0F;
+		}
+		return Math.max(0.0F, (24000.0F - t) / 1800.0F);
+	}
+
+	private static float smoothstep(float edge0, float edge1, float x) {
+		float t = Mth.clamp((x - edge0) / (edge1 - edge0), 0.0F, 1.0F);
+		return t * t * (3.0F - 2.0F * t);
 	}
 
 	/**
