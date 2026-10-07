@@ -19,6 +19,8 @@ import net.minecraft.world.phys.Vec3;
 public final class MissileTrajectory {
 	/** Fraction of the flight the motor burns. */
 	private static final double BOOST_FRACTION = 0.24;
+	/** The free flight after burnout is this much shorter (faster) than the boost would suggest. */
+	private static final double COAST_SPEEDUP = 0.55;
 	/** Time easing of the boost: thrust builds up, the missile creeps off the pad. */
 	private static final double EASE = 1.5;
 
@@ -43,8 +45,10 @@ public final class MissileTrajectory {
 		double nz = horizontal > 1.0E-3 ? dz / horizontal : 0.0;
 
 		this.start = start;
-		this.duration = (int) Math.max(60.0, Mth.clamp(160.0 + horizontal * 0.12, 200.0, 900.0) * durationScale);
-		this.boostTicks = Math.max(30, (int) (this.duration * BOOST_FRACTION));
+		// the lift-off keeps its slow, heavy pace; once up in the air the missile is much faster
+		int full = (int) Math.max(60.0, Mth.clamp(160.0 + horizontal * 0.12, 200.0, 900.0) * durationScale);
+		this.boostTicks = Math.max(30, (int) (full * BOOST_FRACTION));
+		this.duration = this.boostTicks + Math.max(20, (int) ((full - this.boostTicks) * COAST_SPEEDUP));
 		double coast = this.duration - this.boostTicks;
 
 		// burnout point: high above the pad, a little way downrange

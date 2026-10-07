@@ -66,6 +66,8 @@ public class MissileEntity extends Entity implements AirThreat {
 
 	private static final int CRUISE_BOOST_TICKS = 32;
 	private static final double CRUISE_ALTITUDE = 22.0;
+	/** Cruise missiles and drones fly this much faster once the booster is done. */
+	private static final double CRUISE_SPEEDUP = 1.6;
 
 	/** Minimum horizontal distance between pad and target. */
 	public static final int MIN_RANGE = 48;
@@ -546,20 +548,20 @@ public class MissileEntity extends Entity implements AirThreat {
 			}
 			double climb = Mth.clamp((ground + CRUISE_ALTITUDE - pos.y) * 0.06, -0.35, 0.5);
 			desired = heading.add(0, climb, 0).normalize();
-			speed = this.missileType.cruiseSpeed();
+			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP;
 			turn = 0.1;
 		} else if (drone) {
 			// no pop-up: the drone goes straight for it, accelerating into a steep dive
 			desired = target.subtract(pos).normalize();
-			speed = this.missileType.cruiseSpeed() * (horizontal > 40 ? 1.2 : 1.5);
+			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP * (horizontal > 40 ? 1.2 : 1.5);
 			turn = 0.4;
 		} else if (horizontal > 32) {
 			desired = heading.add(0, 0.6, 0).normalize(); // pop-up
-			speed = this.missileType.cruiseSpeed();
+			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP;
 			turn = 0.16;
 		} else {
 			desired = target.subtract(pos).normalize(); // terminal dive
-			speed = this.missileType.cruiseSpeed() * 1.15;
+			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP * 1.15;
 			turn = 0.32;
 		}
 
@@ -669,7 +671,7 @@ public class MissileEntity extends Entity implements AirThreat {
 		}
 		if (this.missileType.isCruise()) {
 			Vec3 t = Vec3.atBottomCenterOf(this.getTarget());
-			return (int) (Math.hypot(t.x - this.getX(), t.z - this.getZ()) / this.missileType.cruiseSpeed());
+			return (int) (Math.hypot(t.x - this.getX(), t.z - this.getZ()) / (this.missileType.cruiseSpeed() * CRUISE_SPEEDUP));
 		}
 		return Math.max(0, this.getTrajectory().duration() - this.stateAge);
 	}
