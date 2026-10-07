@@ -59,12 +59,9 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	private static final BoxMesh GUNSHIP = buildGunship();
 	private static final BoxMesh REAPER = buildReaper();
 	private static final BoxMesh APACHE = buildApache();
-	private static final BoxMesh PROP4 = buildProp(4, 2.1F, 0.32F);
 	private static final BoxMesh PROP3 = buildProp(3, 1.1F, 0.2F);
 	private static final BoxMesh MAIN_ROTOR = buildMainRotor();
 	private static final BoxMesh TAIL_ROTOR = buildTailRotor();
-	/** AC-130 propeller hubs (x, y, z). */
-	private static final float[][] GUNSHIP_PROPS = {{-10.0F, 4.9F, 1.25F}, {-5.2F, 5.1F, 1.25F}, {5.2F, 5.1F, 1.25F}, {10.0F, 4.9F, 1.25F}};
 	private static final RenderType GLOW_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/strike_jet.png"));
 
 	public JetRenderer(EntityRendererProvider.Context context) {
@@ -170,18 +167,25 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 		super.submit(state, poseStack, collector, camera);
 	}
 
-	/** AC-130, MQ-9 and AH-64: airframe plus spinning propellers / rotors. */
+	/** Gunship helicopter, MQ-9 and AH-64: airframe plus spinning propellers / rotors. */
 	private void submitPropAircraft(State state, PoseStack poseStack, SubmitNodeCollector collector, int light) {
 		float t = state.time;
 		if (state.type == JetType.GUNSHIP) {
 			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> GUNSHIP.emit(pose, consumer, light));
-			for (int i = 0; i < GUNSHIP_PROPS.length; i++) {
-				float[] h = GUNSHIP_PROPS[i];
-				poseStack.pushPose();
-				poseStack.translate(h[0], h[1], h[2]);
-				poseStack.mulPose(com.mojang.math.Axis.YP.rotation(t * 1.3F + i * 0.4F));
-				collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> PROP4.emit(pose, consumer, light));
-				poseStack.popPose();
+			poseStack.pushPose();
+			poseStack.translate(0.0F, -0.4F, 2.05F);
+			poseStack.mulPose(com.mojang.math.Axis.ZP.rotation(t * 0.95F));
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> MAIN_ROTOR.emit(pose, consumer, light));
+			poseStack.popPose();
+			poseStack.pushPose();
+			poseStack.translate(0.35F, -9.0F, 2.25F);
+			poseStack.mulPose(com.mojang.math.Axis.XP.rotation(t * 1.7F));
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> TAIL_ROTOR.emit(pose, consumer, light));
+			poseStack.popPose();
+			if (state.firing && Mth.sin(t * 9.0F) > -0.3F) {
+				float flash = 0.25F + 0.15F * Mth.sin(t * 13.0F);
+				BoxMesh muzzle = new BoxMesh.Builder().box(-3.2F - flash * 2.0F, 1.08F - flash, -0.1F - flash, -3.0F, 1.08F + flash, -0.1F + flash, YELLOW).build();
+				collector.submitCustomGeometry(poseStack, GLOW_TYPE, (pose, consumer) -> muzzle.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 			}
 		} else if (state.type == JetType.REAPER) {
 			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> REAPER.emit(pose, consumer, light));
@@ -206,57 +210,69 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	}
 
 	/**
-	 * AC-130 gunship: high-wing four-turboprop transport with an upswept tail and a beavertail
-	 * ramp; the 105 mm howitzer and 40 mm Bofors stick out of the left side, the sensor turrets hang
-	 * under the nose and the gear sponsons bulge out of the lower fuselage.
+	 * Gunship helicopter (MH-60 style): cabin with the cockpit up front, twin engines on the roof, the
+	 * tail boom with fin, stabilator and canted tail rotor, wheeled gear - and the open left cabin door
+	 * with the door gunner sitting at his pintle-mounted cannon, ammunition can beside him.
 	 */
 	private static BoxMesh buildGunship() {
 		BoxMesh.Builder b = new BoxMesh.Builder();
 		Vector3f up = v(0, 0, 1);
 		loft(b, DARK_GREY,
-			new float[] {12.2F, 0.3F, -0.6F, 0.2F, 0.4F},
-			new float[] {11.4F, 1.2F, -1.4F, 1.0F, 1.2F},
-			new float[] {10.0F, 1.7F, -1.6F, 1.6F, 1.8F},
-			new float[] {-5.5F, 1.75F, -1.6F, 1.7F, 1.85F},
-			new float[] {-9.0F, 1.3F, -0.4F, 1.4F, 1.75F},
-			new float[] {-12.6F, 0.4F, 0.9F, 0.45F, 1.5F});
+			new float[] {5.0F, 0.3F, -0.5F, 0.25F, 0.2F},
+			new float[] {4.4F, 0.85F, -0.95F, 0.75F, 0.95F},
+			new float[] {3.0F, 1.0F, -1.0F, 0.95F, 1.15F},
+			new float[] {-1.6F, 1.0F, -1.0F, 0.95F, 1.15F},
+			new float[] {-2.6F, 0.55F, -0.4F, 0.5F, 1.05F},
+			new float[] {-8.6F, 0.22F, 0.35F, 0.2F, 0.85F});
 		loft(b, GLASS,
-			new float[] {11.9F, 0.7F, 0.6F, 0.4F, 0.9F},
-			new float[] {11.0F, 1.1F, 0.9F, 0.8F, 1.65F},
-			new float[] {10.2F, 1.2F, 1.1F, 0.9F, 1.8F});
-		// high wing with dihedral-free outer panels, engine nacelles under it
+			new float[] {4.85F, 0.45F, -0.3F, 0.35F, 0.45F},
+			new float[] {4.1F, 0.88F, -0.2F, 0.7F, 1.05F},
+			new float[] {3.1F, 0.98F, -0.1F, 0.85F, 1.15F});
+		// the open left door: a dark cabin opening, the slid-back door panel beside it
+		b.box(-1.02F, 0.2F, -0.75F, -0.99F, 2.4F, 0.95F, BLACK);
+		b.box(-1.08F, -1.5F, -0.75F, -1.03F, 0.15F, 0.95F, DARK_GREY);
+		b.box(-1.0F, 0.2F, -0.8F, 0.0F, 2.4F, -0.75F, STEEL); // cabin floor
+		// door gunner: seated, legs out of the door, body, arms to the gun, helmet with visor
+		b.box(-0.75F, 0.7F, -0.75F, -0.25F, 1.3F, -0.35F, BOMB);      // seat and lower body
+		b.box(-0.95F, 0.85F, -0.72F, -0.65F, 1.15F, -0.55F, BOMB);    // thighs
+		b.box(-0.7F, 0.75F, -0.35F, -0.3F, 1.25F, 0.4F, BOMB);        // torso in a flight suit
+		b.box(-0.68F, 0.78F, -0.2F, -0.32F, 1.22F, 0.3F, DARK_GREY);  // vest
+		b.box(-0.68F, 0.82F, 0.4F, -0.32F, 1.18F, 0.72F, PANEL);      // face
+		b.box(-0.72F, 0.78F, 0.55F, -0.28F, 1.22F, 0.82F, DARK_GREY); // helmet
+		b.box(-0.73F, 0.88F, 0.5F, -0.71F, 1.12F, 0.62F, BLACK);      // visor
+		b.beam(v(-0.6F, 1.25F, 0.15F), v(-1.05F, 1.3F, 0.05F), 0.12F, 0.12F, BOMB); // arms
+		b.beam(v(-0.6F, 0.75F, 0.15F), v(-1.05F, 0.95F, 0.05F), 0.12F, 0.12F, BOMB);
+		// pintle mount and the cannon pointing out of the door, ammunition can and belt
+		b.box(-1.1F, 1.0F, -0.75F, -1.0F, 1.1F, 0.0F, STEEL);
+		b.box(-1.3F, 0.95F, -0.05F, -1.0F, 1.2F, 0.15F, DARK_GREY);
+		b.beam(v(-1.1F, 1.08F, 0.08F), v(-3.0F, 1.08F, -0.1F), 0.16F, 0.16F, BLACK);
+		b.beam(v(-1.1F, 1.08F, 0.08F), v(-1.6F, 1.08F, 0.04F), 0.3F, 0.26F, DARK_GREY); // receiver
+		b.box(-0.95F, 1.25F, -0.7F, -0.55F, 1.75F, -0.35F, BOMB); // ammunition can
+		b.beam(v(-0.9F, 1.5F, -0.4F), v(-1.15F, 1.15F, 0.05F), 0.08F, 0.03F, YELLOW);
 		for (float s : new float[] {-1.0F, 1.0F}) {
-			surface(b, DARK_GREY, v(s * 1.6F, 2.6F, 1.95F), v(s * 1.6F, -1.4F, 1.95F), 0.55F,
-				v(s * 16.0F, 1.6F, 1.95F), v(s * 16.0F, -0.3F, 1.95F), 0.22F, up);
-			for (float x : new float[] {5.2F, 10.0F}) {
-				float nx = s * x;
-				float y0 = x > 7.0F ? 4.7F : 4.9F;
-				b.revolve(GREY, v(nx, y0, 1.25F), v(0, -1, 0), new float[][] {
-					{0.0F, 0.0F}, {0.0F, 0.42F}, {0.4F, 0.62F}, {3.0F, 0.6F}, {5.6F, 0.35F}, {6.0F, 0.0F}
-				}, 12);
-				b.revolve(BLACK, v(nx, y0 + 0.05F, 1.25F), v(0, 1, 0), new float[][] {{0.0F, 0.0F}, {0.0F, 0.22F}, {0.35F, 0.0F}}, 10); // spinner
-			}
-			// gear sponsons
-			b.hexa(DARK_GREY,
-				v(s * 1.6F, 3.2F, -1.5F), v(s * 2.35F, 3.2F, -1.3F), v(s * 2.35F, 3.2F, -0.3F), v(s * 1.6F, 3.2F, -0.2F),
-				v(s * 1.6F, -3.4F, -1.5F), v(s * 2.35F, -3.4F, -1.3F), v(s * 2.35F, -3.4F, -0.3F), v(s * 1.6F, -3.4F, -0.2F));
-			surface(b, DARK_GREY, v(s * 0.6F, -9.6F, 1.55F), v(s * 0.6F, -12.4F, 1.55F), 0.3F,
-				v(s * 6.6F, -10.9F, 1.55F), v(s * 6.6F, -12.3F, 1.55F), 0.15F, up);
+			// twin engines on the roof, exhausts angled out
+			b.revolve(DARK_GREY, v(s * 0.55F, 0.9F, 1.35F), v(0, -1, 0), new float[][] {
+				{0.0F, 0.0F}, {0.0F, 0.3F}, {0.2F, 0.38F}, {2.4F, 0.38F}, {2.8F, 0.25F}, {2.9F, 0.0F}
+			}, 12);
+			b.box(s * 0.55F - 0.2F, -2.1F, 1.25F, s * 0.55F + 0.2F, -1.9F, 1.55F, BLACK);
+			// main gear: strut and wheel
+			b.box(s * 1.0F - 0.06F, 2.0F, -1.45F, s * 1.0F + 0.06F, 2.2F, -0.8F, STEEL);
+			b.box(s * 1.0F - 0.12F, 1.8F, -1.75F, s * 1.0F + 0.12F, 2.4F, -1.3F, BLACK);
+			// stabilator
+			surface(b, DARK_GREY, v(s * 0.2F, -8.4F, 0.65F), v(s * 0.2F, -9.2F, 0.65F), 0.1F,
+				v(s * 1.9F, -8.6F, 0.65F), v(s * 1.9F, -9.2F, 0.65F), 0.06F, up);
 		}
-		// fin and rudder
+		// roof fairing, rotor mast, fin, tail wheel, nose sensor turret, markings
+		b.box(-0.6F, -1.6F, 1.1F, 0.6F, 1.8F, 1.3F, DARK_GREY);
+		b.revolve(DARK_GREY, v(0.0F, -0.4F, 1.3F), v(0, 0, 1), new float[][] {{0.0F, 0.0F}, {0.0F, 0.32F}, {0.6F, 0.24F}, {0.75F, 0.0F}}, 10);
 		b.hexa(DARK_GREY,
-			v(-0.15F, -8.2F, 1.6F), v(-0.15F, -12.8F, 1.6F), v(0.15F, -12.8F, 1.6F), v(0.15F, -8.2F, 1.6F),
-			v(-0.08F, -11.0F, 7.6F), v(-0.08F, -12.9F, 7.6F), v(0.08F, -12.9F, 7.6F), v(0.08F, -11.0F, 7.6F));
-		// left-side guns: 105 mm howitzer aft of the wing, 40 mm Bofors forward, 25 mm GAU-12 at the door
-		b.beam(v(-1.6F, -2.6F, -0.4F), v(-3.6F, -2.6F, -0.6F), 0.22F, 0.22F, BLACK);
-		b.box(-1.95F, -3.2F, -0.9F, -1.6F, -2.0F, 0.1F, STEEL);
-		b.beam(v(-1.6F, 3.4F, -0.2F), v(-2.9F, 3.4F, -0.35F), 0.12F, 0.12F, BLACK);
-		b.beam(v(-1.6F, 7.6F, -0.3F), v(-2.3F, 7.6F, -0.4F), 0.08F, 0.08F, BLACK);
-		// sensor turrets under the nose and behind the gear
-		b.box(-0.5F, 9.4F, -2.1F, 0.5F, 10.3F, -1.5F, BLACK);
-		b.box(-0.35F, 9.55F, -2.12F, 0.35F, 10.15F, -1.95F, GLASS);
-		b.box(-0.45F, -4.6F, -2.0F, 0.45F, -3.8F, -1.5F, BLACK);
-		b.box(-0.8F, 4.0F, 1.85F, 0.8F, 5.0F, 1.95F, MARKING);
+			v(-0.08F, -7.8F, 0.6F), v(-0.08F, -9.1F, 0.6F), v(0.08F, -9.1F, 0.6F), v(0.08F, -7.8F, 0.6F),
+			v(-0.06F, -8.7F, 2.7F), v(-0.06F, -9.5F, 2.7F), v(0.06F, -9.5F, 2.7F), v(0.06F, -8.7F, 2.7F));
+		b.box(-0.05F, -7.9F, -0.4F, 0.05F, -7.7F, 0.4F, STEEL);
+		b.box(-0.12F, -7.95F, -0.55F, 0.12F, -7.65F, -0.35F, BLACK);
+		b.box(-0.25F, 4.3F, -1.05F, 0.25F, 4.7F, -0.7F, BLACK);
+		b.box(-0.22F, 4.32F, -1.07F, 0.22F, 4.5F, -1.04F, GLASS);
+		b.box(0.95F, -0.8F, 0.0F, 1.01F, 0.4F, 0.6F, MARKING);
 		return b.build();
 	}
 

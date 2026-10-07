@@ -370,7 +370,7 @@ public class JetEntity extends Entity implements AirThreat {
 	 */
 	private Vec3 orbitPattern(ServerLevel level, Vec3 pos, double alt, Vec3 cruise) {
 		JetType type = this.getJetType();
-		double radius = type == JetType.GUNSHIP ? 115.0 : 150.0;
+		double radius = type == JetType.GUNSHIP ? 60.0 : 150.0;
 		Vec3 rel = new Vec3(pos.x - this.target.x, 0, pos.z - this.target.z);
 		double r = rel.length();
 		if (this.orbitTicks < 0) {
@@ -388,25 +388,28 @@ public class JetEntity extends Entity implements AirThreat {
 		Vec3 desired = horizontal.add(0, Mth.clamp((alt - pos.y) * 0.03, -0.2, 0.2), 0).normalize();
 
 		var random = level.getRandom();
-		Vec3 gun = pos.add(new Vec3(-tangent.z, 0, tangent.x).scale(-2.5)).add(0, -0.5, 0);
+		// the open door on the side facing the target, where the door gunner sits
+		Vec3 gun = pos.add(radial.scale(-1.6)).add(0, 0.6, 0);
 		if (type == JetType.GUNSHIP) {
+			// the door gunner works the target over with his autocannon in long bursts
 			int t = this.orbitTicks;
-			if (t > 40 && t % 40 == 0) {
-				Vec3 aim = this.pickAim(level, 3.0);
-				this.shells.add(new Shell(this.tickCount + (int) (aim.distanceTo(gun) / 14.0) + 1, aim, true));
-				level.sendParticles(ParticleTypes.EXPLOSION, gun.x, gun.y, gun.z, 1, 0.3, 0.3, 0.3, 0.0);
-				level.playSound(null, gun.x, gun.y, gun.z, ModRegistry.GUN_105, SoundSource.HOSTILE, 24.0F, 0.95F + random.nextFloat() * 0.1F);
+			int cycle = t % 50;
+			boolean burst = t > 30 && cycle < 26;
+			if (burst != this.isFiring()) {
+				this.entityData.set(DATA_FIRING, burst);
 			}
-			int cycle = t % 70;
-			if (t > 60 && cycle >= 20 && cycle < 44 && cycle % 3 == 0) {
-				Vec3 aim = this.pickAim(level, 5.0);
-				this.shells.add(new Shell(this.tickCount + (int) (aim.distanceTo(gun) / 20.0) + 1, aim, false));
-				level.sendParticles(ParticleTypes.EXPLOSION, gun.x, gun.y, gun.z, 1, 0.1, 0.1, 0.1, 0.0);
-				if (cycle % 6 == 2) {
-					level.playSound(null, gun.x, gun.y, gun.z, ModRegistry.GUN_40, SoundSource.HOSTILE, 16.0F, 0.95F + random.nextFloat() * 0.1F);
+			if (burst && cycle % 2 == 0) {
+				Vec3 aim = this.pickAim(level, 3.5);
+				var hit = level.clip(new ClipContext(gun, gun.add(aim.subtract(gun).normalize().scale(200.0)), ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, this));
+				Vec3 p = hit.getLocation();
+				this.shells.add(new Shell(this.tickCount + (int) (p.distanceTo(gun) / 30.0) + 1, p, false));
+				level.sendParticles(ParticleTypes.SMOKE, gun.x, gun.y, gun.z, 3, 0.1, 0.1, 0.1, 0.02);
+				if (cycle % 6 == 0) {
+					level.playSound(null, gun.x, gun.y, gun.z, ModRegistry.CHAIN_GUN, SoundSource.HOSTILE, 14.0F, 0.85F + random.nextFloat() * 0.1F);
 				}
 			}
-			if (t > 640) {
+			if (t > 700) {
+				this.entityData.set(DATA_FIRING, false);
 				this.egress = true;
 			}
 		} else {

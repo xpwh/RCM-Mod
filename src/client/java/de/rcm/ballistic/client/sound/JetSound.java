@@ -64,12 +64,12 @@ public class JetSound extends AbstractTickableSoundInstance {
 				case STRIKE -> ModRegistry.JET_FIGHTER;
 				case WARTHOG -> ModRegistry.A10_ENGINE;
 				case SPIRIT -> ModRegistry.B2_ENGINE;
-				case GUNSHIP -> ModRegistry.AC130_ENGINE;
+				case GUNSHIP -> ModRegistry.APACHE_ROTOR;
 				case REAPER -> ModRegistry.REAPER_ENGINE;
 				case APACHE -> ModRegistry.APACHE_ROTOR;
 			};
 			case FAR -> switch (type) {
-				case GUNSHIP -> ModRegistry.AC130_ENGINE;
+				case GUNSHIP -> ModRegistry.APACHE_ROTOR;
 				case REAPER -> ModRegistry.REAPER_ENGINE;
 				case APACHE -> ModRegistry.APACHE_ROTOR;
 				default -> ModRegistry.JET_FIGHTER_FAR;

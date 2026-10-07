@@ -77,6 +77,8 @@ public class MissileEntity extends Entity implements AirThreat {
 	private boolean gpsJammed;
 	/** Ticks since the ejected missile left the water (or the silo). */
 	private int airAge;
+	/** Cold launch from under water (submarine): it is shot out of the sea and lights in mid-air. */
+	private boolean seaLaunch;
 	private @Nullable MissileTrajectory trajectory;
 
 	// ---- client-side bookkeeping (used by the client tick hook) ----
@@ -297,8 +299,9 @@ public class MissileEntity extends Entity implements AirThreat {
 		boolean submerged = !level.getFluidState(BlockPos.containing(this.position())).isEmpty();
 		double vy;
 		if (submerged) {
-			vy = 0.7;
+			vy = 0.9;
 			this.airAge = 0;
+			this.seaLaunch = true;
 			level.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, this.getX(), this.getY(), this.getZ(), 12, 0.5, 0.8, 0.5, 0.1);
 		} else {
 			if (this.airAge == 0 && this.stateAge > 2 && level.getFluidState(BlockPos.containing(this.position().subtract(0, 1.5, 0))).isSource()) {
@@ -307,13 +310,22 @@ public class MissileEntity extends Entity implements AirThreat {
 				level.sendParticles(ParticleTypes.CLOUD, this.getX(), this.getY(), this.getZ(), 40, 1.2, 1.0, 1.2, 0.1);
 				level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_SPLASH, SoundSource.BLOCKS, 8.0F, 0.5F);
 			}
-			vy = Math.max(0.25, 1.5 - this.airAge * 0.045);
+			if (this.seaLaunch) {
+				// thrown clear of the water by the gas bubble: it keeps rising unpowered, slowing like a
+				// thrown stone, until the first stage lights near the top of the arc
+				vy = 1.9 - this.airAge * 0.11;
+			} else {
+				vy = Math.max(0.25, 1.5 - this.airAge * 0.045);
+			}
 			this.airAge++;
 		}
 		Vec3 next = this.position().add(0, vy, 0);
 		this.stateAge++;
 		this.setPos(next);
-		if (!submerged && this.airAge > 3 && (next.y > top.y + 2.5 + this.missileType.length * 0.15 || this.airAge > 120) || this.stateAge > 600) {
+		boolean lightUp = this.seaLaunch
+			? !submerged && this.airAge > 8 && vy < 0.3
+			: !submerged && this.airAge > 3 && (next.y > top.y + 2.5 + this.missileType.length * 0.15 || this.airAge > 120);
+		if (lightUp || this.stateAge > 600) {
 			// the engine lights in mid-air
 			this.entityData.set(DATA_LAUNCH, new Vector3f((float) next.x, (float) next.y, (float) next.z));
 			this.applyJamming(level);

@@ -25,10 +25,10 @@ public final class JetClientTicker {
 		boolean burner = jet.isAfterburner();
 		JetType type = jet.getJetType();
 		// nozzle position (behind, sideways, up) and wingtip half-span of each airframe
-		double tailBack = switch (type) { case STRIKE -> 7.3; case WARTHOG -> 3.9; case SPIRIT -> 2.7; case GUNSHIP -> 1.0; case REAPER -> 4.6; case APACHE -> 2.6; };
-		double tailSide = switch (type) { case STRIKE -> 0.5; case WARTHOG -> 1.25; case SPIRIT -> 2.6; case GUNSHIP -> 7.6; case REAPER -> 0.0; case APACHE -> 1.1; };
-		double tailUp = switch (type) { case STRIKE -> 0.0; case WARTHOG -> 1.05; case SPIRIT -> 0.3; case GUNSHIP -> 1.3; case REAPER -> 0.0; case APACHE -> 1.2; };
-		double tipSpan = switch (type) { case STRIKE -> 5.3; case WARTHOG -> 8.7; case SPIRIT -> 11.8; case GUNSHIP -> 16.0; case REAPER -> 8.6; case APACHE -> 0.0; };
+		double tailBack = switch (type) { case STRIKE -> 7.3; case WARTHOG -> 3.9; case SPIRIT -> 2.7; case GUNSHIP -> 2.1; case REAPER -> 4.6; case APACHE -> 2.6; };
+		double tailSide = switch (type) { case STRIKE -> 0.5; case WARTHOG -> 1.25; case SPIRIT -> 2.6; case GUNSHIP -> 0.55; case REAPER -> 0.0; case APACHE -> 1.1; };
+		double tailUp = switch (type) { case STRIKE -> 0.0; case WARTHOG -> 1.05; case SPIRIT -> 0.3; case GUNSHIP -> 1.4; case REAPER -> 0.0; case APACHE -> 1.2; };
+		double tipSpan = switch (type) { case STRIKE -> 5.3; case WARTHOG -> 8.7; case SPIRIT -> 11.8; case GUNSHIP -> 0.0; case REAPER -> 8.6; case APACHE -> 0.0; };
 
 		// hot exhaust haze behind both nozzles
 		Vec3 side = new Vec3(-dir.z, 0, dir.x).normalize();
