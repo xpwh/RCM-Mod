@@ -27,7 +27,7 @@ public final class MissileClientTicker {
 		float scale = missile.getMissileType().radius / 0.45F;
 
 		// ignition: the launch roar follows the rocket (not left behind on the pad)
-		boolean lit = state == MissileEntity.IGNITION && missile.lastSeenState == MissileEntity.COUNTDOWN
+		boolean lit = state == MissileEntity.IGNITION && missile.lastSeenState != MissileEntity.IGNITION
 			|| state == MissileEntity.FLIGHT && missile.lastSeenState == MissileEntity.EJECT;
 		if (state == MissileEntity.EJECT && missile.lastSeenState != MissileEntity.EJECT) {
 			mc.getSoundManager().play(new MissileFollowSound(missile, ModRegistry.IGNITION_SUB, 0.55F, 700.0, 1.2F)); // gas generator

@@ -22,6 +22,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Field radio for close air support. Right-click to call a strike fighter onto the block you are
@@ -38,14 +39,17 @@ public class AirstrikeRadioItem extends Item {
 		FORMATION("formation", JetType.STRIKE, 3, 90),
 		GUNSHIP("gunship", JetType.GUNSHIP, 1, 150),
 		REAPER("reaper", JetType.REAPER, 1, 100),
-		APACHE("apache", JetType.APACHE, 1, 100);
+		APACHE("apache", JetType.APACHE, 1, 100),
+		TOMAHAWK("tomahawk", null, 4, 120),
+		ARTILLERY("artillery", null, 20, 60);
 
 		public final String key;
-		public final JetType jet;
+		/** The aircraft called in, or null for a fire mission (Tomahawks, artillery). */
+		public final @Nullable JetType jet;
 		public final int aircraft;
 		public final int cooldownSeconds;
 
-		Mode(String key, JetType jet, int aircraft, int cooldownSeconds) {
+		Mode(String key, @Nullable JetType jet, int aircraft, int cooldownSeconds) {
 			this.key = key;
 			this.jet = jet;
 			this.aircraft = aircraft;
@@ -98,6 +102,22 @@ public class AirstrikeRadioItem extends Item {
 		if (distance < DANGER_CLOSE) {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.airstrike_danger_close", (int) DANGER_CLOSE).withStyle(ChatFormatting.RED), true);
 			return InteractionResult.FAIL;
+		}
+		if (mode.jet == null) {
+			if (mode == Mode.TOMAHAWK) {
+				FireSupport.tomahawkSalvo(server, serverPlayer, target);
+			} else {
+				FireSupport.artilleryBarrage(server, serverPlayer, target);
+			}
+			if (!player.getAbilities().instabuild) {
+				player.getCooldowns().addCooldown(radio, mode.cooldownSeconds * 20);
+			}
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.TARGET_LOCK, SoundSource.PLAYERS, 1.0F, 0.8F);
+			player.displayClientMessage(Component.literal("☄ ").append(mode.displayName()).append(" – ")
+				.append(Component.translatable(mode == Mode.TOMAHAWK ? "message.ballisticmissiles.tomahawk_away" : "message.ballisticmissiles.artillery_shot",
+					(int) target.x, (int) target.y, (int) target.z, (int) distance))
+				.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
+			return InteractionResult.SUCCESS;
 		}
 		JetEntity jet = JetEntity.callIn(server, serverPlayer, target, mode.jet, 0.0, 0.0);
 		if (jet != null && mode.aircraft > 1) {

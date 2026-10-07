@@ -762,6 +762,19 @@ public class MissileEntity extends Entity implements AirThreat {
 		return true;
 	}
 
+	/**
+	 * Launches at once from where the missile stands (ship- or ground-launched salvo): no countdown,
+	 * straight to ignition.
+	 */
+	public void launchNow(TargetData target) {
+		this.entityData.set(DATA_TARGET, target.pos());
+		this.surfaceTarget = target.surface();
+		Vec3 pos = this.position();
+		this.entityData.set(DATA_LAUNCH, new Vector3f((float) pos.x, (float) pos.y, (float) pos.z));
+		this.trajectory = null;
+		this.setState(IGNITION);
+	}
+
 	/** Stops a running countdown. */
 	public boolean abort() {
 		if (this.getState() != COUNTDOWN) {

@@ -185,6 +185,11 @@ public final class ModRegistry {
 		LaserDefenseBlock::new,
 		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
 	);
+	public static final Block SEA_MINE = registerBlock(
+		"sea_mine",
+		de.rcm.ballistic.block.SeaMineBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 6.0F).sound(SoundType.METAL).noOcclusion()
+	);
 	public static final Block JAMMER = registerBlock(
 		"jammer",
 		JammerBlock::new,
@@ -270,6 +275,9 @@ public final class ModRegistry {
 	);
 	public static final Item LASER_DEFENSE_ITEM = registerItem(
 		"laser_defense", props -> new BlockItem(LASER_DEFENSE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item SEA_MINE_ITEM = registerItem(
+		"sea_mine", props -> new BlockItem(SEA_MINE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.UNCOMMON)
 	);
 	public static final Item JAMMER_ITEM = registerItem(
 		"jammer", props -> new BlockItem(JAMMER, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
@@ -381,6 +389,7 @@ public final class ModRegistry {
 				output.accept(HAZMAT_BOOTS);
 				output.accept(REINFORCED_CONCRETE_ITEM);
 				output.accept(BLAST_DOOR_ITEM);
+				output.accept(SEA_MINE_ITEM);
 				for (MissileType type : MissileType.values()) {
 					output.accept(missileItem(type));
 				}

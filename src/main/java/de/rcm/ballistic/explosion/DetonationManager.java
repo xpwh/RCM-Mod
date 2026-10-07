@@ -15,6 +15,7 @@ import java.util.List;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.SectionPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -260,6 +261,27 @@ public final class DetonationManager {
 	}
 
 	/** Free-fall bomb from an airstrike jet (Mk 82-class): a solid blast with a small crater. */
+	/** Contact sea mine: a heavy underwater blast throwing up a column of spray. */
+	public static void detonateSeaMine(ServerLevel level, Vec3 pos) {
+		broadcast(level, pos, Warhead.AERIAL_BOMB);
+		level.sendParticles(ParticleTypes.SPLASH, pos.x, pos.y + 1.0, pos.z, 400, 2.5, 3.0, 2.5, 1.2);
+		level.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, pos.x, pos.y, pos.z, 200, 2.0, 1.0, 2.0, 0.6);
+		level.sendParticles(ParticleTypes.CLOUD, pos.x, pos.y + 2.0, pos.z, 80, 2.0, 4.0, 2.0, 0.2);
+		level.explode(null, pos.x, pos.y, pos.z, 6.5F, false, Level.ExplosionInteraction.TNT);
+	}
+
+	/** 155 mm artillery shell. */
+	public static void detonateArtilleryShell(ServerLevel level, Vec3 pos) {
+		broadcast(level, pos, Warhead.AERIAL_BOMB);
+		FlyingDebris.launch(level, pos, 3.0, 10, 1.1);
+		highExplosive(level, pos, null, 4.6F, 0, 4);
+	}
+
+	/** Runs {@code action} after {@code delay} server ticks. */
+	public static void later(ServerLevel level, int delay, Runnable action) {
+		schedule(level, delay, action);
+	}
+
 	/** AGM-114 Hellfire: a 9 kg shaped-charge / blast-frag warhead, deadly against vehicles. */
 	public static void detonateHellfire(ServerLevel level, Vec3 pos, Entity source) {
 		broadcast(level, pos, Warhead.DRONE);
