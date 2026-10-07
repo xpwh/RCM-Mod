@@ -20,6 +20,8 @@ SOURCES = {
     "brrrt.wav": "https://upload.wikimedia.org/wikipedia/commons/3/39/BRRRRRRT.wav",
     # NASA, public domain: Falcon 9 IM-2 launch, pad microphones
     "im2.mp3": NASA.format(id="KSC-20250226-AU-ILW01-0002-SpaceX_CLPS_IM-2_Live_Launch_Coverage_PadMic-1_PadMic-2"),
+    # Public domain, Fg2 via Wikimedia Commons: a single real detonation with its echo
+    "bang.ogg": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Explosion-LS100155.ogg",
     # NASA, public domain: SLS Artemis II launch, pad camera site 6
     "artemis.mp3": NASA.format(id="KSC-20260401-AU-LMM01-0001-Artemis_II_Live_Launch_Coverage_Pad_CS6"),
 }
@@ -82,5 +84,105 @@ def main(folder):
     save("air_defense/launch", fade(limiter(x[: s.n_samples(4.0)], 0.98, 1.5), fin=0.005, fout=1.2))
 
 
+def resample(x, factor):
+    """Plays x at `factor` times the speed (factor < 1: slower, deeper, longer)."""
+    idx = np.arange(0, len(x) - 1, factor)
+    return np.interp(idx, np.arange(len(x)), x)
+
+
+def loud(name, x, drive=3.2):
+    """Masters a shock crack as loud as it gets: the onset flat-topped like an overloaded mic,
+    then hard limiting so the whole bang sits at full scale."""
+    from gen_sounds_v5 import mic_clip
+    x = mic_clip(x, 80.0, 5.0)
+    save(name, fade(limiter(x, 0.995, drive), fin=0.0005, fout=0.4))
+
+
+def shock_cracks(folder):
+    """The shock wave cracks, built on a real recorded detonation."""
+    from gen_sounds import env_exp, place, sweep, t_axis, white
+    from gen_sounds_v5 import echo_cloud
+    bang = load(fetch(folder, "bang.ogg"), 0.57, 1.0)
+    bang = bang / (np.max(np.abs(bang)) + 1e-9)
+    body = fft_filter(bang, high=220, slope=1.5)
+
+    def canvas(seconds):
+        return np.zeros(s.n_samples(seconds))
+
+    def thump(seconds, f0, f1, decay, gain):
+        return sweep(seconds, f0, f1, 0.6) * env_exp(seconds, decay, 0.001) * gain
+
+    def rumble(seconds, decay, gain):
+        return fft_filter(white(seconds), high=200, slope=2) * env_exp(seconds, decay, 0.01) * gain
+
+    # conventional: the real bang, fattened low end, longer echo
+    x = canvas(3.5)
+    place(x, bang * 1.4 + body * 1.2, 0.0)
+    place(x, thump(0.4, 90, 40, 0.08, 1.2), 0.0)
+    x += echo_cloud(x.copy(), 80, 0.15, 2.6, 0.3, 0.8, 3000, 400)
+    loud("explosion/shock_he", x)
+
+    # heavy bombs: the bang slowed down (bigger charge), deep punch, rolling low end
+    big = resample(bang, 0.72)
+    x = canvas(4.5)
+    place(x, big * 1.5 + fft_filter(big, high=180) * 1.4, 0.0)
+    place(x, thump(0.8, 65, 26, 0.18, 1.6), 0.0)
+    place(x, rumble(3.0, 0.8, 1.0), 0.05)
+    x += echo_cloud(x.copy(), 120, 0.2, 3.5, 0.32, 1.1, 2400, 300)
+    loud("explosion/shock_heavy", x)
+
+    # thermobaric: a small pop, then the huge whump, then the air rushing back
+    x = canvas(5.0)
+    place(x, resample(bang, 1.35) * 0.5, 0.0)
+    place(x, resample(bang, 0.6) * 1.6, 0.12)
+    place(x, thump(1.1, 50, 20, 0.3, 2.0), 0.12)
+    rush = fft_filter(white(1.8), low=60, high=1200, slope=1.3) * np.interp(t_axis(1.8), [0, 0.6, 1.8], [0, 1, 0]) ** 1.5
+    place(x, rush, 1.0, 0.7)
+    x += echo_cloud(x.copy(), 100, 0.2, 3.5, 0.3, 1.0, 2200, 300)
+    loud("explosion/shock_thermo", x)
+
+    # bunker buster: muffled through the ground first, then the bang breaks out
+    x = canvas(4.5)
+    place(x, fft_filter(resample(bang, 0.6), high=350, slope=2) * 1.8, 0.0)
+    place(x, thump(0.9, 42, 18, 0.25, 2.0), 0.0)
+    place(x, resample(bang, 0.8) * 1.2, 0.08)
+    place(x, rumble(2.5, 0.6, 1.0), 0.1)
+    x += echo_cloud(x.copy(), 90, 0.15, 3.0, 0.28, 1.0, 1800, 300)
+    loud("explosion/shock_bunker", x)
+
+    # nuclear: incident wave and Mach stem as two huge slowed bangs, then thunder for seconds
+    x = canvas(9.0)
+    place(x, resample(bang, 0.5) * 1.6, 0.0)
+    place(x, resample(bang, 0.45) * 1.4, 0.22)
+    place(x, thump(1.8, 38, 15, 0.45, 2.2), 0.0)
+    place(x, rumble(7.0, 2.2, 1.6), 0.05)
+    x += echo_cloud(x.copy(), 200, 0.3, 7.0, 0.35, 2.2, 1500, 200)
+    loud("explosion/shock_nuke", x, 3.0)
+
+    # EMP (high-altitude burst): far away - a dull, dry double bang and a long low roll
+    x = canvas(6.0)
+    far = fft_filter(resample(bang, 0.65), high=1800, slope=1.5)
+    place(x, far * 1.2, 0.0)
+    place(x, far * 1.0, 0.35)
+    place(x, rumble(4.5, 1.4, 1.1), 0.0)
+    x += echo_cloud(x.copy(), 150, 0.3, 5.0, 0.3, 1.6, 1200, 200)
+    loud("explosion/shock_emp", x, 2.6)
+
+    # antimatter: the bang with a metallic, ringing, phasing resonance
+    x = canvas(6.0)
+    place(x, bang * 1.5 + body, 0.0)
+    place(x, thump(1.2, 60, 20, 0.3, 1.4), 0.0)
+    tt = t_axis(3.5)
+    ring = sum(np.sin(2 * np.pi * f * tt * (1 - 0.15 * tt / 3.5)) / (k + 1) for k, f in enumerate((220, 331, 497, 746, 1119)))
+    place(x, ring * env_exp(3.5, 0.9, 0.01) * 0.5 * (1 + 0.5 * np.sin(2 * np.pi * 3.0 * tt)), 0.02)
+    x += echo_cloud(x.copy(), 120, 0.15, 4.0, 0.3, 1.3, 3000, 400)
+    loud("explosion/shock_antimatter", x)
+
+
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "real_audio_cache")
+    folder = sys.argv[1] if len(sys.argv) > 1 else "real_audio_cache"
+    if len(sys.argv) > 2 and sys.argv[2] == "cracks":
+        shock_cracks(folder)
+    else:
+        main(folder)
+        shock_cracks(folder)

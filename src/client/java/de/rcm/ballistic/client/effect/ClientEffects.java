@@ -358,15 +358,31 @@ public final class ClientEffects {
 		}
 		float far = (float) Mth.clamp(distance / reach, 0.0, 1.0);
 		float p = pitch * (1.0F - 0.18F * far) * (0.97F + rand() * 0.06F);
-		float vol = (float) Math.min(1.0, 0.25 + f * 1.1);
-		playDistant(mc, crack, pos, vol, p);
-		if (f > 0.35) {
-			playDistant(mc, crack, pos, vol, p * 0.985F);
+		float vol = (float) Math.min(1.0, 0.45 + f);
+		// on the master channel (only the master slider turns it down), stacked for loudness
+		playLoud(mc, crack, pos, vol, p);
+		playLoud(mc, crack, pos, vol, p * 0.99F);
+		if (f > 0.3) {
+			playLoud(mc, crack, pos, 1.0F, p * 1.01F);
 		}
-		if (f > 0.65) {
-			playDistant(mc, crack, pos, 1.0F, p * 1.015F);
+		if (f > 0.6) {
+			playLoud(mc, crack, pos, 1.0F, p * 0.98F);
 		}
-		addShake((float) (f * f * 2.5));
+		addShake((float) (f * f * 3.0));
+	}
+
+	/** Like {@link #playDistant} but on the master channel. */
+	static void playLoud(Minecraft mc, net.minecraft.sounds.SoundEvent sound, Vec3 source, float volume, float pitch) {
+		if (volume <= 0.01F) {
+			return;
+		}
+		Vec3 ear = mc.gameRenderer.getMainCamera().position();
+		Vec3 dir = source.subtract(ear);
+		double len = dir.length();
+		Vec3 at = len < 8 ? source : ear.add(dir.scale(8.0 / len));
+		mc.getSoundManager().play(new SimpleSoundInstance(
+			sound.location(), SoundSource.MASTER, Mth.clamp(volume, 0.0F, 1.0F), pitch, RANDOM, false, 0, SoundInstance.Attenuation.NONE, at.x, at.y, at.z, false
+		));
 	}
 
 	// ------------------------------------------------------------------ conventional blast
