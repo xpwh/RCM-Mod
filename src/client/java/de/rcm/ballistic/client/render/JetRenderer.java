@@ -56,6 +56,15 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	private static final BoxMesh WARTHOG = buildWarthog();
 	private static final BoxMesh SPIRIT = buildSpirit();
 	private static final BoxMesh SPIRIT_BAY = buildSpiritBay();
+	private static final BoxMesh GUNSHIP = buildGunship();
+	private static final BoxMesh REAPER = buildReaper();
+	private static final BoxMesh APACHE = buildApache();
+	private static final BoxMesh PROP4 = buildProp(4, 2.1F, 0.32F);
+	private static final BoxMesh PROP3 = buildProp(3, 1.1F, 0.2F);
+	private static final BoxMesh MAIN_ROTOR = buildMainRotor();
+	private static final BoxMesh TAIL_ROTOR = buildTailRotor();
+	/** AC-130 propeller hubs (x, y, z). */
+	private static final float[][] GUNSHIP_PROPS = {{-10.0F, 4.9F, 1.25F}, {-5.2F, 5.1F, 1.25F}, {5.2F, 5.1F, 1.25F}, {10.0F, 4.9F, 1.25F}};
 	private static final RenderType GLOW_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/strike_jet.png"));
 
 	public JetRenderer(EntityRendererProvider.Context context) {
@@ -110,6 +119,12 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 			super.submit(state, poseStack, collector, camera);
 			return;
 		}
+		if (state.type == JetType.GUNSHIP || state.type == JetType.REAPER || state.type == JetType.APACHE) {
+			this.submitPropAircraft(state, poseStack, collector, light);
+			poseStack.popPose();
+			super.submit(state, poseStack, collector, camera);
+			return;
+		}
 		if (state.type == JetType.SPIRIT) {
 			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> SPIRIT.emit(pose, consumer, light));
 			if (state.bayOpen) {
@@ -153,6 +168,248 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 		}
 		poseStack.popPose();
 		super.submit(state, poseStack, collector, camera);
+	}
+
+	/** AC-130, MQ-9 and AH-64: airframe plus spinning propellers / rotors. */
+	private void submitPropAircraft(State state, PoseStack poseStack, SubmitNodeCollector collector, int light) {
+		float t = state.time;
+		if (state.type == JetType.GUNSHIP) {
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> GUNSHIP.emit(pose, consumer, light));
+			for (int i = 0; i < GUNSHIP_PROPS.length; i++) {
+				float[] h = GUNSHIP_PROPS[i];
+				poseStack.pushPose();
+				poseStack.translate(h[0], h[1], h[2]);
+				poseStack.mulPose(com.mojang.math.Axis.YP.rotation(t * 1.3F + i * 0.4F));
+				collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> PROP4.emit(pose, consumer, light));
+				poseStack.popPose();
+			}
+		} else if (state.type == JetType.REAPER) {
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> REAPER.emit(pose, consumer, light));
+			poseStack.pushPose();
+			poseStack.translate(0.0F, -4.85F, 0.05F);
+			poseStack.mulPose(com.mojang.math.Axis.YP.rotation(-t * 1.6F));
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> PROP3.emit(pose, consumer, light));
+			poseStack.popPose();
+		} else {
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> APACHE.emit(pose, consumer, light));
+			poseStack.pushPose();
+			poseStack.translate(0.0F, -0.2F, 2.45F);
+			poseStack.mulPose(com.mojang.math.Axis.ZP.rotation(t * 0.95F));
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> MAIN_ROTOR.emit(pose, consumer, light));
+			poseStack.popPose();
+			poseStack.pushPose();
+			poseStack.translate(0.42F, -9.15F, 2.35F);
+			poseStack.mulPose(com.mojang.math.Axis.XP.rotation(t * 1.7F));
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> TAIL_ROTOR.emit(pose, consumer, light));
+			poseStack.popPose();
+		}
+	}
+
+	/**
+	 * AC-130 gunship: high-wing four-turboprop transport with an upswept tail and a beavertail
+	 * ramp; the 105 mm howitzer and 40 mm Bofors stick out of the left side, the sensor turrets hang
+	 * under the nose and the gear sponsons bulge out of the lower fuselage.
+	 */
+	private static BoxMesh buildGunship() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		Vector3f up = v(0, 0, 1);
+		loft(b, DARK_GREY,
+			new float[] {12.2F, 0.3F, -0.6F, 0.2F, 0.4F},
+			new float[] {11.4F, 1.2F, -1.4F, 1.0F, 1.2F},
+			new float[] {10.0F, 1.7F, -1.6F, 1.6F, 1.8F},
+			new float[] {-5.5F, 1.75F, -1.6F, 1.7F, 1.85F},
+			new float[] {-9.0F, 1.3F, -0.4F, 1.4F, 1.75F},
+			new float[] {-12.6F, 0.4F, 0.9F, 0.45F, 1.5F});
+		loft(b, GLASS,
+			new float[] {11.9F, 0.7F, 0.6F, 0.4F, 0.9F},
+			new float[] {11.0F, 1.1F, 0.9F, 0.8F, 1.65F},
+			new float[] {10.2F, 1.2F, 1.1F, 0.9F, 1.8F});
+		// high wing with dihedral-free outer panels, engine nacelles under it
+		for (float s : new float[] {-1.0F, 1.0F}) {
+			surface(b, DARK_GREY, v(s * 1.6F, 2.6F, 1.95F), v(s * 1.6F, -1.4F, 1.95F), 0.55F,
+				v(s * 16.0F, 1.6F, 1.95F), v(s * 16.0F, -0.3F, 1.95F), 0.22F, up);
+			for (float x : new float[] {5.2F, 10.0F}) {
+				float nx = s * x;
+				float y0 = x > 7.0F ? 4.7F : 4.9F;
+				b.revolve(GREY, v(nx, y0, 1.25F), v(0, -1, 0), new float[][] {
+					{0.0F, 0.0F}, {0.0F, 0.42F}, {0.4F, 0.62F}, {3.0F, 0.6F}, {5.6F, 0.35F}, {6.0F, 0.0F}
+				}, 12);
+				b.revolve(BLACK, v(nx, y0 + 0.05F, 1.25F), v(0, 1, 0), new float[][] {{0.0F, 0.0F}, {0.0F, 0.22F}, {0.35F, 0.0F}}, 10); // spinner
+			}
+			// gear sponsons
+			b.hexa(DARK_GREY,
+				v(s * 1.6F, 3.2F, -1.5F), v(s * 2.35F, 3.2F, -1.3F), v(s * 2.35F, 3.2F, -0.3F), v(s * 1.6F, 3.2F, -0.2F),
+				v(s * 1.6F, -3.4F, -1.5F), v(s * 2.35F, -3.4F, -1.3F), v(s * 2.35F, -3.4F, -0.3F), v(s * 1.6F, -3.4F, -0.2F));
+			surface(b, DARK_GREY, v(s * 0.6F, -9.6F, 1.55F), v(s * 0.6F, -12.4F, 1.55F), 0.3F,
+				v(s * 6.6F, -10.9F, 1.55F), v(s * 6.6F, -12.3F, 1.55F), 0.15F, up);
+		}
+		// fin and rudder
+		b.hexa(DARK_GREY,
+			v(-0.15F, -8.2F, 1.6F), v(-0.15F, -12.8F, 1.6F), v(0.15F, -12.8F, 1.6F), v(0.15F, -8.2F, 1.6F),
+			v(-0.08F, -11.0F, 7.6F), v(-0.08F, -12.9F, 7.6F), v(0.08F, -12.9F, 7.6F), v(0.08F, -11.0F, 7.6F));
+		// left-side guns: 105 mm howitzer aft of the wing, 40 mm Bofors forward, 25 mm GAU-12 at the door
+		b.beam(v(-1.6F, -2.6F, -0.4F), v(-3.6F, -2.6F, -0.6F), 0.22F, 0.22F, BLACK);
+		b.box(-1.95F, -3.2F, -0.9F, -1.6F, -2.0F, 0.1F, STEEL);
+		b.beam(v(-1.6F, 3.4F, -0.2F), v(-2.9F, 3.4F, -0.35F), 0.12F, 0.12F, BLACK);
+		b.beam(v(-1.6F, 7.6F, -0.3F), v(-2.3F, 7.6F, -0.4F), 0.08F, 0.08F, BLACK);
+		// sensor turrets under the nose and behind the gear
+		b.box(-0.5F, 9.4F, -2.1F, 0.5F, 10.3F, -1.5F, BLACK);
+		b.box(-0.35F, 9.55F, -2.12F, 0.35F, 10.15F, -1.95F, GLASS);
+		b.box(-0.45F, -4.6F, -2.0F, 0.45F, -3.8F, -1.5F, BLACK);
+		b.box(-0.8F, 4.0F, 1.85F, 0.8F, 5.0F, 1.95F, MARKING);
+		return b.build();
+	}
+
+	/**
+	 * MQ-9 Reaper: slender fuselage with the satellite-dish hump, very long straight wings, the
+	 * Y-tail (V-tail plus ventral fin), a pusher propeller, the sensor ball under the nose and four
+	 * Hellfires on the wing pylons.
+	 */
+	private static BoxMesh buildReaper() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		Vector3f up = v(0, 0, 1);
+		loft(b, GREY,
+			new float[] {4.9F, 0.15F, -0.2F, 0.1F, 0.25F},
+			new float[] {4.3F, 0.42F, -0.45F, 0.38F, 0.75F},
+			new float[] {2.5F, 0.48F, -0.5F, 0.45F, 0.85F},
+			new float[] {0.5F, 0.48F, -0.48F, 0.42F, 0.6F},
+			new float[] {-3.0F, 0.32F, -0.3F, 0.28F, 0.42F},
+			new float[] {-4.6F, 0.18F, -0.12F, 0.16F, 0.22F});
+		for (float s : new float[] {-1.0F, 1.0F}) {
+			surface(b, GREY, v(s * 0.4F, 0.75F, 0.42F), v(s * 0.4F, -0.45F, 0.42F), 0.16F,
+				v(s * 8.6F, 0.35F, 0.55F), v(s * 8.6F, -0.15F, 0.55F), 0.06F, up);
+			// V-tail
+			surface(b, GREY, v(s * 0.2F, -3.3F, 0.35F), v(s * 0.2F, -4.4F, 0.35F), 0.08F,
+				v(s * 2.2F, -4.0F, 1.6F), v(s * 2.2F, -4.55F, 1.6F), 0.05F, v(-s * 0.55F, 0, 0.83F));
+			// Hellfires on the pylons
+			for (float x : new float[] {2.6F, 3.8F}) {
+				b.box(s * x - 0.04F, 0.4F, 0.1F, s * x + 0.04F, -0.1F, 0.38F, DARK_GREY);
+				b.beam(v(s * x, -0.7F, -0.02F), v(s * x, 0.95F, -0.02F), 0.11F, 0.11F, BOMB);
+			}
+		}
+		// ventral fin, sensor ball, satcom bulge, tail cone
+		b.hexa(GREY,
+			v(-0.05F, -3.4F, -0.2F), v(-0.05F, -4.4F, -0.1F), v(0.05F, -4.4F, -0.1F), v(0.05F, -3.4F, -0.2F),
+			v(-0.03F, -3.9F, -1.2F), v(-0.03F, -4.45F, -1.2F), v(0.03F, -4.45F, -1.2F), v(0.03F, -3.9F, -1.2F));
+		b.revolve(DARK_GREY, v(0.0F, 3.4F, -0.55F), v(0, 0, -1), new float[][] {{0.0F, 0.0F}, {0.0F, 0.32F}, {0.3F, 0.34F}, {0.6F, 0.0F}}, 12);
+		b.box(-0.18F, 3.55F, -1.0F, 0.18F, 3.75F, -0.8F, GLASS);
+		b.revolve(BLACK, v(0.0F, -4.6F, 0.05F), v(0, -1, 0), new float[][] {{0.0F, 0.12F}, {0.3F, 0.0F}}, 10);
+		b.box(-0.3F, 1.6F, 0.82F, 0.3F, 2.3F, 0.86F, MARKING);
+		return b.build();
+	}
+
+	/**
+	 * AH-64 Apache: tandem stepped cockpits, engines either side of the rotor mast, long tail boom
+	 * with the fin, stabilator and tail rotor, stub wings with Hellfire rails and Hydra pods, chin
+	 * turret with the 30 mm chain gun and the fixed landing gear.
+	 */
+	private static BoxMesh buildApache() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		Vector3f up = v(0, 0, 1);
+		loft(b, BOMB,
+			new float[] {5.4F, 0.2F, -0.4F, 0.15F, 0.0F},
+			new float[] {4.6F, 0.55F, -0.9F, 0.45F, 0.7F},
+			new float[] {2.8F, 0.75F, -1.0F, 0.6F, 1.0F},
+			new float[] {0.8F, 0.95F, -1.0F, 0.8F, 1.2F},
+			new float[] {-1.8F, 0.9F, -0.8F, 0.75F, 1.1F},
+			new float[] {-2.6F, 0.45F, -0.1F, 0.4F, 0.9F},
+			new float[] {-8.8F, 0.22F, 0.3F, 0.2F, 0.75F});
+		// stepped tandem canopies: gunner in front and below, pilot behind and above
+		loft(b, GLASS,
+			new float[] {4.7F, 0.42F, 0.6F, 0.3F, 0.75F},
+			new float[] {3.6F, 0.55F, 0.85F, 0.4F, 1.35F},
+			new float[] {2.9F, 0.58F, 0.95F, 0.42F, 1.4F});
+		loft(b, GLASS,
+			new float[] {2.8F, 0.58F, 1.0F, 0.4F, 1.5F},
+			new float[] {1.8F, 0.62F, 1.15F, 0.45F, 1.95F},
+			new float[] {1.0F, 0.65F, 1.2F, 0.45F, 1.95F});
+		for (float s : new float[] {-1.0F, 1.0F}) {
+			// engines with exhaust suppressors
+			b.revolve(BOMB, v(s * 1.1F, 0.9F, 1.15F), v(0, -1, 0), new float[][] {
+				{0.0F, 0.0F}, {0.0F, 0.35F}, {0.3F, 0.45F}, {2.8F, 0.45F}, {3.4F, 0.3F}, {3.5F, 0.0F}
+			}, 12);
+			b.box(s * 1.1F - 0.25F, -2.65F, 1.1F, s * 1.1F + 0.25F, -2.4F, 1.45F, BLACK);
+			// stub wing, Hellfire rail, Hydra pod
+			surface(b, BOMB, v(s * 0.9F, 0.9F, 0.2F), v(s * 0.9F, -0.3F, 0.2F), 0.18F,
+				v(s * 2.7F, 0.7F, 0.15F), v(s * 2.7F, -0.1F, 0.15F), 0.1F, up);
+			b.box(s * 1.7F - 0.05F, 0.1F, -0.1F, s * 1.7F + 0.05F, 0.6F, 0.12F, DARK_GREY);
+			for (float dx : new float[] {-0.18F, 0.18F}) {
+				b.beam(v(s * 1.7F + dx, -0.6F, -0.3F), v(s * 1.7F + dx, 1.0F, -0.3F), 0.09F, 0.09F, DARK_GREY);
+			}
+			b.revolve(DARK_GREY, v(s * 2.45F, 1.2F, -0.3F), v(0, -1, 0), new float[][] {
+				{0.0F, 0.0F}, {0.0F, 0.3F}, {0.1F, 0.36F}, {1.8F, 0.36F}, {1.85F, 0.0F}
+			}, 10);
+			// main gear: strut and wheel
+			b.box(s * 1.0F - 0.06F, 2.2F, -1.6F, s * 1.0F + 0.06F, 2.4F, -0.8F, STEEL);
+			b.box(s * 1.0F - 0.12F, 2.0F, -1.85F, s * 1.0F + 0.12F, 2.6F, -1.45F, BLACK);
+			// stabilator at the tail
+			surface(b, BOMB, v(s * 0.2F, -8.5F, 0.55F), v(s * 0.2F, -9.3F, 0.55F), 0.1F,
+				v(s * 1.6F, -8.7F, 0.55F), v(s * 1.6F, -9.3F, 0.55F), 0.06F, up);
+		}
+		// fin, tail wheel, mast, chin turret with chain gun, nose sensors (TADS/PNVS)
+		b.hexa(BOMB,
+			v(-0.08F, -8.0F, 0.6F), v(-0.08F, -9.3F, 0.6F), v(0.08F, -9.3F, 0.6F), v(0.08F, -8.0F, 0.6F),
+			v(-0.06F, -8.9F, 2.7F), v(-0.06F, -9.8F, 2.7F), v(0.06F, -9.8F, 2.7F), v(0.06F, -8.9F, 2.7F));
+		b.box(-0.05F, -8.6F, -0.3F, 0.05F, -8.4F, 0.4F, STEEL);
+		b.box(-0.12F, -8.65F, -0.45F, 0.12F, -8.35F, -0.25F, BLACK);
+		b.revolve(DARK_GREY, v(0.0F, -0.2F, 1.2F), v(0, 0, 1), new float[][] {{0.0F, 0.0F}, {0.0F, 0.3F}, {1.1F, 0.22F}, {1.25F, 0.0F}}, 10);
+		b.box(-0.28F, 2.9F, -1.35F, 0.28F, 3.5F, -0.95F, DARK_GREY);
+		b.beam(v(0.0F, 3.4F, -1.2F), v(0.0F, 5.0F, -1.25F), 0.07F, 0.07F, BLACK);
+		b.box(-0.35F, 5.0F, -0.55F, 0.35F, 5.6F, 0.05F, BLACK);
+		b.box(-0.22F, 5.55F, -0.45F, 0.22F, 5.62F, -0.1F, GLASS);
+		return b.build();
+	}
+
+	/** Propeller with {@code blades} blades of {@code radius}, spinning about the Y axis (in X/Z). */
+	private static BoxMesh buildProp(int blades, float radius, float chord) {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		for (int i = 0; i < blades; i++) {
+			float a = Mth.TWO_PI * i / blades;
+			float cx = Mth.cos(a);
+			float cz = Mth.sin(a);
+			// a twisted paddle: wide near the hub, narrow at the tip
+			b.hexa(BLACK,
+				v(cx * 0.2F - cz * chord * 0.5F, 0.06F, cz * 0.2F + cx * chord * 0.5F), v(cx * 0.2F + cz * chord * 0.5F, -0.06F, cz * 0.2F - cx * chord * 0.5F),
+				v(cx * 0.2F + cz * chord * 0.5F, 0.02F, cz * 0.2F - cx * chord * 0.5F), v(cx * 0.2F - cz * chord * 0.5F, 0.1F, cz * 0.2F + cx * chord * 0.5F),
+				v(cx * radius - cz * chord * 0.25F, 0.02F, cz * radius + cx * chord * 0.25F), v(cx * radius + cz * chord * 0.25F, -0.02F, cz * radius - cx * chord * 0.25F),
+				v(cx * radius + cz * chord * 0.25F, 0.0F, cz * radius - cx * chord * 0.25F), v(cx * radius - cz * chord * 0.25F, 0.04F, cz * radius + cx * chord * 0.25F));
+		}
+		return b.build();
+	}
+
+	/** AH-64 main rotor: four long blades spinning about Z, with the hub. */
+	private static BoxMesh buildMainRotor() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		for (int i = 0; i < 4; i++) {
+			float a = Mth.HALF_PI * i;
+			float cx = Mth.cos(a);
+			float cy = Mth.sin(a);
+			float w = 0.28F;
+			b.hexa(DARK_GREY,
+				v(cx * 0.4F - cy * w, cy * 0.4F + cx * w, -0.04F), v(cx * 0.4F + cy * w, cy * 0.4F - cx * w, -0.04F),
+				v(cx * 0.4F + cy * w, cy * 0.4F - cx * w, 0.04F), v(cx * 0.4F - cy * w, cy * 0.4F + cx * w, 0.04F),
+				v(cx * 6.3F - cy * w, cy * 6.3F + cx * w, -0.1F), v(cx * 6.3F + cy * w, cy * 6.3F - cx * w, -0.1F),
+				v(cx * 6.3F + cy * w, cy * 6.3F - cx * w, -0.05F), v(cx * 6.3F - cy * w, cy * 6.3F + cx * w, -0.05F));
+		}
+		b.box(-0.35F, -0.35F, -0.1F, 0.35F, 0.35F, 0.25F, STEEL);
+		return b.build();
+	}
+
+	/** AH-64 tail rotor: four blades in two scissored pairs, spinning about X. */
+	private static BoxMesh buildTailRotor() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		for (int i = 0; i < 4; i++) {
+			float a = i * Mth.HALF_PI + (i % 2 == 0 ? 0.0F : 0.35F);
+			float cy = Mth.cos(a);
+			float cz = Mth.sin(a);
+			float w = 0.11F;
+			b.hexa(DARK_GREY,
+				v(-0.02F, cy * 0.1F - cz * w, cz * 0.1F + cy * w), v(-0.02F, cy * 0.1F + cz * w, cz * 0.1F - cy * w),
+				v(0.02F, cy * 0.1F + cz * w, cz * 0.1F - cy * w), v(0.02F, cy * 0.1F - cz * w, cz * 0.1F + cy * w),
+				v(-0.02F, cy * 1.35F - cz * w, cz * 1.35F + cy * w), v(-0.02F, cy * 1.35F + cz * w, cz * 1.35F - cy * w),
+				v(0.02F, cy * 1.35F + cz * w, cz * 1.35F - cy * w), v(0.02F, cy * 1.35F - cz * w, cz * 1.35F + cy * w));
+		}
+		return b.build();
 	}
 
 	/** A-10: the airframe, plus muzzle flash and tracer stream while the cannon fires. */

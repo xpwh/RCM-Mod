@@ -147,6 +147,10 @@ public final class ModRegistry {
 		"meteor",
 		EntityType.Builder.<MeteorEntity>of(MeteorEntity::new, MobCategory.MISC).sized(1.2F, 1.2F).clientTrackingRange(32).updateInterval(1).fireImmune().noLootTable()
 	);
+	public static final EntityType<de.rcm.ballistic.entity.RocketEntity> ROCKET = registerEntity(
+		"rocket",
+		EntityType.Builder.<de.rcm.ballistic.entity.RocketEntity>of(de.rcm.ballistic.entity.RocketEntity::new, MobCategory.MISC).sized(0.4F, 0.4F).clientTrackingRange(24).updateInterval(1).noLootTable()
+	);
 	public static final EntityType<AerialBombEntity> AERIAL_BOMB = registerEntity(
 		"aerial_bomb",
 		EntityType.Builder.<AerialBombEntity>of(AerialBombEntity::new, MobCategory.MISC).sized(0.45F, 0.45F).clientTrackingRange(24).updateInterval(1).noLootTable()
@@ -338,6 +342,12 @@ public final class ModRegistry {
 	public static final SoundEvent A10_GUN = sound("a10.gun");
 	public static final SoundEvent A10_ENGINE = sound("a10.engine");
 	public static final SoundEvent B2_ENGINE = sound("b2.engine");
+	public static final SoundEvent AC130_ENGINE = sound("ac130.engine");
+	public static final SoundEvent REAPER_ENGINE = sound("reaper.engine");
+	public static final SoundEvent APACHE_ROTOR = sound("apache.rotor");
+	public static final SoundEvent GUN_105 = sound("ac130.gun_105");
+	public static final SoundEvent GUN_40 = sound("ac130.gun_40");
+	public static final SoundEvent CHAIN_GUN = sound("apache.chain_gun");
 	public static final SoundEvent BOMB_WHISTLE = sound("bomb.whistle");
 	public static final SoundEvent LASER_BEAM = sound("laser.beam");
 

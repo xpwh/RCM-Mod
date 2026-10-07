@@ -260,6 +260,26 @@ public final class DetonationManager {
 	}
 
 	/** Free-fall bomb from an airstrike jet (Mk 82-class): a solid blast with a small crater. */
+	/** AGM-114 Hellfire: a 9 kg shaped-charge / blast-frag warhead, deadly against vehicles. */
+	public static void detonateHellfire(ServerLevel level, Vec3 pos, Entity source) {
+		broadcast(level, pos, Warhead.DRONE);
+		FlyingDebris.launch(level, pos, 2.0, 6, 0.9);
+		highExplosive(level, pos, source, 3.6F, 0, 3);
+	}
+
+	/** AC-130 105 mm howitzer shell. */
+	public static void detonateHowitzerShell(ServerLevel level, Vec3 pos, Entity source) {
+		broadcast(level, pos, Warhead.AERIAL_BOMB);
+		FlyingDebris.launch(level, pos, 2.5, 8, 1.0);
+		highExplosive(level, pos, source, 4.2F, 0, 4);
+	}
+
+	/** Small high-explosive round: 40 mm Bofors, 30 mm chain gun, Hydra 70 rocket. */
+	public static void detonateSmallRound(ServerLevel level, Vec3 pos, Entity source, float power) {
+		broadcast(level, pos, Warhead.BOMBLET);
+		level.explode(source, pos.x, pos.y, pos.z, power, false, Level.ExplosionInteraction.TNT);
+	}
+
 	public static void detonateAerialBomb(ServerLevel level, Vec3 pos, Entity source) {
 		broadcast(level, pos, Warhead.AERIAL_BOMB);
 		FlyingDebris.launch(level, pos, 3.5, 12, 1.2);

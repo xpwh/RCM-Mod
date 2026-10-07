@@ -223,6 +223,11 @@ public class JetEntity extends Entity implements AirThreat {
 			return;
 		}
 		ThreatTracker.report(level, this);
+		this.processShells(level);
+		if (this.getJetType() == JetType.APACHE) {
+			this.apacheTick(level);
+			return;
+		}
 		Vec3 pos = this.position();
 		Vec3 dir = this.getDir();
 		double speed = this.getSpeed();
@@ -254,6 +259,9 @@ public class JetEntity extends Entity implements AirThreat {
 				desired = this.warthogPattern(level, pos, flat, alt, desired);
 				guardRange = Math.min(guardRange, this.guardRange);
 				guardClearance = this.guardClearance;
+			} else if (type == JetType.GUNSHIP || type == JetType.REAPER) {
+				level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(this.target)), 2);
+				desired = this.orbitPattern(level, pos, alt, desired);
 			} else {
 				this.bombRun(level, pos, flat, speed);
 			}
@@ -305,6 +313,225 @@ public class JetEntity extends Entity implements AirThreat {
 		float bank = (float) Mth.clamp(turn * 25.0, -1.1, 1.1);
 		this.entityData.set(DATA_BANK, Mth.lerp(0.2F, this.getBank(), bank));
 		this.entityData.set(DATA_SPEED, (float) speed);
+		this.setDir(newDir);
+		this.setPos(next);
+		if (this.tickCount > 6000) {
+			this.discard();
+		}
+	}
+
+	// ------------------------------------------------------------------ AC-130, MQ-9, AH-64
+
+	/** A delayed impact: shells in flight from the gunship, detonating when they arrive. */
+	private record Shell(int dueTick, Vec3 pos, boolean heavy) {
+	}
+
+	private final java.util.List<Shell> shells = new java.util.ArrayList<>();
+	private int orbitTicks = -1;
+	private int shotsFired;
+	private Vec3 hoverVelocity = Vec3.ZERO;
+
+	private void processShells(ServerLevel level) {
+		for (java.util.Iterator<Shell> it = this.shells.iterator(); it.hasNext(); ) {
+			Shell s = it.next();
+			if (this.tickCount >= s.dueTick()) {
+				if (s.heavy()) {
+					DetonationManager.detonateHowitzerShell(level, s.pos(), this);
+				} else {
+					DetonationManager.detonateSmallRound(level, s.pos(), this, 1.7F);
+				}
+				it.remove();
+			}
+		}
+	}
+
+	/** Where to shoot: a living thing near the target (not the caller), else the target itself. */
+	private Vec3 pickAim(ServerLevel level, double spread) {
+		var random = level.getRandom();
+		var nearby = level.getEntitiesOfClass(LivingEntity.class, new AABB(this.target, this.target).inflate(28.0, 16.0, 28.0),
+			e -> e.isAlive() && !e.getUUID().equals(this.caller));
+		Vec3 aim = !nearby.isEmpty() && random.nextInt(3) > 0 ? nearby.get(random.nextInt(nearby.size())).position() : this.target;
+		double x = aim.x + random.nextGaussian() * spread;
+		double z = aim.z + random.nextGaussian() * spread;
+		int y = level.hasChunk(Mth.floor(x) >> 4, Mth.floor(z) >> 4) ? level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z)) : (int) aim.y;
+		return new Vec3(x, Math.max(y, aim.y - 3.0), z);
+	}
+
+	private @Nullable LivingEntity pickTargetEntity(ServerLevel level) {
+		var nearby = level.getEntitiesOfClass(LivingEntity.class, new AABB(this.target, this.target).inflate(28.0, 16.0, 28.0),
+			e -> e.isAlive() && !e.getUUID().equals(this.caller));
+		return nearby.isEmpty() ? null : nearby.get(level.getRandom().nextInt(nearby.size()));
+	}
+
+	/**
+	 * AC-130 and MQ-9: fly to the target, then circle it in a left-hand pylon turn (guns and sensors
+	 * look out of the left side) and work it over: the gunship with its 105 mm howitzer and 40 mm
+	 * Bofors, the Reaper with four Hellfires. Then they leave.
+	 */
+	private Vec3 orbitPattern(ServerLevel level, Vec3 pos, double alt, Vec3 cruise) {
+		JetType type = this.getJetType();
+		double radius = type == JetType.GUNSHIP ? 115.0 : 150.0;
+		Vec3 rel = new Vec3(pos.x - this.target.x, 0, pos.z - this.target.z);
+		double r = rel.length();
+		if (this.orbitTicks < 0) {
+			if (r > radius + 50.0) {
+				return cruise;
+			}
+			this.orbitTicks = 0;
+			this.tellCaller(level, Component.translatable(type == JetType.GUNSHIP ? "message.ballisticmissiles.ac130_orbit" : "message.ballisticmissiles.reaper_orbit")
+				.withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+		}
+		this.orbitTicks++;
+		Vec3 radial = r > 1.0E-3 ? rel.scale(1.0 / r) : new Vec3(1, 0, 0);
+		Vec3 tangent = new Vec3(radial.z, 0, -radial.x); // counter-clockwise seen from above: target on the left
+		Vec3 horizontal = tangent.add(radial.scale(Mth.clamp((radius - r) * 0.03, -0.6, 0.6))).normalize();
+		Vec3 desired = horizontal.add(0, Mth.clamp((alt - pos.y) * 0.03, -0.2, 0.2), 0).normalize();
+
+		var random = level.getRandom();
+		Vec3 gun = pos.add(new Vec3(-tangent.z, 0, tangent.x).scale(-2.5)).add(0, -0.5, 0);
+		if (type == JetType.GUNSHIP) {
+			int t = this.orbitTicks;
+			if (t > 40 && t % 40 == 0) {
+				Vec3 aim = this.pickAim(level, 3.0);
+				this.shells.add(new Shell(this.tickCount + (int) (aim.distanceTo(gun) / 14.0) + 1, aim, true));
+				level.sendParticles(ParticleTypes.EXPLOSION, gun.x, gun.y, gun.z, 1, 0.3, 0.3, 0.3, 0.0);
+				level.playSound(null, gun.x, gun.y, gun.z, ModRegistry.GUN_105, SoundSource.HOSTILE, 24.0F, 0.95F + random.nextFloat() * 0.1F);
+			}
+			int cycle = t % 70;
+			if (t > 60 && cycle >= 20 && cycle < 44 && cycle % 3 == 0) {
+				Vec3 aim = this.pickAim(level, 5.0);
+				this.shells.add(new Shell(this.tickCount + (int) (aim.distanceTo(gun) / 20.0) + 1, aim, false));
+				level.sendParticles(ParticleTypes.EXPLOSION, gun.x, gun.y, gun.z, 1, 0.1, 0.1, 0.1, 0.0);
+				if (cycle % 6 == 2) {
+					level.playSound(null, gun.x, gun.y, gun.z, ModRegistry.GUN_40, SoundSource.HOSTILE, 16.0F, 0.95F + random.nextFloat() * 0.1F);
+				}
+			}
+			if (t > 640) {
+				this.egress = true;
+			}
+		} else {
+			if (this.orbitTicks > 60 && this.orbitTicks % 70 == 0 && this.shotsFired < 4) {
+				LivingEntity victim = this.pickTargetEntity(level);
+				Vec3 aim = victim != null ? victim.position() : this.target;
+				Vec3 rail = pos.add(0, -0.6, 0);
+				RocketEntity.fire(level, RocketEntity.Kind.HELLFIRE, this, rail, this.getDir().scale(2.5).add(0, -0.3, 0), aim, victim);
+				level.playSound(null, rail.x, rail.y, rail.z, ModRegistry.SAM_LAUNCH, SoundSource.HOSTILE, 10.0F, 1.35F);
+				if (this.shotsFired == 0) {
+					this.tellCaller(level, Component.translatable("message.ballisticmissiles.rifle").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+				}
+				this.shotsFired++;
+			}
+			if (this.shotsFired >= 4 && this.orbitTicks % 70 == 60) {
+				this.egress = true;
+			}
+		}
+		return desired;
+	}
+
+	/**
+	 * AH-64 Apache: comes in low and slow, stops about 110 blocks short of the target and hovers
+	 * there nose on, firing Hellfires, Hydra rocket salvos and its 30 mm chain gun; then it turns
+	 * round and leaves low.
+	 */
+	private void apacheTick(ServerLevel level) {
+		Vec3 pos = this.position();
+		level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(this.blockPosition()), 2);
+		level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(this.target)), 2);
+		Vec3 toTarget = new Vec3(this.target.x - pos.x, 0, this.target.z - pos.z);
+		double dist = toTarget.length();
+		Vec3 toDir = dist > 1.0E-3 ? toTarget.scale(1.0 / dist) : this.getDir();
+		this.a10PhaseAge++;
+		Vec3 wantVel;
+		Vec3 facing;
+		var random = level.getRandom();
+		if (this.a10Phase == 0) {
+			double sp = Mth.clamp((dist - 110.0) * 0.04, 0.0, JetType.APACHE.attackSpeed);
+			wantVel = toDir.scale(sp);
+			facing = toDir;
+			if (dist < 125.0 && this.hoverVelocity.length() < 0.4) {
+				this.a10Phase = 1;
+				this.a10PhaseAge = 0;
+				this.tellCaller(level, Component.translatable("message.ballisticmissiles.apache_engaging").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+			}
+		} else if (this.a10Phase == 1) {
+			wantVel = Vec3.ZERO;
+			facing = toDir;
+			int t = this.a10PhaseAge;
+			Vec3 nose = pos.add(toDir.scale(3.0)).add(0, -0.6, 0);
+			Vec3 side = new Vec3(-toDir.z, 0, toDir.x);
+			if (t > 20 && t % 30 == 0 && this.shotsFired < 4) {
+				LivingEntity victim = this.pickTargetEntity(level);
+				Vec3 rail = pos.add(side.scale(this.shotsFired % 2 == 0 ? 1.6 : -1.6)).add(0, -0.4, 0);
+				RocketEntity.fire(level, RocketEntity.Kind.HELLFIRE, this, rail, toDir.scale(1.5).add(0, 0.15, 0), victim != null ? victim.position() : this.target, victim);
+				level.playSound(null, rail.x, rail.y, rail.z, ModRegistry.SAM_LAUNCH, SoundSource.HOSTILE, 10.0F, 1.4F);
+				this.shotsFired++;
+			}
+			// two Hydra salvos of eight rockets
+			int salvo = t - 45;
+			if ((salvo >= 0 && salvo < 16 || salvo >= 80 && salvo < 96) && salvo % 2 == 0) {
+				Vec3 pod = pos.add(side.scale(salvo % 4 == 0 ? 1.4 : -1.4)).add(0, -0.5, 0);
+				Vec3 aim = this.pickAim(level, 4.0);
+				Vec3 v = aim.subtract(pod).normalize().add(random.nextGaussian() * 0.025, 0.02 + random.nextGaussian() * 0.02, random.nextGaussian() * 0.025).normalize().scale(4.5);
+				RocketEntity.fire(level, RocketEntity.Kind.HYDRA, this, pod, v, aim, null);
+				level.playSound(null, pod.x, pod.y, pod.z, ModRegistry.SAM_LAUNCH, SoundSource.HOSTILE, 6.0F, 1.8F + random.nextFloat() * 0.2F);
+			}
+			// 30 mm chain gun bursts (625 rounds a minute)
+			int gun = t % 50;
+			if (t > 30 && gun < 14 && gun % 2 == 0) {
+				Vec3 aim = this.pickAim(level, 2.5);
+				var hit = level.clip(new ClipContext(nose, nose.add(aim.subtract(nose).normalize().scale(220.0)), ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, this));
+				Vec3 p = hit.getLocation();
+				this.shells.add(new Shell(this.tickCount + (int) (p.distanceTo(nose) / 25.0), p, false));
+				level.sendParticles(ParticleTypes.EXPLOSION, nose.x, nose.y, nose.z, 1, 0.1, 0.1, 0.1, 0.0);
+				if (gun % 6 == 0) {
+					level.playSound(null, nose.x, nose.y, nose.z, ModRegistry.CHAIN_GUN, SoundSource.HOSTILE, 12.0F, 0.95F + random.nextFloat() * 0.1F);
+				}
+			}
+			if (t > 190) {
+				this.a10Phase = 2;
+				this.a10PhaseAge = 0;
+				this.egressHeading = toDir.scale(-1.0);
+			}
+		} else {
+			if (this.egressHeading == null) {
+				this.egressHeading = toDir.scale(-1.0);
+			}
+			wantVel = this.egressHeading.scale(Math.min(3.2, 0.5 + this.a10PhaseAge * 0.03));
+			facing = this.egressHeading;
+			if (this.a10PhaseAge > 260) {
+				this.discard();
+				return;
+			}
+		}
+		// ease the velocity like a helicopter, hold a low altitude above the terrain
+		this.hoverVelocity = this.hoverVelocity.add(wantVel.subtract(this.hoverVelocity).scale(0.06));
+		double ground = this.target.y;
+		for (int k = 0; k <= 40; k += 8) {
+			Vec3 probe = pos.add(this.hoverVelocity.normalize().scale(k));
+			int px = Mth.floor(probe.x);
+			int pz = Mth.floor(probe.z);
+			if (level.hasChunk(px >> 4, pz >> 4)) {
+				ground = Math.max(ground, level.getHeight(Heightmap.Types.MOTION_BLOCKING, px, pz));
+			}
+		}
+		double alt = Math.max(this.target.y + JetType.APACHE.runAltitude, ground + 14.0);
+		double vy = Mth.clamp((alt - pos.y) * 0.06, -0.5, 0.6);
+		Vec3 next = pos.add(this.hoverVelocity).add(0, vy, 0);
+		if (!level.isPositionEntityTicking(BlockPos.containing(next))) {
+			if (this.a10Phase == 2) {
+				this.discard();
+			}
+			return;
+		}
+		// nose down when accelerating forward, banked into turns
+		Vec3 oldDir = this.getDir();
+		Vec3 face = oldDir.add(new Vec3(facing.x, 0, facing.z).normalize().subtract(new Vec3(oldDir.x, 0, oldDir.z)).scale(0.08));
+		Vec3 flatFace = new Vec3(face.x, 0, face.z).normalize();
+		double pitch = -0.08 * this.hoverVelocity.length();
+		Vec3 newDir = flatFace.add(0, pitch, 0).normalize();
+		double turn = oldDir.x * newDir.z - oldDir.z * newDir.x;
+		this.entityData.set(DATA_BANK, Mth.lerp(0.15F, this.getBank(), (float) Mth.clamp(turn * 12.0, -0.5, 0.5)));
+		this.entityData.set(DATA_SPEED, (float) this.hoverVelocity.length());
 		this.setDir(newDir);
 		this.setPos(next);
 		if (this.tickCount > 6000) {

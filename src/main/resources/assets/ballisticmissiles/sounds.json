@@ -329,6 +329,60 @@
 			}
 		]
 	},
+	"ac130.engine": {
+		"subtitle": "subtitles.ballisticmissiles.ac130_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ac130/engine",
+				"stream": true
+			}
+		]
+	},
+	"reaper.engine": {
+		"subtitle": "subtitles.ballisticmissiles.reaper_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:reaper/engine",
+				"stream": true
+			}
+		]
+	},
+	"apache.rotor": {
+		"subtitle": "subtitles.ballisticmissiles.apache_rotor",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:apache/rotor",
+				"stream": true
+			}
+		]
+	},
+	"ac130.gun_105": {
+		"subtitle": "subtitles.ballisticmissiles.gun_105",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ac130/gun_105",
+				"attenuation_distance": 384
+			}
+		]
+	},
+	"ac130.gun_40": {
+		"subtitle": "subtitles.ballisticmissiles.gun_40",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ac130/gun_40",
+				"attenuation_distance": 256
+			}
+		]
+	},
+	"apache.chain_gun": {
+		"subtitle": "subtitles.ballisticmissiles.chain_gun",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:apache/chain_gun",
+				"attenuation_distance": 192
+			}
+		]
+	},
 	"bomb.whistle": {
 		"subtitle": "subtitles.ballisticmissiles.bomb_whistle",
 		"sounds": [

@@ -35,7 +35,10 @@ public class AirstrikeRadioItem extends Item {
 		CARPET("carpet", JetType.STRIKE, 1, 45),
 		WARTHOG("warthog", JetType.WARTHOG, 1, 40),
 		MOAB("moab", JetType.SPIRIT, 1, 120),
-		FORMATION("formation", JetType.STRIKE, 3, 90);
+		FORMATION("formation", JetType.STRIKE, 3, 90),
+		GUNSHIP("gunship", JetType.GUNSHIP, 1, 150),
+		REAPER("reaper", JetType.REAPER, 1, 100),
+		APACHE("apache", JetType.APACHE, 1, 100);
 
 		public final String key;
 		public final JetType jet;
