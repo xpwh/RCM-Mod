@@ -383,6 +383,62 @@
 			}
 		]
 	},
+	"explosion.shock_he": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock_he"
+			}
+		]
+	},
+	"explosion.shock_heavy": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock_heavy"
+			}
+		]
+	},
+	"explosion.shock_thermo": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock_thermo"
+			}
+		]
+	},
+	"explosion.shock_bunker": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock_bunker"
+			}
+		]
+	},
+	"explosion.shock_nuke": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock_nuke"
+			}
+		]
+	},
+	"explosion.shock_emp": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock_emp"
+			}
+		]
+	},
+	"explosion.shock_antimatter": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock_antimatter"
+			}
+		]
+	},
 	"bomb.whistle": {
 		"subtitle": "subtitles.ballisticmissiles.bomb_whistle",
 		"sounds": [

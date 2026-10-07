@@ -346,6 +346,29 @@ public final class ClientEffects {
 		}
 	}
 
+	/**
+	 * The shock wave reaching the listener: an overloading crack, the louder the closer - near the
+	 * blast up to three layered instances (one sound instance is capped at full volume). Far away
+	 * it is duller and lower, and it shakes the camera with the pressure jump.
+	 */
+	static void shockCrack(Minecraft mc, net.minecraft.sounds.SoundEvent crack, Vec3 pos, double distance, double reach, float pitch) {
+		double f = 1.0 - distance / reach;
+		if (f <= 0.0) {
+			return;
+		}
+		float far = (float) Mth.clamp(distance / reach, 0.0, 1.0);
+		float p = pitch * (1.0F - 0.18F * far) * (0.97F + rand() * 0.06F);
+		float vol = (float) Math.min(1.0, 0.25 + f * 1.1);
+		playDistant(mc, crack, pos, vol, p);
+		if (f > 0.35) {
+			playDistant(mc, crack, pos, vol, p * 0.985F);
+		}
+		if (f > 0.65) {
+			playDistant(mc, crack, pos, 1.0F, p * 1.015F);
+		}
+		addShake((float) (f * f * 2.5));
+	}
+
 	// ------------------------------------------------------------------ conventional blast
 
 	static final class BlastEffect implements Effect {
@@ -370,6 +393,7 @@ public final class ClientEffects {
 			double s = this.scale;
 			Vec3 c = this.pos.add(0, 1, 0);
 			if (t == this.soundDelay) {
+				shockCrack(mc, s >= 0.8 ? ModRegistry.SHOCK_HEAVY : ModRegistry.SHOCK_HE, this.pos, this.distance, 450.0 * s + 60.0, s < 0.4 ? 1.35F : s < 0.6 ? 1.15F : 1.0F);
 				float pitch = (float) ((0.9F + rand() * 0.2F) / Math.pow(s, 0.25));
 				if (this.distance < 170 * s) {
 					float vol = (float) Math.min(1.0, s * 1.2);
@@ -459,6 +483,7 @@ public final class ClientEffects {
 			}
 			int erupt = 12;
 			if (t == erupt + this.soundDelay) {
+				shockCrack(mc, ModRegistry.SHOCK_BUNKER, this.pos, this.distance, 700.0, 1.0F);
 				playDistant(mc, ModRegistry.EXPLOSION_BUNKER, this.pos, (float) (1.2 - this.distance / 1500.0), 1.0F);
 				playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, (float) (1.2 - this.distance / 1500.0), 0.8F);
 				deafen(mc, (float) (0.8 - this.distance / 80.0), 50);
@@ -562,6 +587,7 @@ public final class ClientEffects {
 				}
 			}
 			if (t == this.soundDelay) {
+				shockCrack(mc, ModRegistry.SHOCK_THERMO, this.pos, this.distance, 900.0, 1.0F);
 				if (this.distance < 220) {
 					playDistant(mc, ModRegistry.EXPLOSION_THERMOBARIC, this.pos, 1.0F, 1.0F);
 					playDistant(mc, ModRegistry.EXPLOSION_THERMOBARIC, this.pos, 1.0F, 0.97F);
@@ -617,6 +643,7 @@ public final class ClientEffects {
 				}
 			}
 			if (t == this.soundDelay) {
+				shockCrack(mc, ModRegistry.SHOCK_HE, this.pos, this.distance, 500.0, 1.25F);
 				if (this.distance < 400) {
 					playDistant(mc, ModRegistry.EXPLOSION_MID, this.pos, (float) (1.0 - this.distance / 600.0), 1.15F);
 				} else {
@@ -690,6 +717,7 @@ public final class ClientEffects {
 				}
 			}
 			if (t == this.soundDelay) {
+				shockCrack(mc, ModRegistry.SHOCK_EMP, this.pos, this.distance, 6000.0, 1.0F);
 				playDistant(mc, ModRegistry.NUKE_FAR, this.pos, (float) (1.2 - this.distance / 6000.0), 1.35F);
 				playDistant(mc, ModRegistry.NUKE_SUB, this.pos, (float) (0.8 - this.distance / 6000.0), 1.2F);
 			}
@@ -749,6 +777,7 @@ public final class ClientEffects {
 				}
 			}
 			if (t == this.soundDelay) {
+				shockCrack(mc, ModRegistry.SHOCK_ANTIMATTER, this.pos, this.distance, 4000.0, 1.0F);
 				playDistant(mc, ModRegistry.NUKE_NEAR, this.pos, (float) (1.3 - this.distance / 2500.0), 1.6F);
 				playDistant(mc, ModRegistry.NUKE_SUB, this.pos, (float) (1.0 - this.distance / 3000.0), 1.4F);
 			}
@@ -862,6 +891,7 @@ public final class ClientEffects {
 
 			// ---- audio + shock arrival
 			if (t == this.soundDelay) {
+				shockCrack(mc, ModRegistry.SHOCK_NUKE, this.pos, this.distance, 3500.0 * this.scale, this.scale > 1.2 ? 0.8F : this.scale < 0.7 ? 1.12F : 1.0F);
 				float pitch = s > 1.2 ? 0.8F : 1.0F;
 				if (this.distance < 320 * s) {
 					playDistant(mc, ModRegistry.NUKE_NEAR, this.pos, 1.0F, pitch);

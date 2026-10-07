@@ -187,6 +187,7 @@
 	"message.ballisticmissiles.ciws_kill": "CIWS SPLASH: %s shot down",
 	"item.ballisticmissiles.airstrike_radio": "Airstrike Radio",
 	"entity.ballisticmissiles.strike_jet": "Strike Fighter",
+	"subtitles.ballisticmissiles.shock_wave": "Shock wave cracks",
 	"block.ballisticmissiles.command_center": "Command Center",
 	"screen.ballisticmissiles.command": "Command Center – Situation Map",
 	"screen.ballisticmissiles.command_fire": "Fire linked launchers (%s)",

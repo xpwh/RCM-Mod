@@ -383,6 +383,13 @@ public final class ModRegistry {
 	public static final SoundEvent A10_GUN = sound("a10.gun");
 	public static final SoundEvent A10_ENGINE = sound("a10.engine");
 	public static final SoundEvent B2_ENGINE = sound("b2.engine");
+	public static final SoundEvent SHOCK_HE = sound("explosion.shock_he");
+	public static final SoundEvent SHOCK_HEAVY = sound("explosion.shock_heavy");
+	public static final SoundEvent SHOCK_THERMO = sound("explosion.shock_thermo");
+	public static final SoundEvent SHOCK_BUNKER = sound("explosion.shock_bunker");
+	public static final SoundEvent SHOCK_NUKE = sound("explosion.shock_nuke");
+	public static final SoundEvent SHOCK_EMP = sound("explosion.shock_emp");
+	public static final SoundEvent SHOCK_ANTIMATTER = sound("explosion.shock_antimatter");
 	public static final SoundEvent AC130_ENGINE = sound("ac130.engine");
 	public static final SoundEvent REAPER_ENGINE = sound("reaper.engine");
 	public static final SoundEvent APACHE_ROTOR = sound("apache.rotor");

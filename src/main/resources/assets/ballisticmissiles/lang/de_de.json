@@ -187,6 +187,7 @@
 	"message.ballisticmissiles.ciws_kill": "CIWS-TREFFER: %s abgeschossen",
 	"item.ballisticmissiles.airstrike_radio": "Luftschlag-Funkgerät",
 	"entity.ballisticmissiles.strike_jet": "Kampfjet",
+	"subtitles.ballisticmissiles.shock_wave": "Druckwelle knallt",
 	"block.ballisticmissiles.command_center": "Kommandozentrale",
 	"screen.ballisticmissiles.command": "Kommandozentrale – Lagekarte",
 	"screen.ballisticmissiles.command_fire": "Verknüpfte Werfer feuern (%s)",
