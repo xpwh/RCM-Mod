@@ -56,7 +56,7 @@ public class DecoyLauncherBlockEntity extends BlockEntity implements DefenseSite
 		if (this.salvos < MAGAZINE && ++this.reload >= RELOAD_TICKS) {
 			this.reload = 0;
 			this.salvos++;
-			this.setChanged();
+			this.sync();
 		}
 		if (this.cooldown > 0) {
 			this.cooldown--;
@@ -94,7 +94,7 @@ public class DecoyLauncherBlockEntity extends BlockEntity implements DefenseSite
 		}
 		this.salvos--;
 		this.cooldown = 30;
-		this.setChanged();
+		this.sync();
 		// the decoy is thrown off to one side; chaff and flares bloom above the launcher
 		double a = random.nextDouble() * Mth.TWO_PI;
 		double r = 30.0 + random.nextDouble() * 18.0;
@@ -134,6 +134,27 @@ public class DecoyLauncherBlockEntity extends BlockEntity implements DefenseSite
 	public void setOwner(@Nullable UUID owner) {
 		this.owner = owner;
 		this.setChanged();
+	}
+
+	public int getAmmo() {
+		return this.salvos;
+	}
+
+	private void sync() {
+		this.setChanged();
+		if (this.level != null && !this.level.isClientSide()) {
+			this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+		}
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+		return this.saveCustomOnly(registries);
 	}
 
 	@Override

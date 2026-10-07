@@ -68,6 +68,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		BlockEntityRenderers.register(ModRegistry.AIR_DEFENSE_BE, AirDefenseRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.LASER_DEFENSE_BE, LaserRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.JAMMER_BE, JammerRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.IRON_DOME_BE, de.rcm.ballistic.client.render.IronDomeRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.DECOY_LAUNCHER_BE, de.rcm.ballistic.client.render.DecoyLauncherRenderer::new);
 
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.SMOKE, CloudParticle.SmokeProvider::new);
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.FIRE, CloudParticle.FireProvider::new);

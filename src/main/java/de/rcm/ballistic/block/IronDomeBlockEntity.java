@@ -52,7 +52,7 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 		if (this.ammo < MAGAZINE && ++this.reload >= RELOAD_TICKS) {
 			this.reload = 0;
 			this.ammo++;
-			this.setChanged();
+			this.sync();
 		}
 		if (this.cooldown > 0) {
 			this.cooldown--;
@@ -91,14 +91,18 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 		}
 		// vertical launch, the interceptor turns over towards the target right after leaving the cell
 		int cell = this.launches % 20;
-		Vec3 mouth = here.add((cell % 4 - 1.5) * 0.3, 1.6 + (cell / 4) * 0.05, (cell / 4 - 2) * 0.25);
+		net.minecraft.core.Direction facing = this.getBlockState().hasProperty(DefenseSiteBlock.FACING)
+			? this.getBlockState().getValue(DefenseSiteBlock.FACING) : net.minecraft.core.Direction.NORTH;
+		Vec3 fwd = new Vec3(facing.getStepX(), 0, facing.getStepZ());
+		Vec3 right = new Vec3(-fwd.z, 0, fwd.x);
+		Vec3 mouth = Vec3.atBottomCenterOf(this.worldPosition).add(fwd.scale(0.4 + (cell / 4) * 0.05)).add(right.scale((cell % 4 - 1.5) * 0.5)).add(0, 4.2 + (cell / 4) * 0.2, 0);
 		float pk = Math.min(0.95F, best.killProbability() + 0.15F);
 		if (InterceptorEntity.launch(level, this.worldPosition, mouth, best, pk, new Vec3(0, 1, 0)) != null) {
 			best.setEngagements(best.getEngagements() + 1);
 			this.ammo--;
 			this.launches++;
 			this.cooldown = FIRE_GAP;
-			this.setChanged();
+			this.sync();
 			level.playSound(null, mouth.x, mouth.y, mouth.z, ModRegistry.SAM_LAUNCH, SoundSource.BLOCKS, 9.0F, 1.15F + level.getRandom().nextFloat() * 0.15F);
 			level.sendParticles(ParticleTypes.CLOUD, mouth.x, mouth.y, mouth.z, 20, 0.4, 0.3, 0.4, 0.06);
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, here.x, here.y + 0.5, here.z, 10, 0.8, 0.2, 0.8, 0.04);
@@ -128,6 +132,27 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 			DefenseNetwork.unregister(this.level, this.worldPosition);
 		}
 		super.setRemoved();
+	}
+
+	public int getAmmo() {
+		return this.ammo;
+	}
+
+	private void sync() {
+		this.setChanged();
+		if (this.level != null && !this.level.isClientSide()) {
+			this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+		}
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+		return this.saveCustomOnly(registries);
 	}
 
 	@Override

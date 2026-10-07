@@ -1,19 +1,16 @@
 {
 	"variants": {
 		"facing=north": {
-			"model": "ballisticmissiles:block/decoy_launcher"
+			"model": "ballisticmissiles:block/decoy_launcher_world"
 		},
 		"facing=east": {
-			"model": "ballisticmissiles:block/decoy_launcher",
-			"y": 90
+			"model": "ballisticmissiles:block/decoy_launcher_world"
 		},
 		"facing=south": {
-			"model": "ballisticmissiles:block/decoy_launcher",
-			"y": 180
+			"model": "ballisticmissiles:block/decoy_launcher_world"
 		},
 		"facing=west": {
-			"model": "ballisticmissiles:block/decoy_launcher",
-			"y": 270
+			"model": "ballisticmissiles:block/decoy_launcher_world"
 		}
 	}
 }

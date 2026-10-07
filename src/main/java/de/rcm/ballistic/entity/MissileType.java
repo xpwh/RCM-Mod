@@ -33,7 +33,7 @@ public enum MissileType {
 	 * Loitering kamikaze drone (Shahed-136-style): delta wing, pusher propeller, rocket-assisted
 	 * take-off. Slow and loud, but cheap and hard to see on radar.
 	 */
-	DRONE("kamikaze_drone", Flight.CRUISE, Warhead.DRONE, Model.DRONE, 1.0F, 1.0F, 3.6F, 100, 20, 1.0, 2.2, Rarity.UNCOMMON),
+	DRONE("kamikaze_drone", Flight.CRUISE, Warhead.DRONE, Model.DRONE, 1.0F, 1.0F, 3.6F, 100, 20, 1.0, 0.8, Rarity.UNCOMMON),
 	/** The largest bomb ever built, on an outsized heavy ICBM: a crater that swallows a village. */
 	TSAR("tsar_bomba", Flight.BALLISTIC, Warhead.TSAR, Model.HEAVY_ICBM, 1.6F, 2.1F, 20.0F, 600, 100, 1.6, 1.15, Rarity.EPIC),
 	/**

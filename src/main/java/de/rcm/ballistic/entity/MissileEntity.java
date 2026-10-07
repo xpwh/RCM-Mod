@@ -484,6 +484,30 @@ public class MissileEntity extends Entity implements AirThreat {
 			heading = horizontal > 1.0E-3 ? new Vec3(dx / horizontal, 0, dz / horizontal) : heading;
 		}
 
+		// kamikaze drone: its camera seeker picks the nearest living target around the aim point
+		// and the drone flies straight into it
+		boolean drone = this.missileType.model == MissileType.Model.DRONE;
+		if (drone && horizontal < 110 && this.stateAge % 4 == 0) {
+			Vec3 aimAt = target;
+			LivingEntity prey = null;
+			double best = 24.0 * 24.0;
+			for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(aimAt, aimAt).inflate(24.0, 12.0, 24.0), e -> e.isAlive() && !e.isSpectator())) {
+				double d = e.position().distanceToSqr(aimAt);
+				if (d < best) {
+					best = d;
+					prey = e;
+				}
+			}
+			if (prey != null) {
+				this.entityData.set(DATA_TARGET, prey.blockPosition());
+				target = prey.position().add(0, prey.getBbHeight() * 0.5, 0);
+				dx = target.x - pos.x;
+				dz = target.z - pos.z;
+				horizontal = Math.sqrt(dx * dx + dz * dz);
+				heading = horizontal > 1.0E-3 ? new Vec3(dx / horizontal, 0, dz / horizontal) : heading;
+			}
+		}
+
 		// keep the corridor ahead loaded
 		for (int k = 0; k <= 160; k += 16) {
 			level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(pos.add(heading.scale(k)))), 3);
@@ -512,6 +536,11 @@ public class MissileEntity extends Entity implements AirThreat {
 			desired = heading.add(0, climb, 0).normalize();
 			speed = this.missileType.cruiseSpeed();
 			turn = 0.1;
+		} else if (drone) {
+			// no pop-up: the drone goes straight for it, accelerating into a steep dive
+			desired = target.subtract(pos).normalize();
+			speed = this.missileType.cruiseSpeed() * (horizontal > 40 ? 1.2 : 1.5);
+			turn = 0.4;
 		} else if (horizontal > 32) {
 			desired = heading.add(0, 0.6, 0).normalize(); // pop-up
 			speed = this.missileType.cruiseSpeed();
