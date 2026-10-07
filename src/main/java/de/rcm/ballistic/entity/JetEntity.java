@@ -265,7 +265,31 @@ public class JetEntity extends Entity implements AirThreat {
 			} else {
 				this.bombRun(level, pos, flat, speed);
 			}
-			desired = this.avoidTerrain(level, pos, dir, desired, guardClearance, guardRange);
+			if (this.diving) {
+				// straight at the nearest living thing around the target, accelerating; no terrain guard
+				LivingEntity prey = this.tickCount % 5 == 0 || this.diveAim == null ? this.pickTargetEntity(level) : null;
+				if (prey != null) {
+					this.diveAim = prey.position().add(0, prey.getBbHeight() * 0.5, 0);
+				} else if (this.diveAim == null) {
+					this.diveAim = this.target;
+				}
+				desired = this.diveAim.subtract(pos).normalize();
+				speed = Math.min(6.5, speed + 0.25);
+				this.pullUp = 1.84; // turn rate 0.3, the same as the impact prediction above
+				Vec3 next = pos.add(dir.add(desired.subtract(dir).scale(0.3)).normalize().scale(speed));
+				var hit = level.clip(new ClipContext(pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, this));
+				Vec3 end = hit.getLocation();
+				boolean struck = hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS
+					|| !level.getEntitiesOfClass(LivingEntity.class, new AABB(pos, end).inflate(1.5), e -> e.isAlive() && !e.getUUID().equals(this.caller)).isEmpty()
+					|| end.distanceTo(this.diveAim) < 2.0;
+				if (struck) {
+					DetonationManager.detonateAerialBomb(level, end, this);
+					this.discard();
+					return;
+				}
+			} else {
+				desired = this.avoidTerrain(level, pos, dir, desired, guardClearance, guardRange);
+			}
 		} else {
 			this.egressAge++;
 			JetType type = this.getJetType();
@@ -330,6 +354,9 @@ public class JetEntity extends Entity implements AirThreat {
 	private int orbitTicks = -1;
 	private int shotsFired;
 	private Vec3 hoverVelocity = Vec3.ZERO;
+	/** Reaper: out of Hellfires, it flies into the target itself. */
+	private boolean diving;
+	private @Nullable Vec3 diveAim;
 
 	private void processShells(ServerLevel level) {
 		for (java.util.Iterator<Shell> it = this.shells.iterator(); it.hasNext(); ) {
@@ -413,7 +440,7 @@ public class JetEntity extends Entity implements AirThreat {
 				this.egress = true;
 			}
 		} else {
-			if (this.orbitTicks > 60 && this.orbitTicks % 70 == 0 && this.shotsFired < 4) {
+			if (this.orbitTicks > 30 && this.orbitTicks % 35 == 0 && this.shotsFired < 4) {
 				LivingEntity victim = this.pickTargetEntity(level);
 				Vec3 aim = victim != null ? victim.position() : this.target;
 				Vec3 rail = pos.add(0, -0.6, 0);
@@ -424,8 +451,10 @@ public class JetEntity extends Entity implements AirThreat {
 				}
 				this.shotsFired++;
 			}
-			if (this.shotsFired >= 4 && this.orbitTicks % 70 == 60) {
-				this.egress = true;
+			if (this.shotsFired >= 4 && this.orbitTicks % 35 == 20 && !this.diving) {
+				// last weapon: the drone itself
+				this.diving = true;
+				this.tellCaller(level, Component.translatable("message.ballisticmissiles.reaper_dive").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
 			}
 		}
 		return desired;
