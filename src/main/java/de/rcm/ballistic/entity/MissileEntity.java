@@ -775,6 +775,18 @@ public class MissileEntity extends Entity implements AirThreat {
 		this.setState(IGNITION);
 	}
 
+	/**
+	 * A decoy pulled the seeker away: a cruise missile in flight re-targets onto the decoy. Returns
+	 * false for anything that can't be fooled (ballistic warheads follow their trajectory).
+	 */
+	public boolean decoy(Vec3 decoy) {
+		if (!this.missileType.isCruise() || this.getState() != FLIGHT || this.missileType.warhead == MissileType.Warhead.ANTI_RADAR) {
+			return false;
+		}
+		this.entityData.set(DATA_TARGET, BlockPos.containing(decoy));
+		return true;
+	}
+
 	/** Stops a running countdown. */
 	public boolean abort() {
 		if (this.getState() != COUNTDOWN) {

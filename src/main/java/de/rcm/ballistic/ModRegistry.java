@@ -190,6 +190,16 @@ public final class ModRegistry {
 		de.rcm.ballistic.block.SeaMineBlock::new,
 		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 6.0F).sound(SoundType.METAL).noOcclusion()
 	);
+	public static final Block IRON_DOME = registerBlock(
+		"iron_dome",
+		props -> new de.rcm.ballistic.block.DefenseSiteBlock(props, () -> ModRegistry.IRON_DOME_BE, de.rcm.ballistic.block.IronDomeBlockEntity::new),
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
+	);
+	public static final Block DECOY_LAUNCHER = registerBlock(
+		"decoy_launcher",
+		props -> new de.rcm.ballistic.block.DefenseSiteBlock(props, () -> ModRegistry.DECOY_LAUNCHER_BE, de.rcm.ballistic.block.DecoyLauncherBlockEntity::new),
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(4.0F, 600.0F).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
+	);
 	public static final Block JAMMER = registerBlock(
 		"jammer",
 		JammerBlock::new,
@@ -238,6 +248,12 @@ public final class ModRegistry {
 	public static final BlockEntityType<AirDefenseBlockEntity> AIR_DEFENSE_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("air_defense"), FabricBlockEntityTypeBuilder.create(AirDefenseBlockEntity::new, AIR_DEFENSE).build()
 	);
+	public static final BlockEntityType<de.rcm.ballistic.block.IronDomeBlockEntity> IRON_DOME_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("iron_dome"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.IronDomeBlockEntity::new, IRON_DOME).build()
+	);
+	public static final BlockEntityType<de.rcm.ballistic.block.DecoyLauncherBlockEntity> DECOY_LAUNCHER_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("decoy_launcher"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.DecoyLauncherBlockEntity::new, DECOY_LAUNCHER).build()
+	);
 	public static final BlockEntityType<CiwsBlockEntity> CIWS_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("ciws"), FabricBlockEntityTypeBuilder.create(CiwsBlockEntity::new, CIWS).build()
 	);
@@ -275,6 +291,12 @@ public final class ModRegistry {
 	);
 	public static final Item LASER_DEFENSE_ITEM = registerItem(
 		"laser_defense", props -> new BlockItem(LASER_DEFENSE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item IRON_DOME_ITEM = registerItem(
+		"iron_dome", props -> new BlockItem(IRON_DOME, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item DECOY_LAUNCHER_ITEM = registerItem(
+		"decoy_launcher", props -> new BlockItem(DECOY_LAUNCHER, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
 	);
 	public static final Item SEA_MINE_ITEM = registerItem(
 		"sea_mine", props -> new BlockItem(SEA_MINE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.UNCOMMON)
@@ -379,6 +401,8 @@ public final class ModRegistry {
 				output.accept(RADAR_ITEM);
 				output.accept(AIR_DEFENSE_ITEM);
 				output.accept(CIWS_ITEM);
+				output.accept(IRON_DOME_ITEM);
+				output.accept(DECOY_LAUNCHER_ITEM);
 				output.accept(LASER_DEFENSE_ITEM);
 				output.accept(JAMMER_ITEM);
 				output.accept(AIRSTRIKE_RADIO);

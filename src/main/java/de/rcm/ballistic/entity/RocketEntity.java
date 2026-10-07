@@ -26,7 +26,7 @@ import org.jspecify.annotations.Nullable;
  * little after launch, then dives onto its target (and follows it if it moves); a Hydra 70 is an
  * unguided folding-fin rocket fired in salvos, fast and inaccurate.
  */
-public class RocketEntity extends Entity {
+public class RocketEntity extends Entity implements de.rcm.ballistic.defense.AirThreat {
 	public enum Kind {
 		HELLFIRE,
 		HYDRA
@@ -37,6 +37,7 @@ public class RocketEntity extends Entity {
 	private Vec3 target = Vec3.ZERO;
 	private @Nullable Entity targetEntity;
 	private @Nullable Entity shooter;
+	private int engagements;
 
 	public RocketEntity(EntityType<? extends RocketEntity> type, Level level) {
 		super(type, level);
@@ -93,6 +94,7 @@ public class RocketEntity extends Entity {
 		Vec3 next = pos.add(vel);
 
 		if (this.level() instanceof ServerLevel level) {
+			de.rcm.ballistic.defense.ThreatTracker.report(level, this);
 			BlockHitResult hit = level.clip(new ClipContext(pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, CollisionContext.empty()));
 			Vec3 end = hit.getType() == HitResult.Type.MISS ? next : hit.getLocation();
 			boolean entityHit = this.tickCount > 3 && !level.getEntities(this, new AABB(pos, end).inflate(0.8),
@@ -122,6 +124,97 @@ public class RocketEntity extends Entity {
 		}
 		this.setDeltaMovement(vel);
 		this.setPos(next);
+	}
+
+	// ------------------------------------------------------------------ as a target for air defense
+
+	/** The player whose aircraft fired this rocket. */
+	public java.util.@Nullable UUID getOwnerUuid() {
+		return this.shooter instanceof JetEntity jet ? jet.getCaller() : null;
+	}
+
+	/** Seeker pulled off by a decoy: the Hellfire flies at the decoy instead. */
+	public boolean decoy(Vec3 decoy) {
+		if (this.getKind() != Kind.HELLFIRE) {
+			return false;
+		}
+		this.target = decoy;
+		this.targetEntity = null;
+		return true;
+	}
+
+	@Override
+	public Entity asEntity() {
+		return this;
+	}
+
+	@Override
+	public boolean isActiveThreat() {
+		return this.isAlive() && this.tickCount > 2;
+	}
+
+	@Override
+	public Vec3 aimPoint(int ticksAhead) {
+		return this.position().add(this.getDeltaMovement().scale(ticksAhead));
+	}
+
+	@Override
+	public Vec3 threatVelocity() {
+		return this.getDeltaMovement();
+	}
+
+	@Override
+	public Vec3 predictedImpact() {
+		if (this.getKind() == Kind.HELLFIRE) {
+			return this.target;
+		}
+		Vec3 v = this.getDeltaMovement();
+		double t = v.y < -1.0E-3 ? Math.min(200.0, (this.getY() - this.target.y) / -v.y) : 60.0;
+		return this.position().add(v.scale(t));
+	}
+
+	@Override
+	public int etaTicks() {
+		double speed = Math.max(0.5, this.getDeltaMovement().length());
+		return (int) (this.position().distanceTo(this.predictedImpact()) / speed);
+	}
+
+	@Override
+	public ThreatClass threatClass() {
+		return ThreatClass.CRUISE;
+	}
+
+	@Override
+	public double radarCrossSection() {
+		return 0.02;
+	}
+
+	@Override
+	public float killProbability() {
+		return 0.7F;
+	}
+
+	@Override
+	public String nameKey() {
+		return this.getKind() == Kind.HELLFIRE ? "entity.ballisticmissiles.hellfire" : "entity.ballisticmissiles.hydra";
+	}
+
+	@Override
+	public int getEngagements() {
+		return this.engagements;
+	}
+
+	@Override
+	public void setEngagements(int engagements) {
+		this.engagements = engagements;
+	}
+
+	@Override
+	public void destroyByInterceptor(ServerLevel level) {
+		Vec3 p = this.position();
+		level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION, p.x, p.y, p.z, 2, 0.3, 0.3, 0.3, 0.0);
+		level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, p.x, p.y, p.z, 10, 0.5, 0.5, 0.5, 0.05);
+		this.discard();
 	}
 
 	@Override

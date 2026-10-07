@@ -9,6 +9,9 @@
 		"ballisticmissiles:jammer",
 		"ballisticmissiles:submarine",
 		"ballisticmissiles:reinforced_concrete",
-		"ballisticmissiles:blast_door"
+		"ballisticmissiles:blast_door",
+		"ballisticmissiles:iron_dome",
+		"ballisticmissiles:decoy_launcher",
+		"ballisticmissiles:sea_mine"
 	]
 }
