@@ -22,6 +22,8 @@ SOURCES = {
     "im2.mp3": NASA.format(id="KSC-20250226-AU-ILW01-0002-SpaceX_CLPS_IM-2_Live_Launch_Coverage_PadMic-1_PadMic-2"),
     # Public domain, Fg2 via Wikimedia Commons: a single real detonation with its echo
     "bang.ogg": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Explosion-LS100155.ogg",
+    # Public domain, SoundBible.com "Missile Impact" (#1592): a missile flying in and hitting
+    "missile_impact.wav": "https://soundbible.com/grab.php?id=1592&type=wav",
     # NASA, public domain: SLS Artemis II launch, pad camera site 6
     "artemis.mp3": NASA.format(id="KSC-20260401-AU-LMM01-0001-Artemis_II_Live_Launch_Coverage_Pad_CS6"),
 }
@@ -82,6 +84,41 @@ def main(folder):
     idx = np.arange(0, len(x) - 1, 1.45)
     x = np.interp(idx, np.arange(len(x)), x)
     save("air_defense/launch", fade(limiter(x[: s.n_samples(4.0)], 0.98, 1.5), fin=0.005, fout=1.2))
+
+
+def missile_impact(folder):
+    """SoundBible 'Missile Impact': the fly-in becomes the incoming whoosh, the hit the explosion."""
+    from gen_sounds import env_exp, place, sweep, t_axis, white
+    from gen_sounds_v5 import echo_cloud, mic_clip
+    path = fetch(folder, "missile_impact.wav")
+    # the missile flying in, ending right before it hits
+    fly = load(path, 0.15, 2.52)
+    fly *= np.clip(t_axis(len(fly) / s.SR) / 0.3, 0, 1)
+    save("missile/incoming", fade(limiter(fly, 0.98, 1.6), fin=0.05, fout=0.02))
+
+    hit = load(path, 2.62, 5.3)
+    hit = hit / (np.max(np.abs(hit)) + 1e-9)
+
+    def impact(distance):
+        seconds = 6.0 + distance
+        x = np.zeros(s.n_samples(seconds))
+        place(x, hit * 1.6, 0.0)
+        # a heavier punch and the deep rumble rolling on under it
+        punch = sweep(0.45, 120, 55, 0.7) * env_exp(0.45, 0.12, 0.02)
+        place(x, punch * 1.6, 0.0)
+        tt = t_axis(seconds)
+        rum = fft_filter(white(seconds), low=18, high=65, slope=2.0)
+        rum *= np.interp(tt, [0, 0.3, 1.4, seconds], [0.2, 1.0, 0.8, 0.0]) ** 1.2
+        x += rum * 1.6
+        x += echo_cloud(fft_filter(x, low=150), 100, 0.15, seconds * 0.7, 0.25 + 0.05 * distance, seconds * 0.25, 2500, 300)
+        if distance >= 1:
+            x = fft_filter(x, high=2600 if distance == 1 else 900, slope=1.4)
+        x = mic_clip(x, 50.0, 4.0 if distance == 0 else 2.5)
+        return fade(limiter(x, 0.995, 2.4 if distance == 0 else 1.9), fin=0.0005, fout=0.8)
+
+    save("explosion/near", impact(0))
+    save("explosion/mid", impact(1))
+    save("explosion/far", impact(2))
 
 
 def resample(x, factor):
@@ -183,6 +220,9 @@ if __name__ == "__main__":
     folder = sys.argv[1] if len(sys.argv) > 1 else "real_audio_cache"
     if len(sys.argv) > 2 and sys.argv[2] == "cracks":
         shock_cracks(folder)
+    elif len(sys.argv) > 2 and sys.argv[2] == "impact":
+        missile_impact(folder)
     else:
         main(folder)
         shock_cracks(folder)
+        missile_impact(folder)

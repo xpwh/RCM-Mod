@@ -164,11 +164,12 @@ public final class MissileClientTicker {
 
 		Vec3 target = Vec3.atBottomCenterOf(missile.getTarget());
 		double horizontal = Math.hypot(target.x - nozzle.x, target.z - nozzle.z);
-		if (!missile.incomingPlayed && horizontal < 120) {
+		// the fly-in recording lasts 2.5 s and ends at the moment of impact
+		if (!missile.incomingPlayed && horizontal < 220) {
 			double d = mc.gameRenderer.getMainCamera().position().distanceTo(target);
 			if (d < 350) {
 				missile.incomingPlayed = true;
-				ClientEffects.playDistant(mc, ModRegistry.INCOMING, nozzle, (float) (0.8 - d / 450.0), 1.35F);
+				ClientEffects.playDistant(mc, ModRegistry.INCOMING, nozzle, (float) (1.0 - d / 450.0), 1.05F);
 			}
 		}
 	}
@@ -250,7 +251,7 @@ public final class MissileClientTicker {
 
 		// Terminal-phase whistle for anyone near the impact point.
 		int remaining = path.duration() - age;
-		if (!missile.incomingPlayed && remaining < 70 && dir.y < 0) {
+		if (!missile.incomingPlayed && remaining < 50 && dir.y < 0) {
 			Vec3 target = path.position(path.duration());
 			double d = mc.gameRenderer.getMainCamera().position().distanceTo(target);
 			if (d < 450) {
