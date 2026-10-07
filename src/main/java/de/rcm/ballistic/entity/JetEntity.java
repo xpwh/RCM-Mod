@@ -400,6 +400,14 @@ public class JetEntity extends Entity implements AirThreat {
 		double radius = type == JetType.GUNSHIP ? 60.0 : 150.0;
 		Vec3 rel = new Vec3(pos.x - this.target.x, 0, pos.z - this.target.z);
 		double r = rel.length();
+		if (type == JetType.REAPER) {
+			// the Reaper is the weapon: it flies straight in and, once in range, dives onto the target
+			if (!this.diving && r < 260.0) {
+				this.diving = true;
+				this.tellCaller(level, Component.translatable("message.ballisticmissiles.reaper_dive").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+			}
+			return cruise;
+		}
 		if (this.orbitTicks < 0) {
 			if (r > radius + 50.0) {
 				return cruise;
@@ -440,22 +448,6 @@ public class JetEntity extends Entity implements AirThreat {
 				this.egress = true;
 			}
 		} else {
-			if (this.orbitTicks > 30 && this.orbitTicks % 35 == 0 && this.shotsFired < 4) {
-				LivingEntity victim = this.pickTargetEntity(level);
-				Vec3 aim = victim != null ? victim.position() : this.target;
-				Vec3 rail = pos.add(0, -0.6, 0);
-				RocketEntity.fire(level, RocketEntity.Kind.HELLFIRE, this, rail, this.getDir().scale(2.5).add(0, -0.3, 0), aim, victim);
-				level.playSound(null, rail.x, rail.y, rail.z, ModRegistry.SAM_LAUNCH, SoundSource.HOSTILE, 10.0F, 1.35F);
-				if (this.shotsFired == 0) {
-					this.tellCaller(level, Component.translatable("message.ballisticmissiles.rifle").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
-				}
-				this.shotsFired++;
-			}
-			if (this.shotsFired >= 4 && this.orbitTicks % 35 == 20 && !this.diving) {
-				// last weapon: the drone itself
-				this.diving = true;
-				this.tellCaller(level, Component.translatable("message.ballisticmissiles.reaper_dive").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
-			}
 		}
 		return desired;
 	}
