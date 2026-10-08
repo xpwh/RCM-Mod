@@ -156,6 +156,11 @@ public final class ModRegistry {
 		EntityType.Builder.<de.rcm.ballistic.entity.SpentStageEntity>of(de.rcm.ballistic.entity.SpentStageEntity::new, MobCategory.MISC).sized(1.0F, 1.0F)
 			.clientTrackingRange(32).updateInterval(1).fireImmune().noLootTable()
 	);
+	public static final EntityType<de.rcm.ballistic.entity.DestroyerEntity> DESTROYER = registerEntity(
+		"destroyer",
+		EntityType.Builder.<de.rcm.ballistic.entity.DestroyerEntity>of(de.rcm.ballistic.entity.DestroyerEntity::new, MobCategory.MISC).sized(5.0F, 6.0F)
+			.clientTrackingRange(32).updateInterval(1).fireImmune()
+	);
 	public static final EntityType<AerialBombEntity> AERIAL_BOMB = registerEntity(
 		"aerial_bomb",
 		EntityType.Builder.<AerialBombEntity>of(AerialBombEntity::new, MobCategory.MISC).sized(0.45F, 0.45F).clientTrackingRange(24).updateInterval(1).noLootTable()
@@ -421,6 +426,9 @@ public final class ModRegistry {
 	public static final Item SUBMARINE_ITEM = registerItem(
 		"submarine", props -> new BlockItem(SUBMARINE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
 	);
+	public static final Item DESTROYER_ITEM = registerItem(
+		"destroyer", de.rcm.ballistic.item.DestroyerItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
+	);
 	public static final Item MOBILE_LAUNCHER_ITEM = registerItem(
 		"mobile_launcher", MobileLauncherItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
 	);
@@ -497,6 +505,7 @@ public final class ModRegistry {
 		output.accept(MISSILE_SILO_ITEM);
 		output.accept(SUBMARINE_ITEM);
 		output.accept(MOBILE_LAUNCHER_ITEM);
+		output.accept(DESTROYER_ITEM);
 		output.accept(TARGET_DESIGNATOR);
 		output.accept(COMMAND_CENTER_ITEM);
 		output.accept(AIRSTRIKE_RADIO);

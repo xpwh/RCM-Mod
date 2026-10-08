@@ -338,5 +338,17 @@
 	"tooltip.ballisticmissiles.bunker.info": "Auf den Boden setzen: baut in Blickrichtung einen Bunker 8 Blöcke tief – Luke mit Hebel, Schleuse, Raum mit Filter und Generator",
 	"message.ballisticmissiles.bunker_built": "Bunker gebaut – der Hebel neben der Luke öffnet sie",
 	"message.ballisticmissiles.filter_running": "Luftfilter läuft – Bunker ist dicht (Schutz vor Druckwelle und Fallout)",
-	"message.ballisticmissiles.filter_no_power": "Luftfilter ohne Strom – stell einen Notstromgenerator daneben (bis 6 Blöcke)"
+	"message.ballisticmissiles.filter_no_power": "Luftfilter ohne Strom – stell einen Notstromgenerator daneben (bis 6 Blöcke)",
+	"item.ballisticmissiles.destroyer": "Zerstörer (Arleigh-Burke-Klasse)",
+	"entity.ballisticmissiles.destroyer": "Zerstörer",
+	"entity.ballisticmissiles.spent_stage": "Ausgebrannte Raketenstufe",
+	"tooltip.ballisticmissiles.destroyer.1": "Rechtsklick auf offenes Wasser: Schiff zu Wasser lassen",
+	"tooltip.ballisticmissiles.destroyer.2": "Zielmarkierer auf das Schiff: Tomahawk-Salve aufs Ziel · Schleichen: zum Ziel fahren · leere Hand: Status, Schleichen: stoppen",
+	"tooltip.ballisticmissiles.destroyer.3": "16 Senkrechtstart-Zellen, eigene Phalanx, ~30 Knoten",
+	"message.ballisticmissiles.ship_needs_water": "Ziel auf offenes Wasser",
+	"message.ballisticmissiles.ship_course": "Kurs gesetzt – %s Blöcke bis zum Ziel",
+	"message.ballisticmissiles.ship_salvo": "Tomahawk-Salve: %s Marschflugkörper",
+	"message.ballisticmissiles.ship_empty": "Keine Tomahawks mehr – die Zellen werden auf See nachgeladen",
+	"message.ballisticmissiles.ship_stop": "Maschinen stopp",
+	"message.ballisticmissiles.ship_status": "Zerstörer: %s/%s Tomahawks · %s Knoten · Zustand %s"
 }

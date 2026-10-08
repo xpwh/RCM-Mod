@@ -56,6 +56,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModRegistry.BOMBLET, BombletRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.REENTRY_VEHICLE, ctx -> new ProjectileRenderer<>(ctx, false));
 		EntityRendererRegistry.register(ModRegistry.SPENT_STAGE, de.rcm.ballistic.client.render.SpentStageRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.DESTROYER, de.rcm.ballistic.client.render.DestroyerRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.INTERCEPTOR, ctx -> new ProjectileRenderer<>(ctx, true));
 		EntityRendererRegistry.register(ModRegistry.MOBILE_LAUNCHER, MobileLauncherRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.JET, JetRenderer::new);

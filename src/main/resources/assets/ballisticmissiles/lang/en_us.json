@@ -338,5 +338,17 @@
 	"tooltip.ballisticmissiles.bunker.info": "Place on the ground: builds a bunker 8 blocks deep in the direction you face - hatch with lever, airlock, room with filter and generator",
 	"message.ballisticmissiles.bunker_built": "Bunker built - the lever next to the hatch opens it",
 	"message.ballisticmissiles.filter_running": "Air filter running - the bunker is sealed (protected from blast and fallout)",
-	"message.ballisticmissiles.filter_no_power": "Air filter has no power - place an emergency generator next to it (up to 6 blocks)"
+	"message.ballisticmissiles.filter_no_power": "Air filter has no power - place an emergency generator next to it (up to 6 blocks)",
+	"item.ballisticmissiles.destroyer": "Destroyer (Arleigh Burke class)",
+	"entity.ballisticmissiles.destroyer": "Destroyer",
+	"entity.ballisticmissiles.spent_stage": "Spent Missile Stage",
+	"tooltip.ballisticmissiles.destroyer.1": "Right-click open water: put the ship to sea",
+	"tooltip.ballisticmissiles.destroyer.2": "Target designator on the ship: Tomahawk salvo at the target · sneaking: sail there · empty hand: status, sneaking: stop",
+	"tooltip.ballisticmissiles.destroyer.3": "16 vertical launch cells, own Phalanx, ~30 knots",
+	"message.ballisticmissiles.ship_needs_water": "Aim at open water",
+	"message.ballisticmissiles.ship_course": "Course set - %s blocks to go",
+	"message.ballisticmissiles.ship_salvo": "Tomahawk salvo: %s cruise missiles",
+	"message.ballisticmissiles.ship_empty": "No Tomahawks left - the cells are reloaded at sea",
+	"message.ballisticmissiles.ship_stop": "All stop",
+	"message.ballisticmissiles.ship_status": "Destroyer: %s/%s Tomahawks · %s knots · condition %s"
 }
