@@ -13,4 +13,7 @@ Real field recordings from freesound.org, processed by `tools/import_gun_sounds.
 | Shell casing | https://freesound.org/s/507048/ "GUN_AK47_SHELL_BULLET_FLOOR_TILES" | kaniaplania | CC0 1.0 |
 | Ricochet | https://freesound.org/s/43403/ "rifle_steel plate_multiple ricochettes" | gezortenplotz | CC BY 3.0 |
 
-All other sounds are synthesized by the scripts in `tools/`.
+Bullet impacts on earth, stone, wood and flesh use Minecraft's own sounds. Other (non-AK) sounds of the mod are synthesized by the scripts in `tools/`.
+| Room / cave tails | https://freesound.org/s/812210/, /812211/ "Kalashnikov 1/2 (indoor)" | mahecic | CC0 1.0 |
+| Bullet flyby | https://freesound.org/s/855248/ "Real Bullet Flyby Sound" | qubodup | CC0 1.0 |
+| Bullets hitting metal | https://freesound.org/s/116645/ "bullets hit EDIT" | Woodingp | CC0 1.0 |

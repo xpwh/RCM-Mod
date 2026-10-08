@@ -114,16 +114,11 @@ public final class GunAudio {
 		float jitter = 0.95F + RANDOM.nextFloat() * 0.1F;
 		Acoustics room = survey(mc.level, muzzle);
 		if (d < 48.0) {
-			// the report itself, layered for a real rifle's loudness, and the action cycling
+			// the report itself: a real AK, recorded beside the shooter
 			later(ModRegistry.AK_SHOT, muzzle, 1.0F, jitter, delay);
-			later(ModRegistry.AK_SHOT, muzzle, 1.0F, jitter * 0.98F, delay);
-			if (d < 6.0) {
-				later(ModRegistry.AK_MECH, muzzle, 0.8F, jitter, delay);
-			}
 		} else if (d < 260.0) {
 			float v = (float) (1.15 - d / 330.0);
 			later(ModRegistry.AK_SHOT_MID, muzzle, v, jitter, delay);
-			later(ModRegistry.AK_SHOT_MID, muzzle, v * 0.8F, jitter * 0.97F, delay);
 		} else {
 			later(ModRegistry.AK_SHOT_FAR, muzzle, (float) (1.2 - d / 1000.0), jitter, delay);
 		}
@@ -133,7 +128,7 @@ public final class GunAudio {
 			case ROOM -> later(ModRegistry.AK_TAIL_INDOOR, muzzle, tail, jitter, delay);
 			case CAVE -> later(ModRegistry.AK_TAIL_CAVE, muzzle, tail, jitter, delay);
 			default -> {
-				later(ModRegistry.AK_TAIL_OUTDOOR, muzzle, tail * 0.8F, jitter, delay);
+				later(ModRegistry.AK_TAIL_OUTDOOR, muzzle, tail * 0.5F, jitter, delay);
 				for (int i = 0; i < room.echoes().length; i++) {
 					// the echo travels to the wall and from there to the listener
 					Vec3 wall = muzzle.add(room.echoDirs()[i].scale(room.echoes()[i]));

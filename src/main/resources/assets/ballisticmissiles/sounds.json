@@ -522,7 +522,19 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_shot",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/shot"
+				"name": "ballisticmissiles:ak/shot1"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot2"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot3"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot4"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot5"
 			}
 		]
 	},
@@ -530,7 +542,13 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_shot",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/shot_mid"
+				"name": "ballisticmissiles:ak/shot_mid1"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot_mid2"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot_mid3"
 			}
 		]
 	},
@@ -538,15 +556,16 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_shot_far",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/shot_far"
-			}
-		]
-	},
-	"ak.mech": {
-		"subtitle": "subtitles.ballisticmissiles.ak_shot",
-		"sounds": [
+				"name": "ballisticmissiles:ak/shot_far1"
+			},
 			{
-				"name": "ballisticmissiles:ak/mech"
+				"name": "ballisticmissiles:ak/shot_far2"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot_far3"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot_far4"
 			}
 		]
 	},
@@ -554,7 +573,13 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_shot",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/tail_outdoor"
+				"name": "ballisticmissiles:ak/tail_outdoor1"
+			},
+			{
+				"name": "ballisticmissiles:ak/tail_outdoor2"
+			},
+			{
+				"name": "ballisticmissiles:ak/tail_outdoor3"
 			}
 		]
 	},
@@ -562,7 +587,10 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_shot",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/tail_indoor"
+				"name": "ballisticmissiles:ak/tail_indoor1"
+			},
+			{
+				"name": "ballisticmissiles:ak/tail_indoor2"
 			}
 		]
 	},
@@ -570,7 +598,10 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_shot",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/tail_cave"
+				"name": "ballisticmissiles:ak/tail_cave1"
+			},
+			{
+				"name": "ballisticmissiles:ak/tail_cave2"
 			}
 		]
 	},
@@ -587,7 +618,19 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_click",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/selector",
+				"name": "ballisticmissiles:ak/selector1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/selector2",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/selector3",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/selector4",
 				"attenuation_distance": 16
 			}
 		]
@@ -596,7 +639,11 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_reload",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/mag_out",
+				"name": "ballisticmissiles:ak/mag_out1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/mag_out2",
 				"attenuation_distance": 16
 			}
 		]
@@ -605,7 +652,11 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_reload",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/mag_in",
+				"name": "ballisticmissiles:ak/mag_in1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/mag_in2",
 				"attenuation_distance": 16
 			}
 		]
@@ -614,7 +665,15 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_reload",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/charge",
+				"name": "ballisticmissiles:ak/charge1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/charge2",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/charge3",
 				"attenuation_distance": 16
 			}
 		]
@@ -623,7 +682,19 @@
 		"subtitle": "subtitles.ballisticmissiles.ak_shell",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:ak/shell",
+				"name": "ballisticmissiles:ak/shell1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/shell2",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/shell3",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/shell4",
 				"attenuation_distance": 16
 			}
 		]
@@ -632,7 +703,7 @@
 		"subtitle": "subtitles.ballisticmissiles.bullet_crack",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:bullet/crack"
+				"name": "ballisticmissiles:bullet/crack1"
 			}
 		]
 	},
@@ -640,7 +711,7 @@
 		"subtitle": "subtitles.ballisticmissiles.bullet_whiz",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:bullet/whiz"
+				"name": "ballisticmissiles:bullet/whiz1"
 			}
 		]
 	},
@@ -648,15 +719,7 @@
 		"subtitle": "subtitles.ballisticmissiles.bullet_ricochet",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:bullet/ricochet1",
-				"attenuation_distance": 48
-			},
-			{
-				"name": "ballisticmissiles:bullet/ricochet2",
-				"attenuation_distance": 48
-			},
-			{
-				"name": "ballisticmissiles:bullet/ricochet3",
+				"name": "ballisticmissiles:bullet/ricochet4",
 				"attenuation_distance": 48
 			}
 		]
@@ -665,7 +728,19 @@
 		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:bullet/impact_dirt",
+				"name": "minecraft:dig/gravel1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/gravel2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/gravel3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/gravel4",
 				"attenuation_distance": 24
 			}
 		]
@@ -674,7 +749,19 @@
 		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:bullet/impact_stone",
+				"name": "minecraft:dig/stone1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/stone2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/stone3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/stone4",
 				"attenuation_distance": 24
 			}
 		]
@@ -683,7 +770,19 @@
 		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:bullet/impact_metal",
+				"name": "ballisticmissiles:bullet/impact_metal1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:bullet/impact_metal2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:bullet/impact_metal3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:bullet/impact_metal4",
 				"attenuation_distance": 24
 			}
 		]
@@ -692,7 +791,19 @@
 		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:bullet/impact_wood",
+				"name": "minecraft:dig/wood1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/wood2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/wood3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/wood4",
 				"attenuation_distance": 24
 			}
 		]
@@ -701,7 +812,15 @@
 		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:bullet/impact_flesh",
+				"name": "minecraft:damage/hit1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:damage/hit2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:damage/hit3",
 				"attenuation_distance": 24
 			}
 		]

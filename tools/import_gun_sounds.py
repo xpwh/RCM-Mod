@@ -2,9 +2,9 @@
 
 usage: python3 import_gun_sounds.py <dir with the 44.1 kHz mono WAVs named as in the download manifest>
 
-Real recordings replace the synthesized close shot, the distant reports, the handling noises and the
-cases; the environment tails, the mechanical clatter, the supersonic crack and the whiz stay synthetic
-(gen_sounds_v11.py), since there is no usable real recording of those.
+Every AK sound comes from a real recording: close and distant shots, the room/cave/outdoor tails
+(cut from the recordings after the direct blast), handling, cases, a bullet flying past, ricochet and
+metal hits. Impacts on earth, stone, wood and flesh use Minecraft's own recorded sounds (sounds.json).
 """
 import os
 import sys
@@ -49,6 +49,33 @@ def onsets(x, rel=0.35, quiet=0.06, gap=0.15):
     return out
 
 
+def peaks(x, rel=0.2, gap=0.5):
+    """Loud moments at least `gap` s apart (for takes that never fall fully quiet in between)."""
+    env = envelope(x, 6.0)
+    top = env.max()
+    out = []
+    w = int(gap * SR)
+    i = 0
+    while i < len(env):
+        if env[i] >= rel * top:
+            j = i + int(np.argmax(env[i:i + w]))
+            # back up to the start of the attack
+            k = j
+            while k > 0 and env[k] > env[j] * 0.2:
+                k -= 1
+            out.append(k)
+            i = j + w
+        else:
+            i += 1
+    return out
+
+
+def stretch(x, factor):
+    """Slow down (factor > 1): lower and longer, like a bigger space."""
+    idx = np.arange(0, len(x) - 1, 1.0 / factor)
+    return np.interp(idx, np.arange(len(x)), x)
+
+
 def cut(x, start, seconds, pre=0.004):
     a = max(0, start - int(pre * SR))
     return x[a:a + int(seconds * SR)].copy()
@@ -75,10 +102,10 @@ def main():
     shots = []
     blume = load("c1_fs136399_felixblume_ak47_range_close")
     blume = fft_filter(blume, low=90.0, slope=2.0)  # wind rumble
-    for o in onsets(blume, rel=0.4)[:11]:
+    for o in peaks(blume, rel=0.25, gap=1.0)[:11]:
         shots.append(cut(blume, o, 0.75))
     saiga = load("c1_fs698984_areniporgen_saiga_762x39_ext")
-    for o in onsets(saiga, rel=0.4)[:3]:
+    for o in peaks(saiga, rel=0.3, gap=1.0)[:3]:
         shots.append(cut(saiga, o, 0.75))
     # keep the cleanest, strongest takes
     shots.sort(key=lambda x: -np.sqrt(np.mean(x[: int(0.05 * SR)] ** 2)))
@@ -123,8 +150,34 @@ def main():
 
     # ---- cases: a real AK case on tiles (kaniaplania, CC0)
     case = load("c7_fs507048_kaniaplania_ak47_shell_tiles")
-    for i, o in enumerate(onsets(case, rel=0.3, gap=0.6)[:4]):
+    for i, o in enumerate(peaks(case, rel=0.12, gap=1.0)[:4]):
         save("ak/shell%d" % (i + 1), cut(case, o, 0.6), highpass=300.0)
+
+    # ---- the space answering the shot: real tails cut from the recordings, after the direct blast
+    def tail(x, o, start, seconds):
+        t = cut(x, o + int(start * SR), seconds, pre=0.0)
+        return t * np.clip(np.arange(len(t)) / (0.015 * SR), 0, 1)
+    saiga_on = peaks(saiga, rel=0.3, gap=1.0)[:3]
+    for i, o in enumerate(saiga_on):
+        save("ak/tail_outdoor%d" % (i + 1), tail(saiga, o, 0.07, 1.0))
+    rooms = []
+    for n in ("c1_fs812210_mahecic_kalash_indoor1", "c1_fs812211_mahecic_kalash_indoor2"):
+        x = load(n)
+        rooms.append(tail(x, onsets(x, rel=0.4)[0], 0.05, 1.4))
+    for i, x in enumerate(rooms):
+        save("ak/tail_indoor%d" % (i + 1), x)
+        # a cave: the same room sound, bigger and darker
+        save("ak/tail_cave%d" % (i + 1), fft_filter(stretch(x, 1.35), high=3500.0, slope=1.2))
+
+    # ---- a real bullet going past (after an M240 burst, NATO footage, CC0)
+    fly = load("c4_fs855248_qubodup_real_bullet_flyby")
+    save("bullet/crack1", fly, highpass=400.0)
+    save("bullet/whiz1", stretch(fly, 1.6), highpass=200.0)
+
+    # ---- bullets hitting metal (Woodingp, CC0)
+    hits = load("c6_fs116645_woodingp_bullets_hit_metal")
+    for i, o in enumerate(peaks(hits, rel=0.3, gap=0.6)[:4]):
+        save("bullet/impact_metal%d" % (i + 1), cut(hits, o, 0.45), highpass=150.0)
 
     # ---- one real ricochet off steel (gezortenplotz, CC BY 3.0) alongside the synthetic ones
     save("bullet/ricochet4", load("c6_fs43403_gezortenplotz_rifle_steel_ricochets"), highpass=200.0)
