@@ -172,8 +172,8 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 				float a = k * Mth.PI / 3.0F;
 				sheet(pose, consumer, Mth.cos(a) * half, Mth.sin(a) * half, 0.0F, 0.0F, 0.0F, -len, side, color);
 			}
-			// head-on star, just ahead of the brake
-			float s = 0.11F;
+			// head-on star, just ahead of the bare muzzle (no brake to break it up: a rounder, fuller flash)
+			float s = 0.13F;
 			float u0 = 0.75F;
 			float v0 = front * 0.25F;
 			// drawn twice: additive, so the white-hot core burns out to full brightness
@@ -181,18 +181,6 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 				float z = -0.01F - k * 0.004F;
 				quad(pose, consumer, new float[][] {{-s, -s, z, u0, v0 + 0.25F}, {s, -s, z, 1.0F, v0 + 0.25F}, {s, s, z, 1.0F, v0}, {-s, s, z, u0, v0}}, color);
 			}
-		});
-		poseStack.popPose();
-		// the brake's ports vent up and to the right
-		poseStack.pushPose();
-		poseStack.translate(0.0F, BORE_Y + 0.01F, MUZZLE_Z + 0.012F);
-		poseStack.scale(scale, scale, scale);
-		int jet = r.nextInt(4);
-		int jc = Mth.clamp((int) (bright * 255.0F), 0, 255);
-		int jetColor = 0xFF000000 | jc << 16 | jc << 8 | jc;
-		collector.submitCustomGeometry(poseStack, FLASH_TYPE, (pose, consumer) -> {
-			sheet(pose, consumer, 0.0F, 0.0F, 0.03F, 0.025F, 0.075F, -0.015F, jet, jetColor);
-			sheet(pose, consumer, 0.02F, -0.012F, 0.0F, 0.025F, 0.075F, -0.015F, jet, jetColor);
 		});
 		poseStack.popPose();
 	}
@@ -337,28 +325,36 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		BoxMesh.Builder b = new BoxMesh.Builder();
 		float w = W;
 
-		// ===== stamped receiver
-		loft(b, AK_BLUED, new float[] {-0.205F, 0.112F, 0.03F, w, 0.004F}, new float[] {0.165F, 0.112F, 0.03F, w, 0.004F});
-		// front trunnion block, a hair proud of the sheet metal, and the rear trunnion
-		loft(b, AK_BLUED, new float[] {-0.24F, 0.116F, 0.034F, w + 0.0015F, 0.005F}, new float[] {-0.165F, 0.116F, 0.034F, w + 0.0015F, 0.005F});
-		loft(b, AK_BLUED, new float[] {0.13F, 0.11F, 0.032F, w + 0.0012F, 0.004F}, new float[] {0.168F, 0.11F, 0.032F, w + 0.0012F, 0.004F});
-		// rivets: trunnions, the trigger group pins with their retaining spring, the magazine well dimples
+		// ===== milled receiver (AK-47 Type 3): one machined block, no trunnion rivets; the long
+		// lightening cut milled into each side above the magazine well
+		float skin = 0.004F;
+		loft(b, AK_BLUED, new float[] {-0.205F, 0.112F, 0.03F, w - skin, 0.004F}, new float[] {0.165F, 0.112F, 0.03F, w - skin, 0.004F});
+		float cutFront = -0.158F;
+		float cutBack = -0.062F;
+		float cutLow = 0.05F;
+		float cutHigh = 0.075F;
 		for (float sx : new float[] {-1.0F, 1.0F}) {
-			float x = sx * (w + 0.0015F);
-			for (float[] r : new float[][] {{-0.232F, 0.045F}, {-0.212F, 0.045F}, {-0.192F, 0.045F}, {-0.232F, 0.104F}, {-0.212F, 0.104F}, {-0.18F, 0.104F}}) {
-				rivet(b, x, r[1], r[0], 0.0042F, AK_WORN);
-			}
-			float xr = sx * (w + 0.0012F);
-			for (float[] r : new float[][] {{0.14F, 0.045F}, {0.157F, 0.045F}, {0.14F, 0.098F}, {0.157F, 0.098F}}) {
-				rivet(b, xr, r[1], r[0], 0.0038F, AK_WORN);
-			}
+			float x0 = sx > 0 ? w - skin : -w;
+			float x1 = sx > 0 ? w : -w + skin;
+			b.box(x0, 0.035F, -0.205F, x1, 0.107F, cutFront, AK_BLUED);
+			b.box(x0, 0.035F, cutBack, x1, 0.107F, 0.165F, AK_BLUED);
+			b.box(x0, 0.035F, cutFront, x1, cutLow, cutBack, AK_BLUED);
+			b.box(x0, cutHigh, cutFront, x1, 0.107F, cutBack, AK_BLUED);
+			// the rounded ends of the cut, left by the end mill
+			b.box(sx > 0 ? w - skin : -w + skin * 0.5F, cutLow, cutFront, sx > 0 ? w - skin * 0.5F : -w + skin, cutHigh, cutFront + 0.004F, AK_BLUED);
+			b.box(sx > 0 ? w - skin : -w + skin * 0.5F, cutLow, cutBack - 0.004F, sx > 0 ? w - skin * 0.5F : -w + skin, cutHigh, cutBack, AK_BLUED);
+			// the floor of the cut: in shadow under its upper edge, bare machined steel catching the light below
+			float xf0 = sx > 0 ? w - skin : -w + skin - 0.0003F;
+			float xf1 = sx > 0 ? w - skin + 0.0003F : -w + skin;
+			b.box(xf0, cutHigh - 0.009F, cutFront, xf1, cutHigh, cutBack, BLACK);
+			b.box(xf0, cutLow, cutFront, xf1, cutLow + 0.004F, cutBack, AK_WORN);
 			float xp = sx * w;
 			rivet(b, xp, 0.052F, -0.018F, 0.0034F, STEEL); // trigger pin
 			rivet(b, xp, 0.06F, 0.018F, 0.0034F, STEEL);   // hammer pin
-			rivet(b, xp, 0.046F, -0.052F, 0.0034F, STEEL); // auto sear pin
-			// the AKM's dimple over the magazine well, pressed in to guide the magazine
-			b.box(sx > 0 ? w : -w - 0.0006F, 0.058F, -0.112F, sx > 0 ? w + 0.0006F : -w, 0.07F, -0.06F, GUNMETAL);
-			b.box(sx > 0 ? w : -w - 0.0006F, 0.06F, -0.11F, sx > 0 ? w + 0.0009F : -w + 0.0003F, 0.068F, -0.062F, BLACK);
+			rivet(b, xp, 0.044F, -0.046F, 0.0034F, STEEL); // auto sear pin
+			// the axis pin of the magazine catch, and the screw holding the rear of the receiver to the stock
+			rivet(b, xp, 0.04F, -0.036F, 0.0026F, AK_WORN);
+			rivet(b, sx * (w + 0.0005F), 0.098F, 0.148F, 0.003F, AK_WORN);
 		}
 		// ejection port (right) with the bolt hold-open notch, and the charging handle slot behind it
 		b.box(w - 0.0005F, 0.079F, PORT_FRONT, w + 0.0007F, 0.106F, PORT_BACK, BLACK);
@@ -366,12 +362,8 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		// magazine well lip and the catch in front of the trigger guard
 		b.box(-w - 0.002F, 0.026F, -0.118F, w + 0.002F, 0.036F, -0.03F, AK_BLUED);
 
-		// ===== dust cover: rounded, with stamped ribs and the recoil spring guide button at the back
+		// ===== dust cover: rounded and smooth, the recoil spring guide button at the back
 		loft(b, AK_BLUED, new float[] {-0.135F, 0.138F, 0.108F, w - 0.001F, 0.014F}, new float[] {0.172F, 0.136F, 0.108F, w - 0.001F, 0.014F});
-		for (int i = 0; i < 6; i++) {
-			float z = -0.1F + i * 0.044F;
-			loft(b, AK_BLUED, new float[] {z, 0.1405F, 0.112F, w + 0.0006F, 0.015F}, new float[] {z + 0.006F, 0.1405F, 0.112F, w + 0.0006F, 0.015F});
-		}
 		loft(b, AK_WORN, new float[] {0.168F, 0.13F, 0.114F, 0.008F, 0.003F}, new float[] {0.182F, 0.128F, 0.116F, 0.008F, 0.003F});
 
 		// ===== rear sight: block on the front trunnion, the sloping tangent leaf, the range slider
@@ -403,41 +395,36 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		b.beam(v(0, 0.03F, -0.036F), v(0, 0.012F, -0.042F), 0.016F, 0.004F, AK_BLUED);
 		b.box(-0.011F, 0.006F, -0.05F, 0.011F, 0.013F, -0.036F, AK_BLUED);
 
-		// ===== pistol grip: reddish polymer, swelling at the palm, with finger ridge and bottom cap
-		Vector3f[] gs = {v(0, 0.036F, 0.05F), v(0, -0.01F, 0.066F), v(0, -0.06F, 0.084F), v(0, -0.1F, 0.1F), v(0, -0.124F, 0.109F)};
-		sweep(b, AK_GRIP, gs, new float[] {0.036F, 0.042F, 0.047F, 0.046F, 0.044F}, new float[] {0.014F, 0.0165F, 0.0175F, 0.017F, 0.016F}, 0.006F, 0.0F);
-		Vector3f[] cap = {v(0, -0.122F, 0.108F), v(0, -0.13F, 0.111F)};
-		sweep(b, AK_BLUED, cap, new float[] {0.046F, 0.046F}, new float[] {0.0168F, 0.0168F}, 0.005F, 0.0F);
-		for (float sx : new float[] {-1.0F, 1.0F}) {
-			// moulded grip panels
-			Vector3f[] panel = {v(0, -0.004F, 0.062F), v(0, -0.06F, 0.084F), v(0, -0.098F, 0.099F)};
-			sweep(b, AK_GRIP, panel, new float[] {0.028F, 0.032F, 0.03F}, new float[] {0.003F, 0.003F, 0.003F}, 0.001F, sx * 0.0175F);
-		}
+		// ===== pistol grip: wood, flat-sided, held on by a long bolt through its bottom
+		Vector3f[] gs = {v(0, 0.036F, 0.05F), v(0, -0.01F, 0.066F), v(0, -0.06F, 0.083F), v(0, -0.1F, 0.097F), v(0, -0.122F, 0.105F)};
+		sweep(b, AK_GRIP, gs, new float[] {0.036F, 0.041F, 0.044F, 0.045F, 0.044F}, new float[] {0.0145F, 0.0165F, 0.0175F, 0.0175F, 0.017F}, 0.006F, 0.0F);
+		Vector3f[] cap = {v(0, -0.121F, 0.1045F), v(0, -0.126F, 0.1065F)};
+		sweep(b, AK_BLUED, cap, new float[] {0.03F, 0.03F}, new float[] {0.0095F, 0.0095F}, 0.003F, 0.0F);
 
-		// ===== laminated stock: tang, wrist, comb sweeping down to the butt plate
+		// ===== wooden stock: tang, slim wrist, comb dropping away (more than on the AKM) to the butt plate
 		loft(b, AK_LAMINATE,
 			new float[] {0.165F, 0.108F, 0.036F, 0.022F, 0.008F},
-			new float[] {0.215F, 0.104F, 0.014F, 0.021F, 0.009F},
-			new float[] {0.3F, 0.094F, -0.022F, 0.024F, 0.01F},
-			new float[] {0.4F, 0.082F, -0.06F, 0.026F, 0.011F},
-			new float[] {0.52F, 0.066F, -0.104F, 0.0285F, 0.011F});
+			new float[] {0.215F, 0.103F, 0.012F, 0.0205F, 0.009F},
+			new float[] {0.3F, 0.09F, -0.026F, 0.0235F, 0.01F},
+			new float[] {0.4F, 0.075F, -0.068F, 0.026F, 0.011F},
+			new float[] {0.52F, 0.057F, -0.114F, 0.0285F, 0.011F});
 		b.box(-0.012F, 0.108F, 0.165F, 0.012F, 0.112F, 0.235F, AK_BLUED); // tang strap
 		rivet(b, v(0.0F, 0.112F, 0.22F), v(0, 1, 0), 0.0035F, AK_WORN);
 		// butt plate with the trap door to the cleaning kit
-		loft(b, AK_BLUED, new float[] {0.52F, 0.069F, -0.108F, 0.03F, 0.01F}, new float[] {0.535F, 0.069F, -0.108F, 0.03F, 0.01F});
-		loft(b, AK_WORN, new float[] {0.535F, 0.035F, -0.06F, 0.017F, 0.004F}, new float[] {0.5368F, 0.035F, -0.06F, 0.017F, 0.004F});
-		rivet(b, v(0.0F, 0.052F, 0.536F), v(0, 0, 1), 0.004F, STEEL);
+		loft(b, AK_BLUED, new float[] {0.52F, 0.06F, -0.118F, 0.03F, 0.01F}, new float[] {0.535F, 0.06F, -0.118F, 0.03F, 0.01F});
+		loft(b, AK_WORN, new float[] {0.535F, 0.026F, -0.07F, 0.017F, 0.004F}, new float[] {0.5368F, 0.026F, -0.07F, 0.017F, 0.004F});
+		rivet(b, v(0.0F, 0.043F, 0.536F), v(0, 0, 1), 0.004F, STEEL);
+		rivet(b, v(0.0F, -0.1F, 0.536F), v(0, 0, 1), 0.004F, STEEL);
 		// sling loop on the left of the stock
-		b.box(-0.031F, -0.03F, 0.395F, -0.026F, -0.022F, 0.43F, AK_BLUED);
-		b.beam(v(-0.034F, -0.026F, 0.4F), v(-0.034F, -0.026F, 0.425F), 0.004F, 0.012F, AK_WORN);
+		b.box(-0.031F, -0.04F, 0.395F, -0.026F, -0.032F, 0.43F, AK_BLUED);
+		b.beam(v(-0.034F, -0.036F, 0.4F), v(-0.034F, -0.036F, 0.425F), 0.004F, 0.012F, AK_WORN);
 
-		// ===== lower handguard with its palm swells, the ferrule and the retainer with its lever
+		// ===== lower handguard: straight and slab-sided (no palm swells), the ferrule and the retainer with its lever
 		loft(b, AK_LAMINATE,
-			new float[] {-0.242F, 0.104F, 0.04F, 0.027F, 0.01F},
-			new float[] {-0.275F, 0.104F, 0.035F, 0.033F, 0.012F},
-			new float[] {-0.33F, 0.104F, 0.033F, 0.036F, 0.013F},
-			new float[] {-0.42F, 0.104F, 0.034F, 0.035F, 0.013F},
-			new float[] {-0.468F, 0.104F, 0.042F, 0.029F, 0.011F});
+			new float[] {-0.242F, 0.104F, 0.04F, 0.027F, 0.008F},
+			new float[] {-0.258F, 0.104F, 0.036F, 0.03F, 0.009F},
+			new float[] {-0.452F, 0.104F, 0.037F, 0.0295F, 0.009F},
+			new float[] {-0.468F, 0.104F, 0.042F, 0.028F, 0.008F});
 		loft(b, AK_BLUED, new float[] {-0.245F, 0.108F, 0.036F, 0.03F, 0.01F}, new float[] {-0.24F, 0.108F, 0.036F, 0.03F, 0.01F});
 		loft(b, AK_BLUED, new float[] {-0.482F, 0.108F, 0.038F, 0.031F, 0.01F}, new float[] {-0.468F, 0.108F, 0.038F, 0.031F, 0.01F});
 		b.beam(v(0.031F, 0.06F, -0.475F), v(0.034F, 0.09F, -0.47F), 0.006F, 0.004F, AK_WORN);
@@ -460,11 +447,8 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		// ===== barrel
 		b.revolve(AK_BLUED, v(0, BORE_Y, -0.24F), v(0, 0, -1), new float[][] {{0.0F, 0.0145F}, {0.05F, 0.0135F}, {0.42F, 0.0118F}}, 12);
 
-		// ===== 45-degree gas block with the front sling loop
-		b.hexa(AK_BLUED,
-			v(-0.0175F, 0.07F, -0.505F), v(0.0175F, 0.07F, -0.505F), v(0.0175F, 0.152F, -0.505F), v(-0.0175F, 0.152F, -0.505F),
-			v(-0.0175F, 0.07F, -0.55F), v(0.0175F, 0.07F, -0.55F), v(0.0175F, 0.152F, -0.525F), v(-0.0175F, 0.152F, -0.525F));
-		b.revolve(AK_BLUED, v(0, 0.135F, -0.525F), v(0, 0, -1), new float[][] {{0.0F, 0.016F}, {0.012F, 0.016F}, {0.016F, 0.0F}}, 10);
+		// ===== the AK-47's square, 90-degree gas block, with the front sling loop
+		loft(b, AK_BLUED, new float[] {-0.505F, 0.153F, 0.07F, 0.0175F, 0.004F}, new float[] {-0.548F, 0.153F, 0.07F, 0.0175F, 0.004F});
 		b.box(-0.022F, 0.084F, -0.54F, -0.0175F, 0.092F, -0.515F, AK_BLUED);
 		b.beam(v(-0.025F, 0.075F, -0.537F), v(-0.025F, 0.075F, -0.518F), 0.004F, 0.012F, AK_WORN);
 
@@ -487,27 +471,15 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		b.revolve(AK_WORN, v(0, 0.058F, -0.47F), v(0, 0, -1), new float[][] {{0.0F, 0.0036F}, {0.19F, 0.0036F}}, 6);
 		b.revolve(AK_WORN, v(0, 0.058F, -0.66F), v(0, 0, -1), new float[][] {{0.0F, 0.005F}, {0.012F, 0.005F}, {0.014F, 0.0F}}, 6);
 
-		// ===== slant muzzle brake: longer at the bottom so the blast kicks the muzzle down and right
-		b.revolve(AK_WORN, v(0, BORE_Y, -0.664F), v(0, 0, -1), new float[][] {{0.0F, 0.0115F}, {0.004F, 0.0155F}, {0.032F, 0.0155F}}, 12);
-		int seg = 8;
-		for (int i = 0; i < seg; i++) {
-			float a0 = Mth.PI + Mth.PI * i / seg;
-			float a1 = Mth.PI + Mth.PI * (i + 1) / seg;
-			float r = 0.0155F;
-			float ri = 0.009F;
-			Vector3f o0 = v(Mth.cos(a0) * r, BORE_Y + Mth.sin(a0) * r, 0);
-			Vector3f o1 = v(Mth.cos(a1) * r, BORE_Y + Mth.sin(a1) * r, 0);
-			Vector3f i0 = v(Mth.cos(a0) * ri, BORE_Y + Mth.sin(a0) * ri, 0);
-			Vector3f i1 = v(Mth.cos(a1) * ri, BORE_Y + Mth.sin(a1) * ri, 0);
-			// the cut runs from the top front edge down to the long bottom lip
-			float l0 = 0.004F + 0.014F * -Mth.sin(a0);
-			float l1 = 0.004F + 0.014F * -Mth.sin(a1);
-			float z0 = -0.696F;
-			b.hexa(AK_WORN,
-				v(i0.x, i0.y, z0), v(o0.x, o0.y, z0), v(o1.x, o1.y, z0), v(i1.x, i1.y, z0),
-				v(i0.x, i0.y, z0 - l0), v(o0.x, o0.y, z0 - l0), v(o1.x, o1.y, z0 - l1), v(i1.x, i1.y, z0 - l1));
+		// ===== no brake on the AK-47: a plain nut protecting the muzzle thread, knurled at the back
+		b.revolve(AK_BLUED, v(0, BORE_Y, -0.664F), v(0, 0, -1),
+			new float[][] {{0.0F, 0.0108F}, {0.002F, 0.0128F}, {0.009F, 0.0128F}, {0.0095F, 0.0122F}, {0.034F, 0.0122F}, {0.037F, 0.0104F}}, 12);
+		for (int i = 0; i < 12; i++) {
+			float a = Mth.TWO_PI * i / 12.0F;
+			b.box(Mth.cos(a) * 0.0128F - 0.0012F, BORE_Y + Mth.sin(a) * 0.0128F - 0.0012F, -0.6735F, Mth.cos(a) * 0.0128F + 0.0012F,
+				BORE_Y + Mth.sin(a) * 0.0128F + 0.0012F, -0.6655F, AK_WORN);
 		}
-		b.revolve(BLACK, v(0, BORE_Y, -0.6965F), v(0, 0, -1), new float[][] {{0.0F, 0.0F}, {0.001F, 0.0085F}}, 10);
+		b.revolve(BLACK, v(0, BORE_Y, -0.7012F), v(0, 0, -1), new float[][] {{0.0F, 0.0F}, {0.0005F, 0.0062F}}, 10);
 
 		// ===== canvas sling from the front loop on the gas block to the loop on the stock, hanging slack
 		int links = 12;
@@ -572,25 +544,17 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 			hw[i] = 0.0135F + 0.002F * f;
 		}
 		sweep(b, AK_MAG, spine, depth, hw, 0.004F, 0.0F);
-		// raised ribs on both sides, following the curve
-		Vector3f[] ribF = new Vector3f[n - 1];
-		Vector3f[] ribR = new Vector3f[n - 1];
+		// the AK-47's slab-sided steel magazine has flat sides; only a stamped seam runs down its spine
+		Vector3f[] seam = new Vector3f[n - 1];
 		for (int i = 1; i < n; i++) {
 			Vector3f t = new Vector3f(spine[i + 1]).sub(spine[i - 1]).normalize();
-			Vector3f nn = v(0.0F, -t.z, t.y);
-			ribF[i - 1] = new Vector3f(spine[i]).add(new Vector3f(nn).mul(-0.018F));
-			ribR[i - 1] = new Vector3f(spine[i]).add(new Vector3f(nn).mul(0.016F));
+			seam[i - 1] = new Vector3f(spine[i]).add(v(0.0F, -t.z, t.y).mul(depth[i] * 0.5F + 0.0006F));
 		}
-		float[] rd = new float[n - 1];
-		float[] rw = new float[n - 1];
-		java.util.Arrays.fill(rd, 0.008F);
-		for (float sx : new float[] {-1.0F, 1.0F}) {
-			for (int i = 0; i < n - 1; i++) {
-				rw[i] = 0.0015F;
-			}
-			sweep(b, AK_MAG, ribF, rd, rw, 0.0005F, sx * (0.0145F + 0.001F));
-			sweep(b, AK_MAG, ribR, rd, rw, 0.0005F, sx * (0.0145F + 0.001F));
-		}
+		float[] sd = new float[n - 1];
+		float[] sw = new float[n - 1];
+		java.util.Arrays.fill(sd, 0.003F);
+		java.util.Arrays.fill(sw, 0.006F);
+		sweep(b, AK_BLUED, seam, sd, sw, 0.001F, 0.0F);
 		// floor plate with its tab
 		Vector3f end = spine[n];
 		Vector3f tEnd = new Vector3f(spine[n]).sub(spine[n - 1]).normalize();
