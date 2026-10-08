@@ -155,7 +155,12 @@ public final class RadiationManager {
 		if (fallout > 0.0 && !level.canSeeSky(BlockPos.containing(pos.x, pos.y + 1.0, pos.z))) {
 			fallout *= 0.15; // a roof overhead keeps the falling dust off
 		}
-		return rate + fallout + groundDose(level, pos);
+		double total = rate + fallout + groundDose(level, pos);
+		if (de.rcm.ballistic.bunker.BunkerManager.sheltered(level, pos)) {
+			// metres of earth and concrete overhead, filtered air: only a trace gets in
+			total = BACKGROUND + (total - BACKGROUND) * 0.02;
+		}
+		return total;
 	}
 
 	/** Settled fallout and trinitite close by: each block adds a little, more the closer it is. */

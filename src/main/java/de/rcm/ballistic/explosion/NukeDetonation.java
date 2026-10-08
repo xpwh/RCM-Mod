@@ -183,6 +183,10 @@ public class NukeDetonation {
 				continue;
 			}
 			// earth and concrete between the fireball and the target soak up the blast
+			if (de.rcm.ballistic.bunker.BunkerManager.sheltered(this.level, living.position()) && d > this.craterRadius * 0.6) {
+				living.hurtServer(this.level, this.level.damageSources().explosion(this.source, null), 1.0F);
+				continue; // in a sealed bunker: the lights flicker and dust falls from the ceiling
+			}
 			int cover = this.shielding(living);
 			double core = this.craterRadius * 0.85;
 			if (cover >= 12 && d > this.craterRadius * 0.5) {
@@ -427,7 +431,7 @@ public class NukeDetonation {
 			if (d > radius) {
 				continue;
 			}
-			if (RadiationManager.protection(living) >= 0.9F) {
+			if (RadiationManager.protection(living) >= 0.9F || de.rcm.ballistic.bunker.BunkerManager.sheltered(this.level, living.position())) {
 				continue; // a full radiation suit keeps the fallout out
 			}
 			int amp = d < this.craterRadius ? 1 : 0;

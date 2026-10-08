@@ -329,5 +329,14 @@
 	"tooltip.ballisticmissiles.sea_mine.bad": "Raketen, Flugzeuge, alles an Land",
 	"tooltip.ballisticmissiles.sea_mine.info": "Auf oder ins Wasser setzen",
 	"message.ballisticmissiles.winter_begins": "Ruß in der Stratosphäre verdunkelt die Sonne – ein nuklearer Winter beginnt. Es wird kalt und dunkel, die Ernte bleibt aus.",
-	"message.ballisticmissiles.winter_ends": "Der Ruß hat sich gelegt – die Sonne kommt zurück."
+	"message.ballisticmissiles.winter_ends": "Der Ruß hat sich gelegt – die Sonne kommt zurück.",
+	"block.ballisticmissiles.bunker": "Bunker (Bausatz)",
+	"block.ballisticmissiles.air_filter": "ABC-Luftfilter",
+	"block.ballisticmissiles.emergency_generator": "Notstromgenerator",
+	"tooltip.ballisticmissiles.bunker.good": "Druckwelle von Atomwaffen, radioaktiver Fallout und Strahlung, nuklearer Winter",
+	"tooltip.ballisticmissiles.bunker.bad": "Volltreffer im Krater, Bunkerbrecher; ohne laufenden Luftfilter kein Fallout-Schutz",
+	"tooltip.ballisticmissiles.bunker.info": "Auf den Boden setzen: baut in Blickrichtung einen Bunker 8 Blöcke tief – Luke mit Hebel, Schleuse, Raum mit Filter und Generator",
+	"message.ballisticmissiles.bunker_built": "Bunker gebaut – der Hebel neben der Luke öffnet sie",
+	"message.ballisticmissiles.filter_running": "Luftfilter läuft – Bunker ist dicht (Schutz vor Druckwelle und Fallout)",
+	"message.ballisticmissiles.filter_no_power": "Luftfilter ohne Strom – stell einen Notstromgenerator daneben (bis 6 Blöcke)"
 }

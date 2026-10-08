@@ -329,5 +329,14 @@
 	"tooltip.ballisticmissiles.sea_mine.bad": "missiles, aircraft, anything on land",
 	"tooltip.ballisticmissiles.sea_mine.info": "Place on or in water",
 	"message.ballisticmissiles.winter_begins": "Soot in the stratosphere is blotting out the sun - a nuclear winter is setting in. It is getting cold and dark, the harvest will fail.",
-	"message.ballisticmissiles.winter_ends": "The soot has settled - the sun is coming back."
+	"message.ballisticmissiles.winter_ends": "The soot has settled - the sun is coming back.",
+	"block.ballisticmissiles.bunker": "Bunker (Kit)",
+	"block.ballisticmissiles.air_filter": "NBC Air Filter",
+	"block.ballisticmissiles.emergency_generator": "Emergency Generator",
+	"tooltip.ballisticmissiles.bunker.good": "nuclear blast waves, radioactive fallout and radiation, nuclear winter",
+	"tooltip.ballisticmissiles.bunker.bad": "a direct hit in the crater, bunker busters; no fallout protection without a running air filter",
+	"tooltip.ballisticmissiles.bunker.info": "Place on the ground: builds a bunker 8 blocks deep in the direction you face - hatch with lever, airlock, room with filter and generator",
+	"message.ballisticmissiles.bunker_built": "Bunker built - the lever next to the hatch opens it",
+	"message.ballisticmissiles.filter_running": "Air filter running - the bunker is sealed (protected from blast and fallout)",
+	"message.ballisticmissiles.filter_no_power": "Air filter has no power - place an emergency generator next to it (up to 6 blocks)"
 }

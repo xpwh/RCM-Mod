@@ -235,6 +235,21 @@ public final class ModRegistry {
 			.noOcclusion().pushReaction(PushReaction.BLOCK)
 	);
 
+	public static final Block BUNKER = registerBlock(
+		"bunker", de.rcm.ballistic.bunker.BunkerBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(5.0F, 600.0F).sound(SoundType.STONE)
+	);
+	public static final Block AIR_FILTER = registerBlock(
+		"air_filter", de.rcm.ballistic.bunker.AirFilterBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(4.0F, 600.0F).sound(SoundType.METAL).requiresCorrectToolForDrops()
+			.lightLevel(s -> s.getValue(de.rcm.ballistic.bunker.AirFilterBlock.LIT) ? 5 : 0)
+	);
+	public static final Block EMERGENCY_GENERATOR = registerBlock(
+		"emergency_generator", de.rcm.ballistic.bunker.GeneratorBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_YELLOW).strength(4.0F, 600.0F).sound(SoundType.METAL).requiresCorrectToolForDrops()
+			.lightLevel(s -> s.getValue(de.rcm.ballistic.bunker.GeneratorBlock.LIT) ? 7 : 0)
+	);
+
 	public static final Block MISSILE_SILO = registerBlock(
 		"missile_silo",
 		MissileSiloBlock::new,
@@ -298,6 +313,9 @@ public final class ModRegistry {
 	);
 	public static final BlockEntityType<de.rcm.ballistic.block.CommandCenterBlockEntity> COMMAND_CENTER_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("command_center"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.CommandCenterBlockEntity::new, COMMAND_CENTER).build()
+	);
+	public static final BlockEntityType<de.rcm.ballistic.bunker.AirFilterBlockEntity> AIR_FILTER_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("air_filter"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.bunker.AirFilterBlockEntity::new, AIR_FILTER).build()
 	);
 	public static final BlockEntityType<de.rcm.ballistic.block.SeaMineBlockEntity> SEA_MINE_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("sea_mine"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.SeaMineBlockEntity::new, SEA_MINE).build()
@@ -368,6 +386,13 @@ public final class ModRegistry {
 		"blast_door", props -> new DoubleHighBlockItem(BLAST_DOOR, props), new Item.Properties().useBlockDescriptionPrefix()
 	);
 
+	public static final Item BUNKER_ITEM = registerItem(
+		"bunker", props -> new de.rcm.ballistic.item.DefenseBlockItem(BUNKER, props, "bunker"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item AIR_FILTER_ITEM = registerItem("air_filter", props -> new BlockItem(AIR_FILTER, props), new Item.Properties().useBlockDescriptionPrefix());
+	public static final Item EMERGENCY_GENERATOR_ITEM = registerItem(
+		"emergency_generator", props -> new BlockItem(EMERGENCY_GENERATOR, props), new Item.Properties().useBlockDescriptionPrefix()
+	);
 	public static final Item SCORCHED_EARTH_ITEM = registerItem("scorched_earth", props -> new BlockItem(SCORCHED_EARTH, props), new Item.Properties().useBlockDescriptionPrefix());
 	public static final Item SMOLDERING_EARTH_ITEM = registerItem("smoldering_earth", props -> new BlockItem(SMOLDERING_EARTH, props), new Item.Properties().useBlockDescriptionPrefix());
 	public static final Item CHARRED_LOG_ITEM = registerItem("charred_log", props -> new BlockItem(CHARRED_LOG, props), new Item.Properties().useBlockDescriptionPrefix());
@@ -489,6 +514,9 @@ public final class ModRegistry {
 	});
 	/** Shelter and radiation protection. */
 	public static final CreativeModeTab TAB_PROTECTION = tab("protection", () -> HAZMAT_HELMET, output -> {
+		output.accept(BUNKER_ITEM);
+		output.accept(AIR_FILTER_ITEM);
+		output.accept(EMERGENCY_GENERATOR_ITEM);
 		output.accept(REINFORCED_CONCRETE_ITEM);
 		output.accept(BLAST_DOOR_ITEM);
 		output.accept(HAZMAT_HELMET);

@@ -16,6 +16,9 @@
 		"ballisticmissiles:command_center",
 		"ballisticmissiles:crater_glass",
 		"ballisticmissiles:molten_rock",
-		"ballisticmissiles:trinitite"
+		"ballisticmissiles:trinitite",
+		"ballisticmissiles:bunker",
+		"ballisticmissiles:air_filter",
+		"ballisticmissiles:emergency_generator"
 	]
 }

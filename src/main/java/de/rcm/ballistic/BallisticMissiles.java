@@ -55,6 +55,7 @@ public class BallisticMissiles implements ModInitializer {
 			DefenseNetwork.clear();
 			EmpManager.clear();
 			RadiationManager.clear();
+			de.rcm.ballistic.bunker.BunkerManager.clear();
 			de.rcm.ballistic.explosion.NuclearWinter.clear();
 			RemoteLaunch.clear();
 		});
