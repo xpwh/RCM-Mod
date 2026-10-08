@@ -66,8 +66,8 @@ public final class MissileClientTicker {
 		if (state == MissileEntity.FLIGHT || state == MissileEntity.EJECT) {
 			// punching up (or falling) through the cloud layer: a hole along the path, the exhaust spreading out in it
 			boolean burning = missile.isBoosterBurning();
-			VolumetricClouds.rocket(new Vec3(missile.xo, missile.yo, missile.zo), missile.position(), (burning ? 8.0F : 5.0F) + 4.0F * scale,
-				burning ? 0.55F + 0.15F * scale : 0.0F);
+			VolumetricClouds.rocket(new Vec3(missile.xo, missile.yo, missile.zo), missile.position(), (burning ? 9.0F : 6.0F) + 5.0F * scale,
+				burning ? 0.7F + 0.15F * scale : 0.0F, burning ? 1.0F : 0.0F);
 		}
 		missile.lastSeenState = state;
 	}

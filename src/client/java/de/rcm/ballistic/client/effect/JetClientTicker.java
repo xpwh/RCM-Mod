@@ -71,7 +71,7 @@ public final class JetClientTicker {
 
 	public static void tick(JetEntity jet) {
 		// a jet through the clouds leaves a clear lane behind it
-		VolumetricClouds.rocket(new net.minecraft.world.phys.Vec3(jet.xo, jet.yo, jet.zo), jet.position(), 5.0F, 0.0F);
+		VolumetricClouds.rocket(new net.minecraft.world.phys.Vec3(jet.xo, jet.yo, jet.zo), jet.position(), 5.0F, 0.0F, 0.0F);
 		Minecraft mc = Minecraft.getInstance();
 		if (jet.tickCount == 1) { // the client entity is created when it comes into tracking range
 			for (JetSound.Layer layer : JetSound.Layer.values()) {

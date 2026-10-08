@@ -35,7 +35,8 @@ import net.minecraft.world.phys.Vec3;
  * fills in again, and its exhaust smoke spreads out sideways along the layer, drifting and thinning
  * over a minute or two. Rain and thunderstorms darken and thicken the clouds, and lightning lights
  * them up from inside. {@code /volcloud} switches them on or off and sets how cloudy it is. Big blasts that reach up to it blow a ring clear. All of this lives in a small
- * wrapping map (1024 x 1024 blocks, 4 blocks a texel) the shader reads.
+ * wrapping map (1024 x 1024 blocks, 4 blocks a texel) the shader reads: R holes, G exhaust smoke,
+ * B cloud piled up round the holes' rims, A engine glow.
  */
 public final class VolumetricClouds {
 	/** How thick the cloud layer is (blocks). */
@@ -63,6 +64,10 @@ public final class VolumetricClouds {
 	private static final float[] HOLE = new float[MAP * MAP];
 	private static final float[] SMOKE = new float[MAP * MAP];
 	private static final float[] SCRATCH = new float[MAP * MAP];
+	/** Cloud piled up round the rims of the holes (0-1), and rocket engines / fireballs lighting the cloud (0-1). */
+	private static final float[] RING = new float[MAP * MAP];
+	private static final float[] GLOW = new float[MAP * MAP];
+	private static boolean glowing;
 	private static boolean disturbed;
 	private static boolean dirty = true;
 	private static int age;
@@ -167,13 +172,64 @@ public final class VolumetricClouds {
 
 	// ------------------------------------------------------------------ disturbances
 
-	/** A rocket moving through the layer from {@code from} to {@code to} this tick: a hole along its path, and its smoke. */
-	public static void rocket(Vec3 from, Vec3 to, float radius, float smoke) {
+	/**
+	 * A hole punched through the layer: it opens at the rocket's size and keeps widening for a while (the
+	 * cloud around it is pushed aside and evaporates, like a hole-punch cloud), the displaced cloud piled
+	 * up in a dense ring round its rim; then it fills in again.
+	 */
+	private static final class Puncture {
+		double x;
+		double z;
+		final float r0;
+		final float rMax;
+		final float ring;
+		final int life;
+		final float seed;
+		int age;
+
+		Puncture(double x, double z, float r0, float rMax, float ring, int life) {
+			this.x = x;
+			this.z = z;
+			this.r0 = r0;
+			this.rMax = rMax;
+			this.ring = ring;
+			this.life = life;
+			this.seed = ClientEffects.rand() * 100.0F;
+		}
+
+		float radius() {
+			return this.r0 + (this.rMax - this.r0) * (1.0F - (float) Math.exp(-this.age / 160.0));
+		}
+
+		/** How clear the hole is: fully, until it starts to fill in over the second half of its life. */
+		float strength() {
+			return Mth.clamp(2.0F * (1.0F - this.age / (float) this.life), 0.0F, 1.0F);
+		}
+
+		float ringStrength() {
+			return this.ring * (float) Math.exp(-this.age / 500.0) * Math.min(1.0F, this.age / 6.0F + 0.3F);
+		}
+	}
+
+	private static final java.util.List<Puncture> PUNCTURES = new java.util.ArrayList<>();
+	private static final int MAX_PUNCTURES = 160;
+
+	/**
+	 * A rocket moving from {@code from} to {@code to} this tick: where it is inside the layer it punches a
+	 * hole along its path and leaves a column of exhaust smoke; while its engine burns ({@code glow}) it
+	 * lights the cloud round it from inside, and from below as it comes up to the base.
+	 */
+	public static void rocket(Vec3 from, Vec3 to, float radius, float smoke, float glow) {
 		if (Float.isNaN(base)) {
 			return;
 		}
 		double lo = base - 4.0;
 		double hi = base + THICKNESS + 4.0;
+		if (glow > 0.0F && to.y > base - 70.0 && to.y < hi + 20.0) {
+			float below = (float) Mth.clamp((to.y - (base - 70.0)) / 70.0, 0.0, 1.0);
+			stamp(GLOW, to.x, to.z, 26.0F + radius * 2.0F, glow * below, false);
+			glowing = true;
+		}
 		if (Math.max(from.y, to.y) < lo || Math.min(from.y, to.y) > hi) {
 			return;
 		}
@@ -184,20 +240,22 @@ public final class VolumetricClouds {
 			if (p.y < lo || p.y > hi) {
 				continue;
 			}
-			stamp(HOLE, p.x, p.z, radius, 1.0F, false);
+			puncture(p.x, p.z, radius, radius * 3.4F, 1.0F, 2400);
 			if (smoke > 0.0F) {
-				stamp(SMOKE, p.x, p.z, radius * 1.4F, smoke, true);
+				stamp(SMOKE, p.x, p.z, radius * 1.6F, smoke, true);
 			}
 		}
 	}
 
-	/** A blast big enough to reach the clouds: the shock blows a wide ring clear, and its smoke rides up into the layer. */
+	/** A blast big enough to reach the clouds: the shock blows a wide ring clear, the fireball lights them, its smoke rides up into the layer. */
 	public static void blast(Vec3 pos, float radius, float smoke) {
 		if (Float.isNaN(base) || pos.y > base + THICKNESS + radius || pos.y < base - radius * 6.0) {
 			return;
 		}
-		stamp(HOLE, pos.x, pos.z, radius, 1.0F, false);
+		puncture(pos.x, pos.z, radius * 0.45F, radius, 1.4F, 3600);
 		stamp(SMOKE, pos.x, pos.z, radius * 0.45F, smoke, true);
+		stamp(GLOW, pos.x, pos.z, radius * 0.9F, 1.0F, false);
+		glowing = true;
 	}
 
 	/** Smoke that has risen to the cloud base and spread into the layer there. */
@@ -205,6 +263,22 @@ public final class VolumetricClouds {
 		if (!Float.isNaN(base) && amount > 0.005F) {
 			stamp(SMOKE, x, z, radius, amount, true);
 		}
+	}
+
+	private static void puncture(double x, double z, float r0, float rMax, float ring, int life) {
+		for (Puncture p : PUNCTURES) {
+			double dx = p.x - x;
+			double dz = p.z - z;
+			if (p.age < 40 && dx * dx + dz * dz < r0 * r0 * 0.5) {
+				return; // the same hole, a tick further along
+			}
+		}
+		if (PUNCTURES.size() >= MAX_PUNCTURES) {
+			PUNCTURES.remove(0);
+		}
+		PUNCTURES.add(new Puncture(x, z, r0, rMax, ring, life));
+		disturbed = true;
+		dirty = true;
 	}
 
 	private static void stamp(float[] field, double x, double z, float radius, float value, boolean add) {
@@ -227,11 +301,55 @@ public final class VolumetricClouds {
 		dirty = true;
 	}
 
+	/** Draws the holes (and the rings of cloud round them) into their fields afresh. */
+	private static void drawPunctures() {
+		java.util.Arrays.fill(HOLE, 0.0F);
+		java.util.Arrays.fill(RING, 0.0F);
+		for (Puncture p : PUNCTURES) {
+			float r = p.radius();
+			float hole = p.strength();
+			float ring = p.ringStrength();
+			float width = Math.max(8.0F, r * 0.4F);
+			float outer = r * 1.15F + width;
+			int cx = Mth.floor(p.x / TEXEL);
+			int cz = Mth.floor(p.z / TEXEL);
+			int n = Math.min(MAP / 2 - 1, Mth.ceil(outer / TEXEL) + 1);
+			for (int dz = -n; dz <= n; dz++) {
+				for (int dx = -n; dx <= n; dx++) {
+					double wx = (cx + dx + 0.5) * TEXEL - p.x;
+					double wz = (cz + dz + 0.5) * TEXEL - p.z;
+					float d = (float) Math.sqrt(wx * wx + wz * wz);
+					if (d > outer) {
+						continue;
+					}
+					// a ragged rim, not a perfect circle
+					float a = (float) Mth.atan2(wz, wx);
+					float edge = r * (1.0F + 0.13F * Mth.sin(a * 5.0F + p.seed) + 0.07F * Mth.sin(a * 11.0F + p.seed * 1.7F));
+					int i = Math.floorMod(cz + dz, MAP) * MAP + Math.floorMod(cx + dx, MAP);
+					float h = hole * (1.0F - smooth((d - edge * 0.7F) / (edge * 0.3F + 0.01F)));
+					HOLE[i] = Math.max(HOLE[i], h);
+					float k = (d - edge * 0.85F) / (width + edge * 0.3F);
+					if (k > 0.0F && k < 1.0F) {
+						RING[i] = Math.min(1.0F, RING[i] + ring * Mth.sin(k * Mth.PI));
+					}
+				}
+			}
+		}
+	}
+
+	private static float smooth(float x) {
+		x = Mth.clamp(x, 0.0F, 1.0F);
+		return x * x * (3.0F - 2.0F * x);
+	}
+
 	private static void tick(Minecraft mc) {
 		if (mc.level == null) {
 			if (disturbed) {
 				java.util.Arrays.fill(HOLE, 0.0F);
 				java.util.Arrays.fill(SMOKE, 0.0F);
+				java.util.Arrays.fill(RING, 0.0F);
+				java.util.Arrays.fill(GLOW, 0.0F);
+				PUNCTURES.clear();
 				disturbed = false;
 				dirty = true;
 			}
@@ -267,17 +385,31 @@ public final class VolumetricClouds {
 			return;
 		}
 		age++;
-		// holes fill in over about a minute, smoke thins over two or three and spreads out as it does
-		boolean any = false;
-		for (int i = 0; i < HOLE.length; i++) {
-			float h = HOLE[i];
-			if (h > 0.0F) {
-				h = h * 0.996F - 0.0004F;
-				HOLE[i] = h > 0.0F ? h : 0.0F;
-				any = true;
+		// the holes widen, their rings thin out, they fill in; all of it drifts with the clouds
+		for (java.util.Iterator<Puncture> it = PUNCTURES.iterator(); it.hasNext(); ) {
+			Puncture p = it.next();
+			p.age++;
+			p.x -= WIND_X;
+			p.z -= WIND_Z;
+			if (p.age >= p.life) {
+				it.remove();
 			}
 		}
-		// carried along with the clouds by the wind (the noise is sampled at position + wind: it moves towards -x, -z)
+		drawPunctures();
+		// the engine glow dies the moment the rocket has gone on
+		boolean lit = false;
+		if (glowing) {
+			for (int i = 0; i < GLOW.length; i++) {
+				float g = GLOW[i];
+				if (g > 0.0F) {
+					g = g * 0.72F - 0.01F;
+					GLOW[i] = g > 0.0F ? g : 0.0F;
+					lit |= g > 0.0F;
+				}
+			}
+			glowing = lit;
+		}
+		// the smoke is carried along with the clouds by the wind (the noise is sampled at position + wind: it moves towards -x, -z)
 		driftX += WIND_X;
 		driftZ += WIND_Z;
 		if (driftX >= TEXEL || driftZ >= TEXEL) {
@@ -285,11 +417,11 @@ public final class VolumetricClouds {
 			int sz = driftZ >= TEXEL ? 1 : 0;
 			driftX -= sx * TEXEL;
 			driftZ -= sz * TEXEL;
-			shift(HOLE, sx, sz);
 			shift(SMOKE, sx, sz);
 		}
+		boolean any = !PUNCTURES.isEmpty() || glowing;
 		if (age % 3 == 0) {
-			// spreading: each texel shares with its neighbours
+			// spreading: each texel shares with its neighbours, thinning slowly over two or three minutes
 			for (int z = 0; z < MAP; z++) {
 				int up = ((z + MAP - 1) % MAP) * MAP;
 				int down = ((z + 1) % MAP) * MAP;
@@ -299,16 +431,18 @@ public final class VolumetricClouds {
 					int r = (x + 1) % MAP;
 					float c = SMOKE[row + x];
 					float avg = (SMOKE[row + l] + SMOKE[row + r] + SMOKE[up + x] + SMOKE[down + x]) * 0.25F;
-					float s = (c * 0.55F + avg * 0.45F) * 0.995F - 0.0005F;
+					float s = (c * 0.6F + avg * 0.4F) * 0.996F - 0.0004F;
 					SCRATCH[row + x] = s > 0.0F ? s : 0.0F;
 				}
 			}
 			System.arraycopy(SCRATCH, 0, SMOKE, 0, SMOKE.length);
 		}
-		for (float s : SMOKE) {
-			if (s > 0.0F) {
-				any = true;
-				break;
+		if (!any) {
+			for (float s : SMOKE) {
+				if (s > 0.0F) {
+					any = true;
+					break;
+				}
 			}
 		}
 		disturbed = any;
@@ -345,7 +479,9 @@ public final class VolumetricClouds {
 				int i = z * MAP + x;
 				int h = Math.round(Mth.clamp(HOLE[i], 0.0F, 1.0F) * 255.0F);
 				int s = Math.round(Mth.clamp(SMOKE[i], 0.0F, 1.0F) * 255.0F);
-				img.setPixel(x, z, 0xFF000000 | h << 16 | s << 8);
+				int r = Math.round(Mth.clamp(RING[i], 0.0F, 1.0F) * 255.0F);
+				int g = Math.round(Mth.clamp(GLOW[i], 0.0F, 1.0F) * 255.0F);
+				img.setPixel(x, z, g << 24 | h << 16 | s << 8 | r);
 			}
 		}
 		map.upload();

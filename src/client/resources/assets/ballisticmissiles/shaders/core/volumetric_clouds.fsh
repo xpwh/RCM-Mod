@@ -10,7 +10,8 @@
 // Rain and thunderstorms darken and thicken the layer (storm clouds tower right up), and lightning lights
 // the clouds up from inside, brightest low down where the bolts come out.
 // Rockets disturb the layer: Sampler0 is a wrapping 1024 x 1024 block map, R = holes punched through
-// (they fill in again), G = exhaust smoke spreading out along the layer.
+// (they widen, then fill in again), G = exhaust smoke spreading out along the layer, B = cloud pushed
+// aside and piled up round the rims of the holes, A = rocket engines and fireballs lighting the cloud.
 
 uniform sampler2D Sampler0; // disturbance map
 uniform sampler2D Sampler1; // 3D noise atlas: 64 slices of 66 x 66 (1 texel wrapped border) in an 8 x 8 grid
@@ -55,13 +56,14 @@ float remap(float v, float a, float b, float c, float d) {
 }
 
 // cloud density at a point (x and z wrapped to 4096 blocks, y absolute); smoke = how much of it is exhaust
-float density(vec3 p, bool detail, out float smoke) {
+float density(vec3 p, bool detail, out float smoke, out float glow) {
     smoke = 0.0;
+    glow = 0.0;
     float h = (p.y - bottom) / thick;
     if (h <= 0.0 || h >= 1.0) {
         return 0.0;
     }
-    vec2 dist = texture(Sampler0, p.xz / 1024.0).rg;
+    vec4 dist = texture(Sampler0, p.xz / 1024.0);
     vec3 q = vec3(p.x + wind.x, p.z + wind.y, p.y * 2.5);
     vec4 n = cloudNoise(q / 1024.0);
     float cov = clamp(coverage + (n.b - 0.5) * 0.5, 0.0, 1.0);
@@ -73,14 +75,20 @@ float density(vec3 p, bool detail, out float smoke) {
     float profile = smoothstep(0.0, 0.07, h) * (1.0 - smoothstep(tall - 0.3, tall, h));
     d *= profile;
     float e = 0.5;
-    if (detail && (d > 0.0 || dist.g > 0.0)) {
+    if (detail && (d > 0.0 || dist.g > 0.0 || dist.b > 0.0)) {
         // the edges eaten into cauliflower lumps, wispier towards the base
         e = cloudNoise(q / 256.0 + vec3(0.37)).g;
         d = remap(d, e * mix(0.55, 0.3, h), 1.0, 0.0, 1.0);
     }
     d = max(d, 0.0) * (1.0 - dist.r);
+    // the cloud the rocket shoved aside, heaped up in a lumpy ring round the hole
+    float heap = 0.35 + 0.45 * n.r;
+    d += dist.b * smoothstep(0.0, 0.08, h) * (1.0 - smoothstep(heap - 0.2, heap, h)) * smoothstep(0.25, 0.75, e) * 0.75;
+    glow = dist.a;
     // exhaust smoke flattened into a sheet low in the layer, frayed by the same noise
-    float s = dist.g * smoothstep(0.0, 0.06, h) * smoothstep(0.55, 0.15, h) * smoothstep(0.15, 0.85, e * 0.65 + n.r * 0.55) * 0.8;
+    // exhaust smoke: a column right through the layer where the rocket went, heaviest low down, frayed
+    // (it thins out in the hole, where the blast of the passage has carried it on up)
+    float s = dist.g * smoothstep(0.0, 0.05, h) * (1.0 - 0.55 * h) * smoothstep(0.12, 0.8, e * 0.65 + n.r * 0.55) * 0.9 * (1.0 - 0.75 * dist.r);
     if (s > 0.0) {
         smoke = s / max(d + s, 1e-4);
         d += s;
@@ -153,16 +161,18 @@ void main() {
         if (i >= steps || t > t1) break;
         vec3 p = cam + rd * t;
         float smoke;
-        float d = density(p, fancy, smoke);
+        float glow;
+        float d = density(p, fancy, smoke, glow);
         if (d > 0.002) {
             if (firstHit < 0.0) firstHit = t;
             // how much cloud lies between here and the sun
             float od = 0.0;
             float s0;
-            od += density(p + sunDir * 6.0, false, s0) * 8.0;
-            od += density(p + sunDir * 16.0, false, s0) * 12.0;
-            od += density(p + sunDir * 32.0, false, s0) * 18.0;
-            od += density(p + sunDir * 58.0, false, s0) * 30.0;
+            float g0;
+            od += density(p + sunDir * 6.0, false, s0, g0) * 8.0;
+            od += density(p + sunDir * 16.0, false, s0, g0) * 12.0;
+            od += density(p + sunDir * 32.0, false, s0, g0) * 18.0;
+            od += density(p + sunDir * 58.0, false, s0, g0) * 30.0;
             float sunT = exp(-od * 0.06) * 0.85 + exp(-od * 0.015) * 0.15;
             float powder = 1.0 - exp(-d * 6.0);
             float h = (p.y - bottom) / thick;
@@ -171,6 +181,8 @@ void main() {
             float away = 0.5 - 0.5 * cosTheta;
             vec3 lit = ambient + sunCol * sunT * mix(1.0, powder, 0.5 * away) * phase * 0.9;
             lit += boltCol * (0.25 + 0.75 * (1.0 - h) * (1.0 - h)) * (0.4 + 0.6 * d);
+            // a rocket engine (or a fireball) inside or under the cloud: it glows orange round it
+            lit += vec3(1.0, 0.45, 0.16) * glow * glow * 1.5 * (0.3 + 0.7 * d);
             // exhaust smoke: dingy grey-brown
             lit *= mix(vec3(1.0), vec3(0.62, 0.6, 0.58), smoke);
             float a = 1.0 - exp(-d * sigma * stepLen);
