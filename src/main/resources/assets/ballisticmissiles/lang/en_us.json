@@ -460,5 +460,11 @@
 	"message.ballisticmissiles.smoke_debug_title": "Smoke collision (debug)",
 	"message.ballisticmissiles.smoke_debug_stats": "Checked: %s · Skipped (open sky): %s",
 	"message.ballisticmissiles.smoke_debug_hits": "Ceiling: %s · Wall: %s · Way out found: %s",
-	"message.ballisticmissiles.smoke_debug_legend": "yellow clear · red ceiling · orange wall · purple inside · green way out"
+	"message.ballisticmissiles.smoke_debug_legend": "yellow clear · red ceiling · orange wall · purple inside · green way out",
+	"message.ballisticmissiles.volcloud_status_on": "Volumetric clouds: on, cloud cover %s %%. /volcloud off to switch them off, /volcloud <0-100> to set the cover.",
+	"message.ballisticmissiles.volcloud_status_off": "Volumetric clouds: off (Minecraft's clouds), cloud cover %s %%. /volcloud on to switch them on.",
+	"message.ballisticmissiles.volcloud_on": "Volumetric clouds on.",
+	"message.ballisticmissiles.volcloud_off": "Volumetric clouds off - Minecraft's own clouds are back.",
+	"message.ballisticmissiles.volcloud_amount": "Cloud cover set to %s %% (rain and thunderstorms add to it).",
+	"message.ballisticmissiles.volcloud_hint": "The volumetric clouds are switched off: /volcloud on"
 }

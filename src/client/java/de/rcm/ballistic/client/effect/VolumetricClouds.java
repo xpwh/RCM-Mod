@@ -33,7 +33,8 @@ import net.minecraft.world.phys.Vec3;
  * <p>
  * Rockets disturb the layer: a missile climbing (or falling) through it punches a hole that slowly
  * fills in again, and its exhaust smoke spreads out sideways along the layer, drifting and thinning
- * over a minute or two. Big blasts that reach up to it blow a ring clear. All of this lives in a small
+ * over a minute or two. Rain and thunderstorms darken and thicken the clouds, and lightning lights
+ * them up from inside. {@code /volcloud} switches them on or off and sets how cloudy it is. Big blasts that reach up to it blow a ring clear. All of this lives in a small
  * wrapping map (1024 x 1024 blocks, 4 blocks a texel) the shader reads.
  */
 public final class VolumetricClouds {
@@ -73,14 +74,75 @@ public final class VolumetricClouds {
 	private static final double WIND_Z = 0.025;
 	/** Cloud base of the current dimension (blocks), or NaN where there are no clouds. */
 	private static float base = Float.NaN;
+	/** Switched on or off with /volcloud; off, Minecraft's own clouds come back. */
+	private static boolean enabled = true;
+	/** How much of the fair-weather sky is clouded (percent), set with /volcloud; rain and storms add to it. */
+	private static int amount = 40;
+	/** A lightning flash lighting the storm clouds from inside (0-1), dying away in a few frames. */
+	private static float flash;
+	private static float prevFlash;
+	private static final java.nio.file.Path CONFIG = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
+		.resolve("ballisticmissiles-clouds.properties");
 
 	private VolumetricClouds() {
 	}
 
 	public static void init() {
+		load();
 		RenderPipelines.register(PIPELINE);
 		ClientTickEvents.END_CLIENT_TICK.register(VolumetricClouds::tick);
 		WorldRenderEvents.END_MAIN.register(VolumetricClouds::render);
+	}
+
+	/** Whether the volumetric clouds are drawn (instead of Minecraft's own). */
+	public static boolean enabled() {
+		return enabled;
+	}
+
+	public static void setEnabled(boolean on) {
+		enabled = on;
+		if (!on) {
+			base = Float.NaN;
+		}
+		save();
+	}
+
+	public static int amount() {
+		return amount;
+	}
+
+	public static void setAmount(int percent) {
+		amount = Mth.clamp(percent, 0, 100);
+		save();
+	}
+
+	private static void load() {
+		try {
+			if (java.nio.file.Files.exists(CONFIG)) {
+				java.util.Properties p = new java.util.Properties();
+				try (var in = java.nio.file.Files.newInputStream(CONFIG)) {
+					p.load(in);
+				}
+				enabled = Boolean.parseBoolean(p.getProperty("enabled", "true"));
+				amount = Mth.clamp(Integer.parseInt(p.getProperty("amount", "40").trim()), 0, 100);
+			}
+		} catch (Exception e) {
+			BallisticMissiles.LOGGER.warn("Could not read {}: {}", CONFIG, e.toString());
+		}
+	}
+
+	private static void save() {
+		try {
+			java.util.Properties p = new java.util.Properties();
+			p.setProperty("enabled", Boolean.toString(enabled));
+			p.setProperty("amount", Integer.toString(amount));
+			java.nio.file.Files.createDirectories(CONFIG.getParent());
+			try (var out = java.nio.file.Files.newOutputStream(CONFIG)) {
+				p.store(out, "Ballistic Missiles - volumetric clouds (/volcloud)");
+			}
+		} catch (Exception e) {
+			BallisticMissiles.LOGGER.warn("Could not write {}: {}", CONFIG, e.toString());
+		}
 	}
 
 	/** Bottom of the cloud layer here, NaN if this dimension has none. */
@@ -176,7 +238,32 @@ public final class VolumetricClouds {
 			base = Float.NaN;
 			return;
 		}
-		if (mc.isPaused() || !disturbed) {
+		if (mc.isPaused()) {
+			return;
+		}
+		// lightning: the storm clouds lit up from inside - at every real bolt, and now and then within the clouds
+		prevFlash = flash;
+		flash *= 0.55F;
+		float thunder = mc.level.getThunderLevel(1.0F);
+		if (thunder > 0.2F && enabled) {
+			boolean bolt = false;
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof net.minecraft.world.entity.LightningBolt && e.tickCount < 2) {
+					bolt = true;
+					break;
+				}
+			}
+			if (bolt) {
+				flash = 1.0F;
+			} else if (ClientEffects.rand() < 0.006F * thunder) {
+				flash = Math.max(flash, 0.45F + ClientEffects.rand() * 0.45F);
+			} else if (flash > 0.2F && ClientEffects.rand() < 0.25F) {
+				flash = Math.min(1.0F, flash + 0.35F); // it flickers
+			}
+		} else {
+			flash = 0.0F;
+		}
+		if (!disturbed) {
 			return;
 		}
 		age++;
@@ -269,7 +356,7 @@ public final class VolumetricClouds {
 
 	private static void render(WorldRenderContext context) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.level == null || mc.options.getCloudsType() == CloudStatus.OFF) {
+		if (mc.level == null || !enabled || mc.options.getCloudsType() == CloudStatus.OFF) {
 			base = Float.NaN;
 			return;
 		}
@@ -296,7 +383,11 @@ public final class VolumetricClouds {
 		}
 		float rain = mc.level.getRainLevel(partialTick);
 		float thunder = mc.level.getThunderLevel(partialTick);
-		float coverage = Mth.clamp(0.4F + rain * 0.3F + thunder * 0.15F + WinterClient.amount() * 0.35F, 0.0F, 0.98F);
+		// rain clouds the sky over; a thunderstorm closes it almost completely
+		float coverage = Mth.clamp(amount / 100.0F + rain * 0.35F + thunder * 0.3F + WinterClient.amount() * 0.35F, 0.0F, 0.99F);
+		float lightning = Mth.lerp(partialTick, prevFlash, flash);
+		// UV2: x reach, y storm (low 7 bits) and lightning (next 7)
+		int storm = Math.round(thunder * 127.0F) | Math.round(lightning * 127.0F) << 7;
 		long time = mc.level.getGameTime();
 		// drifting with the wind; wraps after 4096 blocks, a whole number of noise periods
 		double ticks = (time % 81920L) + partialTick;
@@ -314,19 +405,19 @@ public final class VolumetricClouds {
 		int color = quality << 24 | Math.round(coverage * 255.0F) << 16 | Math.round(day * 255.0F) << 8 | Math.round(rain * 255.0F);
 		// below the layer the rays enter through its base, above it through its top; inside, both planes catch them
 		if (camY < top) {
-			plane(consumer, pose, (float) (bottom - camY), reach, color, windX, windZ, bottom, sx, sy);
+			plane(consumer, pose, (float) (bottom - camY), reach, storm, color, windX, windZ, bottom, sx, sy);
 		}
 		if (camY > bottom) {
-			plane(consumer, pose, (float) (top - camY), reach, color, windX, windZ, bottom, sx, sy);
+			plane(consumer, pose, (float) (top - camY), reach, storm, color, windX, windZ, bottom, sx, sy);
 		}
 	}
 
-	private static void plane(VertexConsumer consumer, PoseStack.Pose pose, float y, float reach, int color, float windX, float windZ, float bottom, float sx,
-		float sy) {
+	private static void plane(VertexConsumer consumer, PoseStack.Pose pose, float y, float reach, int storm, int color, float windX, float windZ, float bottom,
+		float sx, float sy) {
 		float[][] corners = {{-reach, -reach}, {reach, -reach}, {reach, reach}, {-reach, reach}};
 		for (float[] c : corners) {
 			consumer.addVertex(pose, c[0], y, c[1]).setColor(color).setUv(windX, windZ).setOverlay(OverlayTexture.pack((int) bottom, THICKNESS))
-				.setLight((int) reach).setNormal(pose, sx, sy, 0.0F);
+				.setLight((int) reach | storm << 16).setNormal(pose, sx, sy, 0.0F);
 		}
 	}
 }

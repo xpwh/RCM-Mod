@@ -79,6 +79,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.render.SmokeDebug.init();
 		de.rcm.ballistic.client.render.BulletHoles.init();
 		de.rcm.ballistic.client.effect.VolumetricClouds.init();
+		de.rcm.ballistic.client.effect.VolCloudCommand.init();
 		BlockEntityRenderers.register(ModRegistry.CIWS_BE, CiwsRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.LAUNCH_PAD_BE, LaunchPadRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.MISSILE_SILO_BE, SiloRenderer::new);

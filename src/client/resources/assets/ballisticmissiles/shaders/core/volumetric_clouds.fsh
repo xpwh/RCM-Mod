@@ -7,6 +7,8 @@
 // noise (billowing Perlin-Worley base, eroded at the edges by finer Worley detail), with a flat base and
 // rounded tops; light is marched a few steps towards the sun, so tops are bright, undersides dark, thin
 // edges glow when you look towards the sun, and the light reddens at sunrise and sunset.
+// Rain and thunderstorms darken and thicken the layer (storm clouds tower right up), and lightning lights
+// the clouds up from inside, brightest low down where the bolts come out.
 // Rockets disturb the layer: Sampler0 is a wrapping 1024 x 1024 block map, R = holes punched through
 // (they fill in again), G = exhaust smoke spreading out along the layer.
 
@@ -19,6 +21,8 @@ flat in vec2 wind;
 flat in ivec2 layer;
 flat in vec3 sunDir;
 flat in float reach;
+flat in float storm;
+flat in float lightning;
 
 out vec4 fragColor;
 
@@ -65,7 +69,7 @@ float density(vec3 p, bool detail, out float smoke) {
     // a second, finer octave breaks up the outlines
     float shape = n.r * 0.72 + cloudNoise(q / 512.0 + vec3(0.21, 0.63, 0.11)).r * 0.28;
     float d = clamp(remap(shape, 1.0 - cov, 1.0, 0.0, 1.0), 0.0, 1.0);
-    float tall = 0.2 + 0.8 * d;
+    float tall = min(1.0, 0.2 + 0.8 * d + storm * 0.35);
     float profile = smoothstep(0.0, 0.07, h) * (1.0 - smoothstep(tall - 0.3, tall, h));
     d *= profile;
     float e = 0.5;
@@ -130,9 +134,15 @@ void main() {
 
     // light: the sun (orange low in the sky), the moon at night, the sky from above, darker in rain
     float low = smoothstep(0.0, 0.35, sunDir.y);
-    vec3 sunCol = mix(vec3(0.16, 0.18, 0.26), mix(vec3(1.25, 0.62, 0.32), vec3(1.15, 1.1, 1.02), low), day) * (1.0 - 0.55 * rain);
-    vec3 skyTop = mix(vec3(0.035, 0.04, 0.065), vec3(0.62, 0.7, 0.84), day) * (1.0 - 0.45 * rain);
-    vec3 skyBottom = skyTop * mix(0.55, 0.62, rain);
+    // rain and above all a thunderstorm: much less sun gets through, the undersides turn slate grey
+    float gloom = clamp(0.5 * rain + 0.4 * storm, 0.0, 0.85);
+    vec3 sunCol = mix(vec3(0.16, 0.18, 0.26), mix(vec3(1.25, 0.62, 0.32), vec3(1.15, 1.1, 1.02), low), day) * (1.0 - 1.1 * gloom);
+    vec3 skyTop = mix(vec3(0.035, 0.04, 0.065), vec3(0.62, 0.7, 0.84), day) * (1.0 - 0.9 * gloom);
+    vec3 skyBottom = skyTop * mix(0.55, 0.32, storm) * mix(vec3(1.0), vec3(0.92, 0.95, 1.05), storm);
+    // the flash of lightning inside the cloud
+    vec3 boltCol = vec3(0.75, 0.8, 1.0) * lightning * 0.9;
+    // storm clouds are thicker: they swallow more light
+    float sigma = 0.11 * (1.0 + 0.6 * rain + 0.9 * storm);
     float cosTheta = dot(rd, sunDir);
     float phase = mix(henyeyGreenstein(cosTheta, 0.65), henyeyGreenstein(cosTheta, -0.15), 0.35) * 4.0 * 3.14159;
 
@@ -160,9 +170,10 @@ void main() {
             // dark edges (the "powder" effect) only show on the side away from the sun
             float away = 0.5 - 0.5 * cosTheta;
             vec3 lit = ambient + sunCol * sunT * mix(1.0, powder, 0.5 * away) * phase * 0.9;
+            lit += boltCol * (0.25 + 0.75 * (1.0 - h) * (1.0 - h)) * (0.4 + 0.6 * d);
             // exhaust smoke: dingy grey-brown
             lit *= mix(vec3(1.0), vec3(0.62, 0.6, 0.58), smoke);
-            float a = 1.0 - exp(-d * 0.11 * stepLen);
+            float a = 1.0 - exp(-d * sigma * stepLen);
             col += trans * a * lit;
             trans *= 1.0 - a;
             if (trans < 0.02) break;

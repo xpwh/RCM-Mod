@@ -460,5 +460,11 @@
 	"message.ballisticmissiles.smoke_debug_title": "Rauch-Kollision (Debug)",
 	"message.ballisticmissiles.smoke_debug_stats": "Geprüft: %s · Übersprungen (freier Himmel): %s",
 	"message.ballisticmissiles.smoke_debug_hits": "Decke: %s · Wand: %s · Ausweg gefunden: %s",
-	"message.ballisticmissiles.smoke_debug_legend": "gelb frei · rot Decke · orange Wand · lila im Block · grün Ausweg"
+	"message.ballisticmissiles.smoke_debug_legend": "gelb frei · rot Decke · orange Wand · lila im Block · grün Ausweg",
+	"message.ballisticmissiles.volcloud_status_on": "Volumetrische Wolken: an, Bewölkung %s %%. /volcloud aus zum Ausschalten, /volcloud <0-100> für die Wolkenmenge.",
+	"message.ballisticmissiles.volcloud_status_off": "Volumetrische Wolken: aus (Minecraft-Wolken), Bewölkung %s %%. /volcloud an zum Einschalten.",
+	"message.ballisticmissiles.volcloud_on": "Volumetrische Wolken an.",
+	"message.ballisticmissiles.volcloud_off": "Volumetrische Wolken aus - die normalen Minecraft-Wolken sind zurück.",
+	"message.ballisticmissiles.volcloud_amount": "Bewölkung auf %s %% gesetzt (Regen und Gewitter kommen noch dazu).",
+	"message.ballisticmissiles.volcloud_hint": "Die volumetrischen Wolken sind gerade aus: /volcloud an"
 }

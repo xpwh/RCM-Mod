@@ -9,6 +9,7 @@
 //  UV0     wind offset (blocks)
 //  UV1     base height, thickness (blocks)
 //  UV2     x: how far out the planes reach (blocks): the clouds fade out before their edge
+//          y: thunderstorm (low 7 bits) and a lightning flash (next 7 bits), 0-127 each
 //  Normal  direction to the sun (or the moon at night)
 
 in vec3 Position;
@@ -24,6 +25,8 @@ flat out vec2 wind;
 flat out ivec2 layer;
 flat out vec3 sunDir;
 flat out float reach;
+flat out float storm;
+flat out float lightning;
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
@@ -33,4 +36,6 @@ void main() {
     layer = UV1;
     sunDir = normalize(Normal);
     reach = float(UV2.x);
+    storm = float(UV2.y & 127) / 127.0;
+    lightning = float((UV2.y >> 7) & 127) / 127.0;
 }
