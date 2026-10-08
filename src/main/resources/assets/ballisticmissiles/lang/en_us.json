@@ -1,5 +1,9 @@
 {
-	"itemGroup.ballisticmissiles.main": "Ballistic Missiles",
+	"itemGroup.ballisticmissiles.main": "Ballistic Missiles: Missiles",
+	"itemGroup.ballisticmissiles.launch": "Ballistic Missiles: Launch & Command",
+	"itemGroup.ballisticmissiles.defense": "Ballistic Missiles: Air Defense",
+	"itemGroup.ballisticmissiles.protection": "Ballistic Missiles: Protection & Radiation",
+	"itemGroup.ballisticmissiles.blocks": "Ballistic Missiles: Blocks",
 	"block.ballisticmissiles.launch_pad": "Launch Pad",
 	"item.ballisticmissiles.ballistic_missile": "Ballistic Missile",
 	"item.ballisticmissiles.nuclear_missile": "Nuclear Ballistic Missile",

@@ -451,50 +451,55 @@ public final class ModRegistry {
 	public static final SimpleParticleType SMOKE = particle("smoke");
 	public static final SimpleParticleType FIRE = particle("fire");
 
-	// ---------- Creative tab ----------
-	public static final CreativeModeTab TAB = Registry.register(
-		BuiltInRegistries.CREATIVE_MODE_TAB,
-		BallisticMissiles.id("main"),
-		FabricItemGroup.builder()
-			.title(Component.translatable("itemGroup.ballisticmissiles.main"))
-			.icon(() -> new ItemStack(missileItem(MissileType.NUCLEAR)))
-			.displayItems((params, output) -> {
-				output.accept(LAUNCH_PAD_ITEM);
-				output.accept(MISSILE_SILO_ITEM);
-				output.accept(SUBMARINE_ITEM);
-				output.accept(MOBILE_LAUNCHER_ITEM);
-				output.accept(TARGET_DESIGNATOR);
-				output.accept(COMMAND_CENTER_ITEM);
-				output.accept(RADAR_ITEM);
-				output.accept(AIR_DEFENSE_ITEM);
-				output.accept(CIWS_ITEM);
-				output.accept(IRON_DOME_ITEM);
-				output.accept(DECOY_LAUNCHER_ITEM);
-				output.accept(LASER_DEFENSE_ITEM);
-				output.accept(JAMMER_ITEM);
-				output.accept(AIRSTRIKE_RADIO);
-				output.accept(GEIGER_COUNTER);
-				output.accept(HAZMAT_HELMET);
-				output.accept(HAZMAT_SUIT);
-				output.accept(HAZMAT_LEGGINGS);
-				output.accept(HAZMAT_BOOTS);
-				output.accept(REINFORCED_CONCRETE_ITEM);
-				output.accept(BLAST_DOOR_ITEM);
-				output.accept(SEA_MINE_ITEM);
-				output.accept(SCORCHED_EARTH_ITEM);
-				output.accept(SMOLDERING_EARTH_ITEM);
-				output.accept(CHARRED_LOG_ITEM);
-				output.accept(ASH_ITEM);
-				output.accept(CRATER_GLASS_ITEM);
-				output.accept(MOLTEN_ROCK_ITEM);
-				output.accept(TRINITITE_ITEM);
-				output.accept(FALLOUT_ITEM);
-				for (MissileType type : MissileType.values()) {
-					output.accept(missileItem(type));
-				}
-			})
-			.build()
-	);
+	// ---------- Creative tabs ----------
+	/** Every missile and warhead. */
+	public static final CreativeModeTab TAB = tab("main", () -> missileItem(MissileType.NUCLEAR), output -> {
+		for (MissileType type : MissileType.values()) {
+			output.accept(missileItem(type));
+		}
+	});
+	/** Launchers, targeting and command: everything needed to fire. */
+	public static final CreativeModeTab TAB_LAUNCH = tab("launch", () -> LAUNCH_PAD_ITEM, output -> {
+		output.accept(LAUNCH_PAD_ITEM);
+		output.accept(MISSILE_SILO_ITEM);
+		output.accept(SUBMARINE_ITEM);
+		output.accept(MOBILE_LAUNCHER_ITEM);
+		output.accept(TARGET_DESIGNATOR);
+		output.accept(COMMAND_CENTER_ITEM);
+		output.accept(AIRSTRIKE_RADIO);
+	});
+	/** Air defense: radar, interceptors, guns, lasers, decoys, jammers, mines. */
+	public static final CreativeModeTab TAB_DEFENSE = tab("defense", () -> AIR_DEFENSE_ITEM, output -> {
+		output.accept(RADAR_ITEM);
+		output.accept(AIR_DEFENSE_ITEM);
+		output.accept(CIWS_ITEM);
+		output.accept(IRON_DOME_ITEM);
+		output.accept(DECOY_LAUNCHER_ITEM);
+		output.accept(LASER_DEFENSE_ITEM);
+		output.accept(JAMMER_ITEM);
+		output.accept(SEA_MINE_ITEM);
+	});
+	/** Shelter and radiation protection. */
+	public static final CreativeModeTab TAB_PROTECTION = tab("protection", () -> HAZMAT_HELMET, output -> {
+		output.accept(REINFORCED_CONCRETE_ITEM);
+		output.accept(BLAST_DOOR_ITEM);
+		output.accept(HAZMAT_HELMET);
+		output.accept(HAZMAT_SUIT);
+		output.accept(HAZMAT_LEGGINGS);
+		output.accept(HAZMAT_BOOTS);
+		output.accept(GEIGER_COUNTER);
+	});
+	/** Building blocks of the wasteland blasts leave behind. */
+	public static final CreativeModeTab TAB_BLOCKS = tab("blocks", () -> SMOLDERING_EARTH_ITEM, output -> {
+		output.accept(SCORCHED_EARTH_ITEM);
+		output.accept(SMOLDERING_EARTH_ITEM);
+		output.accept(CHARRED_LOG_ITEM);
+		output.accept(ASH_ITEM);
+		output.accept(CRATER_GLASS_ITEM);
+		output.accept(MOLTEN_ROCK_ITEM);
+		output.accept(TRINITITE_ITEM);
+		output.accept(FALLOUT_ITEM);
+	});
 
 	private ModRegistry() {
 	}
@@ -529,6 +534,18 @@ public final class ModRegistry {
 	private static SoundEvent sound(String name) {
 		var id = BallisticMissiles.id(name);
 		return Registry.register(BuiltInRegistries.SOUND_EVENT, id, SoundEvent.createVariableRangeEvent(id));
+	}
+
+	private static CreativeModeTab tab(String name, java.util.function.Supplier<Item> icon, java.util.function.Consumer<CreativeModeTab.Output> items) {
+		return Registry.register(
+			BuiltInRegistries.CREATIVE_MODE_TAB,
+			BallisticMissiles.id(name),
+			FabricItemGroup.builder()
+				.title(Component.translatable("itemGroup.ballisticmissiles." + name))
+				.icon(() -> new ItemStack(icon.get()))
+				.displayItems((params, output) -> items.accept(output))
+				.build()
+		);
 	}
 
 	private static SimpleParticleType particle(String name) {

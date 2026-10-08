@@ -1,5 +1,9 @@
 {
-	"itemGroup.ballisticmissiles.main": "Ballistische Raketen",
+	"itemGroup.ballisticmissiles.main": "Ballistic Missiles: Raketen",
+	"itemGroup.ballisticmissiles.launch": "Ballistic Missiles: Start & Steuerung",
+	"itemGroup.ballisticmissiles.defense": "Ballistic Missiles: Luftabwehr",
+	"itemGroup.ballisticmissiles.protection": "Ballistic Missiles: Schutz & Strahlung",
+	"itemGroup.ballisticmissiles.blocks": "Ballistic Missiles: Blöcke",
 	"block.ballisticmissiles.launch_pad": "Startrampe",
 	"item.ballisticmissiles.ballistic_missile": "Ballistische Rakete",
 	"item.ballisticmissiles.nuclear_missile": "Ballistische Atomrakete",

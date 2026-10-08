@@ -65,7 +65,7 @@ public final class JetClientTicker {
 		double lead = 78 - miss / JetEntity.SOUND_SPEED;
 		if (miss < 160 && ticksToClosest > lead - 2 && ticksToClosest <= lead + 2) {
 			jet.clientFlybyAt = jet.tickCount;
-			mc.getSoundManager().play(new EntityFollowSound(jet, ModRegistry.A10_FLYBY, 1.0F, 420.0));
+			mc.getSoundManager().play(new EntityFollowSound(jet, ModRegistry.A10_FLYBY, 1.0F, 750.0));
 		}
 	}
 
