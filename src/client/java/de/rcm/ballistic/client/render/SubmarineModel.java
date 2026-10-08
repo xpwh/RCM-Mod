@@ -5,7 +5,9 @@ import static de.rcm.ballistic.client.render.StructureKit.GLASS;
 import static de.rcm.ballistic.client.render.StructureKit.HAZE_DARK;
 import static de.rcm.ballistic.client.render.StructureKit.RED_LAMP;
 import static de.rcm.ballistic.client.render.StructureKit.STEEL;
+import static de.rcm.ballistic.client.render.StructureKit.SUB_DECK;
 import static de.rcm.ballistic.client.render.StructureKit.SUB_HULL;
+import static de.rcm.ballistic.client.render.StructureKit.SUB_TILES;
 import static de.rcm.ballistic.client.render.StructureKit.WHITE;
 import static de.rcm.ballistic.client.render.StructureKit.v;
 
@@ -22,7 +24,7 @@ final class SubmarineModel {
 	static final float AXIS_Y = 2.2F;
 	static final float DECK_Y = AXIS_Y + HULL_RADIUS + 0.35F;
 	/** Hatch positions along the missile deck; the one at z = 0 belongs to the live tube. */
-	private static final float[] HATCHES = {-4.2F, -2.8F, -1.4F, 0.0F, 1.4F, 2.8F};
+	private static final float[] HATCHES = {-8.4F, -7.0F, -5.6F, -4.2F, -2.8F, -1.4F, 0.0F, 1.4F, 2.8F};
 
 	static final BoxMesh HULL = buildHull();
 	/** The live tube's hatch, hinged at its aft edge (z = -0.45), drawn closed. */
@@ -35,19 +37,39 @@ final class SubmarineModel {
 	private static BoxMesh buildHull() {
 		BoxMesh.Builder b = new BoxMesh.Builder();
 		Vector3f fwd = v(0, 0, 1);
-		// pressure hull: rounded bow, long parallel midbody, tapering stern
-		b.revolve(SUB_HULL, v(0, AXIS_Y, -17.0F), fwd, new float[][] {
+		// pressure hull under its anechoic tiles: rounded bow, long parallel midbody, tapering stern
+		b.revolve(SUB_TILES, v(0, AXIS_Y, -17.0F), fwd, new float[][] {
 			{0.0F, 0.0F}, {0.4F, 0.55F}, {2.0F, 1.25F}, {4.5F, 1.85F}, {7.0F, HULL_RADIUS}, {28.0F, HULL_RADIUS},
 			{30.6F, 1.95F}, {32.4F, 1.5F}, {33.5F, 0.85F}, {34.0F, 0.0F}
 		}, 28);
-		// missile deck "turtleback" with the row of hatches
-		b.hexa(SUB_HULL,
-			v(-1.3F, AXIS_Y + 1.5F, -5.6F), v(1.3F, AXIS_Y + 1.5F, -5.6F), v(0.9F, DECK_Y, -5.0F), v(-0.9F, DECK_Y, -5.0F),
+		// the long missile deck "turtleback" aft of the sail, with its row of tube hatches
+		b.hexa(SUB_DECK,
+			v(-1.3F, AXIS_Y + 1.5F, -9.9F), v(1.3F, AXIS_Y + 1.5F, -9.9F), v(0.9F, DECK_Y, -9.3F), v(-0.9F, DECK_Y, -9.3F),
 			v(-1.3F, AXIS_Y + 1.5F, 4.4F), v(1.3F, AXIS_Y + 1.5F, 4.4F), v(0.9F, DECK_Y, 3.8F), v(-0.9F, DECK_Y, 3.8F));
 		for (float z : HATCHES) {
 			if (z != 0.0F) {
 				b.box(-0.45F, DECK_Y, z - 0.45F, 0.45F, DECK_Y + 0.12F, z + 0.45F, HAZE_DARK);
+				b.box(-0.4F, DECK_Y + 0.12F, z - 0.47F, 0.4F, DECK_Y + 0.16F, z - 0.39F, STEEL); // hinge
 			}
+		}
+		// limber holes: rows of flood openings along both sides of the casing
+		for (float z = -9.8F; z < 10.8F; z += 0.7F) {
+			if (z > 5.2F && z < 10.8F) {
+				continue; // under the sail
+			}
+			for (float side : new float[] {-1.0F, 1.0F}) {
+				float x = side * 1.36F;
+				b.box(x - 0.06F, AXIS_Y + 1.52F, z, x + 0.06F, AXIS_Y + 1.62F, z + 0.38F, BLACK);
+			}
+		}
+		// flank sonar arrays near the bow and the towed-array fairing along the port side
+		for (float side : new float[] {-1.0F, 1.0F}) {
+			b.box(side * 2.08F - 0.04F, AXIS_Y - 0.7F, 9.0F, side * 2.08F + 0.04F, AXIS_Y + 0.7F, 12.5F, HAZE_DARK);
+		}
+		b.beam(v(1.92F, AXIS_Y + 0.85F, -9.8F), v(1.92F, AXIS_Y + 0.85F, 9.0F), 0.16F, 0.16F, SUB_HULL);
+		// rescue hatches fore and aft, where a rescue vehicle can mate
+		for (float z : new float[] {-10.6F, 11.0F}) {
+			b.revolve(HAZE_DARK, v(0, AXIS_Y + HULL_RADIUS - 0.05F, z), v(0, 1, 0), new float[][] {{0.0F, 0.55F}, {0.12F, 0.55F}, {0.12F, 0.0F}}, 14);
 		}
 		// the open tube mouth under the live hatch
 		b.box(-0.42F, DECK_Y - 0.02F, -0.42F, 0.42F, DECK_Y + 0.01F, 0.42F, BLACK);

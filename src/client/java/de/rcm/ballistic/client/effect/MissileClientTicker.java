@@ -12,6 +12,7 @@ import de.rcm.ballistic.entity.ReentryVehicleEntity;
 import net.minecraft.world.entity.Entity;
 import de.rcm.ballistic.entity.MissileTrajectory;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -80,9 +81,101 @@ public final class MissileClientTicker {
 		}
 	}
 
+	/** Height of the water surface at or below {@code pos} (within 40 blocks), or NaN if there is none. */
+	private static double waterSurfaceBelow(Minecraft mc, Vec3 pos) {
+		BlockPos.MutableBlockPos p = BlockPos.containing(pos).mutable();
+		for (int i = 0; i < 40 && mc.level != null; i++, p.move(0, -1, 0)) {
+			if (!mc.level.getFluidState(p).isEmpty()) {
+				return p.getY() + mc.level.getFluidState(p).getHeight(mc.level, p);
+			}
+		}
+		return Double.NaN;
+	}
+
+	/**
+	 * Submarine launch: a burst of gas from the opened tube, the missile rising in a column of
+	 * bubbles, then breaking the surface in a dome of water and a tall column of spray, leaving a
+	 * ring of foam behind - and water streaming off it as it hangs in the air before the motor lights.
+	 */
+	private static void seaEject(Minecraft mc, MissileEntity missile, float scale) {
+		Vec3 pos = missile.position();
+		Vec3 top = missile.getSiloTop();
+		int age = missile.clientStateAge;
+		float len = missile.getMissileType().length * missile.getMissileType().scale;
+		if (age < 5) {
+			for (int i = 0; i < 40; i++) {
+				ClientEffects.vanilla(ParticleTypes.BUBBLE, top.x + ClientEffects.gauss() * 0.6, top.y + ClientEffects.rand(), top.z + ClientEffects.gauss() * 0.6,
+					ClientEffects.gauss() * 0.15, 0.3 + ClientEffects.rand() * 0.4, ClientEffects.gauss() * 0.15);
+			}
+		}
+		boolean submerged = !mc.level.getFluidState(BlockPos.containing(pos)).isEmpty();
+		if (submerged) {
+			for (int i = 0; i < 14; i++) {
+				double along = ClientEffects.rand() * len;
+				ClientEffects.vanilla(i % 3 == 0 ? ParticleTypes.BUBBLE : ParticleTypes.BUBBLE_COLUMN_UP,
+					pos.x + ClientEffects.gauss() * 0.4, pos.y + along, pos.z + ClientEffects.gauss() * 0.4, 0, 0.2, 0);
+			}
+			for (int i = 0; i < 6; i++) {
+				ClientEffects.vanilla(ParticleTypes.BUBBLE, pos.x + ClientEffects.gauss() * 0.7, pos.y - ClientEffects.rand(), pos.z + ClientEffects.gauss() * 0.7, 0, 0.4, 0);
+			}
+			return;
+		}
+		if (!missile.clientBroached) {
+			missile.clientBroached = true;
+			double sy = waterSurfaceBelow(mc, pos);
+			if (!Double.isNaN(sy)) {
+				broach(mc, new Vec3(pos.x, sy, pos.z), scale);
+			}
+		}
+		// water streaming off the body while it hangs above the sea
+		for (int i = 0; i < 4; i++) {
+			ClientEffects.vanilla(ParticleTypes.FALLING_WATER, pos.x + ClientEffects.gauss() * 0.3, pos.y + ClientEffects.rand() * len, pos.z + ClientEffects.gauss() * 0.3, 0, 0, 0);
+		}
+	}
+
+	private static void broach(Minecraft mc, Vec3 s, float scale) {
+		// tall column of spray thrown up with the missile, falling back
+		for (int i = 0; i < 70; i++) {
+			CloudParticle p = ClientEffects.cloud(false, s.x + ClientEffects.gauss() * 0.5, s.y, s.z + ClientEffects.gauss() * 0.5,
+				ClientEffects.gauss() * 0.12, 0.5 + ClientEffects.rand() * 1.3, ClientEffects.gauss() * 0.12);
+			if (p != null) {
+				p.configure(40 + (int) (ClientEffects.rand() * 40), 0.8F * scale, 3.5F * scale, 0xFFFFFF, 0xDCE4E8, 0.85F).physics(0.95F, -0.035F).wind(0.3F);
+			}
+		}
+		// the dome of water bursting outwards
+		for (int i = 0; i < 46; i++) {
+			double a = ClientEffects.rand() * Mth.TWO_PI;
+			double sp = 0.35 + ClientEffects.rand() * 0.4;
+			CloudParticle p = ClientEffects.cloud(false, s.x + Math.cos(a), s.y + 0.3, s.z + Math.sin(a), Math.cos(a) * sp, 0.35 + ClientEffects.rand() * 0.35, Math.sin(a) * sp);
+			if (p != null) {
+				p.configure(30 + (int) (ClientEffects.rand() * 25), 0.7F * scale, 2.6F * scale, 0xF4F8FA, 0xC8D4DA, 0.8F).physics(0.93F, -0.03F);
+			}
+			ClientEffects.vanilla(ParticleTypes.SPLASH, s.x + Math.cos(a) * 1.5, s.y + 0.2, s.z + Math.sin(a) * 1.5, Math.cos(a) * sp, 0.5, Math.sin(a) * sp);
+		}
+		// ring of white foam spreading on the water
+		for (int i = 0; i < 30; i++) {
+			double a = ClientEffects.rand() * Mth.TWO_PI;
+			CloudParticle p = ClientEffects.cloud(false, s.x + Math.cos(a) * 1.4, s.y + 0.15, s.z + Math.sin(a) * 1.4, Math.cos(a) * 0.12, 0.0, Math.sin(a) * 0.12);
+			if (p != null) {
+				p.configure(220 + (int) (ClientEffects.rand() * 80), 1.6F * scale, 5.5F * scale, 0xFFFFFF, 0xE6EEF0, 0.55F).physics(0.96F, 0.0F);
+			}
+		}
+		for (int i = 0; i < 30; i++) {
+			ClientEffects.vanilla(ParticleTypes.FALLING_WATER, s.x + ClientEffects.gauss() * 1.5, s.y + 2 + ClientEffects.rand() * 6, s.z + ClientEffects.gauss() * 1.5, 0, 0, 0);
+		}
+		ClientEffects.playDistant(mc, net.minecraft.sounds.SoundEvents.GENERIC_SPLASH, s, 1.0F, 0.45F);
+		ClientEffects.playDistant(mc, net.minecraft.sounds.SoundEvents.GENERIC_SPLASH, s, 0.9F, 0.6F);
+		ClientEffects.playDistant(mc, ModRegistry.EXPLOSION_SUB, s, (float) Math.max(0.0, 0.7 - ClientEffects.distanceToCamera(mc, s) / 400.0), 0.6F);
+		ClientEffects.addShake((float) Math.max(0.0, 0.8 - ClientEffects.distanceToCamera(mc, s) / 80.0));
+	}
+
 	/** Cold launch: the gas generator blasts steam and smoke out of the silo shaft. */
 	private static void eject(Minecraft mc, MissileEntity missile, float scale) {
 		Vec3 top = missile.getSiloTop();
+		if (!mc.level.getFluidState(BlockPos.containing(top.x, top.y + 0.5, top.z)).isEmpty()) {
+			seaEject(mc, missile, scale);
+			return;
+		}
 		int age = missile.clientStateAge;
 		int count = age < 6 ? 30 : 10;
 		for (int i = 0; i < count; i++) {
@@ -102,12 +195,63 @@ public final class MissileClientTicker {
 		}
 	}
 
+	/** True when the missile stands (or stood) on a launch pad, whose flame trench points along +X. */
+	private static boolean onPad(MissileEntity missile) {
+		Minecraft mc = Minecraft.getInstance();
+		return mc.level != null && mc.level.getBlockState(BlockPos.containing(missile.getLaunchPos())).is(ModRegistry.LAUNCH_PAD);
+	}
+
+	/**
+	 * Launch pad at ignition: the deluge system floods the table with water, and the exhaust, turned
+	 * into a wall of steam, is blasted down the flame trench and thrown up by the deflector at its end.
+	 */
+	private static void padIgnition(double x, double y, double z, int age, float scale) {
+		int plume = 5 + Math.min(14, age / 2);
+		for (int i = 0; i < plume; i++) {
+			double speed = 1.1 + ClientEffects.rand() * 1.1;
+			CloudParticle p = ClientEffects.cloud(false, x + 0.6 + ClientEffects.rand() * 0.8, y - 0.1, z + ClientEffects.gauss() * 0.3,
+				speed, 0.12 + ClientEffects.rand() * 0.35, ClientEffects.gauss() * 0.12);
+			if (p != null) {
+				p.configure(160 + (int) (ClientEffects.rand() * 100), 1.6F * scale, 9.0F * scale, 0xF6F6F4, 0xB4B2AE, 0.9F)
+					.physics(0.93F, 0.007F)
+					.shade(0.78F + ClientEffects.rand() * 0.25F)
+					.turbulence(0.03F);
+			}
+		}
+		// fire licking out of the trench mouth
+		for (int i = 0; i < 2; i++) {
+			CloudParticle f = ClientEffects.cloud(true, x + 1.0 + ClientEffects.rand() * 2.5, y, z + ClientEffects.gauss() * 0.3, 1.2, 0.15, 0);
+			if (f != null) {
+				f.configure(10 + (int) (ClientEffects.rand() * 8), 1.0F * scale, 2.6F * scale, 0xFFE8B0, 0xFF6010, 0.95F).physics(0.85F, 0.0F);
+			}
+		}
+		// deluge: water gushing from the ring nozzles, flashing to steam around the table
+		for (int i = 0; i < 6; i++) {
+			double a = ClientEffects.rand() * Mth.TWO_PI;
+			double nx = x + Math.cos(a) * 0.9;
+			double nz = z + Math.sin(a) * 0.9;
+			ClientEffects.vanilla(ParticleTypes.SPLASH, nx, y + 0.1, nz, Math.cos(a) * 0.4, 0.3, Math.sin(a) * 0.4);
+			ClientEffects.vanilla(ParticleTypes.FALLING_WATER, nx, y + 0.3, nz, 0, 0, 0);
+		}
+		for (int i = 0; i < 3; i++) {
+			double a = ClientEffects.rand() * Mth.TWO_PI;
+			CloudParticle s = ClientEffects.cloud(false, x + Math.cos(a) * 1.2, y + 0.2, z + Math.sin(a) * 1.2, Math.cos(a) * 0.35, 0.08, Math.sin(a) * 0.35);
+			if (s != null) {
+				s.configure(90 + (int) (ClientEffects.rand() * 50), 1.2F * scale, 5.0F * scale, 0xFFFFFF, 0xE2E2E0, 0.7F).physics(0.9F, 0.006F);
+			}
+		}
+	}
+
 	private static void ignition(MissileEntity missile, float scale) {
 		double x = missile.getX();
 		double y = missile.getY();
 		double z = missile.getZ();
 		int age = missile.clientStateAge;
-		int count = 4 + Math.min(14, age / 2);
+		boolean pad = onPad(missile);
+		if (pad) {
+			padIgnition(x, y, z, age, scale);
+		}
+		int count = (4 + Math.min(14, age / 2)) / (pad ? 3 : 1);
 
 		// Smoke rolling out along the ground from the pad.
 		for (int i = 0; i < count; i++) {
@@ -241,7 +385,23 @@ public final class MissileClientTicker {
 		// Launch cloud keeps growing for the first seconds of the climb.
 		if (age < 50) {
 			Vec3 pad = path.position(0);
-			for (int i = 0; i < 8; i++) {
+			if (onPad(missile)) {
+				// still roaring out of the flame trench and boiling up off the deflector
+				padIgnition(pad.x, pad.y, pad.z, 30, scale * (1.0F - age / 70.0F));
+			}
+			double sea = age < 30 ? waterSurfaceBelow(mc, pad) : Double.NaN;
+			if (!Double.isNaN(sea) && pad.y - sea < 25.0) {
+				// lit just above the sea: the exhaust hits the water and flashes it to steam
+				for (int i = 0; i < 6; i++) {
+					double a = ClientEffects.rand() * Mth.TWO_PI;
+					double sp = 0.4 + ClientEffects.rand() * 0.6;
+					CloudParticle p = ClientEffects.cloud(false, pad.x + Math.cos(a), sea + 0.3, pad.z + Math.sin(a), Math.cos(a) * sp, 0.08 + ClientEffects.rand() * 0.1, Math.sin(a) * sp);
+					if (p != null) {
+						p.configure(160 + (int) (ClientEffects.rand() * 80), 1.5F * scale, 8.0F * scale, 0xFFFFFF, 0xD6DADC, 0.8F).physics(0.94F, 0.006F).turbulence(0.02F);
+					}
+				}
+			}
+			for (int i = 0; i < (onPad(missile) ? 3 : 8); i++) {
 				double a = ClientEffects.rand() * Mth.TWO_PI;
 				double sp = 0.6 + ClientEffects.rand() * 0.8;
 				CloudParticle p = ClientEffects.cloud(false, pad.x, pad.y + 0.5, pad.z, Math.cos(a) * sp, 0.05, Math.sin(a) * sp);

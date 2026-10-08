@@ -88,6 +88,8 @@ public class MissileEntity extends Entity implements AirThreat {
 	public int lastSeenState = -1;
 	public boolean engineSoundStarted;
 	public boolean incomingPlayed;
+	/** Client: a submarine-launched missile has broken the surface (spray already shown). */
+	public boolean clientBroached;
 	public @Nullable Vec3 lastNozzlePos;
 	public boolean jetSoundStarted;
 	public boolean sonicBoomPlayed;
