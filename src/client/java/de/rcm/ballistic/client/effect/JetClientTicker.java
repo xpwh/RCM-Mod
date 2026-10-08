@@ -2,6 +2,8 @@ package de.rcm.ballistic.client.effect;
 
 import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.client.particle.CloudParticle;
+import de.rcm.ballistic.client.sound.DistantBurstSound;
+import de.rcm.ballistic.client.sound.EntityFollowSound;
 import de.rcm.ballistic.client.sound.JetSound;
 import de.rcm.ballistic.entity.JetEntity;
 import de.rcm.ballistic.entity.JetType;
@@ -11,6 +13,60 @@ import net.minecraft.world.phys.Vec3;
 /** Client side of the strike jet: engine sound layers, exhaust trail, wingtip vortices, sonic boom. */
 public final class JetClientTicker {
 	private JetClientTicker() {
+	}
+
+	/**
+	 * A-10 cannon, cut to the real burst: the BRRRT (a real GAU-8 recording) starts when the sound of
+	 * the first rounds reaches us - you see the impacts first - and stops exactly as long after the
+	 * gun stops, then the rumble rolls away. Loud: two layered instances, never distance-faded away.
+	 */
+	private static void warthogGun(Minecraft mc, JetEntity jet, Vec3 center, Vec3 dir, Vec3 ear) {
+		boolean firing = jet.isFiring();
+		if (firing && !jet.clientWasFiring) {
+			jet.clientGunSoundFrom = center.add(dir.scale(7.5));
+			jet.clientGunSoundIn = (int) (jet.clientGunSoundFrom.distanceTo(ear) / JetEntity.SOUND_SPEED);
+			jet.clientGunStopIn = -1;
+		} else if (!firing && jet.clientWasFiring) {
+			jet.clientGunStopIn = (int) (center.add(dir.scale(7.5)).distanceTo(ear) / JetEntity.SOUND_SPEED);
+		}
+		jet.clientWasFiring = firing;
+		double d = jet.clientGunSoundFrom.distanceTo(ear);
+		float volume = (float) Math.max(0.35, 1.25 - d / 1600.0);
+		if (jet.clientGunSoundIn >= 0 && jet.clientGunSoundIn-- == 0) {
+			DistantBurstSound a = new DistantBurstSound(ModRegistry.A10_GUN, jet.clientGunSoundFrom, volume, 1.0F);
+			DistantBurstSound b = new DistantBurstSound(ModRegistry.A10_GUN, jet.clientGunSoundFrom, volume, 0.985F);
+			mc.getSoundManager().play(a);
+			mc.getSoundManager().play(b);
+			jet.clientGunSounds = new DistantBurstSound[] {a, b};
+			ClientEffects.addShake((float) Math.max(0.0, 1.1 - d / 300.0));
+		}
+		if (jet.clientGunSoundIn < 0 && jet.clientGunStopIn >= 0 && jet.clientGunStopIn-- == 0) {
+			if (jet.clientGunSounds instanceof DistantBurstSound[] sounds) {
+				for (DistantBurstSound s : sounds) {
+					s.release();
+				}
+			}
+			jet.clientGunSounds = null;
+			ClientEffects.playDistant(mc, ModRegistry.A10_GUN_TAIL, jet.clientGunSoundFrom, volume, 1.0F);
+		}
+	}
+
+	/** Recorded A-10 pass, started so that its loudest moment comes when the jet is closest to us. */
+	private static void warthogFlyby(Minecraft mc, JetEntity jet, Vec3 center, Vec3 ear) {
+		Vec3 v = new Vec3(jet.getX() - jet.xo, jet.getY() - jet.yo, jet.getZ() - jet.zo);
+		double speed2 = v.lengthSqr();
+		if (speed2 < 0.25 || jet.tickCount - jet.clientFlybyAt < 220) {
+			return;
+		}
+		Vec3 rel = ear.subtract(center);
+		double ticksToClosest = rel.dot(v) / speed2;
+		double miss = rel.subtract(v.scale(ticksToClosest)).length();
+		// the recording peaks 3.9 s (78 ticks) in; the sound itself needs miss / 17 ticks to arrive
+		double lead = 78 - miss / JetEntity.SOUND_SPEED;
+		if (miss < 160 && ticksToClosest > lead - 2 && ticksToClosest <= lead + 2) {
+			jet.clientFlybyAt = jet.tickCount;
+			mc.getSoundManager().play(new EntityFollowSound(jet, ModRegistry.A10_FLYBY, 1.0F, 420.0));
+		}
 	}
 
 	public static void tick(JetEntity jet) {
@@ -61,21 +117,10 @@ public final class JetClientTicker {
 			}
 		}
 
-		// A-10 cannon: the burst is heard only once its sound has travelled to us (you see the impacts
-		// first, then the BRRRT rolls in), and loud: two layered instances, never distance-faded away
-		boolean firing = jet.isFiring();
 		Vec3 earNow = mc.gameRenderer.getMainCamera().position();
-		if (firing && !jet.clientWasFiring) {
-			jet.clientGunSoundFrom = center.add(dir.scale(7.5));
-			jet.clientGunSoundIn = (int) (jet.clientGunSoundFrom.distanceTo(earNow) / JetEntity.SOUND_SPEED);
-		}
-		jet.clientWasFiring = firing;
-		if (jet.clientGunSoundIn >= 0 && jet.clientGunSoundIn-- == 0) {
-			double d = jet.clientGunSoundFrom.distanceTo(earNow);
-			float volume = (float) Math.max(0.35, 1.25 - d / 1600.0);
-			ClientEffects.playDistant(mc, ModRegistry.A10_GUN, jet.clientGunSoundFrom, volume, 1.0F);
-			ClientEffects.playDistant(mc, ModRegistry.A10_GUN, jet.clientGunSoundFrom, volume, 0.985F);
-			ClientEffects.addShake((float) Math.max(0.0, 1.1 - d / 300.0));
+		if (type == JetType.WARTHOG) {
+			warthogGun(mc, jet, center, dir, earNow);
+			warthogFlyby(mc, jet, center, earNow);
 		}
 
 		// sonic boom: heard the moment the Mach cone trailing the jet sweeps over the listener

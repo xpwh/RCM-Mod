@@ -428,6 +428,8 @@ public final class ModRegistry {
 	public static final SoundEvent JET_SUB = sound("jet.sub");
 	public static final SoundEvent A10_GUN = sound("a10.gun");
 	public static final SoundEvent A10_ENGINE = sound("a10.engine");
+	public static final SoundEvent A10_GUN_TAIL = sound("a10.gun_tail");
+	public static final SoundEvent A10_FLYBY = sound("a10.flyby");
 	public static final SoundEvent B2_ENGINE = sound("b2.engine");
 	public static final SoundEvent SHOCK_HE = sound("explosion.shock_he");
 	public static final SoundEvent SHOCK_HEAVY = sound("explosion.shock_heavy");

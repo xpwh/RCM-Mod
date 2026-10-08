@@ -52,7 +52,7 @@ public class JetEntity extends Entity implements AirThreat {
 	private static final EntityDataAccessor<Integer> DATA_TYPE = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Boolean> DATA_FIRING = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.BOOLEAN);
 	/** A-10 gun run: opens fire this far before the target, ceases this close. */
-	private static final double GUN_OPEN = 170.0;
+	private static final double GUN_OPEN = 200.0;
 	private static final double GUN_CEASE = 55.0;
 	/** Terrain guard: climb gradient being held (decays slowly, so the nose doesn't bob). */
 	private double guardSlope = -1.0;
@@ -106,6 +106,10 @@ public class JetEntity extends Entity implements AirThreat {
 	public boolean clientWasFiring;
 	public int clientGunSoundIn = -1;
 	public Vec3 clientGunSoundFrom = Vec3.ZERO;
+	/** Client: ticks until the end of the burst is heard, the burst sounds playing (client objects), last flyby. */
+	public int clientGunStopIn = -1;
+	public @Nullable Object clientGunSounds;
+	public int clientFlybyAt = -1000;
 
 	public JetEntity(EntityType<? extends JetEntity> type, Level level) {
 		super(type, level);

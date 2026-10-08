@@ -311,6 +311,22 @@
 			}
 		]
 	},
+	"a10.gun_tail": {
+		"subtitle": "subtitles.ballisticmissiles.a10_gun",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:a10/gun_tail"
+			}
+		]
+	},
+	"a10.flyby": {
+		"subtitle": "subtitles.ballisticmissiles.a10_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:a10/flyby"
+			}
+		]
+	},
 	"a10.engine": {
 		"subtitle": "subtitles.ballisticmissiles.a10_engine",
 		"sounds": [
