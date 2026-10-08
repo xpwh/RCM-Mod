@@ -327,5 +327,7 @@
 	"tooltip.ballisticmissiles.jammer.info": "Also smears other players' radars (320 blocks), right-click: on/off",
 	"tooltip.ballisticmissiles.sea_mine.good": "boats, swimmers and mobs in the water - goes off on contact",
 	"tooltip.ballisticmissiles.sea_mine.bad": "missiles, aircraft, anything on land",
-	"tooltip.ballisticmissiles.sea_mine.info": "Place on or in water"
+	"tooltip.ballisticmissiles.sea_mine.info": "Place on or in water",
+	"message.ballisticmissiles.winter_begins": "Soot in the stratosphere is blotting out the sun - a nuclear winter is setting in. It is getting cold and dark, the harvest will fail.",
+	"message.ballisticmissiles.winter_ends": "The soot has settled - the sun is coming back."
 }

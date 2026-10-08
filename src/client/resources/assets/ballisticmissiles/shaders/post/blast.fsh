@@ -61,6 +61,7 @@ void main() {
     vec2 blast = p3.rg;      // explosion position on screen
     float onScreen = step(0.5, p3.b);
     float dust = p3.a;       // dust / smoke haze after the shock
+    float winter = p2.a;     // nuclear winter: soot in the stratosphere
 
     float aspect = OutSize.x / max(OutSize.y, 1.0);
     vec2 px = 1.0 / OutSize;
@@ -184,6 +185,16 @@ void main() {
     } else {
         col = mix(col, col * mix(vec3(1.0), tint * 1.25 + 0.15, 0.35), grade);
         col = mix(col, smoothstep(0.0, 1.0, col), 0.35 * grade);
+    }
+
+    // ---- nuclear winter: the sun dimmed behind a grey-brown soot veil, colours drained, the bright
+    // sky turned into a flat overcast
+    if (winter > 0.0) {
+        float l = luma(col);
+        col = mix(col, vec3(l), 0.6 * winter);
+        col *= 1.0 - 0.42 * winter;
+        col *= mix(vec3(1.0), vec3(0.96, 0.93, 0.88), winter);
+        col = mix(col, vec3(0.36, 0.35, 0.34), 0.35 * winter * smoothstep(0.45, 0.95, l));
     }
 
     // ---- tunnel vision and grain

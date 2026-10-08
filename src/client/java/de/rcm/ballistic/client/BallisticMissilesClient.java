@@ -104,6 +104,10 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.FalloutPayload.TYPE,
 			(payload, context) -> de.rcm.ballistic.client.effect.FalloutClient.receive(payload));
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.FalloutClient::tick);
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.WinterPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.WinterClient.receive(payload.soot()));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.WinterClient::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.WinterClient.clear());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FalloutClient.clear());
 		ClientTickEvents.END_CLIENT_TICK.register(BallisticMissilesClient::debrisTrails);
 

@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "de.rcm.ballistic.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"GrowthMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

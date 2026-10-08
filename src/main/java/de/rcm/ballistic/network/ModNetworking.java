@@ -339,7 +339,19 @@ public final class ModNetworking {
 		}
 	}
 
+	/** Server -> client: how much soot is in the stratosphere (nuclear winter, 0-1). */
+	public record WinterPayload(float soot) implements CustomPacketPayload {
+		public static final Type<WinterPayload> TYPE = new Type<>(BallisticMissiles.id("winter"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, WinterPayload> CODEC = StreamCodec.of((buf, p) -> buf.writeFloat(p.soot), buf -> new WinterPayload(buf.readFloat()));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	public static void init() {
+		PayloadTypeRegistry.playS2C().register(WinterPayload.TYPE, WinterPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(FalloutPayload.TYPE, FalloutPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(DetonationPayload.TYPE, DetonationPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(RadarDataPayload.TYPE, RadarDataPayload.CODEC);

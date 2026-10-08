@@ -19,6 +19,7 @@
 		]
 	},
 	"mixins": [
+		"ballisticmissiles.mixins.json",
 		{
 			"config": "ballisticmissiles.client.mixins.json",
 			"environment": "client"

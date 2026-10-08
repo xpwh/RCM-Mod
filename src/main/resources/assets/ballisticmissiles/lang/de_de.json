@@ -327,5 +327,7 @@
 	"tooltip.ballisticmissiles.jammer.info": "Verschmiert auch fremde Radare (320 Blöcke), Rechtsklick: ein/aus",
 	"tooltip.ballisticmissiles.sea_mine.good": "Boote, Schwimmer und Mobs im Wasser – explodiert bei Berührung",
 	"tooltip.ballisticmissiles.sea_mine.bad": "Raketen, Flugzeuge, alles an Land",
-	"tooltip.ballisticmissiles.sea_mine.info": "Auf oder ins Wasser setzen"
+	"tooltip.ballisticmissiles.sea_mine.info": "Auf oder ins Wasser setzen",
+	"message.ballisticmissiles.winter_begins": "Ruß in der Stratosphäre verdunkelt die Sonne – ein nuklearer Winter beginnt. Es wird kalt und dunkel, die Ernte bleibt aus.",
+	"message.ballisticmissiles.winter_ends": "Der Ruß hat sich gelegt – die Sonne kommt zurück."
 }

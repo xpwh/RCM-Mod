@@ -31,15 +31,22 @@ public class BallisticMissiles implements ModInitializer {
 		ServerTickEvents.END_WORLD_TICK.register(DetonationManager::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RemoteLaunch::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RadiationManager::tick);
+		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.NuclearWinter::tick);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.defense.FarTracker::tick);
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % 6000 == 0) {
 				RadiationManager.save(server);
+				de.rcm.ballistic.explosion.NuclearWinter.save(server);
 			}
 		});
 		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
+		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
+		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.NuclearWinter::save);
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
-			(handler, sender, server) -> RadiationManager.sync(handler.player.level(), handler.player));
+			(handler, sender, server) -> {
+				RadiationManager.sync(handler.player.level(), handler.player);
+				de.rcm.ballistic.explosion.NuclearWinter.sync(handler.player);
+			});
 		net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
 			(player, origin, destination) -> RadiationManager.sync(destination, player));
 		ServerLifecycleEvents.SERVER_STOPPING.register(RadiationManager::save);
@@ -48,6 +55,7 @@ public class BallisticMissiles implements ModInitializer {
 			DefenseNetwork.clear();
 			EmpManager.clear();
 			RadiationManager.clear();
+			de.rcm.ballistic.explosion.NuclearWinter.clear();
 			RemoteLaunch.clear();
 		});
 		LOGGER.info("Ballistic Missiles geladen - Startrampen bereit.");
