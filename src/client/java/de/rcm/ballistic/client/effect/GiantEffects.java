@@ -69,7 +69,6 @@ final class GiantEffects {
 			BlockState g = groundBlock(mc, pos);
 			this.ground = g != null ? g : net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState();
 			BlastShader.blast(BlastShader.Kind.UNDERGROUND, pos, 1.3, 0xC08850);
-			BlastShader.shockwave(pos, 9.0, 260.0, 0.8F);
 		}
 
 		@Override
