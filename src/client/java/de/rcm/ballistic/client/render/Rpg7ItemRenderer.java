@@ -46,18 +46,23 @@ public final class Rpg7ItemRenderer implements SpecialModelRenderer<Boolean> {
 	@Override
 	public void submit(Boolean loaded, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil, int outline) {
 		boolean withRound = Boolean.TRUE.equals(loaded);
+		poseStack.pushPose();
+		// the item transform leaves the origin at the model's corner (it shifts by -0.5 for 0..1
+		// block-space models); this mesh is built around the hand, so move back to the centre
+		poseStack.translate(0.5F, 0.5F, 0.5F);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> {
 			LAUNCHER.emit(pose, consumer, light);
 			if (withRound) {
 				WARHEAD.emit(pose, consumer, light);
 			}
 		});
+		poseStack.popPose();
 	}
 
 	@Override
 	public void getExtents(Consumer<Vector3fc> output) {
-		output.accept(new Vector3f(-0.1F, -0.1F, -0.85F));
-		output.accept(new Vector3f(0.08F, 0.2F, 0.66F));
+		output.accept(new Vector3f(0.4F, 0.4F, -0.35F));
+		output.accept(new Vector3f(0.58F, 0.7F, 1.16F));
 	}
 
 	@Override
