@@ -421,22 +421,22 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 
 		// ===== lower handguard: straight and slab-sided (no palm swells), the ferrule and the retainer with its lever
 		loft(b, AK_LAMINATE,
-			new float[] {-0.242F, 0.104F, 0.04F, 0.027F, 0.008F},
-			new float[] {-0.258F, 0.104F, 0.036F, 0.03F, 0.009F},
-			new float[] {-0.452F, 0.104F, 0.037F, 0.0295F, 0.009F},
-			new float[] {-0.468F, 0.104F, 0.042F, 0.028F, 0.008F});
-		loft(b, AK_BLUED, new float[] {-0.245F, 0.108F, 0.036F, 0.03F, 0.01F}, new float[] {-0.24F, 0.108F, 0.036F, 0.03F, 0.01F});
-		loft(b, AK_BLUED, new float[] {-0.482F, 0.108F, 0.038F, 0.031F, 0.01F}, new float[] {-0.468F, 0.108F, 0.038F, 0.031F, 0.01F});
+			new float[] {-0.242F, 0.11F, 0.04F, 0.027F, 0.006F},
+			new float[] {-0.258F, 0.11F, 0.036F, 0.03F, 0.007F},
+			new float[] {-0.452F, 0.11F, 0.037F, 0.0295F, 0.007F},
+			new float[] {-0.468F, 0.11F, 0.042F, 0.028F, 0.006F});
+		loft(b, AK_BLUED, new float[] {-0.245F, 0.112F, 0.036F, 0.03F, 0.008F}, new float[] {-0.24F, 0.112F, 0.036F, 0.03F, 0.008F});
+		loft(b, AK_BLUED, new float[] {-0.482F, 0.112F, 0.038F, 0.031F, 0.008F}, new float[] {-0.468F, 0.112F, 0.038F, 0.031F, 0.008F});
 		b.beam(v(0.031F, 0.06F, -0.475F), v(0.034F, 0.09F, -0.47F), 0.006F, 0.004F, AK_WORN);
 
 		// ===== gas tube with the upper handguard, vent holes ahead of it
 		b.revolve(AK_BLUED, v(0, 0.135F, -0.25F), v(0, 0, -1), new float[][] {{0.0F, 0.0135F}, {0.29F, 0.0135F}}, 10);
+		// (it rests on the lower handguard with only a hairline between them)
 		loft(b, AK_LAMINATE,
-			new float[] {-0.25F, 0.156F, 0.111F, 0.02F, 0.012F},
-			new float[] {-0.3F, 0.158F, 0.11F, 0.021F, 0.012F},
-			new float[] {-0.42F, 0.157F, 0.11F, 0.021F, 0.012F},
-			new float[] {-0.445F, 0.154F, 0.112F, 0.019F, 0.011F});
-		b.box(-0.0215F, 0.13F, -0.4F, 0.0215F, 0.133F, -0.29F, BLACK); // the groove along each side
+			new float[] {-0.25F, 0.155F, 0.1115F, 0.0205F, 0.013F},
+			new float[] {-0.3F, 0.157F, 0.1115F, 0.0215F, 0.014F},
+			new float[] {-0.42F, 0.156F, 0.1115F, 0.0215F, 0.014F},
+			new float[] {-0.445F, 0.153F, 0.1115F, 0.0195F, 0.012F});
 		loft(b, AK_BLUED, new float[] {-0.452F, 0.152F, 0.114F, 0.017F, 0.006F}, new float[] {-0.445F, 0.152F, 0.114F, 0.017F, 0.006F});
 		for (float z : new float[] {-0.468F, -0.484F, -0.5F}) {
 			for (float sx : new float[] {-1.0F, 1.0F}) {
