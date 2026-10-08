@@ -40,6 +40,20 @@ public final class AkAnim {
 	static final Vector3f HANDLE = new Vector3f(0.092F, 0.098F, 0.004F);
 	/** Off-screen spot by the chest rig where magazines come from and go to. */
 	static final Vector3f POUCH = new Vector3f(-0.26F, -0.46F, 0.3F);
+	/** The way to the pouch and back, over {@code away} = 0..1: {away, x, y, z, roll, pitch}. */
+	private static final Keys POUCH_PATH = new Keys(
+		new float[] {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F},
+		new float[] {0.3F, -0.03F, -0.1F, -0.005F, -8.0F, -6.0F},
+		new float[] {0.65F, -0.12F, -0.27F, 0.08F, -22.0F, -16.0F},
+		new float[] {1.0F, POUCH.x, POUCH.y, POUCH.z, -35.0F, -25.0F});
+	/** The old magazine rocking out of the well: thumb on the paddle, a firm push forward, out. */
+	private static final Keys OLD_OUT = new Keys(
+		new float[] {0.0F, 0.0F}, new float[] {11.0F, 0.0F}, new float[] {13.0F, 0.35F}, new float[] {15.5F, 0.95F}, new float[] {17.0F, 1.0F});
+	/** When the fresh magazine takes over from the old one (both out of view by then). */
+	private static final float FRESH = 23.0F;
+	/** Reload (by its start) during which the rifle still had a magazine in before it was let fall. */
+	private long hadMag = Long.MIN_VALUE;
+
 	/** Bolt travel at full recoil. */
 	public static final float BOLT_TRAVEL = 0.115F;
 
@@ -61,10 +75,11 @@ public final class AkAnim {
 	private static void magPose(Matrix4f m, float out, float away) {
 		m.identity();
 		if (away > 0.0F) {
-			float a = smooth(away);
-			m.translate(POUCH.x * a, POUCH.y * a + 0.06F * Mth.sin(a * Mth.PI), POUCH.z * a);
-			m.rotate(Axis.ZP.rotationDegrees(-35.0F * a));
-			m.rotate(Axis.XP.rotationDegrees(-25.0F * a));
+			// down past the trigger guard, then back and out of view to the pouch: {x, y, z, roll, pitch}
+			float a = Mth.clamp(away, 0.0F, 1.0F);
+			m.translate(POUCH_PATH.at(a, 0), POUCH_PATH.at(a, 1), POUCH_PATH.at(a, 2));
+			m.rotate(Axis.ZP.rotationDegrees(POUCH_PATH.at(a, 3)));
+			m.rotate(Axis.XP.rotationDegrees(POUCH_PATH.at(a, 4)));
 		}
 		m.translate(0.0F, 0.03F, -0.085F);
 		m.rotate(Axis.XP.rotationDegrees(-28.0F * out));
@@ -154,52 +169,68 @@ public final class AkAnim {
 		}
 
 		float r = now - state.reloadStart();
-		Vector3f hold = new Vector3f();
-		Matrix4f m = this.mag;
-		float out = 0.0F;
-		float away = 0.0F;
-		boolean fresh = false;
-		if (r < AkItem.T_MAG_OUT) {
-			// reaching for the magazine
-			magPose(m, 0.0F, 0.0F);
-			m.transformPosition(MAG_HOLD, hold);
-			swing(HANDGUARD, hold, r / 8.0F, this.leftHand);
-		} else if (r < 17.0F) {
-			out = (r - AkItem.T_MAG_OUT) / 5.0F;
-		} else if (r < 24.0F) {
-			out = 1.0F;
-			away = (r - 17.0F) / 7.0F;
-		} else if (r < AkItem.T_MAG_IN) {
-			fresh = true;
-			out = 1.0F;
-			away = 1.0F - (r - 24.0F) / 6.0F;
-		} else if (r < AkItem.T_MAG_IN + 3) {
-			fresh = true;
-			out = 1.0F - smooth((r - AkItem.T_MAG_IN) / 3.0F);
-		} else {
-			fresh = true;
+		boolean empty = state.reloadKind() == GunState.EMPTY;
+		if (r < AkItem.T_MAG_DROP && state.hasMag()) {
+			this.hadMag = state.reloadStart();
 		}
-		if (r >= AkItem.T_MAG_OUT) {
-			magPose(m, smooth(out), away);
+		boolean oldMag = state.hasMag() || this.hadMag == state.reloadStart();
+		// a speed reload lets the old magazine go once it is out of the well
+		boolean dropped = empty && oldMag && r >= AkItem.T_MAG_DROP;
+		Matrix4f m = this.mag;
+		Vector3f hold = new Vector3f();
+		Matrix4f seated = new Matrix4f();
+		magPose(seated, 0.0F, 0.0F);
+		Vector3f seatedHold = seated.transformPosition(MAG_HOLD, new Vector3f());
+
+		if (r < FRESH) {
+			// the old magazine: rocked forward out of the well, then away to the pouch (or let fall)
+			float out = Math.max(0.0F, OLD_OUT.at(r, 0));
+			if (dropped) {
+				magPose(m, OLD_OUT.at(AkItem.T_MAG_DROP, 0), 0.0F);
+				float f = r - AkItem.T_MAG_DROP;
+				// falling free: tumbling forward as it drops away below the rifle
+				m.translateLocal(0.0F, -0.017F * f * f, 0.008F * f);
+				m.translate(0.0F, -0.1F, -0.06F);
+				m.rotate(Axis.XP.rotationDegrees(-9.0F * f));
+				m.rotate(Axis.ZP.rotationDegrees(3.0F * f));
+				m.translate(0.0F, 0.1F, 0.06F);
+				this.magVisible = f < 7.0F;
+				this.magLoaded = false;
+			} else {
+				magPose(m, out, Keys.ease(r, 15.5F, FRESH));
+				this.magVisible = oldMag;
+			}
+		} else {
+			// the fresh one: up from the pouch nose first, hooked in at the front and rocked back until it clicks
+			float away = 1.0F - Keys.ease(r, FRESH, 29.0F);
+			float out = 1.0F - Keys.ease(r, 28.6F, 31.2F);
+			magPose(m, out, away);
 			if (r >= AkItem.T_MAG_IN + 3 && r < AkItem.T_MAG_IN + 6) {
 				// the tug: pulled down a hair against the catch
 				m.translate(0.0F, -0.006F * Mth.sin((r - AkItem.T_MAG_IN - 3) / 3.0F * Mth.PI), 0.0F);
 			}
-			m.transformPosition(MAG_HOLD, hold);
-			if (r < 36.0F) {
-				this.leftHand.set(hold);
-			} else {
-				swing(hold, HANDGUARD, (r - 36.0F) / 8.0F, this.leftHand);
-			}
-		}
-		if (fresh) {
 			this.magVisible = true;
 			this.magLoaded = true;
 			this.magTracer = state.reloadAmmo() == GunState.TRACER;
-		} else if (r >= AkItem.T_MAG_OUT && !state.hasMag()
-			|| state.reloadKind() == GunState.EMPTY && r >= AkItem.T_MAG_DROP) {
-			// gone: there was none, or (a speed reload) the empty one was let fall
-			this.magVisible = false;
+		}
+		m.transformPosition(MAG_HOLD, hold);
+
+		// the support hand: round the outside to the magazine, with it all the way, and back to the handguard
+		if (r < 9.0F) {
+			swing(HANDGUARD, oldMag ? seatedHold : new Vector3f(seatedHold).add(0.0F, -0.04F, 0.0F), r / 9.0F, this.leftHand);
+		} else if (dropped && r < FRESH) {
+			// let go: straight on down to the pouch for a full one
+			Matrix4f pouch = new Matrix4f();
+			magPose(pouch, 1.0F, Keys.ease(r, AkItem.T_MAG_DROP, FRESH));
+			pouch.transformPosition(MAG_HOLD, this.leftHand);
+		} else if (!oldMag && r < FRESH) {
+			Matrix4f pouch = new Matrix4f();
+			magPose(pouch, 1.0F, Keys.ease(r, 9.0F, FRESH));
+			pouch.transformPosition(MAG_HOLD, this.leftHand);
+		} else if (r < 36.0F) {
+			this.leftHand.set(hold);
+		} else {
+			swing(hold, HANDGUARD, (r - 36.0F) / 9.0F, this.leftHand);
 		}
 
 		if (state.reloadKind() == GunState.EMPTY) {
@@ -211,7 +242,9 @@ public final class AkAnim {
 				this.bolt = 1.0F - (c - 3.0F) / 2.2F;
 			}
 			if (c < 0.0F) {
-				lerp(GRIP, handle, (r - 40.0F) / 10.0F, this.rightHand);
+				// up and over the receiver to the handle
+				float f = (r - 40.0F) / 10.0F;
+				lerp(GRIP, handle, f, this.rightHand).add(0.02F * Mth.sin(Mth.clamp(f, 0.0F, 1.0F) * Mth.PI), 0.045F * Mth.sin(Mth.clamp(f, 0.0F, 1.0F) * Mth.PI), 0.0F);
 			} else if (c < 3.0F) {
 				this.rightHand.set(handle).add(0.0F, 0.0F, BOLT_TRAVEL * this.bolt);
 			} else if (c < 5.0F) {
