@@ -290,6 +290,19 @@ public final class SmokeField {
 			if (SHELTER[i] == SmokeCollision.PIT && t > 0.2F) {
 				VY[i] *= 0.8F; // cooled, it no longer climbs out of the hole
 			}
+			// the cloud base is an inversion: rising smoke stops under it and spreads out along it, into the layer
+			float cloudBase = VolumetricClouds.base();
+			if (!Float.isNaN(cloudBase) && Y[i] > cloudBase - 14.0 && Y[i] < cloudBase + VolumetricClouds.THICKNESS) {
+				if (VY[i] > 0.0F) {
+					float spread = VY[i] * 0.45F;
+					VY[i] *= Y[i] > cloudBase ? 0.5F : 0.75F;
+					VX[i] += Mth.sin(s * 2.7F) * spread;
+					VZ[i] += Mth.cos(s * 2.7F) * spread;
+				}
+				if ((age + (int) (s * 7.0F)) % 10 == 0) {
+					VolumetricClouds.smoke(X[i], Z[i], Math.max(6.0F, radius(i, t) * 1.5F), ALPHA[i] * 0.12F);
+				}
+			}
 			double mx = VX[i] + WIND_X[band] * ramp * windHere + tx;
 			double my = VY[i] + ty;
 			double mz = VZ[i] + WIND_Z[band] * ramp * windHere + tz;

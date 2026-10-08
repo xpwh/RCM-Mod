@@ -66,6 +66,12 @@ public final class BlastShader {
 
 	/** A detonation somewhere: sets the look and the fireball's heat glow. */
 	public static void blast(Kind newKind, Vec3 pos, double scale, int color) {
+		// the shock of a really big one reaches the clouds: it blows a ring clear, and its smoke rises into the layer
+		if (newKind == Kind.NUCLEAR || newKind == Kind.ANTIMATTER) {
+			VolumetricClouds.blast(pos, (float) Math.min(450.0, 90.0 * scale), 0.9F);
+		} else if (scale >= 3.0) {
+			VolumetricClouds.blast(pos, (float) Math.min(160.0, 22.0 * scale), 0.5F);
+		}
 		double distance = ClientEffects.distanceToCamera(Minecraft.getInstance(), pos);
 		double reach = 260.0 * Math.max(0.3, scale);
 		if (distance > reach * 3.0) {
