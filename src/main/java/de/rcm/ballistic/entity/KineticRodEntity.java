@@ -105,10 +105,10 @@ public class KineticRodEntity extends Entity {
 			Vec3 next = pos.add(vel);
 			server.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(next)), 2);
 			server.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(this.target)), 3);
-			if (!this.warned && pos.y - this.target.y < 520) {
+			if (!this.warned) {
 				this.warned = true;
-				// the shriek of the rod coming down arrives just before it does
-				server.playSound(null, this.target.x, this.target.y + 30, this.target.z, ModRegistry.INCOMING, SoundSource.HOSTILE, 14.0F, 0.6F);
+				// the tearing roar of the rod coming down, swelling until it hits
+				server.playSound(null, this.target.x, this.target.y + 40, this.target.z, ModRegistry.ROD_REENTRY, SoundSource.HOSTILE, 3.0F, 1.0F);
 			}
 			if (next.y < server.getMaxY() + 32) {
 				BlockHitResult hit = server.clip(new ClipContext(pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, CollisionContext.empty()));
@@ -144,6 +144,11 @@ public class KineticRodEntity extends Entity {
 				}
 				if (i % 2 == 0) {
 					level.addParticle(ParticleTypes.CLOUD, p.x, p.y, p.z, 0, 0.02, 0);
+				}
+				if (heat > 0.3F && i % 3 == 0) {
+					// a lasting column of smoke where it tore through the air
+					level.addParticle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, p.x, p.y, p.z, 0, 0.01, 0);
+					level.addParticle(ParticleTypes.LARGE_SMOKE, p.x, p.y, p.z, 0, 0.0, 0);
 				}
 			} else if (i % 4 == 0) {
 				level.addParticle(ParticleTypes.FIREWORK, p.x, p.y, p.z, 0, 0, 0);

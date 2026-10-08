@@ -392,7 +392,7 @@
 	"tooltip.ballisticmissiles.tungsten_rod.1": "6 m massives Wolfram – wird über die orbitale Bodenstation in den Orbit gebracht",
 	"tooltip.ballisticmissiles.tungsten_rod.2": "Munition für den kinetischen Orbitalschlag",
 	"launcher.ballisticmissiles.uplink": "Bodenstation %s / %s",
-	"message.ballisticmissiles.uplink_rod_loaded": "Wolframstab in den Orbit gebracht (%s/%s)",
+	"message.ballisticmissiles.uplink_rod_loaded": "Trägerrakete gestartet – Wolframstab auf dem Weg in den Orbit (%s/%s)",
 	"message.ballisticmissiles.uplink_full": "Die Plattform ist voll beladen",
 	"message.ballisticmissiles.uplink_emp": "Bodenstation durch EMP gestört",
 	"message.ballisticmissiles.uplink_busy": "Bodenstation arbeitet bereits an einem Schlag",
@@ -401,5 +401,12 @@
 	"message.ballisticmissiles.uplink_release": "Deorbit-Zündung! Wolframstab fällt – Einschlag in wenigen Sekunden",
 	"message.ballisticmissiles.uplink_status_ready": "Bodenstation bereit – %s/%s Stäbe im Orbit",
 	"message.ballisticmissiles.uplink_status_acquiring": "Uplink läuft – %s/%s Stäbe im Orbit",
-	"message.ballisticmissiles.uplink_status_cooldown": "Stab unterwegs – %s/%s Stäbe im Orbit"
+	"message.ballisticmissiles.uplink_status_cooldown": "Stab unterwegs – %s/%s Stäbe im Orbit",
+	"subtitles.ballisticmissiles.uplink_servo": "Antennenantrieb surrt",
+	"subtitles.ballisticmissiles.uplink_data": "Uplink-Datenübertragung",
+	"subtitles.ballisticmissiles.uplink_confirm": "Bodenstation bestätigt",
+	"subtitles.ballisticmissiles.uplink_alarm": "Alarm: Orbitalschlag ausgelöst",
+	"subtitles.ballisticmissiles.rod_reentry": "Wolframstab stürzt aus dem Orbit",
+	"subtitles.ballisticmissiles.supply_launch": "Trägerrakete startet",
+	"entity.ballisticmissiles.supply_rocket": "Trägerrakete"
 }

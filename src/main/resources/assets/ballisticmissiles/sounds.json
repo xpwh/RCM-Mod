@@ -463,5 +463,59 @@
 				"attenuation_distance": 96
 			}
 		]
+	},
+	"uplink.servo": {
+		"subtitle": "subtitles.ballisticmissiles.uplink_servo",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:uplink/servo",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"uplink.data": {
+		"subtitle": "subtitles.ballisticmissiles.uplink_data",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:uplink/data",
+				"attenuation_distance": 32
+			}
+		]
+	},
+	"uplink.confirm": {
+		"subtitle": "subtitles.ballisticmissiles.uplink_confirm",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:uplink/confirm",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"uplink.alarm": {
+		"subtitle": "subtitles.ballisticmissiles.uplink_alarm",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:uplink/alarm",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"rod.reentry": {
+		"subtitle": "subtitles.ballisticmissiles.rod_reentry",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rod/reentry",
+				"attenuation_distance": 600
+			}
+		]
+	},
+	"supply.launch": {
+		"subtitle": "subtitles.ballisticmissiles.supply_launch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:supply/launch",
+				"attenuation_distance": 400
+			}
+		]
 	}
 }

@@ -9,7 +9,7 @@
 //  * shell shock afterwards: washed-out colours, soft focus, tunnel vision while the ears ring
 //  * per weapon: nuclear bleach, antimatter violet negative flash, EMP signal glitches
 //  * giant blasts: the shock front as a ring of refracting air, the earthquake rolling the picture,
-//    a starburst from a kinetic impact, water running down the lens after the tsunami's spray,
+//    water running down the lens after the tsunami's spray,
 //    and the negative afterimage a nuclear flash burns into the eye
 // Expensive parts only run while they are visible; idle the shader is not even active.
 
@@ -195,16 +195,6 @@ void main() {
         col += streak * vec3(0.6, 0.72, 1.0) * 0.05 * flare;
     }
 
-    // ---- starburst: a kinetic impact's point of light throws spikes across the frame
-    if (kind == 5 && flare > 0.01) {
-        vec2 rel = toBlast;
-        float ang = atan(rel.y, rel.x);
-        float spikes = pow(abs(cos(ang * 3.0)), 60.0) + 0.6 * pow(abs(cos(ang * 3.0 + 0.5236)), 120.0);
-        float fall = exp(-dBlast * 2.2);
-        col += vec3(0.85, 0.92, 1.0) * spikes * fall * flare * 0.9;
-        col += vec3(0.8, 0.9, 1.0) * exp(-dBlast * 9.0) * flare * 0.6;
-    }
-
     // ---- dust and smoke: the shock wave kicks up a brown haze that flattens the picture
     if (dust > 0.0) {
         float drift = noise(uv * vec2(3.0, 5.0) + vec2(time * 0.15, time * 0.05)) * 0.6 + 0.4;
@@ -261,8 +251,8 @@ void main() {
         col = mix(col, col * vec3(1.06, 0.95, 0.8), grade * 0.7); // earth-brown
         col = mix(col, smoothstep(0.0, 1.0, col), 0.3 * grade);
     } else if (kind == 5) {
-        col = mix(col, col * vec3(0.9, 0.98, 1.12), grade * 0.6); // harsh, cold light
-        col = mix(col, smoothstep(0.0, 1.0, col), 0.45 * grade);
+        col = mix(col, col * vec3(1.04, 0.98, 0.9), grade * 0.5); // dust-dry
+        col = mix(col, smoothstep(0.0, 1.0, col), 0.3 * grade);
     } else if (kind == 6) {
         col = mix(col, col * vec3(0.88, 1.0, 1.08), grade * 0.6); // sea-cold
     } else if (kind == 3) {

@@ -28,7 +28,7 @@ public final class BlastShader {
 		EMP,
 		/** Buried burst: brown, dusty, the picture shaken by the earthquake. */
 		UNDERGROUND,
-		/** Kinetic impact: blinding blue-white, a starburst of light from the impact point. */
+		/** Kinetic impact: dust and a hard shock, no flash. */
 		KINETIC,
 		/** Under the sea: cold white light and mist. */
 		WATER
@@ -190,7 +190,7 @@ public final class BlastShader {
 		float sy = screen[1];
 		boolean onScreen = screen[2] > 0.5F;
 		// a flash looked at directly leaves its mark on the eye
-		if (onScreen && exposure > 0.5F && (kind == Kind.NUCLEAR || kind == Kind.KINETIC || kind == Kind.ANTIMATTER || kind == Kind.WATER) && exposure > afterimage) {
+		if (onScreen && exposure > 0.5F && (kind == Kind.NUCLEAR || kind == Kind.ANTIMATTER || kind == Kind.WATER) && exposure > afterimage) {
 			afterimage = exposure;
 			afterX = Mth.clamp(sx, 0.0F, 1.0F);
 			afterY = Mth.clamp(sy, 0.0F, 1.0F);

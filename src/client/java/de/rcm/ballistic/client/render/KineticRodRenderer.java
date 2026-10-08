@@ -44,6 +44,11 @@ public class KineticRodRenderer extends EntityRenderer<KineticRodEntity, Kinetic
 		public final Quaternionf rotation = new Quaternionf();
 		public float heat;
 		public float time;
+		public float distance;
+		public Vec3 back = new Vec3(0, 1, 0);
+		public Vec3 toCamera = new Vec3(0, -1, 0);
+		/** The first second: the de-orbit motor firing, a bright flame high in the sky. */
+		public float burn;
 	}
 
 	@Override
@@ -53,7 +58,7 @@ public class KineticRodRenderer extends EntityRenderer<KineticRodEntity, Kinetic
 
 	@Override
 	protected AABB getBoundingBoxForCulling(KineticRodEntity entity) {
-		return entity.getBoundingBox().inflate(16.0);
+		return entity.getBoundingBox().inflate(200.0);
 	}
 
 	@Override
@@ -63,6 +68,16 @@ public class KineticRodRenderer extends EntityRenderer<KineticRodEntity, Kinetic
 		MissileRenderer.orient(state.rotation, v.lengthSqr() < 1.0E-6 ? new Vec3(0, -1, 0) : v.normalize());
 		state.heat = entity.heating();
 		state.time = entity.tickCount + partialTick;
+		state.back = v.lengthSqr() < 1.0E-6 ? new Vec3(0, 1, 0) : v.normalize().scale(-1.0);
+		Vec3 cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().position();
+		state.toCamera = cam.subtract(state.x, state.y, state.z);
+		state.distance = (float) state.toCamera.length();
+		state.burn = net.minecraft.util.Mth.clamp(1.0F - (state.time - 4.0F) / 16.0F, 0.0F, 1.0F);
+	}
+
+	@Override
+	public boolean shouldRender(KineticRodEntity entity, net.minecraft.client.renderer.culling.Frustum frustum, double x, double y, double z) {
+		return true; // a point of light in the sky: always drawn, however far
 	}
 
 	@Override
@@ -70,10 +85,28 @@ public class KineticRodRenderer extends EntityRenderer<KineticRodEntity, Kinetic
 		int light = state.lightCoords;
 		float heat = state.heat;
 		float t = state.time;
+		// ---- seen from afar: a point of fire with a glowing tail, getting brighter and whiter as it
+		// falls deeper into the air; at first the de-orbit motor's flame
+		float flicker = 0.9F + 0.1F * net.minecraft.util.Mth.sin(t * 2.1F);
+		float r = SkyGlow.size(state.distance, 0.8F, 0.006F) * (1.0F + 1.2F * heat + 1.5F * state.burn) * flicker;
+		int core = heat > 0.5F ? 0xFFF6E0 : 0xFFD890;
+		int halo = state.burn > 0.2F ? 0xFF8A30 : heat > 0.5F ? 0xFFB070 : 0xFF7A28;
+		SkyGlow.point(poseStack, collector, camera, r, core, halo, 0.6F + 0.4F * Math.max(heat, state.burn));
+		float trail = 25.0F + 190.0F * heat;
+		SkyGlow.streak(poseStack, collector, state.toCamera, state.back, trail, r * 0.55F, heat > 0.5F ? 0xFFE6B8 : 0xFF9A48, 0.35F + 0.6F * heat);
+		SkyGlow.streak(poseStack, collector, state.toCamera, state.back, trail * 0.35F, r * 0.3F, 0xFFFFF4, 0.5F * heat);
 		poseStack.pushPose();
 		poseStack.mulPose(state.rotation);
 		poseStack.translate(0.0F, -LENGTH * 0.5F, 0.0F);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> MESH.emit(pose, consumer, heat > 0.3F ? LightTexture.FULL_BRIGHT : light));
+		if (state.burn > 0.01F) {
+			// de-orbit burn: the motor in the tail drives it down out of orbit
+			float b = state.burn;
+			collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
+				MissileRenderer.flame(pose, consumer, 0.45F, 16.0F * b, t, b);
+				MissileRenderer.flame(pose, consumer, 0.25F, 9.0F * b, t + 2.0F, b);
+			});
+		}
 		if (heat > 0.02F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> SHEATH.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 			// the glowing wake streaming off the tail

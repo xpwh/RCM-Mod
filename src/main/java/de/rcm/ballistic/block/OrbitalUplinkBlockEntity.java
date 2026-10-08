@@ -16,7 +16,6 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
@@ -101,25 +100,35 @@ public class OrbitalUplinkBlockEntity extends BlockEntity {
 		double dz = this.target.getZ() - this.worldPosition.getZ();
 		this.workAzimuth = (float) Math.atan2(dx, dz);
 		this.sync();
-		this.level.playSound(null, this.worldPosition, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.5F, 0.6F);
+		this.level.playSound(null, this.worldPosition, ModRegistry.UPLINK_CONFIRM, SoundSource.BLOCKS, 1.0F, 1.0F);
+		this.level.playSound(null, this.worldPosition.above(2), ModRegistry.UPLINK_SERVO, SoundSource.BLOCKS, 1.4F, 0.9F);
 		return Component.literal("☄ ").append(Component.translatable("message.ballisticmissiles.uplink_acquire", this.target.getX(), this.target.getZ(), this.rods))
 			.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
 	}
 
 	public static void serverTick(Level level, BlockPos pos, BlockState state, OrbitalUplinkBlockEntity uplink) {
-		if (uplink.phase == IDLE || !(level instanceof ServerLevel server)) {
+		if (!(level instanceof ServerLevel server)) {
+			return;
+		}
+		if (uplink.phase == IDLE) {
+			// now and then the dish steps along after the platform crossing the sky
+			if ((level.getGameTime() + pos.asLong()) % 300 == 0) {
+				level.playSound(null, pos.above(2), ModRegistry.UPLINK_SERVO, SoundSource.BLOCKS, 0.35F, 1.1F);
+			}
 			return;
 		}
 		uplink.timer++;
-		if (uplink.phase == ACQUIRING && uplink.timer % 10 == 0) {
-			level.playSound(null, pos, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.BLOCKS, 0.8F, 1.4F + uplink.timer / 100.0F);
+		if (uplink.phase == ACQUIRING && uplink.timer % 22 == 8) {
+			// telemetry and the target data going up the link
+			level.playSound(null, pos, ModRegistry.UPLINK_DATA, SoundSource.BLOCKS, 0.9F, 0.95F + server.getRandom().nextFloat() * 0.1F);
 		}
 		if (uplink.phase == ACQUIRING && uplink.timer >= ACQUIRE_TICKS) {
 			uplink.phase = STRIKING;
 			Vec3 aim = Vec3.atBottomCenterOf(uplink.target);
 			KineticRodEntity.drop(server, aim, Vec3.atCenterOf(pos));
 			uplink.tell(server, Component.translatable("message.ballisticmissiles.uplink_release").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
-			level.playSound(null, pos, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.5F, 0.5F);
+			level.playSound(null, pos, ModRegistry.UPLINK_ALARM, SoundSource.BLOCKS, 2.0F, 1.0F);
+			level.playSound(null, pos, ModRegistry.UPLINK_CONFIRM, SoundSource.BLOCKS, 1.0F, 0.8F);
 			uplink.sync();
 		}
 		if (uplink.phase == STRIKING && uplink.timer >= ACQUIRE_TICKS + COOLDOWN_TICKS) {

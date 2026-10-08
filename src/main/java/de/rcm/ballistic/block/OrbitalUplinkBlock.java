@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -64,7 +63,11 @@ public class OrbitalUplinkBlock extends Block implements EntityBlock {
 					if (!player.getAbilities().instabuild) {
 						stack.shrink(1);
 					}
-					level.playSound(null, pos, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 1.0F, 0.7F);
+					// the rod goes up on a supply rocket from the pad beside the station
+					if (level instanceof net.minecraft.server.level.ServerLevel server) {
+						de.rcm.ballistic.entity.SupplyRocketEntity.launch(server, pos, state.getValue(FACING));
+					}
+					level.playSound(null, pos, ModRegistry.UPLINK_CONFIRM, SoundSource.BLOCKS, 1.0F, 1.0F);
 					player.displayClientMessage(Component.translatable("message.ballisticmissiles.uplink_rod_loaded", uplink.rods(), OrbitalUplinkBlockEntity.CAPACITY)
 						.withStyle(ChatFormatting.AQUA), true);
 				} else {

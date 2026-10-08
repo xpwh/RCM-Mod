@@ -65,6 +65,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModRegistry.METEOR, MeteorRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.EARTH_PENETRATOR, de.rcm.ballistic.client.render.B61Renderer::new);
 		EntityRendererRegistry.register(ModRegistry.POSEIDON, de.rcm.ballistic.client.render.PoseidonRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.SUPPLY_ROCKET, de.rcm.ballistic.client.render.SupplyRocketRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.KINETIC_ROD, de.rcm.ballistic.client.render.KineticRodRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.ORBITAL_UPLINK_BE, de.rcm.ballistic.client.render.OrbitalUplinkRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.RPG_GRENADE, de.rcm.ballistic.client.render.RpgGrenadeRenderer::new);

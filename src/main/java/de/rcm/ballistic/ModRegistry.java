@@ -181,6 +181,11 @@ public final class ModRegistry {
 		EntityType.Builder.<de.rcm.ballistic.entity.KineticRodEntity>of(de.rcm.ballistic.entity.KineticRodEntity::new, MobCategory.MISC).sized(0.4F, 0.4F)
 			.clientTrackingRange(64).updateInterval(1).fireImmune().noLootTable()
 	);
+	public static final EntityType<de.rcm.ballistic.entity.SupplyRocketEntity> SUPPLY_ROCKET = registerEntity(
+		"supply_rocket",
+		EntityType.Builder.<de.rcm.ballistic.entity.SupplyRocketEntity>of(de.rcm.ballistic.entity.SupplyRocketEntity::new, MobCategory.MISC).sized(0.6F, 0.6F)
+			.clientTrackingRange(64).updateInterval(1).fireImmune().noLootTable()
+	);
 	public static final EntityType<AerialBombEntity> AERIAL_BOMB = registerEntity(
 		"aerial_bomb",
 		EntityType.Builder.<AerialBombEntity>of(AerialBombEntity::new, MobCategory.MISC).sized(0.45F, 0.45F).clientTrackingRange(24).updateInterval(1).noLootTable()
@@ -533,6 +538,12 @@ public final class ModRegistry {
 	public static final SoundEvent CHAIN_GUN = sound("apache.chain_gun");
 	public static final SoundEvent BOMB_WHISTLE = sound("bomb.whistle");
 	public static final SoundEvent LASER_BEAM = sound("laser.beam");
+	public static final SoundEvent UPLINK_SERVO = sound("uplink.servo");
+	public static final SoundEvent UPLINK_DATA = sound("uplink.data");
+	public static final SoundEvent UPLINK_CONFIRM = sound("uplink.confirm");
+	public static final SoundEvent UPLINK_ALARM = sound("uplink.alarm");
+	public static final SoundEvent ROD_REENTRY = sound("rod.reentry");
+	public static final SoundEvent SUPPLY_LAUNCH = sound("supply.launch");
 
 	// ---------- Particles ----------
 	public static final SimpleParticleType SMOKE = particle("smoke");

@@ -325,8 +325,7 @@ final class GiantEffects {
 	// ------------------------------------------------------------------ rod from orbit
 
 	/**
-	 * A tungsten rod hitting the ground at many times the speed of sound: a blinding blue-white flash,
-	 * a steep curtain of ejecta, glowing molten droplets, a pillar of dust and a hammer blow through
+	 * A tungsten rod hitting the ground at many times the speed of sound: a steep curtain of ejecta, glowing molten droplets, a pillar of dust and a hammer blow through
 	 * the ground. No mushroom cloud, no fire to speak of.
 	 */
 	static final class KineticImpact implements ClientEffects.Effect {
@@ -345,8 +344,8 @@ final class GiantEffects {
 			this.quakeDelay = (int) (this.distance / SEISMIC_SPEED);
 			BlockState g = groundBlock(mc, pos);
 			this.ground = g != null ? g : net.minecraft.world.level.block.Blocks.STONE.defaultBlockState();
-			setFlash((float) Mth.clamp(1.1 - this.distance / 1800.0, 0.2, 1.0), 0xE6EEFF);
-			BlastShader.blast(BlastShader.Kind.KINETIC, pos, 1.2, 0xCFE2FF);
+			// no flash: there is no fireball, only the impact itself
+			BlastShader.blast(BlastShader.Kind.KINETIC, pos, 0.35, 0xD8C8B0);
 			BlastShader.shockwave(pos, 14.0, 220.0, 0.9F);
 		}
 
@@ -372,9 +371,9 @@ final class GiantEffects {
 				}
 			}
 			if (t == 0) {
-				// the instant of impact: a white-hot point and a ring of shock-heated air
+				// the instant of impact: rock pulverised to dust and a ring of shocked air
 				shockSphere(new Vec3(cx, cy + 3, cz), 18.0, 100);
-				fireball(new Vec3(cx, cy + 2, cz), 6.0, 40, 7.0F, 1.6, 12);
+				ClientEffects.dirtBurst(new Vec3(cx, cy + 2, cz), 70, 1.6, 1.6);
 				embers(this.pos, 400, 3.4);
 				debrisJets(mc, this.pos, 110, 4.2, 6.5F);
 			}

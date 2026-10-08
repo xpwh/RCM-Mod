@@ -392,7 +392,7 @@
 	"tooltip.ballisticmissiles.tungsten_rod.1": "6 m of solid tungsten – sent into orbit from the orbital ground station",
 	"tooltip.ballisticmissiles.tungsten_rod.2": "Ammunition for the kinetic orbital strike",
 	"launcher.ballisticmissiles.uplink": "Ground station %s / %s",
-	"message.ballisticmissiles.uplink_rod_loaded": "Tungsten rod sent into orbit (%s/%s)",
+	"message.ballisticmissiles.uplink_rod_loaded": "Supply rocket away – tungsten rod on its way to orbit (%s/%s)",
 	"message.ballisticmissiles.uplink_full": "The platform is fully loaded",
 	"message.ballisticmissiles.uplink_emp": "Ground station knocked out by an EMP",
 	"message.ballisticmissiles.uplink_busy": "The ground station is already running a strike",
@@ -401,5 +401,12 @@
 	"message.ballisticmissiles.uplink_release": "De-orbit burn! Tungsten rod falling – impact in a few seconds",
 	"message.ballisticmissiles.uplink_status_ready": "Ground station ready – %s/%s rods in orbit",
 	"message.ballisticmissiles.uplink_status_acquiring": "Uplink in progress – %s/%s rods in orbit",
-	"message.ballisticmissiles.uplink_status_cooldown": "Rod on its way – %s/%s rods in orbit"
+	"message.ballisticmissiles.uplink_status_cooldown": "Rod on its way – %s/%s rods in orbit",
+	"subtitles.ballisticmissiles.uplink_servo": "Antenna drives whir",
+	"subtitles.ballisticmissiles.uplink_data": "Uplink data burst",
+	"subtitles.ballisticmissiles.uplink_confirm": "Ground station confirms",
+	"subtitles.ballisticmissiles.uplink_alarm": "Alarm: orbital strike released",
+	"subtitles.ballisticmissiles.rod_reentry": "Tungsten rod falls from orbit",
+	"subtitles.ballisticmissiles.supply_launch": "Supply rocket lifts off",
+	"entity.ballisticmissiles.supply_rocket": "Supply Rocket"
 }
