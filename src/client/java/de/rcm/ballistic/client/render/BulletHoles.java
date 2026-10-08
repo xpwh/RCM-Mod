@@ -38,7 +38,7 @@ public final class BulletHoles {
 	private BulletHoles() {
 	}
 
-	private record Hole(Vec3 at, Direction face, int kind, float angle, BlockPos block, BlockState state, long born, int index) {
+	private record Hole(Vec3 at, Direction face, int kind, float angle, BlockPos block, BlockState state, long born, int index, boolean predicted) {
 	}
 
 	private static int counter;
@@ -50,12 +50,27 @@ public final class BulletHoles {
 	}
 
 	private static void add(BulletHolePayload p) {
+		Direction face = Direction.from3DDataValue(p.face());
+		Vec3 at = new Vec3(p.x(), p.y(), p.z());
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level != null) {
+			// the server's hole replaces the one we drew the instant we fired
+			long now = mc.level.getGameTime();
+			HOLES.removeIf(h -> h.predicted && now - h.born < 30 && h.face == face && h.at.distanceToSqr(at) < 0.5 * 0.5);
+		}
+		place(at, face, p.kind(), false);
+	}
+
+	/** Our own shot: the hole appears at once where the crosshair is; the server's own follows it. */
+	public static void predict(Vec3 at, Direction face, int kind) {
+		place(at, face, kind, true);
+	}
+
+	private static void place(Vec3 at, Direction face, int kind, boolean predicted) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null) {
 			return;
 		}
-		Direction face = Direction.from3DDataValue(p.face());
-		Vec3 at = new Vec3(p.x(), p.y(), p.z());
 		BlockPos block = BlockPos.containing(at.subtract(face.getStepX() * 0.05, face.getStepY() * 0.05, face.getStepZ() * 0.05));
 		BlockState state = mc.level.getBlockState(block);
 		if (state.isAir()) {
@@ -64,7 +79,7 @@ public final class BulletHoles {
 		if (HOLES.size() >= CAP) {
 			HOLES.remove(0);
 		}
-		HOLES.add(new Hole(at, face, p.kind(), (float) (Math.random() * Mth.TWO_PI), block, state, mc.level.getGameTime(), counter++ % 9));
+		HOLES.add(new Hole(at, face, kind, (float) (Math.random() * Mth.TWO_PI), block, state, mc.level.getGameTime(), counter++ % 9, predicted));
 	}
 
 	private static void tick(Minecraft mc) {
@@ -74,7 +89,9 @@ public final class BulletHoles {
 		}
 		long now = mc.level.getGameTime();
 		// gone with time, or with the block (broken, or changed)
-		HOLES.removeIf(h -> now - h.born > LIFE || mc.level.getBlockState(h.block) != h.state);
+		// a hole drawn at once for our own shot that the server never confirmed (the round hit someone
+		// on the way, or the spread put it elsewhere) goes again
+		HOLES.removeIf(h -> now - h.born > LIFE || mc.level.getBlockState(h.block) != h.state || h.predicted && now - h.born > 40);
 	}
 
 	private static void render(WorldRenderContext context) {
@@ -104,7 +121,9 @@ public final class BulletHoles {
 		float angle = h.kind == 1 && Math.abs(n.y) < 0.5F ? 0.0F : h.angle;
 		Vector3f ru = new Vector3f(u).mul(Mth.cos(angle)).add(new Vector3f(v).mul(Mth.sin(angle))).mul(SIZE);
 		Vector3f rv = new Vector3f(v).mul(Mth.cos(angle)).sub(new Vector3f(u).mul(Mth.sin(angle))).mul(SIZE);
-		float lift = 0.003F + h.index * 0.0004F;
+		// held off the face by more the further away it is, so the depth buffer never swallows it
+		float dist = (float) Math.sqrt(h.at.distanceToSqr(cam));
+		float lift = 0.006F + dist * 0.0009F + h.index * 0.0005F;
 		Vector3f c = new Vector3f((float) (h.at.x - cam.x), (float) (h.at.y - cam.y), (float) (h.at.z - cam.z)).add(new Vector3f(n).mul(lift));
 		int light = LevelRenderer.getLightColor(mc.level, h.block.relative(h.face));
 		int color = (int) (alpha * 255.0F) << 24 | 0xFFFFFF;

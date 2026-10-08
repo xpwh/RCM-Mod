@@ -294,7 +294,7 @@ public class BulletEntity extends Entity {
 	}
 
 	/** Which bullet hole the block shows: 0 rock/concrete, 1 wood, 2 metal, 3 earth. */
-	private static int holeKind(BlockState state) {
+	public static int holeKind(BlockState state) {
 		SoundType sound = state.getSoundType();
 		if (sound == SoundType.WOOD || sound == SoundType.NETHER_WOOD || sound == SoundType.BAMBOO_WOOD || sound == SoundType.CHERRY_WOOD
 			|| sound == SoundType.BAMBOO || sound == SoundType.SCAFFOLDING || sound == SoundType.LADDER) {
