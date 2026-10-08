@@ -142,9 +142,11 @@ public class AkItem extends Item {
 		Vec3 dir = look.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
 		boolean tracer = state.ammo() == GunState.TRACER;
 		BulletEntity.fire(level, player, muzzle, dir.scale(MUZZLE_VELOCITY), tracer);
-		GunshotPayload shot = new GunshotPayload(player.getId(), muzzle.x, muzzle.y, muzzle.z, (float) look.x, (float) look.y, (float) look.z, left == 0);
+		// everybody near hears it; the shooter gets it too, for the tracer on the bullet's true line
+		GunshotPayload shot = new GunshotPayload(player.getId(), muzzle.x, muzzle.y, muzzle.z, (float) dir.x, (float) dir.y, (float) dir.z,
+			(left == 0 ? GunshotPayload.LAST : 0) | (tracer ? GunshotPayload.TRACER : 0));
 		for (ServerPlayer p : level.players()) {
-			if (p != player && p.position().distanceToSqr(muzzle) < 900.0 * 900.0) {
+			if (p.position().distanceToSqr(muzzle) < 900.0 * 900.0) {
 				ServerPlayNetworking.send(p, shot);
 			}
 		}

@@ -11,6 +11,7 @@ import static de.rcm.ballistic.client.render.StructureKit.BRASS;
 import static de.rcm.ballistic.client.render.StructureKit.GREEN_LAMP;
 import static de.rcm.ballistic.client.render.StructureKit.GUNMETAL;
 import static de.rcm.ballistic.client.render.StructureKit.HOT;
+import static de.rcm.ballistic.client.render.StructureKit.OLIVE;
 import static de.rcm.ballistic.client.render.StructureKit.STEEL;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -493,6 +494,26 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 				v(i0.x, i0.y, z0 - l0), v(o0.x, o0.y, z0 - l0), v(o1.x, o1.y, z0 - l1), v(i1.x, i1.y, z0 - l1));
 		}
 		b.revolve(BLACK, v(0, BORE_Y, -0.6965F), v(0, 0, -1), new float[][] {{0.0F, 0.0F}, {0.001F, 0.0085F}}, 10);
+
+		// ===== canvas sling from the front loop on the gas block to the loop on the stock, hanging slack
+		int links = 12;
+		Vector3f front = v(0, 0.07F, -0.528F);
+		Vector3f rear = v(0, -0.034F, 0.412F);
+		Vector3f[] sling = new Vector3f[links + 1];
+		for (int i = 0; i <= links; i++) {
+			float f = i / (float) links;
+			Vector3f p = new Vector3f(front).lerp(rear, f);
+			p.y -= 0.1F * 4.0F * f * (1.0F - f); // the sag of a strap hanging under its own weight
+			sling[i] = p;
+		}
+		float[] across = new float[links + 1];
+		float[] thick = new float[links + 1];
+		java.util.Arrays.fill(across, 0.024F);
+		java.util.Arrays.fill(thick, 0.0016F);
+		sweep(b, OLIVE, sling, across, thick, 0.0005F, -0.0365F);
+		// the brass-coloured buckle partway along
+		Vector3f buckle = sling[8];
+		b.box(-0.0395F, buckle.y - 0.015F, buckle.z - 0.008F, -0.0335F, buckle.y + 0.015F, buckle.z + 0.008F, AK_WORN);
 		return b.build();
 	}
 

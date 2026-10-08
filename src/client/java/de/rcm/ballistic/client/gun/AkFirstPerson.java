@@ -19,6 +19,59 @@ public final class AkFirstPerson {
 	private AkFirstPerson() {
 	}
 
+	// motion state, stepped every client tick
+	private static float sprint;
+	private static float prevSprint;
+	private static long equipTick = -100L;
+	private static long landTick = -100L;
+	private static float landHard;
+	private static long modeTick = -100L;
+	private static int lastMode = -1;
+	private static boolean held;
+	private static boolean wasOnGround = true;
+	private static double fallFrom;
+	/** Random lean of the current shot's kick (set per shot). */
+	static float kickSide;
+	static float kickRoll;
+
+	/** Called every client tick. */
+	static void tick(Minecraft mc) {
+		var player = mc.player;
+		prevSprint = sprint;
+		if (player == null || mc.level == null) {
+			return;
+		}
+		long now = mc.level.getGameTime();
+		ItemStack stack = player.getMainHandItem();
+		boolean ak = stack.getItem() instanceof AkItem;
+		if (ak && !held) {
+			equipTick = now;
+		}
+		held = ak;
+		GunState state = ak ? AkItem.state(stack) : null;
+		boolean busy = state != null && state.reloading();
+		boolean firing = now - AkClient.lastShotTick < 6;
+		float target = ak && player.isSprinting() && !busy && !firing ? 1.0F : 0.0F;
+		sprint += (target - sprint) * 0.25F;
+		if (state != null) {
+			if (lastMode >= 0 && state.mode() != lastMode) {
+				modeTick = now;
+			}
+			lastMode = state.mode();
+		}
+		// landing from a jump or a fall dips the rifle
+		if (!player.onGround()) {
+			if (wasOnGround) {
+				fallFrom = player.getY();
+			}
+			fallFrom = Math.max(fallFrom, player.getY());
+		} else if (!wasOnGround) {
+			landTick = now;
+			landHard = (float) Mth.clamp((fallFrom - player.getY()) / 3.0, 0.25, 1.0);
+		}
+		wasOnGround = player.onGround();
+	}
+
 	private static float smooth(float x) {
 		x = Mth.clamp(x, 0.0F, 1.0F);
 		return x * x * (3.0F - 2.0F * x);
@@ -35,6 +88,40 @@ public final class AkFirstPerson {
 		// breathing sway
 		poseStack.mulPose(Axis.XP.rotationDegrees(Mth.sin(now * 0.045F) * 0.35F));
 		poseStack.mulPose(Axis.YP.rotationDegrees(Mth.cos(now * 0.031F) * 0.3F));
+
+		// brought up into the shoulder when drawn: from low and canted to on target
+		float draw = 1.0F - smooth((now - equipTick) / 12.0F);
+		if (draw > 0.0F) {
+			poseStack.translate(0.04F * draw, -0.25F * draw, 0.1F * draw);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-35.0F * draw));
+			poseStack.mulPose(Axis.XP.rotationDegrees(-30.0F * draw));
+		}
+
+		// sprinting: low ready - muzzle down and across the body, bouncing with the stride
+		float run = smooth(Mth.lerp(partialTick, prevSprint, sprint));
+		if (run > 0.0F && mc.player != null) {
+			float stride = mc.player.walkAnimation.position(partialTick) * 0.3F;
+			poseStack.translate(-0.06F * run, -0.07F * run + Math.abs(Mth.sin(stride * Mth.PI)) * 0.025F * run, 0.04F * run);
+			poseStack.mulPose(Axis.YP.rotationDegrees(38.0F * run + Mth.sin(stride * Mth.PI) * 3.0F * run));
+			poseStack.mulPose(Axis.XP.rotationDegrees(-22.0F * run));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(14.0F * run + Mth.cos(stride * Mth.PI) * 2.0F * run));
+		}
+
+		// landing: the rifle dips with your knees and comes back up
+		float land = now - landTick;
+		if (land >= 0.0F && land < 10.0F) {
+			float dip = Mth.sin(land / 10.0F * Mth.PI) * (1.0F - land / 10.0F) * landHard;
+			poseStack.translate(0.0F, -0.07F * dip, 0.0F);
+			poseStack.mulPose(Axis.XP.rotationDegrees(-5.0F * dip));
+		}
+
+		// working the selector: the rifle rolls a touch as the thumb rides the lever
+		float sel = now - modeTick;
+		if (sel >= 0.0F && sel < 7.0F) {
+			float flick = Mth.sin(sel / 7.0F * Mth.PI);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(7.0F * flick));
+			poseStack.translate(0.01F * flick, 0.008F * flick, 0.0F);
+		}
 
 		// reload choreography
 		if (state.reloading()) {
@@ -57,12 +144,14 @@ public final class AkFirstPerson {
 
 		// recoil: the local player's own shots (instant), everybody else's from the synced state
 		float shot = AkClient.lastShotTick > 0 ? now - AkClient.lastShotTick : now - state.lastShot();
-		if (shot >= 0.0F && shot < 8.0F) {
-			float kick = shot < 0.6F ? shot / 0.6F : (float) Math.exp(-(shot - 0.6F) * 0.9F);
-			float build = 1.0F + Math.min(AkClient.burst, 10) * 0.05F;
-			poseStack.translate(0.0F, 0.012F * kick, 0.07F * kick * build);
-			poseStack.mulPose(Axis.XP.rotationDegrees(3.2F * kick * build));
-			poseStack.mulPose(Axis.ZP.rotationDegrees((AkClient.burst % 2 == 0 ? 1.0F : -1.0F) * 0.8F * kick));
+		if (shot >= 0.0F && shot < 10.0F) {
+			// slammed back into the shoulder, then the buffer spring pushes it back past rest and it settles
+			float kick = shot < 0.5F ? shot / 0.5F : (float) (Math.exp(-(shot - 0.5F) * 0.8F) * Math.cos((shot - 0.5F) * 1.3F));
+			float build = 1.0F + Math.min(AkClient.burst, 10) * 0.06F;
+			poseStack.translate(0.004F * kickSide * kick, 0.014F * kick, 0.08F * kick * build);
+			poseStack.mulPose(Axis.XP.rotationDegrees(3.6F * kick * build));
+			poseStack.mulPose(Axis.YP.rotationDegrees(-1.2F * kickSide * kick));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(2.2F * kickRoll * kick));
 		}
 	}
 }

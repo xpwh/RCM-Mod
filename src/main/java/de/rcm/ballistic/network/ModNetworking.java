@@ -351,7 +351,10 @@ public final class ModNetworking {
 	}
 
 	/** A rifle shot, for the players around the shooter: sound with distance delay and reverb, shells. */
-	public record GunshotPayload(int shooter, double x, double y, double z, float dx, float dy, float dz, boolean last) implements CustomPacketPayload {
+	/** A shot: muzzle, the bullet's direction, flags {@link #LAST} (magazine now empty) and {@link #TRACER}. */
+	public record GunshotPayload(int shooter, double x, double y, double z, float dx, float dy, float dz, int flags) implements CustomPacketPayload {
+		public static final int LAST = 1;
+		public static final int TRACER = 2;
 		public static final Type<GunshotPayload> TYPE = new Type<>(BallisticMissiles.id("gunshot"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunshotPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunshotPayload::shooter,
@@ -361,7 +364,7 @@ public final class ModNetworking {
 			ByteBufCodecs.FLOAT, GunshotPayload::dx,
 			ByteBufCodecs.FLOAT, GunshotPayload::dy,
 			ByteBufCodecs.FLOAT, GunshotPayload::dz,
-			ByteBufCodecs.BOOL, GunshotPayload::last,
+			ByteBufCodecs.VAR_INT, GunshotPayload::flags,
 			GunshotPayload::new
 		);
 

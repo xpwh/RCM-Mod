@@ -18,6 +18,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.KeyMapping;
 import de.rcm.ballistic.client.render.ShellCasings;
+import de.rcm.ballistic.client.render.TracerFx;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
@@ -57,6 +58,8 @@ public final class AkClient {
 		ClientTickEvents.END_CLIENT_TICK.register(AkClient::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(GunAudio::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(ShellCasings::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(TracerFx::tick);
+		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(TracerFx::render);
 		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_ENTITIES.register(ShellCasings::render);
 		AkItem.clientShot = AkClient::localShot;
 		ClientHooks.bulletClientTick = AkClient::bulletTick;
@@ -83,6 +86,7 @@ public final class AkClient {
 		if (mc.level != null && mc.level.getGameTime() - lastShotTick > 5) {
 			burst = 0;
 		}
+		AkFirstPerson.tick(mc);
 	}
 
 	// ------------------------------------------------------------------ firing
@@ -102,6 +106,8 @@ public final class AkClient {
 		}
 		lastShotTick = mc.level.getGameTime();
 		burst++;
+		AkFirstPerson.kickSide = ClientEffects.rand() * 2.0F - 1.0F;
+		AkFirstPerson.kickRoll = ClientEffects.rand() * 2.0F - 0.6F; // the AK's kick rolls it a little to the right
 		// the muzzle climbs through a burst and wanders a little to the side
 		float climb = 0.75F + Math.min(burst, 10) * 0.09F + ClientEffects.rand() * 0.3F;
 		player.setXRot(Mth.clamp(player.getXRot() - climb, -90.0F, 90.0F));
@@ -118,6 +124,13 @@ public final class AkClient {
 			return;
 		}
 		Vec3 muzzle = new Vec3(p.x(), p.y(), p.z());
+		Vec3 dir = new Vec3(p.dx(), p.dy(), p.dz());
+		if ((p.flags() & GunshotPayload.TRACER) != 0) {
+			TracerFx.fire(muzzle, dir.scale(de.rcm.ballistic.gun.AkItem.MUZZLE_VELOCITY), p.shooter());
+		}
+		if (mc.player != null && p.shooter() == mc.player.getId()) {
+			return; // our own shot: heard and seen already
+		}
 		GunAudio.shot(muzzle, false);
 		Entity shooter = mc.level.getEntity(p.shooter());
 		if (shooter instanceof Player other && muzzle.distanceTo(mc.gameRenderer.getMainCamera().position()) < 96.0) {

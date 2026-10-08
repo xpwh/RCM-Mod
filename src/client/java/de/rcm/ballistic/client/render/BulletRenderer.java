@@ -81,19 +81,8 @@ public class BulletRenderer extends EntityRenderer<BulletEntity, BulletRenderer.
 	public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
 		// the streak never reaches back past the muzzle
 		float travelled = state.age * state.speed;
-		if (state.tracer && state.burn > 0.0F && travelled > 4.0F) {
-			float n = state.night;
-			float b = state.burn * Math.min(1.0F, (travelled - 4.0F) / 6.0F); // the compound catches a few metres out
-			// burning pellet: it sputters, so the light flickers from frame to frame
-			float flicker = 0.72F + 0.28F * Mth.sin(state.age * 9.7F + state.id * 1.3F) * Mth.sin(state.age * 23.1F + state.id);
-			float strength = b * flicker * (0.4F + 0.6F * n);
-			// a compact spot: small however far, never a beam
-			float core = Math.max(0.016F, state.distance * 0.0011F);
-			SkyGlow.point(poseStack, collector, camera, core, 0xF4FFE6, 0x86F060, strength);
-			// the short dash the eye smears it into, brightest at the head
-			float dash = Math.min(travelled - 4.0F, 1.2F + 2.0F * n);
-			SkyGlow.streak(poseStack, collector, state.toCamera, state.back, dash, core * 0.9F, 0x6AD848, 0.45F * strength);
-			SkyGlow.streak(poseStack, collector, state.toCamera, state.back, dash * 0.55F, core * 0.4F, 0xE6FFD8, 0.7F * strength);
+		if (state.tracer) {
+			// drawn by TracerFx from the moment of the shot
 		} else if (travelled > 2.0F && state.age < 6.0F) {
 			// a ball round: a faint grey flick of disturbed air
 			float trail = Math.min(travelled - 1.5F, 3.5F);

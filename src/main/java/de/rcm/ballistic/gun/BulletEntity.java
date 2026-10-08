@@ -198,7 +198,8 @@ public class BulletEntity extends Entity {
 				? ModRegistry.BULLET_IMPACT_WOOD : ModRegistry.BULLET_IMPACT_DIRT;
 		level.playSound(null, at.x, at.y, at.z, impact, SoundSource.PLAYERS, 1.2F, 0.9F + this.random.nextFloat() * 0.2F);
 		// glancing off something hard it skips away, tumbling and whining
-		if (hard && incidence < 0.35 && this.ricochets < 2 && this.random.nextFloat() < 0.7F) {
+		// (tracers, lighter at the base and spinning hard, skip off almost anything at a flat enough angle)
+		if ((hard && incidence < 0.35 || this.isTracer() && incidence < 0.2) && this.ricochets < 3 && this.random.nextFloat() < 0.7F) {
 			this.ricochets++;
 			Vec3 out = dir.subtract(n.scale(2.0 * dir.dot(n)));
 			out = out.add(this.random.nextGaussian() * 0.15, Math.abs(this.random.nextGaussian()) * 0.1, this.random.nextGaussian() * 0.15).normalize();
