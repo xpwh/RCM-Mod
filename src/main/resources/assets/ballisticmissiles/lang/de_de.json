@@ -453,5 +453,12 @@
 	"subtitles.ballisticmissiles.grenade_spoon": "Sicherungsbügel springt ab",
 	"subtitles.ballisticmissiles.grenade_bounce": "Handgranate schlägt auf",
 	"subtitles.ballisticmissiles.grenade_explode": "Handgranate explodiert",
-	"subtitles.ballisticmissiles.breath": "Schweres Atmen"
+	"subtitles.ballisticmissiles.breath": "Schweres Atmen",
+	"message.ballisticmissiles.smoke_debug_on": "Rauch-Debug an: gelb = geprüft (frei), rot = Decke, orange = Wand, lila = im Block, grün = Ausweg. /rauchdebug test für eine Rauchsäule.",
+	"message.ballisticmissiles.smoke_debug_off": "Rauch-Debug aus.",
+	"message.ballisticmissiles.smoke_debug_test": "Test-Rauchsäule steigt 10 Sekunden lang dort auf, wo du hinschaust.",
+	"message.ballisticmissiles.smoke_debug_title": "Rauch-Kollision (Debug)",
+	"message.ballisticmissiles.smoke_debug_stats": "Geprüft: %s · Übersprungen (freier Himmel): %s",
+	"message.ballisticmissiles.smoke_debug_hits": "Decke: %s · Wand: %s · Ausweg gefunden: %s",
+	"message.ballisticmissiles.smoke_debug_legend": "gelb frei · rot Decke · orange Wand · lila im Block · grün Ausweg"
 }

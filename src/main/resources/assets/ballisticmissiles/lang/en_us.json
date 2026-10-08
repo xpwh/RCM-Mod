@@ -453,5 +453,12 @@
 	"subtitles.ballisticmissiles.grenade_spoon": "Grenade lever flies off",
 	"subtitles.ballisticmissiles.grenade_bounce": "Grenade lands",
 	"subtitles.ballisticmissiles.grenade_explode": "Grenade explodes",
-	"subtitles.ballisticmissiles.breath": "Heavy breathing"
+	"subtitles.ballisticmissiles.breath": "Heavy breathing",
+	"message.ballisticmissiles.smoke_debug_on": "Smoke debug on: yellow = checked (clear), red = ceiling, orange = wall, purple = inside a block, green = way out. /smokedebug test for a smoke column.",
+	"message.ballisticmissiles.smoke_debug_off": "Smoke debug off.",
+	"message.ballisticmissiles.smoke_debug_test": "A test column of smoke rises where you are looking for 10 seconds.",
+	"message.ballisticmissiles.smoke_debug_title": "Smoke collision (debug)",
+	"message.ballisticmissiles.smoke_debug_stats": "Checked: %s · Skipped (open sky): %s",
+	"message.ballisticmissiles.smoke_debug_hits": "Ceiling: %s · Wall: %s · Way out found: %s",
+	"message.ballisticmissiles.smoke_debug_legend": "yellow clear · red ceiling · orange wall · purple inside · green way out"
 }
