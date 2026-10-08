@@ -39,7 +39,7 @@ public class AkItem extends Item {
 	public static final int MAG_CAPACITY = 30;
 	/** Ticks between shots in automatic fire (600 rounds per minute). */
 	public static final int CYCLE = 2;
-	public static final int RELOAD_TACTICAL = 44;
+	public static final int RELOAD_TACTICAL = 38;
 	public static final int RELOAD_EMPTY = 72;
 	/** Reload choreography (ticks after the start): magazine out, new magazine in, bolt charged. */
 	public static final int T_MAG_OUT = 12;
@@ -48,11 +48,12 @@ public class AkItem extends Item {
 	public static final int T_MAG_IN = 30;
 	public static final int T_CHARGE = 52;
 	/**
-	 * A reload with rounds left goes magazine to magazine: the fresh one knocks the release and the old
-	 * one out of the well at {@code T_TAC_OUT} and goes straight in, seated at {@code T_TAC_IN}.
+	 * A reload with rounds left goes magazine to magazine: the fresh one comes up from behind and knocks
+	 * the old one out of the well and away forward at {@code T_TAC_OUT} (it lands on the ground, with
+	 * the rounds still in it), and goes straight in, seated at {@code T_TAC_IN}.
 	 */
 	public static final int T_TAC_OUT = 14;
-	public static final int T_TAC_IN = 23;
+	public static final int T_TAC_IN = 21;
 	/** Muzzle velocity, blocks per tick (715 m/s). */
 	public static final double MUZZLE_VELOCITY = 35.75;
 
@@ -290,10 +291,16 @@ public class AkItem extends Item {
 			this.sound(level, player, ModRegistry.AK_MAG_OUT, 1.0F);
 		} else if (t == T_MAG_DROP && state.hasMag() && state.reloadKind() == GunState.EMPTY) {
 			// a speed reload: the empty magazine is let go and falls where you stand - pick it up again later
-			this.dropMagazine(level, player, state);
+			this.dropMagazine(level, player, state, 0, false);
 			setState(stack, new GunState(0, state.ammo(), false, state.mode(), state.lastShot(), state.reloadStart(), state.reloadKind(), state.reloadAmmo()));
 			state = state(stack);
-		} else if (t == T_MAG_DROP + 9) {
+		} else if (t == T_TAC_OUT + 1 && state.hasMag() && tactical) {
+			// knocked out by the fresh one: away forward with what is left in it; the round in the chamber stays
+			this.dropMagazine(level, player, state, Math.max(0, state.rounds() - 1), true);
+			setState(stack, new GunState(Math.min(1, state.rounds()), state.ammo(), false, state.mode(), state.lastShot(), state.reloadStart(),
+				state.reloadKind(), state.reloadAmmo()));
+			state = state(stack);
+		} else if (t == (tactical ? T_TAC_OUT + 12 : T_MAG_DROP + 9)) {
 			// and lands with a clatter
 			for (ItemEntity dropped : level.getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(3.0),
 				e -> e.getItem().getItem() instanceof AkMagazineItem && e.getAge() < 14)) {
@@ -334,20 +341,24 @@ public class AkItem extends Item {
 		setState(stack, state.loaded(newRounds + chambered, state.reloadAmmo()));
 	}
 
-	/** The empty magazine, let go below the rifle: it drops at your feet with a little toss forward. */
-	private void dropMagazine(ServerLevel level, Player player, GunState state) {
+	/**
+	 * The old magazine leaving the rifle: let go, it drops at your feet with a little toss forward;
+	 * knocked out by the fresh one, it flies off a couple of metres ahead.
+	 */
+	private void dropMagazine(ServerLevel level, Player player, GunState state, int rounds, boolean knocked) {
 		if (player.getAbilities().instabuild) {
 			return;
 		}
 		ItemStack old = new ItemStack(state.ammo() == GunState.TRACER ? ModRegistry.AK_MAG_TRACER : ModRegistry.AK_MAG);
-		AkMagazineItem.setRounds(old, 0);
+		AkMagazineItem.setRounds(old, rounds);
 		Vec3 look = Vec3.directionFromRotation(0.0F, player.getYRot());
 		Vec3 right = new Vec3(-look.z, 0.0, look.x);
 		boolean leftHanded = player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT;
 		Vec3 at = player.position().add(0.0, player.getBbHeight() * 0.55, 0.0).add(look.scale(0.45)).add(right.scale(leftHanded ? -0.15 : 0.15));
 		ItemEntity item = new ItemEntity(level, at.x, at.y, at.z, old);
 		var random = level.getRandom();
-		item.setDeltaMovement(look.x * 0.06 + random.triangle(0.0, 0.03), 0.02, look.z * 0.06 + random.triangle(0.0, 0.03));
+		double toss = knocked ? 0.2 : 0.06;
+		item.setDeltaMovement(look.x * toss + random.triangle(0.0, 0.03), knocked ? 0.1 : 0.02, look.z * toss + random.triangle(0.0, 0.03));
 		item.setPickUpDelay(30);
 		level.addFreshEntity(item);
 	}

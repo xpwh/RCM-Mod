@@ -97,10 +97,10 @@ public final class AkFirstPerson {
 		new float[] {6.0F, -0.05F, 0.09F, -0.055F, -15.0F, 4.0F, 18.0F},
 		new float[] {11.0F, -0.08F, 0.15F, -0.09F, -24.0F, 7.0F, 30.0F},
 		new float[] {AkItem.T_TAC_OUT, -0.085F, 0.16F, -0.095F, -26.0F, 7.0F, 32.0F},
-		new float[] {19.0F, -0.085F, 0.165F, -0.095F, -25.0F, 8.0F, 32.0F},
+		new float[] {18.0F, -0.085F, 0.165F, -0.095F, -25.0F, 8.0F, 32.0F},
 		new float[] {AkItem.T_TAC_IN, -0.085F, 0.17F, -0.095F, -24.0F, 9.0F, 31.0F},
-		new float[] {28.0F, -0.07F, 0.14F, -0.08F, -19.0F, 6.0F, 25.0F},
-		new float[] {36.0F, -0.025F, 0.045F, -0.025F, -6.0F, 2.0F, 8.0F},
+		new float[] {26.0F, -0.065F, 0.13F, -0.075F, -18.0F, 6.0F, 24.0F},
+		new float[] {32.0F, -0.022F, 0.04F, -0.022F, -5.0F, 2.0F, 7.0F},
 		new float[] {AkItem.RELOAD_TACTICAL, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F});
 	/** The same with an empty gun: then rolled over to the right for the charging handle. */
 	private static final Keys RELOAD_EMPTY = new Keys(
