@@ -7,6 +7,8 @@ import de.rcm.ballistic.gun.GunState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * The rifle in first person: a slow breathing sway, the stock punching back into the shoulder and
@@ -18,6 +20,13 @@ import net.minecraft.world.item.ItemStack;
 public final class AkFirstPerson {
 	private AkFirstPerson() {
 	}
+
+	/** Line of sight: from the rear notch to the tip of the front post, and the eye behind it (item space). */
+	private static final Vector3f NOTCH = new Vector3f(0.0F, 0.155F, -0.126F);
+	private static final Vector3f SIGHT_LINE = new Vector3f(0.0F, 0.01F, -0.518F).normalize();
+	private static final Vector3f EYE = new Vector3f(NOTCH).sub(new Vector3f(SIGHT_LINE).mul(0.17F));
+	/** Camera position in the hand space vanilla sets up for the main hand. */
+	private static final Vector3f CAMERA = new Vector3f(-0.56F, 0.52F, 0.72F);
 
 	// motion state, stepped every client tick
 	private static float sprint;
@@ -51,7 +60,7 @@ public final class AkFirstPerson {
 		GunState state = ak ? AkItem.state(stack) : null;
 		boolean busy = state != null && state.reloading();
 		boolean firing = now - AkClient.lastShotTick < 6;
-		float target = ak && player.isSprinting() && !busy && !firing ? 1.0F : 0.0F;
+		float target = ak && player.isSprinting() && !busy && !firing && !AkItem.isAiming(player) ? 1.0F : 0.0F;
 		sprint += (target - sprint) * 0.25F;
 		if (state != null) {
 			if (lastMode >= 0 && state.mode() != lastMode) {
@@ -85,9 +94,35 @@ public final class AkFirstPerson {
 		float now = mc.level.getGameTime() + partialTick;
 		GunState state = AkItem.state(stack);
 
-		// breathing sway
-		poseStack.mulPose(Axis.XP.rotationDegrees(Mth.sin(now * 0.045F) * 0.35F));
-		poseStack.mulPose(Axis.YP.rotationDegrees(Mth.cos(now * 0.031F) * 0.3F));
+		// up to the eye: rear notch and front post lined up on the middle of the view
+		float aim = AkClient.aimProgress(partialTick);
+		if (aim > 0.0F) {
+			Quaternionf display = Axis.YP.rotationDegrees(3.0F);
+			Vector3f line = display.transform(new Vector3f(SIGHT_LINE));
+			Quaternionf toView = new Quaternionf().rotationTo(line, new Vector3f(0.0F, 0.0F, -1.0F));
+			Vector3f eye = display.transform(new Vector3f(EYE)).add(-3.2F / 16.0F, 2.4F / 16.0F, 0.5F / 16.0F);
+			Vector3f shift = new Vector3f(CAMERA).sub(toView.transform(new Vector3f(eye)));
+			poseStack.translate(shift.x * aim, shift.y * aim, shift.z * aim);
+			poseStack.mulPose(new Quaternionf().slerp(toView, aim));
+		}
+
+		// breathing: a slow heave, heavy and quick when out of breath
+		float tired = Fatigue.level();
+		float breath = Fatigue.breathPhase(partialTick);
+		float steady = 1.0F - 0.5F * aim;
+		poseStack.mulPose(Axis.XP.rotationDegrees((Mth.sin(now * 0.045F) * 0.35F + Mth.sin(breath) * 1.6F * tired) * steady));
+		poseStack.mulPose(Axis.YP.rotationDegrees((Mth.cos(now * 0.031F) * 0.3F + Mth.cos(breath * 0.5F) * 0.9F * tired) * steady));
+		poseStack.translate(0.0F, Mth.sin(breath) * 0.012F * tired * steady, 0.0F);
+
+		// checking the magazine: canted and brought in a little so you can look at it
+		float checkT = AkClient.checkTime(now);
+		if (checkT >= 0.0F) {
+			float c = smooth(checkT / 7.0F) * (1.0F - smooth((checkT - 31.0F) / 8.0F));
+			poseStack.translate(-0.06F * c, 0.13F * c, -0.06F * c);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-24.0F * c));
+			poseStack.mulPose(Axis.XP.rotationDegrees(5.0F * c));
+			poseStack.mulPose(Axis.YP.rotationDegrees(28.0F * c));
+		}
 
 		// brought up into the shoulder when drawn: from low and canted to on target
 		float draw = 1.0F - smooth((now - equipTick) / 12.0F);

@@ -22,6 +22,8 @@ public abstract class AvatarRendererMixin {
 	private static void ballisticmissiles$shoulderRpg(Avatar avatar, ItemStack stack, InteractionHand hand, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
 		if (stack.is(ModRegistry.ROCKET_LAUNCHER) || stack.is(ModRegistry.AK47)) {
 			cir.setReturnValue(HumanoidModel.ArmPose.CROSSBOW_HOLD);
+		} else if (stack.is(ModRegistry.GRENADE) && avatar.isUsingItem() && avatar.getUsedItemHand() == hand) {
+			cir.setReturnValue(HumanoidModel.ArmPose.THROW_TRIDENT); // arm drawn back to throw
 		}
 	}
 }

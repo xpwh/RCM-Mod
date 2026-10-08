@@ -39,6 +39,19 @@ public final class AkClient {
 	private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(BallisticMissiles.id("weapons"));
 	private static KeyMapping reload;
 	private static KeyMapping selector;
+	private static KeyMapping check;
+
+	// the trigger as the client sees it (left mouse button), with the shots it has predicted
+	private static boolean triggerDown;
+	private static long triggerTick;
+	private static int pressShots;
+	private static int pressRounds;
+	// aiming over the sights
+	private static float aim;
+	private static float prevAim;
+	/** Magazine check: when it started (game tick), and the rounds seen. */
+	static long checkStart = -1000L;
+	static final int CHECK_TICKS = 40;
 
 	/** Local recoil state, for the first-person animation. */
 	static long lastShotTick = -100;
@@ -55,16 +68,51 @@ public final class AkClient {
 	public static void init() {
 		reload = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.reload", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY));
 		selector = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.selector", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, CATEGORY));
+		check = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.mag_check", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, CATEGORY));
 		ClientTickEvents.END_CLIENT_TICK.register(AkClient::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(GunAudio::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(ShellCasings::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(Fatigue::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(TracerFx::tick);
 		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(TracerFx::render);
 		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_ENTITIES.register(ShellCasings::render);
-		AkItem.clientShot = AkClient::localShot;
 		ClientHooks.bulletClientTick = AkClient::bulletTick;
 		ClientPlayNetworking.registerGlobalReceiver(GunshotPayload.TYPE, (payload, context) -> remoteShot(payload));
 		HudElementRegistry.addLast(BallisticMissiles.id("ammo"), (graphics, tickCounter) -> hud(graphics));
+	}
+
+	/** 0 at the hip, 1 with the eye behind the rear sight. */
+	public static float aimProgress(float partialTick) {
+		float a = Mth.lerp(partialTick, prevAim, aim);
+		return a * a * (3.0F - 2.0F * a);
+	}
+
+	/** Ticks into the local player's magazine check, or -1. */
+	public static float checkTime(float now) {
+		float t = now - checkStart;
+		return t >= 0.0F && t < CHECK_TICKS ? t : -1.0F;
+	}
+
+	static boolean checking(long now) {
+		return now - checkStart < CHECK_TICKS;
+	}
+
+	/** The magazine check: sounds as it comes out and goes back, and what you make of what you see. */
+	private static void magCheckTick(Minecraft mc, LocalPlayer player, GunState state, long now) {
+		long t = now - checkStart;
+		if (state == null) {
+			checkStart = -1000L;
+			return;
+		}
+		if (t == 11) {
+			GunAudio.play(ModRegistry.AK_MAG_OUT, player.getEyePosition(), 0.5F, 1.0F);
+		} else if (t == 17) {
+			int r = state.rounds();
+			String key = r <= 0 ? "empty" : r < 8 ? "low" : r < 15 ? "half" : r < 25 ? "most" : "full";
+			mc.gui.setOverlayMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.mag_check_" + key), false);
+		} else if (t == 27) {
+			GunAudio.play(ModRegistry.AK_MAG_IN, player.getEyePosition(), 0.6F, 1.0F);
+		}
 	}
 
 	private static boolean holdingAk(Player player) {
@@ -86,6 +134,39 @@ public final class AkClient {
 		if (mc.level != null && mc.level.getGameTime() - lastShotTick > 5) {
 			burst = 0;
 		}
+		if (mc.level != null && player != null) {
+			long now = mc.level.getGameTime();
+			ItemStack stack = player.getMainHandItem();
+			GunState state = holdingAk(player) ? AkItem.state(stack) : null;
+			boolean checking = checking(now);
+			while (check.consumeClick()) {
+				if (state != null && !state.reloading() && !checking && state.hasMag()) {
+					checkStart = now;
+					checking = true;
+				}
+			}
+			magCheckTick(mc, player, state, now);
+			// the trigger: held down with the rifle in hand and nothing else on screen
+			boolean want = state != null && mc.screen == null && mc.options.keyAttack.isDown() && !checking;
+			if (want != triggerDown) {
+				triggerDown = want;
+				triggerTick = now;
+				pressShots = 0;
+				pressRounds = state == null ? 0 : state.rounds();
+				ClientPlayNetworking.send(new GunInputPayload(want ? GunInputPayload.TRIGGER_DOWN : GunInputPayload.TRIGGER_UP));
+			}
+			if (triggerDown && !state.reloading() && state.mode() != GunState.SAFE) {
+				long held = now - triggerTick;
+				boolean drop = state.mode() == GunState.AUTO ? held % AkItem.CYCLE == 0 : held == 0;
+				if (drop && pressShots < pressRounds) {
+					pressShots++;
+					localShot(player, state);
+				}
+			}
+			prevAim = aim;
+			boolean aiming = state != null && AkItem.isAiming(player) && !state.reloading() && !checking;
+			aim = aiming ? Math.min(1.0F, aim + 0.2F) : Math.max(0.0F, aim - 0.22F);
+		}
 		AkFirstPerson.tick(mc);
 	}
 
@@ -99,7 +180,7 @@ public final class AkClient {
 		return player.getEyePosition(partial).add(look.scale(0.95)).add(right.scale(0.14)).add(0, -0.12, 0);
 	}
 
-	private static void localShot(Player player, GunState state) {
+	static void localShot(Player player, GunState state) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null) {
 			return;

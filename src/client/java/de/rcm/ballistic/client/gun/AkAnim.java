@@ -46,6 +46,8 @@ public final class AkAnim {
 	public float bolt;
 	public boolean magVisible;
 	public boolean magTracer;
+	/** Rounds showing in the feed lips. */
+	public boolean magLoaded;
 	public final Matrix4f mag = new Matrix4f();
 	public final Vector3f leftHand = new Vector3f();
 	public final Vector3f rightHand = new Vector3f();
@@ -69,6 +71,51 @@ public final class AkAnim {
 		m.translate(0.0F, -0.03F - 0.05F * out * out, 0.085F);
 	}
 
+	/**
+	 * Checking the magazine: the hand takes it, thumbs the release, rocks it out and tips it back so the
+	 * rounds in the lips are in view, holds it there a moment, and rocks it home again.
+	 */
+	private void magCheck(float t) {
+		float out;
+		float show;
+		if (t < 11.0F) {
+			out = 0.0F;
+			show = 0.0F;
+		} else if (t < 16.0F) {
+			out = smooth((t - 11.0F) / 5.0F);
+			show = smooth((t - 12.0F) / 5.0F);
+		} else if (t < 25.0F) {
+			out = 1.0F;
+			show = 1.0F;
+		} else if (t < 29.0F) {
+			out = 1.0F - smooth((t - 25.0F) / 4.0F);
+			show = 1.0F - smooth((t - 24.0F) / 4.0F);
+		} else {
+			out = 0.0F;
+			show = 0.0F;
+		}
+		Matrix4f m = this.mag;
+		magPose(m, out * 0.8F, 0.0F);
+		if (show > 0.0F) {
+			// pulled clear and tipped back, top towards the eye
+			m.translate(0.0F, -0.045F * show, 0.03F * show);
+			m.translate(0.0F, 0.036F, -0.06F);
+			m.rotate(Axis.XP.rotationDegrees(38.0F * show));
+			m.rotate(Axis.ZP.rotationDegrees(-12.0F * show));
+			m.translate(0.0F, -0.036F, 0.06F);
+		}
+		Vector3f hold = m.transformPosition(MAG_HOLD, new Vector3f());
+		if (t < 7.0F) {
+			Matrix4f seated = new Matrix4f();
+			magPose(seated, 0.0F, 0.0F);
+			lerp(HANDGUARD, seated.transformPosition(MAG_HOLD, new Vector3f()), t / 7.0F, this.leftHand);
+		} else if (t < 31.0F) {
+			this.leftHand.set(hold);
+		} else {
+			lerp(hold, HANDGUARD, (t - 31.0F) / 8.0F, this.leftHand);
+		}
+	}
+
 	private static Vector3f lerp(Vector3f a, Vector3f b, float t, Vector3f out) {
 		return out.set(a).lerp(b, smooth(t));
 	}
@@ -77,14 +124,25 @@ public final class AkAnim {
 	 * @param lastShot game tick of the last shot (the client's own for the local player)
 	 */
 	public AkAnim compute(GunState state, float now, long lastShot) {
+		return this.compute(state, now, lastShot, -1.0F);
+	}
+
+	/**
+	 * @param check ticks into a magazine check (local player, first person), or -1
+	 */
+	public AkAnim compute(GunState state, float now, long lastShot, float check) {
 		float shot = now - lastShot;
 		this.bolt = shot >= 0.0F && shot < AkItem.CYCLE ? Mth.sin(shot / AkItem.CYCLE * Mth.PI) : 0.0F;
 		this.magVisible = state.hasMag();
 		this.magTracer = state.ammo() == GunState.TRACER;
 		magPose(this.mag, 0.0F, 0.0F);
+		this.magLoaded = state.rounds() > 0;
 		this.leftHand.set(HANDGUARD);
 		this.rightHand.set(GRIP);
 		if (!state.reloading()) {
+			if (check >= 0.0F && state.hasMag()) {
+				this.magCheck(check);
+			}
 			return this;
 		}
 
@@ -129,6 +187,7 @@ public final class AkAnim {
 		}
 		if (fresh) {
 			this.magVisible = true;
+			this.magLoaded = true;
 			this.magTracer = state.reloadAmmo() == GunState.TRACER;
 		} else if (r >= AkItem.T_MAG_OUT && !state.hasMag()) {
 			this.magVisible = false;

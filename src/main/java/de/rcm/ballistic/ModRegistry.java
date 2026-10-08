@@ -197,6 +197,11 @@ public final class ModRegistry {
 		EntityType.Builder.<de.rcm.ballistic.entity.SupplyRocketEntity>of(de.rcm.ballistic.entity.SupplyRocketEntity::new, MobCategory.MISC).sized(0.6F, 0.6F)
 			.clientTrackingRange(64).updateInterval(1).fireImmune().noLootTable()
 	);
+	public static final EntityType<de.rcm.ballistic.gun.GrenadeEntity> GRENADE_ENTITY = registerEntity(
+		"grenade",
+		EntityType.Builder.<de.rcm.ballistic.gun.GrenadeEntity>of(de.rcm.ballistic.gun.GrenadeEntity::new, MobCategory.MISC).sized(0.2F, 0.2F)
+			.clientTrackingRange(8).updateInterval(1).noLootTable()
+	);
 	public static final EntityType<de.rcm.ballistic.gun.BulletEntity> BULLET = registerEntity(
 		"bullet",
 		EntityType.Builder.<de.rcm.ballistic.gun.BulletEntity>of(de.rcm.ballistic.gun.BulletEntity::new, MobCategory.MISC).sized(0.1F, 0.1F)
@@ -505,6 +510,9 @@ public final class ModRegistry {
 	public static final Item AK_MAG_TRACER = registerItem(
 		"ak_magazine_tracer", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, true), new Item.Properties().stacksTo(8).rarity(Rarity.UNCOMMON)
 	);
+	public static final Item GRENADE = registerItem(
+		"grenade", de.rcm.ballistic.gun.GrenadeItem::new, new Item.Properties().stacksTo(8)
+	);
 	public static final Item RPG_ROCKET = registerItem("rpg_rocket", Item::new, new Item.Properties().stacksTo(16));
 	public static final Item MOBILE_LAUNCHER_ITEM = registerItem(
 		"mobile_launcher", MobileLauncherItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
@@ -590,6 +598,12 @@ public final class ModRegistry {
 	public static final SoundEvent BULLET_IMPACT_WOOD = sound("bullet.impact_wood");
 	public static final SoundEvent BULLET_IMPACT_FLESH = sound("bullet.impact_flesh");
 	public static final SoundEvent SHELL_DROP = sound("ak.shell");
+	public static final SoundEvent PLAYER_BREATH = sound("player.breath");
+	public static final SoundEvent GRENADE_PIN = sound("grenade.pin");
+	public static final SoundEvent GRENADE_SPOON = sound("grenade.spoon");
+	public static final SoundEvent GRENADE_BOUNCE = sound("grenade.bounce");
+	public static final SoundEvent GRENADE_EXPLODE = sound("grenade.explode");
+	public static final SoundEvent GRENADE_EXPLODE_FAR = sound("grenade.explode_far");
 
 	// ---------- Particles ----------
 	public static final SimpleParticleType SMOKE = particle("smoke");
@@ -616,6 +630,7 @@ public final class ModRegistry {
 		output.accept(AK47);
 		output.accept(AK_MAG);
 		output.accept(AK_MAG_TRACER);
+		output.accept(GRENADE);
 		output.accept(ROCKET_LAUNCHER);
 		output.accept(RPG_ROCKET);
 		output.accept(TARGET_DESIGNATOR);

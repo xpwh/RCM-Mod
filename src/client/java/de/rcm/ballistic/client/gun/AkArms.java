@@ -50,7 +50,7 @@ public final class AkArms {
 		}
 		float now = mc.level.getGameTime() + partialTick;
 		GunState state = AkItem.state(stack);
-		AkAnim anim = ANIM.compute(state, now, Math.max(state.lastShot(), AkClient.lastShotTick));
+		AkAnim anim = ANIM.compute(state, now, Math.max(state.lastShot(), AkClient.lastShotTick), AkClient.checkTime(now));
 
 		poseStack.pushPose();
 		// the item's first-person display transform (models/item/ak47_in_hand.json) and the renderer's re-centring

@@ -27,8 +27,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * AKM assault rifle, 7.62x39 mm, 600 rounds a minute. Hold right-click to fire (automatic or
- * single shots), R to change magazines (sneak + R loads the other kind of ammunition), V to work the
+ * AKM assault rifle, 7.62x39 mm, 600 rounds a minute. Hold right-click to aim over the sights,
+ * left-click is the trigger (automatic or single shots), R to change magazines (sneak + R loads the other kind of ammunition), V to work the
  * fire selector (safe / auto / single). The magazine you take out goes back into your inventory with
  * whatever it still holds; with the chamber empty the bolt has to be charged after the new magazine
  * is in.
@@ -66,25 +66,10 @@ public class AkItem extends Item {
 		stack.set(ModRegistry.GUN_STATE, state);
 	}
 
+	/** Right-click (held): shoulder the rifle and look over the sights. */
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		ItemStack stack = player.getItemInHand(hand);
-		GunState state = state(stack);
-		if (hand != InteractionHand.MAIN_HAND || state.reloading()) {
-			return InteractionResult.FAIL;
-		}
-		if (state.mode() == GunState.SAFE) {
-			if (!level.isClientSide()) {
-				level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_SELECTOR, SoundSource.PLAYERS, 0.4F, 1.3F);
-				player.displayClientMessage(Component.translatable("message.ballisticmissiles.ak_safe").withStyle(ChatFormatting.YELLOW), true);
-			}
-			return InteractionResult.FAIL;
-		}
-		if (state.rounds() <= 0) {
-			if (!level.isClientSide()) {
-				level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_DRY, SoundSource.PLAYERS, 0.7F, 1.0F);
-				player.displayClientMessage(Component.translatable("message.ballisticmissiles.ak_empty").withStyle(ChatFormatting.RED), true);
-			}
+		if (hand != InteractionHand.MAIN_HAND || state(player.getItemInHand(hand)).reloading()) {
 			return InteractionResult.FAIL;
 		}
 		player.startUsingItem(hand);
@@ -101,34 +86,69 @@ public class AkItem extends Item {
 		return ItemUseAnimation.NONE;
 	}
 
-	@Override
-	public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remaining) {
-		if (!(entity instanceof Player player)) {
+	/** Whether the player has the rifle up at the eye. */
+	public static boolean isAiming(Player player) {
+		return player.isUsingItem() && player.getUseItem().getItem() instanceof AkItem;
+	}
+
+	// ------------------------------------------------------------------ the trigger (left mouse button)
+
+	private static final java.util.Map<java.util.UUID, long[]> TRIGGERS = new java.util.HashMap<>();
+
+	/** The trigger pressed or let go (from the client). */
+	public static void trigger(ServerPlayer player, boolean down) {
+		if (!down) {
+			TRIGGERS.remove(player.getUUID());
 			return;
 		}
-		int held = this.getUseDuration(stack, entity) - remaining;
+		ItemStack stack = player.getMainHandItem();
+		if (!(stack.getItem() instanceof AkItem)) {
+			return;
+		}
 		GunState state = state(stack);
-		boolean trigger = state.mode() == GunState.AUTO ? held % CYCLE == 0 : held == 0;
-		if (!trigger || state.reloading() || state.mode() == GunState.SAFE) {
+		ServerLevel level = player.level();
+		if (state.reloading()) {
+			return;
+		}
+		if (state.mode() == GunState.SAFE) {
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_SELECTOR, SoundSource.PLAYERS, 0.4F, 1.3F);
+			player.displayClientMessage(Component.translatable("message.ballisticmissiles.ak_safe").withStyle(ChatFormatting.YELLOW), true);
 			return;
 		}
 		if (state.rounds() <= 0) {
-			if (held > 0 && !level.isClientSide()) {
-				// the hammer falls on an empty chamber
-				level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_DRY, SoundSource.PLAYERS, 0.7F, 1.0F);
-			}
-			player.releaseUsingItem();
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_DRY, SoundSource.PLAYERS, 0.7F, 1.0F);
+			player.displayClientMessage(Component.translatable("message.ballisticmissiles.ak_empty").withStyle(ChatFormatting.RED), true);
 			return;
 		}
-		if (level.isClientSide()) {
-			clientShot.shot(player, state);
-			return;
-		}
-		ServerLevel server = (ServerLevel) level;
-		this.fire(server, player, stack, state, held / CYCLE);
+		TRIGGERS.put(player.getUUID(), new long[] {level.getGameTime()});
 	}
 
-	private void fire(ServerLevel level, Player player, ItemStack stack, GunState state, int burst) {
+	/** Server, every tick while in the main hand: the hammer falls as long as the trigger is held. */
+	private void triggerTick(ServerLevel level, ServerPlayer player, ItemStack stack) {
+		long[] down = TRIGGERS.get(player.getUUID());
+		if (down == null) {
+			return;
+		}
+		GunState state = state(stack);
+		long held = level.getGameTime() - down[0];
+		boolean drop = state.mode() == GunState.AUTO ? held % CYCLE == 0 : held == 0;
+		if (state.reloading() || state.mode() == GunState.SAFE) {
+			TRIGGERS.remove(player.getUUID());
+			return;
+		}
+		if (!drop) {
+			return;
+		}
+		if (state.rounds() <= 0) {
+			// the hammer falls on an empty chamber
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_DRY, SoundSource.PLAYERS, 0.7F, 1.0F);
+			TRIGGERS.remove(player.getUUID());
+			return;
+		}
+		this.fire(level, player, stack, state, (int) (held / CYCLE));
+	}
+
+	private void fire(ServerLevel level, ServerPlayer player, ItemStack stack, GunState state, int burst) {
 		int left = state.rounds() - 1;
 		long now = level.getGameTime();
 		setState(stack, state.fired(left, now));
@@ -138,6 +158,8 @@ public class AkItem extends Item {
 		Vec3 muzzle = player.getEyePosition().add(look.scale(0.9)).add(right.scale(0.12)).add(0, -0.1, 0);
 		// a long burst walks: the barrel climbs and wanders, the spread opens up
 		double spread = 0.0035 + Math.min(burst, 12) * 0.0018 + (player.isCrouching() ? -0.0015 : 0.0) + (player.onGround() ? 0.0 : 0.012);
+		// over the sights it goes where you look; from the hip only roughly
+		spread *= isAiming(player) ? 0.45 : 1.7;
 		var random = level.getRandom();
 		Vec3 dir = look.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
 		boolean tracer = state.ammo() == GunState.TRACER;
@@ -152,7 +174,7 @@ public class AkItem extends Item {
 		}
 		level.gameEvent(player, net.minecraft.world.level.gameevent.GameEvent.PROJECTILE_SHOOT, muzzle);
 		if (left == 0) {
-			player.releaseUsingItem(); // the bolt stays forward on an empty chamber: the next pull just clicks
+			TRIGGERS.remove(player.getUUID()); // the bolt stays forward on an empty chamber: the next pull just clicks
 		}
 	}
 
@@ -226,6 +248,9 @@ public class AkItem extends Item {
 
 	@Override
 	public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, EquipmentSlot slot) {
+		if (slot == EquipmentSlot.MAINHAND && entity instanceof ServerPlayer shooter) {
+			this.triggerTick(level, shooter, stack);
+		}
 		GunState state = state(stack);
 		if (!state.reloading() || !(entity instanceof Player player)) {
 			return;

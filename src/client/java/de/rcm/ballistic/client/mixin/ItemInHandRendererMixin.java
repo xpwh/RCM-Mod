@@ -35,6 +35,12 @@ public abstract class ItemInHandRendererMixin {
 			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
 				RpgClient.renderArms(player, stack, base, poseStack, collector, light, partialTick);
 			}
+		} else if (stack.is(ModRegistry.GRENADE)) {
+			Matrix4f base = new Matrix4f(poseStack.last().pose());
+			de.rcm.ballistic.client.gun.GrenadeClient.transform(poseStack, player, partialTick);
+			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
+				de.rcm.ballistic.client.gun.GrenadeClient.renderArms(player, base, poseStack, collector, light, partialTick);
+			}
 		} else if (stack.is(ModRegistry.AK47)) {
 			Matrix4f base = new Matrix4f(poseStack.last().pose());
 			AkFirstPerson.transform(poseStack, partialTick, stack);

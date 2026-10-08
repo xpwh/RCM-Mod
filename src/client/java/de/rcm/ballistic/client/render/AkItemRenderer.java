@@ -59,8 +59,10 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 	static final BoxMesh HANDLE = handle();
 	static final BoxMesh CARRIER = carrier();
 	static final BoxMesh SELECTOR = selector();
-	static final BoxMesh MAG = magazine(false);
-	static final BoxMesh MAG_TRACER = magazine(true);
+	static final BoxMesh MAG = magazine(false, true);
+	static final BoxMesh MAG_TRACER = magazine(true, true);
+	static final BoxMesh MAG_EMPTY = magazine(false, false);
+	static final BoxMesh MAG_TRACER_EMPTY = magazine(true, false);
 	private static final net.minecraft.client.renderer.rendertype.RenderType FLASH_TYPE = net.minecraft.client.renderer.rendertype.RenderTypes.eyes(
 		BallisticMissiles.id("textures/effect/muzzle_flash.png"));
 	private static final AkAnim ANIM = new AkAnim();
@@ -75,7 +77,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		Minecraft mc = Minecraft.getInstance();
 		float now = mc.level == null ? 0.0F : mc.level.getGameTime() + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		long lastShot = context.firstPerson() ? Math.max(state.lastShot(), AkClient.lastShotTick()) : state.lastShot();
-		AkAnim anim = ANIM.compute(state, now, lastShot);
+		AkAnim anim = ANIM.compute(state, now, lastShot, context.firstPerson() ? AkClient.checkTime(now) : -1.0F);
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.5F, 0.5F); // undo the item transform's corner offset
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> BODY.emit(pose, consumer, light));
@@ -109,7 +111,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 
 		// ---- magazine
 		if (anim.magVisible) {
-			BoxMesh mag = anim.magTracer ? MAG_TRACER : MAG;
+			BoxMesh mag = anim.magLoaded ? (anim.magTracer ? MAG_TRACER : MAG) : (anim.magTracer ? MAG_TRACER_EMPTY : MAG_EMPTY);
 			poseStack.pushPose();
 			poseStack.mulPose(anim.mag);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> mag.emit(pose, consumer, light));
@@ -367,13 +369,13 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 			new float[] {-0.135F, 0.132F, 0.11F, 0.02F, 0.006F});
 		b.hexa(AK_BLUED,
 			v(-0.015F, 0.149F, -0.2F), v(0.015F, 0.149F, -0.2F), v(0.015F, 0.154F, -0.2F), v(-0.015F, 0.154F, -0.2F),
-			v(-0.015F, 0.137F, -0.122F), v(0.015F, 0.137F, -0.122F), v(0.015F, 0.142F, -0.122F), v(-0.015F, 0.142F, -0.122F));
+			v(-0.015F, 0.15F, -0.122F), v(0.015F, 0.15F, -0.122F), v(0.015F, 0.155F, -0.122F), v(-0.015F, 0.155F, -0.122F));
 		for (float sx : new float[] {-1.0F, 1.0F}) {
 			// the ears either side of the notch
-			b.box(sx > 0 ? 0.003F : -0.012F, 0.14F, -0.13F, sx > 0 ? 0.012F : -0.003F, 0.149F, -0.122F, AK_BLUED);
+			b.box(sx > 0 ? 0.003F : -0.012F, 0.153F, -0.13F, sx > 0 ? 0.012F : -0.003F, 0.163F, -0.122F, AK_BLUED);
 		}
-		b.box(-0.018F, 0.142F, -0.172F, 0.018F, 0.155F, -0.16F, AK_WORN); // range slider
-		b.box(0.018F, 0.144F, -0.17F, 0.023F, 0.152F, -0.162F, AK_WORN);  // slider catch
+		b.box(-0.018F, 0.146F, -0.172F, 0.018F, 0.159F, -0.16F, AK_WORN); // range slider
+		b.box(0.018F, 0.148F, -0.17F, 0.023F, 0.156F, -0.162F, AK_WORN);  // slider catch
 		// gas tube lock lever on the right of the sight block
 		b.beam(v(0.022F, 0.135F, -0.214F), v(0.026F, 0.12F, -0.185F), 0.005F, 0.008F, AK_WORN);
 
@@ -466,7 +468,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 				v(sx * 0.0125F, 0.108F, -0.628F), v(sx * 0.018F, 0.108F, -0.628F), v(sx * 0.016F, 0.168F, -0.636F), v(sx * 0.0125F, 0.168F, -0.636F),
 				v(sx * 0.0125F, 0.108F, -0.658F), v(sx * 0.018F, 0.108F, -0.658F), v(sx * 0.016F, 0.168F, -0.652F), v(sx * 0.0125F, 0.168F, -0.652F));
 		}
-		b.revolve(AK_WORN, v(0, 0.12F, -0.644F), v(0, 1, 0), new float[][] {{0.0F, 0.0028F}, {0.032F, 0.0024F}, {0.036F, 0.0F}}, 6);
+		b.revolve(AK_WORN, v(0, 0.12F, -0.644F), v(0, 1, 0), new float[][] {{0.0F, 0.0028F}, {0.041F, 0.0024F}, {0.045F, 0.0F}}, 6);
 		b.box(-0.006F, 0.044F, -0.66F, 0.006F, 0.06F, -0.618F, AK_BLUED);
 		b.box(-0.004F, 0.04F, -0.656F, 0.004F, 0.044F, -0.645F, AK_BLUED);
 		// cleaning rod under the barrel, its notched head at the front
@@ -546,7 +548,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 	}
 
 	/** The curved 30-round magazine, top at the magazine well, with two rounds showing in the lips. */
-	private static BoxMesh magazine(boolean tracer) {
+	private static BoxMesh magazine(boolean tracer, boolean loaded) {
 		BoxMesh.Builder b = new BoxMesh.Builder();
 		int n = 10;
 		Vector3f[] spine = arc(v(0, 0.036F, -0.06F), -1.0F, -0.12F, 1.9F, 0.31F, n);
@@ -589,7 +591,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		// feed lips and the top two rounds: steel-cased 7.62x39, copper-washed bullets (green tip for tracers)
 		b.box(-0.0145F, 0.034F, -0.092F, -0.009F, 0.042F, -0.03F, AK_BLUED);
 		b.box(0.009F, 0.034F, -0.092F, 0.0145F, 0.042F, -0.03F, AK_BLUED);
-		for (int k = 0; k < 2; k++) {
+		for (int k = 0; k < (loaded ? 2 : 0); k++) {
 			float x = k == 0 ? 0.0035F : -0.0035F;
 			float y = k == 0 ? 0.042F : 0.036F;
 			b.revolve(BRASS, v(x, y, -0.03F), v(0, -0.06F, -1), new float[][] {{0.0F, 0.0055F}, {0.04F, 0.0052F}, {0.046F, 0.0042F}}, 8);
