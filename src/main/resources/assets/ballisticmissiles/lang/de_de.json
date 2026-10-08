@@ -356,7 +356,7 @@
 	"entity.ballisticmissiles.rpg_grenade": "PG-7V Panzergranate",
 	"tooltip.ballisticmissiles.rocket_launcher.loaded": "Geladen",
 	"tooltip.ballisticmissiles.rocket_launcher.empty": "Leer",
-	"tooltip.ballisticmissiles.rocket_launcher.1": "Rechtsklick: feuern · lädt in der Hand automatisch aus PG-7V-Granaten im Inventar nach",
+	"tooltip.ballisticmissiles.rocket_launcher.1": "Rechtsklick halten: über Kimme und Korn zielen · Linksklick: feuern (aus der Hüfte ungenau) · lädt aus PG-7V-Granaten im Inventar nach",
 	"tooltip.ballisticmissiles.rocket_launcher.2": "Hohlladung: durchschlägt Wände, Fahrzeuge, Schiffe und Jets",
 	"tooltip.ballisticmissiles.rocket_launcher.3": "Achtung Rückstrahl: niemand direkt hinter dir stehen lassen!",
 	"message.ballisticmissiles.rpg_no_ammo": "Keine PG-7V-Granaten im Inventar",

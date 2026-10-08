@@ -59,6 +59,11 @@ public final class Rpg7ItemRenderer implements SpecialModelRenderer<Boolean> {
 		poseStack.popPose();
 	}
 
+	/** The PG-7V on its own, positioned as if seated in the muzzle (for the round in the reloading hand). */
+	public static void submitWarhead(PoseStack poseStack, SubmitNodeCollector collector, int light) {
+		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> WARHEAD.emit(pose, consumer, light));
+	}
+
 	@Override
 	public void getExtents(Consumer<Vector3fc> output) {
 		output.accept(new Vector3f(0.4F, 0.4F, -0.35F));
@@ -118,8 +123,11 @@ public final class Rpg7ItemRenderer implements SpecialModelRenderer<Boolean> {
 		b.box(-0.008F, AXIS_Y - r - 0.02F, 0.06F, 0.008F, AXIS_Y - r + 0.005F, 0.085F, STEEL); // hammer
 		// folding iron sights: front post near the muzzle, rear leaf above the grip
 		b.box(-0.012F, top - 0.004F, MUZZLE_Z + 0.04F, 0.012F, top + 0.012F, MUZZLE_Z + 0.07F, GUNMETAL);
-		b.box(-0.004F, top + 0.012F, MUZZLE_Z + 0.05F, 0.004F, top + 0.045F, MUZZLE_Z + 0.058F, GUNMETAL);
-		b.box(-0.016F, top - 0.004F, -0.03F, 0.016F, top + 0.03F, -0.02F, GUNMETAL);
+		b.box(-0.003F, top + 0.012F, MUZZLE_Z + 0.05F, 0.003F, top + 0.055F, MUZZLE_Z + 0.057F, GUNMETAL);
+		// rear leaf with its notch
+		b.box(-0.016F, top - 0.004F, -0.03F, 0.016F, top + 0.05F, -0.022F, GUNMETAL);
+		b.box(-0.016F, top + 0.05F, -0.03F, -0.004F, top + 0.062F, -0.022F, GUNMETAL);
+		b.box(0.004F, top + 0.05F, -0.03F, 0.016F, top + 0.062F, -0.022F, GUNMETAL);
 		// PGO-7 optical sight on the left: bracket, body, objective lens, rubber eye-cup
 		float sx = -0.065F;
 		float sy = AXIS_Y + 0.05F;

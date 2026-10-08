@@ -10,8 +10,8 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * The rifle in first person: a slow breathing sway, the stock punching back into the shoulder and
- * the muzzle jumping with every shot (more as a burst goes on), and the reload - the rifle rolled
- * over to the left and tipped down to bring the magazine well into view, the old magazine rocked out,
+ * the muzzle jumping with every shot (more as a burst goes on), and the reload - the rifle brought
+ * in to the middle of the view and rolled so the magazine well faces you, the old magazine rocked out,
  * the new one rocked in and slapped home, then for an empty gun the rifle turned right and the
  * charging handle racked, and back up on target.
  */
@@ -48,10 +48,11 @@ public final class AkFirstPerson {
 			if (state.reloadKind() == GunState.EMPTY) {
 				rack = smooth((r - (AkItem.T_CHARGE - 12)) / 8.0F) * (1.0F - smooth((r - (AkItem.T_CHARGE + 6)) / 8.0F));
 			}
-			poseStack.translate(-0.06F * tilt, -0.12F * tilt + 0.02F * slap, 0.05F * tilt);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(28.0F * tilt - 40.0F * rack));
-			poseStack.mulPose(Axis.XP.rotationDegrees(-14.0F * tilt + 4.0F * slap));
-			poseStack.mulPose(Axis.YP.rotationDegrees(10.0F * tilt - 12.0F * rack));
+			// brought in towards the middle of the view and up, rolled so the magazine well faces you
+			poseStack.translate(-0.1F * tilt + 0.06F * rack, 0.2F * tilt + 0.012F * slap, -0.12F * tilt);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-30.0F * tilt + 52.0F * rack));
+			poseStack.mulPose(Axis.XP.rotationDegrees(5.0F * tilt - 3.0F * slap));
+			poseStack.mulPose(Axis.YP.rotationDegrees(40.0F * tilt + 8.0F * rack));
 		}
 
 		// recoil: the local player's own shots (instant), everybody else's from the synced state

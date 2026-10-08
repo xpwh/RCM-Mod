@@ -356,7 +356,7 @@
 	"entity.ballisticmissiles.rpg_grenade": "PG-7V Rocket Grenade",
 	"tooltip.ballisticmissiles.rocket_launcher.loaded": "Loaded",
 	"tooltip.ballisticmissiles.rocket_launcher.empty": "Empty",
-	"tooltip.ballisticmissiles.rocket_launcher.1": "Right-click: fire · reloads itself in the hand from PG-7V grenades in your inventory",
+	"tooltip.ballisticmissiles.rocket_launcher.1": "Hold right-click: aim down the sights · Left-click: fire (inaccurate from the hip) · reloads from PG-7V grenades in your inventory",
 	"tooltip.ballisticmissiles.rocket_launcher.2": "Shaped charge: punches through walls, vehicles, ships and jets",
 	"tooltip.ballisticmissiles.rocket_launcher.3": "Back-blast: keep everyone clear of the area behind you!",
 	"message.ballisticmissiles.rpg_no_ammo": "No PG-7V grenades in your inventory",

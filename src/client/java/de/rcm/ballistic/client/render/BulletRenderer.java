@@ -14,9 +14,9 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Bullets as the eye sees them. A ball round is a brief grey smear along its path, gone in a blink.
- * A tracer burns green: by day a small bright spark with a short tail; at night a vivid, glowing
- * dot dragging a long streak (the eye's persistence turns it into a line of light), its colour
- * deepening as the compound burns down; after about 800 m it goes out.
+ * A tracer is a burning pellet in the base of the bullet: it catches a few metres out of the muzzle,
+ * then shows as a small, sputtering green spot trailing a short dash where the eye smears it - faint
+ * by day, vivid at night - and burns out after about 800 m.
  */
 public class BulletRenderer extends EntityRenderer<BulletEntity, BulletRenderer.State> {
 	public BulletRenderer(EntityRendererProvider.Context context) {
@@ -33,6 +33,7 @@ public class BulletRenderer extends EntityRenderer<BulletEntity, BulletRenderer.
 		public float speed;
 		public float night;
 		public float age;
+		public int id;
 	}
 
 	@Override
@@ -57,6 +58,7 @@ public class BulletRenderer extends EntityRenderer<BulletEntity, BulletRenderer.
 		state.distance = (float) state.toCamera.length();
 		state.tracer = entity.isTracer();
 		state.age = entity.tickCount + partialTick;
+		state.id = entity.getId();
 		state.burn = entity.isTracer() ? Mth.clamp(1.0F - (state.age - (BulletEntity.TRACER_BURN - 4)) / 4.0F, 0.0F, 1.0F) : 0.0F;
 		state.night = night(entity.level().getDayTime()) * (1.0F - entity.level().getRainLevel(partialTick) * 0.3F);
 	}
@@ -79,17 +81,19 @@ public class BulletRenderer extends EntityRenderer<BulletEntity, BulletRenderer.
 	public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
 		// the streak never reaches back past the muzzle
 		float travelled = state.age * state.speed;
-		if (state.tracer && state.burn > 0.0F) {
+		if (state.tracer && state.burn > 0.0F && travelled > 4.0F) {
 			float n = state.night;
-			float b = state.burn;
-			// the eye keeps the light for about a tenth of a second: at night that is a long line
-			float trail = Math.min(travelled, state.speed * (0.9F + 2.4F * n));
-			float core = SkyGlow.size(state.distance, 0.05F, 0.0022F) * (1.0F + 1.4F * n);
-			int coreColor = 0xF0FFE8;
-			int glowColor = b > 0.6F ? 0x6CFF50 : 0x9AE040;
-			SkyGlow.point(poseStack, collector, camera, core, coreColor, glowColor, (0.55F + 0.45F * n) * b);
-			SkyGlow.streak(poseStack, collector, state.toCamera, state.back, trail, core * 0.55F, glowColor, (0.45F + 0.55F * n) * b);
-			SkyGlow.streak(poseStack, collector, state.toCamera, state.back, trail * 0.45F, core * 0.25F, 0xE8FFE0, (0.35F + 0.5F * n) * b);
+			float b = state.burn * Math.min(1.0F, (travelled - 4.0F) / 6.0F); // the compound catches a few metres out
+			// burning pellet: it sputters, so the light flickers from frame to frame
+			float flicker = 0.72F + 0.28F * Mth.sin(state.age * 9.7F + state.id * 1.3F) * Mth.sin(state.age * 23.1F + state.id);
+			float strength = b * flicker * (0.4F + 0.6F * n);
+			// a compact spot: small however far, never a beam
+			float core = Math.max(0.016F, state.distance * 0.0011F);
+			SkyGlow.point(poseStack, collector, camera, core, 0xF4FFE6, 0x86F060, strength);
+			// the short dash the eye smears it into, brightest at the head
+			float dash = Math.min(travelled - 4.0F, 1.2F + 2.0F * n);
+			SkyGlow.streak(poseStack, collector, state.toCamera, state.back, dash, core * 0.9F, 0x6AD848, 0.45F * strength);
+			SkyGlow.streak(poseStack, collector, state.toCamera, state.back, dash * 0.55F, core * 0.4F, 0xE6FFD8, 0.7F * strength);
 		} else if (travelled > 2.0F && state.age < 6.0F) {
 			// a ball round: a faint grey flick of disturbed air
 			float trail = Math.min(travelled - 1.5F, 3.5F);

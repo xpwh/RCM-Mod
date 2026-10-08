@@ -30,7 +30,11 @@ public abstract class ItemInHandRendererMixin {
 	private void ballisticmissiles$rpgAnimation(AbstractClientPlayer player, float partialTick, float pitch, InteractionHand hand, float swingProgress,
 		ItemStack stack, float equipProgress, PoseStack poseStack, SubmitNodeCollector collector, int light, CallbackInfo ci) {
 		if (stack.is(ModRegistry.ROCKET_LAUNCHER)) {
+			Matrix4f base = new Matrix4f(poseStack.last().pose());
 			RpgClient.transform(poseStack, partialTick);
+			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
+				RpgClient.renderArms(player, stack, base, poseStack, collector, light, partialTick);
+			}
 		} else if (stack.is(ModRegistry.AK47)) {
 			Matrix4f base = new Matrix4f(poseStack.last().pose());
 			AkFirstPerson.transform(poseStack, partialTick, stack);

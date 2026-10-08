@@ -8,7 +8,6 @@ import static de.rcm.ballistic.client.render.StructureKit.AK_MAG;
 import static de.rcm.ballistic.client.render.StructureKit.AK_WORN;
 import static de.rcm.ballistic.client.render.StructureKit.BLACK;
 import static de.rcm.ballistic.client.render.StructureKit.BRASS;
-import static de.rcm.ballistic.client.render.StructureKit.FLASH;
 import static de.rcm.ballistic.client.render.StructureKit.GREEN_LAMP;
 import static de.rcm.ballistic.client.render.StructureKit.GUNMETAL;
 import static de.rcm.ballistic.client.render.StructureKit.HOT;
@@ -61,7 +60,8 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 	static final BoxMesh SELECTOR = selector();
 	static final BoxMesh MAG = magazine(false);
 	static final BoxMesh MAG_TRACER = magazine(true);
-	static final BoxMesh FLASH_MESH = flash();
+	private static final net.minecraft.client.renderer.rendertype.RenderType FLASH_TYPE = net.minecraft.client.renderer.rendertype.RenderTypes.eyes(
+		BallisticMissiles.id("textures/effect/muzzle_flash.png"));
 	private static final AkAnim ANIM = new AkAnim();
 
 	public static void register() {
@@ -117,17 +117,89 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 
 		// ---- muzzle flash, for the first frame or two of each shot
 		float shot = now - lastShot;
-		if (shot >= 0.0F && shot < 1.2F) {
-			float size = 1.0F - shot / 1.2F;
-			long seed = lastShot;
-			poseStack.pushPose();
-			poseStack.translate(0.0F, BORE_Y, MUZZLE_Z);
-			poseStack.mulPose(Axis.ZP.rotationDegrees((seed * 47L) % 360L));
-			poseStack.scale(0.6F + 0.6F * size, 0.6F + 0.6F * size, 0.7F + 0.8F * size);
-			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> FLASH_MESH.emit(pose, consumer, LightTexture.FULL_BRIGHT));
-			poseStack.popPose();
+		if (shot >= 0.0F && shot < 1.4F) {
+			muzzleFlash(poseStack, collector, shot, lastShot, ambient(light, mc));
 		}
 		poseStack.popPose();
+	}
+
+
+	/** How bright the surroundings are (0 dark .. 1 daylight): a flash that is a spark at noon is a fireball at night. */
+	private static float ambient(int light, Minecraft mc) {
+		float block = LightTexture.block(light) / 15.0F;
+		float sky = LightTexture.sky(light) / 15.0F;
+		float day = 1.0F;
+		if (mc.level != null) {
+			long t = mc.level.getDayTime() % 24000L;
+			day = t < 12500L || t > 23500L ? 1.0F : 0.1F;
+		}
+		return Math.max(block * 0.7F, sky * day);
+	}
+
+	/**
+	 * The flash as the eye catches it: a white-hot star at the brake seen head-on, crossed sheets of
+	 * burning gas reaching forward (with the secondary fireball) seen from the side, and the jets the
+	 * slant brake throws up and to the right. Drawn additively; picked and turned at random per shot.
+	 */
+	private static void muzzleFlash(PoseStack poseStack, SubmitNodeCollector collector, float age, long seed, float ambient) {
+		java.util.Random r = new java.util.Random(seed * 31L + 7L);
+		float fade = age < 0.35F ? 1.0F : Math.max(0.0F, 1.0F - (age - 0.35F) / 1.05F);
+		float dark = 1.0F - ambient;
+		float bright = fade * (0.55F + 0.45F * dark);
+		float scale = (0.75F + 0.5F * dark) * (0.85F + 0.3F * r.nextFloat()) * (0.8F + 0.25F * Math.min(1.0F, age * 2.0F));
+		int side = r.nextInt(4);
+		int front = r.nextInt(4);
+		float roll = r.nextFloat() * 360.0F;
+		int c = Mth.clamp((int) (bright * 255.0F), 0, 255);
+		int color = 0xFF000000 | c << 16 | c << 8 | c;
+		poseStack.pushPose();
+		poseStack.translate(0.0F, BORE_Y, MUZZLE_Z);
+		poseStack.scale(scale, scale, scale);
+		poseStack.mulPose(Axis.ZP.rotationDegrees(roll));
+		float len = 0.3F;
+		float half = 0.05F;
+		collector.submitCustomGeometry(poseStack, FLASH_TYPE, (pose, consumer) -> {
+			for (int k = 0; k < 3; k++) {
+				float a = k * Mth.PI / 3.0F;
+				sheet(pose, consumer, Mth.cos(a) * half, Mth.sin(a) * half, 0.0F, 0.0F, 0.0F, -len, side, color);
+			}
+			// head-on star, just ahead of the brake
+			float s = 0.075F;
+			float u0 = 0.75F;
+			float v0 = front * 0.25F;
+			quad(pose, consumer, new float[][] {{-s, -s, -0.01F, u0, v0 + 0.25F}, {s, -s, -0.01F, 1.0F, v0 + 0.25F}, {s, s, -0.01F, 1.0F, v0}, {-s, s, -0.01F, u0, v0}}, color);
+		});
+		poseStack.popPose();
+		// the brake's ports vent up and to the right
+		poseStack.pushPose();
+		poseStack.translate(0.0F, BORE_Y + 0.01F, MUZZLE_Z + 0.012F);
+		poseStack.scale(scale, scale, scale);
+		int jet = r.nextInt(4);
+		int jc = Mth.clamp((int) (bright * 200.0F), 0, 255);
+		int jetColor = 0xFF000000 | jc << 16 | jc << 8 | jc;
+		collector.submitCustomGeometry(poseStack, FLASH_TYPE, (pose, consumer) -> {
+			sheet(pose, consumer, 0.0F, 0.0F, 0.03F, 0.025F, 0.075F, -0.015F, jet, jetColor);
+			sheet(pose, consumer, 0.02F, -0.012F, 0.0F, 0.025F, 0.075F, -0.015F, jet, jetColor);
+		});
+		poseStack.popPose();
+	}
+
+	/** A flame sheet from the origin along (dx, dy, dz), (wx, wy) its half-width across (wz along). */
+	private static void sheet(PoseStack.Pose pose, com.mojang.blaze3d.vertex.VertexConsumer consumer, float wx, float wy, float wz, float dx, float dy, float dz,
+		int row, int color) {
+		float v0 = row * 0.25F;
+		float v1 = v0 + 0.25F;
+		quad(pose, consumer, new float[][] {
+			{-wx, -wy, -wz, 0.0F, v1}, {dx - wx, dy - wy, dz - wz, 0.75F, v1}, {dx + wx, dy + wy, dz + wz, 0.75F, v0}, {wx, wy, wz, 0.0F, v0}
+		}, color);
+	}
+
+	/** Both windings, so it shows from either side. */
+	private static void quad(PoseStack.Pose pose, com.mojang.blaze3d.vertex.VertexConsumer consumer, float[][] v, int color) {
+		for (int i : new int[] {0, 1, 2, 3, 3, 2, 1, 0}) {
+			consumer.addVertex(pose, v[i][0], v[i][1], v[i][2]).setColor(color).setUv(v[i][3], v[i][4])
+				.setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(pose, 0.0F, 0.0F, 1.0F);
+		}
 	}
 
 	@Override
@@ -507,27 +579,6 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 			Vector3f[] band = {spine[3], new Vector3f(spine[3]).lerp(spine[4], 0.35F)};
 			sweep(b, GREEN_LAMP, band, new float[] {depth[3] + 0.002F, depth[3] + 0.002F}, new float[] {hw[3] + 0.0012F, hw[3] + 0.0012F}, 0.004F, 0.0F);
 		}
-		return b.build();
-	}
-
-	/** Muzzle flash: crossed blades of fire and a bright core, along -Z from the brake. */
-	private static BoxMesh flash() {
-		BoxMesh.Builder b = new BoxMesh.Builder();
-		for (int i = 0; i < 3; i++) {
-			float a = i * Mth.PI / 3.0F;
-			float c = Mth.cos(a);
-			float s = Mth.sin(a);
-			float nx = -s * 0.0015F;
-			float ny = c * 0.0015F;
-			b.hexa(FLASH,
-				v(-c * 0.012F - nx, -s * 0.012F - ny, 0.0F), v(c * 0.012F - nx, s * 0.012F - ny, 0.0F),
-				v(c * 0.07F - nx, s * 0.07F - ny, -0.12F), v(-c * 0.07F - nx, -s * 0.07F - ny, -0.12F),
-				v(-c * 0.012F + nx, -s * 0.012F + ny, 0.0F), v(c * 0.012F + nx, s * 0.012F + ny, 0.0F),
-				v(c * 0.07F + nx, s * 0.07F + ny, -0.12F), v(-c * 0.07F + nx, -s * 0.07F + ny, -0.12F));
-		}
-		b.revolve(HOT, v(0, 0, 0), v(0, 0, -1), new float[][] {{0.0F, 0.02F}, {0.05F, 0.05F}, {0.16F, 0.0F}}, 8);
-		// the slant brake throws its flash up and to the right
-		b.beam(v(0, 0.01F, -0.01F), v(0.04F, 0.08F, -0.03F), 0.02F, 0.03F, FLASH);
 		return b.build();
 	}
 }

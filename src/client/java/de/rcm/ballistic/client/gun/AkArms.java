@@ -29,8 +29,8 @@ import org.joml.Vector3f;
  */
 public final class AkArms {
 	/** Shoulders in the hand space vanilla sets up for the main hand (before our recoil and reload motion). */
-	private static final Vector3f RIGHT_SHOULDER = new Vector3f(0.02F, -0.4F, 0.58F);
-	private static final Vector3f LEFT_SHOULDER = new Vector3f(-0.84F, -0.34F, 0.5F);
+	public static final Vector3f RIGHT_SHOULDER = new Vector3f(0.34F, -0.48F, 0.52F);
+	public static final Vector3f LEFT_SHOULDER = new Vector3f(-1.1F, -0.45F, 0.1F);
 	/** Arms are slimmed to sit right on a rifle of this size. */
 	private static final float THICK = 0.5F;
 	private static final AkAnim ANIM = new AkAnim();
@@ -52,23 +52,31 @@ public final class AkArms {
 		GunState state = AkItem.state(stack);
 		AkAnim anim = ANIM.compute(state, now, Math.max(state.lastShot(), AkClient.lastShotTick));
 
-		PlayerModel model = mc.getEntityRenderDispatcher().getPlayerRenderer(player).getModel();
-		Identifier skin = player.getSkin().body().texturePath();
-		boolean slim = player.getSkin().model() == PlayerModelType.SLIM;
-
 		poseStack.pushPose();
 		// the item's first-person display transform (models/item/ak47_in_hand.json) and the renderer's re-centring
 		poseStack.translate(-3.2F / 16.0F, 2.4F / 16.0F, 0.5F / 16.0F);
 		poseStack.mulPose(Axis.YP.rotationDegrees(3.0F));
-		Matrix4f toGun = new Matrix4f(poseStack.last().pose()).invert().mul(base);
-		Vector3f rightShoulder = toGun.transformPosition(RIGHT_SHOULDER, new Vector3f());
-		Vector3f leftShoulder = toGun.transformPosition(LEFT_SHOULDER, new Vector3f());
-
-		arm(model.rightArm, model.rightSleeve, player.isModelPartShown(PlayerModelPart.RIGHT_SLEEVE), anim.rightHand, rightShoulder, slim ? -0.5F : -1.0F,
-			poseStack, collector, light, skin);
-		arm(model.leftArm, model.leftSleeve, player.isModelPartShown(PlayerModelPart.LEFT_SLEEVE), anim.leftHand, leftShoulder, slim ? 0.5F : 1.0F,
-			poseStack, collector, light, skin);
+		draw(player, base, poseStack, collector, light, anim.rightHand, anim.leftHand, RIGHT_SHOULDER, LEFT_SHOULDER);
 		poseStack.popPose();
+	}
+
+	/**
+	 * Both arms, with {@code poseStack} already in the held item's own space and the fists at
+	 * {@code rightHand} / {@code leftHand} there; the shoulders are given in {@code base} space.
+	 */
+	public static void draw(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, Vector3f rightHand,
+		Vector3f leftHand, Vector3f rightShoulderBase, Vector3f leftShoulderBase) {
+		Minecraft mc = Minecraft.getInstance();
+		PlayerModel model = mc.getEntityRenderDispatcher().getPlayerRenderer(player).getModel();
+		Identifier skin = player.getSkin().body().texturePath();
+		boolean slim = player.getSkin().model() == PlayerModelType.SLIM;
+		Matrix4f toItem = new Matrix4f(poseStack.last().pose()).invert().mul(base);
+		Vector3f rightShoulder = toItem.transformPosition(rightShoulderBase, new Vector3f());
+		Vector3f leftShoulder = toItem.transformPosition(leftShoulderBase, new Vector3f());
+		arm(model.rightArm, model.rightSleeve, player.isModelPartShown(PlayerModelPart.RIGHT_SLEEVE), rightHand, rightShoulder, slim ? -0.5F : -1.0F,
+			poseStack, collector, light, skin);
+		arm(model.leftArm, model.leftSleeve, player.isModelPartShown(PlayerModelPart.LEFT_SLEEVE), leftHand, leftShoulder, slim ? 0.5F : 1.0F,
+			poseStack, collector, light, skin);
 	}
 
 	/**

@@ -17,16 +17,14 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.KeyMapping;
+import de.rcm.ballistic.client.render.ShellCasings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
@@ -58,6 +56,8 @@ public final class AkClient {
 		selector = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.selector", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, CATEGORY));
 		ClientTickEvents.END_CLIENT_TICK.register(AkClient::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(GunAudio::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(ShellCasings::tick);
+		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_ENTITIES.register(ShellCasings::render);
 		AkItem.clientShot = AkClient::localShot;
 		ClientHooks.bulletClientTick = AkClient::bulletTick;
 		ClientPlayNetworking.registerGlobalReceiver(GunshotPayload.TYPE, (payload, context) -> remoteShot(payload));
@@ -133,9 +133,7 @@ public final class AkClient {
 		// the spent case flicks out of the ejection port to the right, forward and up
 		Vec3 port = muzzle.subtract(look.scale(0.55)).add(right.scale(0.05));
 		Vec3 v = right.scale(0.22 + ClientEffects.rand() * 0.06).add(look.scale(0.05)).add(0, 0.14 + ClientEffects.rand() * 0.05, 0);
-		mc.particleEngine.createParticle(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.GOLD_BLOCK.defaultBlockState()), port.x, port.y, port.z, v.x, v.y, v.z);
-		Vec3 ground = port.add(right.scale(1.6));
-		GunAudio.later(ModRegistry.SHELL_DROP, ground.add(0, -1.4, 0), own ? 0.35F : 0.2F, 0.9F + ClientEffects.rand() * 0.3F, 10 + (int) (ClientEffects.rand() * 5));
+		ShellCasings.eject(port, v.add(player.getDeltaMovement()));
 		// a puff of powder smoke at the muzzle that hangs about in still air
 		Vec3 m = muzzle.add(look.scale(0.25));
 		SmokeField.puff(m.x, m.y, m.z, look.x * 0.12, look.y * 0.12 + 0.01, look.z * 0.12, 160 + (int) (ClientEffects.rand() * 80), 0.08F, 0.75F,

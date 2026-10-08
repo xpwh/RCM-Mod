@@ -9,6 +9,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -19,6 +20,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.TooltipDisplay;
@@ -27,7 +29,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * RPG-7 shoulder-fired rocket launcher. Right-click fires the PG-7V grenade sitting in the muzzle;
+ * RPG-7 shoulder-fired rocket launcher. Hold right-click to shoulder it and aim through the sights,
+ * left-click fires the PG-7V grenade sitting in the muzzle (from the hip it goes wide);
  * the open tube blows a cone of fire and smoke out of the back (stand clear!). Held in the hand, it
  * reloads itself from the PG-7V rounds in your inventory after a moment. Whether a round is loaded
  * is kept in the stack's custom model data, so the model shows the warhead in the muzzle or not.
@@ -57,33 +60,73 @@ public class RocketLauncherItem extends Item {
 		return player.getAbilities().instabuild || player.getInventory().contains(s -> s.is(ModRegistry.RPG_ROCKET));
 	}
 
+	/** Right-click (held): shoulder the launcher and aim through the sights. */
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		ItemStack stack = player.getItemInHand(hand);
+		player.startUsingItem(hand);
+		return InteractionResult.CONSUME;
+	}
+
+	@Override
+	public int getUseDuration(ItemStack stack, LivingEntity entity) {
+		return 72000;
+	}
+
+	@Override
+	public ItemUseAnimation getUseAnimation(ItemStack stack) {
+		return ItemUseAnimation.NONE;
+	}
+
+	/** Whether the player is holding the launcher up to the eye. */
+	public static boolean isAiming(Player player) {
+		return player.isUsingItem() && player.getUseItem().getItem() instanceof RocketLauncherItem;
+	}
+
+	/** Left-click, on the client: fire at once (the server confirms) or click on an empty tube. */
+	public static boolean clientTrigger(Player player) {
+		ItemStack stack = player.getMainHandItem();
+		if (!(stack.getItem() instanceof RocketLauncherItem) || player.getCooldowns().isOnCooldown(stack)) {
+			return false;
+		}
 		if (!isLoaded(stack)) {
-			if (!level.isClientSide()) {
+			return true; // the server answers with the click and the message
+		}
+		player.getCooldowns().addCooldown(stack, RELOAD_TICKS);
+		setLoaded(stack, false); // the warhead leaves the muzzle at once
+		clientFired.run();
+		return true;
+	}
+
+	/** Left-click, on the server. */
+	public static void serverTrigger(ServerPlayer player) {
+		ItemStack stack = player.getMainHandItem();
+		if (!(stack.getItem() instanceof RocketLauncherItem launcher)) {
+			return;
+		}
+		ServerLevel level = player.level();
+		if (!isLoaded(stack)) {
+			if (!player.getCooldowns().isOnCooldown(stack)) {
 				level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
 				if (!hasAmmo(player)) {
 					player.displayClientMessage(Component.translatable("message.ballisticmissiles.rpg_no_ammo").withStyle(ChatFormatting.YELLOW), true);
 				}
 			}
-			return InteractionResult.FAIL;
+			return;
 		}
 		player.getCooldowns().addCooldown(stack, RELOAD_TICKS);
-		setLoaded(stack, false); // on the client too, so the warhead leaves the muzzle at once
-		if (level.isClientSide()) {
-			clientFired.run();
-			return InteractionResult.CONSUME;
-		}
-		ServerLevel server = (ServerLevel) level;
+		setLoaded(stack, false);
 		Vec3 look = player.getLookAngle();
+		if (!isAiming(player)) {
+			// fired from the hip: nowhere near where you were looking
+			var random = player.getRandom();
+			look = look.add(random.triangle(0.0, 0.07), random.triangle(0.0, 0.07), random.triangle(0.0, 0.07)).normalize();
+		}
 		Vec3 right = look.cross(new Vec3(0, 1, 0));
 		right = right.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : right.normalize();
-		boolean leftHand = (hand == InteractionHand.MAIN_HAND) == (player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT);
+		boolean leftHand = player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT;
 		Vec3 shoulder = player.getEyePosition().add(right.scale(leftHand ? -0.28 : 0.28)).add(0, -0.12, 0);
-		RpgRocketEntity.fire(server, player, shoulder.add(look.scale(1.1)), look);
-		this.muzzleAndBackblast(server, player, shoulder, look);
-		return InteractionResult.CONSUME;
+		RpgRocketEntity.fire(level, player, shoulder.add(look.scale(1.1)), look);
+		launcher.muzzleAndBackblast(level, player, shoulder, look);
 	}
 
 	private void muzzleAndBackblast(ServerLevel level, Player player, Vec3 shoulder, Vec3 look) {
