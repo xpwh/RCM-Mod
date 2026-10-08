@@ -3,6 +3,9 @@
 30 SUB_TILES  anechoic coating of the submarine's pressure hull: rubber tiles in a grid, some
               of them a shade off where they were replaced, a few missing
 31 SUB_DECK   the missile deck: dark non-skid surface with a faint walkway line
+32 BEAM_HAZE  the laser beam's scattered glow: faint, translucent cyan-white
+33 HOT        white-hot glowing metal for the laser's burn spot
+34 FLASH      bright orange-yellow muzzle/launch flash
 """
 import os
 import random
@@ -45,5 +48,8 @@ if __name__ == "__main__":
     atlas = Image.open(PATH).convert("RGBA")
     put(atlas, 30, tiles())
     put(atlas, 31, deck())
+    put(atlas, 32, Image.new("RGBA", (P, P), (170, 235, 255, 60)))
+    put(atlas, 33, Image.new("RGBA", (P, P), (255, 236, 200, 255)))
+    put(atlas, 34, Image.new("RGBA", (P, P), (255, 170, 60, 200)))
     atlas.save(PATH)
     print("ok")

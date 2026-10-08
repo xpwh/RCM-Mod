@@ -220,12 +220,18 @@ public class CiwsBlockEntity extends BlockEntity {
 			Vec3 dir = gun.aimDirection(1.0F);
 			Vec3 muzzle = Vec3.atBottomCenterOf(pos).add(0, MUZZLE_Y, 0).add(dir.scale(BARREL_LENGTH));
 			var random = level.getRandom();
+			// muzzle flash flickering at the restrainer and a growing cloud of propellant smoke
+			level.addParticle(ParticleTypes.FLAME, muzzle.x, muzzle.y, muzzle.z, dir.x * 0.25, dir.y * 0.25, dir.z * 0.25);
+			level.addParticle(ParticleTypes.SMALL_FLAME, muzzle.x + dir.x * 0.3, muzzle.y + dir.y * 0.3, muzzle.z + dir.z * 0.3, dir.x * 0.4, dir.y * 0.4, dir.z * 0.4);
 			level.addParticle(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, dir.x * 0.1, dir.y * 0.1 + 0.02, dir.z * 0.1);
-			if (random.nextInt(2) == 0) {
-				// spent brass ejected below the mount
-				Vec3 side = new Vec3(-dir.z, 0, dir.x).normalize();
-				Vec3 eject = Vec3.atBottomCenterOf(pos).add(0, MUZZLE_Y - 0.4, 0).add(side.scale(0.4));
-				level.addParticle(ParticleTypes.CRIT, eject.x, eject.y, eject.z, side.x * 0.15, 0.1, side.z * 0.15);
+			if (random.nextInt(3) == 0) {
+				level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, muzzle.x, muzzle.y, muzzle.z, dir.x * 0.05, 0.03, dir.z * 0.05);
+			}
+			// spent brass streaming out below the mount
+			Vec3 side = new Vec3(-dir.z, 0, dir.x).normalize();
+			Vec3 eject = Vec3.atBottomCenterOf(pos).add(0, MUZZLE_Y - 0.4, 0).add(side.scale(0.4));
+			for (int i = 0; i < 2; i++) {
+				level.addParticle(ParticleTypes.CRIT, eject.x, eject.y, eject.z, side.x * 0.15 + random.nextGaussian() * 0.03, 0.1, side.z * 0.15 + random.nextGaussian() * 0.03);
 			}
 		}
 	}

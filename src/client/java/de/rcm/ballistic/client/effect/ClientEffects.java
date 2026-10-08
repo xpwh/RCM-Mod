@@ -385,6 +385,75 @@ public final class ClientEffects {
 		));
 	}
 
+	// ------------------------------------------------------------------ interceptor launch
+
+	/**
+	 * An interceptor leaving its launcher: the frangible front cover bursts into fragments, a flash and
+	 * a gout of flame at the mouth, a dense cloud of motor smoke rolling forward, and the back blast
+	 * blowing out of the rear of the canister and kicking up dust.
+	 *
+	 * @param launcher {@link InterceptorEntity#LAUNCHER_CANISTER} (Patriot), {@link InterceptorEntity#LAUNCHER_CELL} (Iron Dome) or other
+	 */
+	public static void canisterLaunch(Vec3 mouth, Vec3 dir, int launcher) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level == null) {
+			return;
+		}
+		double tube = launcher == de.rcm.ballistic.entity.InterceptorEntity.LAUNCHER_CANISTER ? 5.4 : launcher == de.rcm.ballistic.entity.InterceptorEntity.LAUNCHER_CELL ? 2.4 : 1.2;
+		float size = launcher == de.rcm.ballistic.entity.InterceptorEntity.LAUNCHER_CANISTER ? 1.0F : 0.7F;
+		Vec3 rear = mouth.subtract(dir.scale(tube));
+		double distance = distanceToCamera(mc, mouth);
+		setFlash((float) Mth.clamp(0.25 - distance / 400.0, 0.0, 0.25), 0xFFE0B0);
+		addShake((float) Mth.clamp(0.9 - distance / 60.0, 0.0, 0.9));
+		// cover fragments flung ahead of the missile
+		BlockState cover = (launcher == de.rcm.ballistic.entity.InterceptorEntity.LAUNCHER_CELL
+			? net.minecraft.world.level.block.Blocks.LIGHT_GRAY_CONCRETE : net.minecraft.world.level.block.Blocks.WHITE_CONCRETE).defaultBlockState();
+		for (int i = 0; i < 26; i++) {
+			double sp = 0.4 + rand() * 0.9;
+			vanilla(new BlockParticleOption(ParticleTypes.BLOCK, cover), mouth.x, mouth.y, mouth.z,
+				dir.x * sp + gauss() * 0.25, dir.y * sp + gauss() * 0.25 + 0.1, dir.z * sp + gauss() * 0.25);
+		}
+		for (int i = 0; i < 6; i++) {
+			// a few bigger cover petals tumbling away
+			double sp = 0.3 + rand() * 0.5;
+			CloudParticle p = cloud(false, mouth.x, mouth.y, mouth.z, dir.x * sp + gauss() * 0.2, dir.y * sp + 0.2, dir.z * sp + gauss() * 0.2);
+			if (p != null) {
+				p.configure(40 + RANDOM.nextInt(30), 0.25F, 0.22F, 0xE8E8E4, 0xC8C8C4, 1.0F).physics(0.97F, -0.04F).wind(0.0F);
+			}
+		}
+		// flash and flame at the mouth
+		for (int i = 0; i < 14; i++) {
+			double sp = 0.2 + rand() * 0.7;
+			CloudParticle f = cloud(true, mouth.x, mouth.y, mouth.z, dir.x * sp + gauss() * 0.08, dir.y * sp + gauss() * 0.08, dir.z * sp + gauss() * 0.08);
+			if (f != null) {
+				f.configure(5 + RANDOM.nextInt(6), 1.0F * size, 2.8F * size, 0xFFF6D8, 0xFF7A20, 1.0F).physics(0.82F, 0.0F);
+			}
+		}
+		// motor smoke rolling forward out of the tube
+		for (int i = 0; i < 28; i++) {
+			double along = rand() * 4.0;
+			double sp = 0.1 + rand() * 0.35;
+			Vec3 p0 = mouth.add(dir.scale(along));
+			CloudParticle s = cloud(false, p0.x + gauss() * 0.3, p0.y + gauss() * 0.3, p0.z + gauss() * 0.3, dir.x * sp + gauss() * 0.05, dir.y * sp + 0.02, dir.z * sp + gauss() * 0.05);
+			if (s != null) {
+				s.configure(140 + RANDOM.nextInt(80), 1.0F * size, 5.5F * size, 0xF2F0EC, 0xB4B0AA, 0.85F).physics(0.9F, 0.003F).shade(0.8F + rand() * 0.2F).turbulence(0.02F);
+			}
+		}
+		// back blast out of the rear of the canister
+		for (int i = 0; i < 20; i++) {
+			double sp = 0.4 + rand() * 0.6;
+			CloudParticle s = cloud(i < 5, rear.x, rear.y, rear.z, -dir.x * sp + gauss() * 0.15, -dir.y * sp + gauss() * 0.1, -dir.z * sp + gauss() * 0.15);
+			if (s != null) {
+				if (i < 5) {
+					s.configure(6 + RANDOM.nextInt(5), 0.8F * size, 2.0F * size, 0xFFE8B0, 0xFF6A10, 1.0F).physics(0.8F, 0.0F);
+				} else {
+					s.configure(110 + RANDOM.nextInt(70), 1.2F * size, 6.0F * size, 0xD8D4CE, 0x8E8A84, 0.8F).physics(0.9F, 0.004F).turbulence(0.03F);
+				}
+			}
+		}
+		groundRing(mc, rear, 2.0, 20, 3.5F * size, 0.5, 0xB8A890);
+	}
+
 	// ------------------------------------------------------------------ conventional blast
 
 	static final class BlastEffect implements Effect {

@@ -1,6 +1,10 @@
 package de.rcm.ballistic.client.render;
 
+import static de.rcm.ballistic.client.render.StructureKit.ARRAY;
 import static de.rcm.ballistic.client.render.StructureKit.BEAM;
+import static de.rcm.ballistic.client.render.StructureKit.BEAM_HAZE;
+import static de.rcm.ballistic.client.render.StructureKit.FLASH;
+import static de.rcm.ballistic.client.render.StructureKit.HOT;
 import static de.rcm.ballistic.client.render.StructureKit.BLACK;
 import static de.rcm.ballistic.client.render.StructureKit.CABLE;
 import static de.rcm.ballistic.client.render.StructureKit.DOOR;
@@ -36,7 +40,12 @@ import org.jspecify.annotations.Nullable;
 /**
  * Iron Beam-style laser battery: a 20 ft container holding the laser and its cooling, radiators on
  * the side, and on the roof the beam director - a large telescope on a yaw/pitch gimbal with sensor
- * pods. While it burns a target the beam is drawn from the telescope to the target.
+ * pods. Beside it a second container with the power plant: battery racks charged by a diesel
+ * generator, its exhaust stack, and a mast with the search radar that cues the beam director.
+ * <p>
+ * While it burns a target the beam is drawn from the telescope's exit window: a white-hot core, the
+ * beam itself and a faint glow of light scattered by the air around it (much stronger in rain and
+ * fog). The spot on the target glows brighter and grows as it heats up.
  */
 public class LaserRenderer implements BlockEntityRenderer<LaserDefenseBlockEntity, LaserRenderer.State> {
 	private static final float PIVOT = (float) LaserDefenseBlockEntity.EMITTER_Y;
@@ -58,6 +67,7 @@ public class LaserRenderer implements BlockEntityRenderer<LaserDefenseBlockEntit
 		public float heat;
 		public @Nullable Vector3f target;
 		public float time;
+		public boolean rain;
 	}
 
 	@Override
@@ -73,6 +83,7 @@ public class LaserRenderer implements BlockEntityRenderer<LaserDefenseBlockEntit
 		state.powered = laser.isPowered();
 		state.heat = laser.getHeat();
 		state.time = laser.getLevel() == null ? 0.0F : laser.getLevel().getGameTime() + partialTick;
+		state.rain = laser.getLevel() != null && laser.getLevel().isRainingAt(laser.getBlockPos().above(3));
 		Entity target = laser.getTarget();
 		if (target != null && state.heat > 0.0F) {
 			Vec3 p = target.getPosition(partialTick).add(0, target.getBbHeight() * 0.5, 0);
@@ -97,12 +108,21 @@ public class LaserRenderer implements BlockEntityRenderer<LaserDefenseBlockEntit
 			// the beam leaves the telescope's exit aperture
 			Vector3f dir = new Vector3f(Mth.cos(state.pitch) * Mth.sin(state.yaw), Mth.sin(state.pitch), Mth.cos(state.pitch) * Mth.cos(state.yaw));
 			Vector3f start = new Vector3f(dir).mul(0.85F).add(0, PIVOT, 0);
-			float flicker = 0.85F + 0.15F * Mth.sin(state.time * 7.0F);
-			float w = (0.12F + 0.1F * state.heat) * flicker;
+			float flicker = 0.88F + 0.12F * Mth.sin(state.time * 7.0F) * Mth.sin(state.time * 2.3F);
+			float w = (0.09F + 0.08F * state.heat) * flicker;
+			float haze = w * (state.rain ? 7.0F : 3.5F);
+			float spot = w * (2.0F + 4.0F * state.heat);
+			float glow = spot * (1.6F + 0.4F * Mth.sin(state.time * 3.1F));
 			BoxMesh beam = new BoxMesh.Builder()
+				.beam(start, target, haze, haze, BEAM_HAZE)
 				.beam(start, target, w, w, BEAM)
-				.beam(start, target, w * 0.4F, w * 0.4F, LAMP)
-				.box(target.x - w * 2.5F, target.y - w * 2.5F, target.z - w * 2.5F, target.x + w * 2.5F, target.y + w * 2.5F, target.z + w * 2.5F, LAMP)
+				.beam(start, target, w * 0.35F, w * 0.35F, HOT)
+				// flare in the exit window
+				.box(start.x - w * 2.2F, start.y - w * 2.2F, start.z - w * 2.2F, start.x + w * 2.2F, start.y + w * 2.2F, start.z + w * 2.2F, BEAM_HAZE)
+				.box(start.x - w, start.y - w, start.z - w, start.x + w, start.y + w, start.z + w, HOT)
+				// the burn spot: white-hot centre in an orange glow
+				.box(target.x - glow, target.y - glow, target.z - glow, target.x + glow, target.y + glow, target.z + glow, FLASH)
+				.box(target.x - spot, target.y - spot, target.z - spot, target.x + spot, target.y + spot, target.z + spot, HOT)
 				.build();
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> beam.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 		}
@@ -147,6 +167,24 @@ public class LaserRenderer implements BlockEntityRenderer<LaserDefenseBlockEntit
 		b.box(-2.4F, 1.6F, 1.24F, -2.0F, 2.1F, 1.32F, PANEL); // control panel
 		b.box(-3.5F, 0.0F, -0.2F, 2.2F, 0.12F, 0.0F, CABLE); // power feed
 		b.box(-3.0F, 0.0F, -1.25F, 3.0F, 0.12F, -1.2F, HAZARD);
+		// power container alongside: battery racks behind louvred doors, diesel generator, exhaust
+		b.box(-3.0F, 0.0F, -4.2F, 3.0F, ROOF, -1.8F, OLIVE_DARK);
+		for (float x = -2.7F; x < 2.8F; x += 0.9F) {
+			b.box(x, 0.4F, -4.24F, x + 0.6F, 2.0F, -4.2F, VENT);
+		}
+		for (float[] c : new float[][] {{-3.0F, -4.2F}, {2.85F, -4.2F}, {-3.0F, -1.95F}, {2.85F, -1.95F}}) {
+			b.box(c[0] - 0.02F, 0.0F, c[1] - 0.02F, c[0] + 0.17F, ROOF + 0.02F, c[1] + 0.17F, STEEL);
+		}
+		b.box(2.2F, ROOF, -3.6F, 2.5F, ROOF + 1.4F, -3.3F, BLACK); // exhaust stack
+		b.box(2.15F, ROOF + 1.4F, -3.65F, 2.55F, ROOF + 1.5F, -3.25F, STEEL);
+		b.box(-2.6F, ROOF, -3.9F, -0.6F, ROOF + 0.5F, -2.2F, VENT); // roof radiators
+		b.box(-0.4F, 1.2F, -1.8F, 0.4F, 1.5F, -1.2F, CABLE); // high-current bus between the containers
+		b.box(-2.0F, 0.12F, -1.8F, -1.6F, 0.25F, -1.2F, CABLE);
+		// search radar on a mast at the corner, cueing the beam director
+		b.box(3.3F, 0.0F, -4.1F, 3.4F, 5.2F, -4.0F, STEEL);
+		b.box(3.05F, 5.2F, -4.3F, 3.65F, 5.3F, -3.8F, STEEL);
+		b.box(3.0F, 5.3F, -4.3F, 3.7F, 6.0F, -4.22F, ARRAY);
+		b.box(3.0F, 5.3F, -3.88F, 3.7F, 6.0F, -3.8F, ARRAY);
 		// roof: walkway and the turret pedestal
 		b.box(-2.8F, ROOF, -0.3F, -0.8F, ROOF + 0.05F, 0.3F, PANEL);
 		b.revolve(OLIVE_DARK, v(0, ROOF, 0), v(0, 1, 0), new float[][] {{0.0F, 0.0F}, {0.0F, 0.75F}, {0.3F, 0.7F}, {0.3F, 0.0F}}, 20);

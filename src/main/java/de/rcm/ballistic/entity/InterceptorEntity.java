@@ -35,6 +35,13 @@ import org.jspecify.annotations.Nullable;
  */
 public class InterceptorEntity extends Entity {
 	private static final EntityDataAccessor<Vector3fc> DATA_DIR = SynchedEntityData.defineId(InterceptorEntity.class, EntityDataSerializers.VECTOR3);
+	/** What it was fired from, for the launch effect: 0 other, 1 Patriot canister, 2 Iron Dome cell. */
+	private static final EntityDataAccessor<Integer> DATA_LAUNCHER = SynchedEntityData.defineId(InterceptorEntity.class, EntityDataSerializers.INT);
+	public static final int LAUNCHER_OTHER = 0;
+	public static final int LAUNCHER_CANISTER = 1;
+	public static final int LAUNCHER_CELL = 2;
+	/** Client: the launch (cover bursting, blast, smoke) has been shown. */
+	public boolean clientLaunchShown;
 	public static final double START_SPEED = 1.2;
 	public static final double ACCEL = 0.9;
 	public static final double MAX_SPEED = 11.0;
@@ -74,6 +81,8 @@ public class InterceptorEntity extends Entity {
 		Vec3 d = aim.subtract(from);
 		Vec3 initial = launcherDir != null ? launcherDir.normalize() : new Vec3(d.x, Math.max(Math.abs(d.y), Math.hypot(d.x, d.z)) * 1.2, d.z).normalize();
 		e.setDir(initial);
+		var launcher = level.getBlockState(battery);
+		e.entityData.set(DATA_LAUNCHER, launcher.is(ModRegistry.AIR_DEFENSE) ? LAUNCHER_CANISTER : launcher.is(ModRegistry.IRON_DOME) ? LAUNCHER_CELL : LAUNCHER_OTHER);
 		level.addFreshEntity(e);
 		return e;
 	}
@@ -117,6 +126,11 @@ public class InterceptorEntity extends Entity {
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
 		builder.define(DATA_DIR, new Vector3f(0, 1, 0));
+		builder.define(DATA_LAUNCHER, LAUNCHER_OTHER);
+	}
+
+	public int getLauncher() {
+		return this.entityData.get(DATA_LAUNCHER);
 	}
 
 	public Vec3 getDir() {

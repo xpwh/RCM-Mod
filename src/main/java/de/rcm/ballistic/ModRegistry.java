@@ -325,30 +325,30 @@ public final class ModRegistry {
 	public static final Item TARGET_DESIGNATOR = registerItem(
 		"target_designator", TargetDesignatorItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
 	);
-	public static final Item RADAR_ITEM = registerItem("radar", props -> new BlockItem(RADAR, props), new Item.Properties().useBlockDescriptionPrefix());
+	public static final Item RADAR_ITEM = registerItem("radar", props -> new de.rcm.ballistic.item.DefenseBlockItem(RADAR, props, "radar"), new Item.Properties().useBlockDescriptionPrefix());
 	public static final Item AIR_DEFENSE_ITEM = registerItem(
-		"air_defense", props -> new BlockItem(AIR_DEFENSE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
+		"air_defense", props -> new de.rcm.ballistic.item.DefenseBlockItem(AIR_DEFENSE, props, "air_defense"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
 	);
 	public static final Item CIWS_ITEM = registerItem(
-		"ciws", props -> new BlockItem(CIWS, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
+		"ciws", props -> new de.rcm.ballistic.item.DefenseBlockItem(CIWS, props, "ciws"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
 	);
 	public static final Item LASER_DEFENSE_ITEM = registerItem(
-		"laser_defense", props -> new BlockItem(LASER_DEFENSE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+		"laser_defense", props -> new de.rcm.ballistic.item.DefenseBlockItem(LASER_DEFENSE, props, "laser_defense"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
 	);
 	public static final Item IRON_DOME_ITEM = registerItem(
-		"iron_dome", props -> new BlockItem(IRON_DOME, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+		"iron_dome", props -> new de.rcm.ballistic.item.DefenseBlockItem(IRON_DOME, props, "iron_dome"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
 	);
 	public static final Item COMMAND_CENTER_ITEM = registerItem(
 		"command_center", props -> new BlockItem(COMMAND_CENTER, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
 	);
 	public static final Item DECOY_LAUNCHER_ITEM = registerItem(
-		"decoy_launcher", props -> new BlockItem(DECOY_LAUNCHER, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
+		"decoy_launcher", props -> new de.rcm.ballistic.item.DefenseBlockItem(DECOY_LAUNCHER, props, "decoy_launcher"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
 	);
 	public static final Item SEA_MINE_ITEM = registerItem(
-		"sea_mine", props -> new BlockItem(SEA_MINE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.UNCOMMON)
+		"sea_mine", props -> new de.rcm.ballistic.item.DefenseBlockItem(SEA_MINE, props, "sea_mine"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.UNCOMMON)
 	);
 	public static final Item JAMMER_ITEM = registerItem(
-		"jammer", props -> new BlockItem(JAMMER, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
+		"jammer", props -> new de.rcm.ballistic.item.DefenseBlockItem(JAMMER, props, "jammer"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.RARE)
 	);
 	public static final Item AIRSTRIKE_RADIO = registerItem(
 		"airstrike_radio", AirstrikeRadioItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)

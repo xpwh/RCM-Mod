@@ -451,6 +451,14 @@ public final class MissileClientTicker {
 		Vec3 pos = entity.position();
 		if (entity instanceof InterceptorEntity interceptor) {
 			Vec3 dir = interceptor.getDir();
+			if (!interceptor.clientLaunchShown) {
+				interceptor.clientLaunchShown = true;
+				// back to where it left the launcher (the client sees it a tick or two after launch)
+				double flown = interceptor.tickCount <= 1 ? 0.0 : InterceptorEntity.reach(InterceptorEntity.START_SPEED, interceptor.tickCount - 1);
+				if (flown < 30.0) {
+					ClientEffects.canisterLaunch(pos.subtract(dir.scale(flown)), dir, interceptor.getLauncher());
+				}
+			}
 			for (int i = 0; i < 3; i++) {
 				double back = 0.4 + ClientEffects.rand() * 3.0;
 				CloudParticle p = ClientEffects.cloud(false, pos.x - dir.x * back, pos.y - dir.y * back, pos.z - dir.z * back,

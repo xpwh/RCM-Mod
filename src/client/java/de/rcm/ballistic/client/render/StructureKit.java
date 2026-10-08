@@ -46,6 +46,9 @@ final class StructureKit {
 	static final int MOON_ROCK = 29;
 	static final int SUB_TILES = 30;
 	static final int SUB_DECK = 31;
+	static final int BEAM_HAZE = 32;
+	static final int HOT = 33;
+	static final int FLASH = 34;
 
 	private StructureKit() {
 	}

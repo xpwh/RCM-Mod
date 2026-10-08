@@ -216,14 +216,27 @@ public class LaserDefenseBlockEntity extends BlockEntity {
 		laser.clientPitch += Mth.clamp(laser.pitch - laser.clientPitch, -SLEW, SLEW);
 		Entity target = laser.getTarget();
 		if (target != null && laser.heat > 0.0F) {
-			// the hot spot on the target throws sparks and molten droplets
+			// the hot spot on the target throws sparks and molten droplets, then the skin burns through:
+			// smoke and flames trail behind it
 			Vec3 p = target.position().add(0, target.getBbHeight() * 0.5, 0);
+			Vec3 v = target.getDeltaMovement();
 			var random = level.getRandom();
-			for (int i = 0; i < 2; i++) {
-				level.addParticle(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, random.nextGaussian() * 0.15, random.nextGaussian() * 0.15, random.nextGaussian() * 0.15);
+			for (int i = 0; i < 2 + (int) (laser.heat * 3); i++) {
+				level.addParticle(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, random.nextGaussian() * 0.2, random.nextGaussian() * 0.2, random.nextGaussian() * 0.2);
 			}
 			if (random.nextFloat() < laser.heat) {
 				level.addParticle(ParticleTypes.LAVA, p.x, p.y, p.z, 0, 0, 0);
+			}
+			if (laser.heat > 0.3F) {
+				level.addParticle(ParticleTypes.LARGE_SMOKE, p.x - v.x * 0.5, p.y - v.y * 0.5, p.z - v.z * 0.5, 0, 0.02, 0);
+			}
+			if (laser.heat > 0.6F && random.nextFloat() < laser.heat) {
+				level.addParticle(ParticleTypes.FLAME, p.x, p.y, p.z, -v.x * 0.2, -v.y * 0.2, -v.z * 0.2);
+			}
+			// heat shimmer and vapour boiling off the exit window
+			Vec3 e = laser.emitter();
+			if (random.nextInt(3) == 0) {
+				level.addParticle(ParticleTypes.WHITE_ASH, e.x + random.nextGaussian() * 0.3, e.y + 0.4, e.z + random.nextGaussian() * 0.3, 0, 0.02, 0);
 			}
 		}
 	}
