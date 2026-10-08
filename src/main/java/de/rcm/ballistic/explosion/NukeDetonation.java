@@ -91,6 +91,8 @@ public class NukeDetonation {
 	/** How far the shock front has travelled. */
 	private double shockRadius;
 	private final Set<Integer> shocked = new HashSet<>();
+	/** How far out the shock has broken windows so far; it carries well past the damage radius. */
+	private double glassFront;
 	private int nextSlice;
 	private int falloutAge = -1;
 	private final RadiationManager.Plume plume;
@@ -155,6 +157,13 @@ public class NukeDetonation {
 		}
 		if (this.shockRadius <= this.damageRadius) {
 			this.blastWave();
+		}
+		double glassLimit = this.blastRadius * (this.mode == Mode.UNDERGROUND ? 1.6 : 2.4);
+		if (this.glassFront < glassLimit) {
+			// windows burst ring by ring as the shock front reaches them
+			double from = this.glassFront;
+			this.glassFront = Math.min(glassLimit, this.glassFront + 17.15 + 60.0 * Math.exp(-this.age / 6.0));
+			BlastPhysics.shatter(this.level, this.exact, from, this.glassFront, (int) (this.glassFront * 5) + 60, 0.95F);
 		}
 		this.age++;
 

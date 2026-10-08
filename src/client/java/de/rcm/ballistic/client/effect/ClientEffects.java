@@ -32,6 +32,9 @@ public final class ClientEffects {
 	private static final double SPEED_OF_SOUND = 17.15;
 
 	private static final List<Effect> EFFECTS = new ArrayList<>();
+	/** Clods of earth and rock flying out of craters, each trailing dust. */
+	private static final List<Clod> CLODS = new ArrayList<>();
+	private static final int MAX_CLODS = 500;
 	private static final RandomSource RANDOM = RandomSource.create();
 
 	private static float flash;
@@ -139,6 +142,7 @@ public final class ClientEffects {
 
 	public static void clear() {
 		EFFECTS.clear();
+		CLODS.clear();
 		deafness = 0;
 		deafHold = 0;
 		flash = flashPrev = 0;
@@ -158,11 +162,13 @@ public final class ClientEffects {
 		BlastShader.tick(mc);
 		if (mc.level == null || mc.player == null) {
 			EFFECTS.clear();
+			CLODS.clear();
 			return;
 		}
 		if (mc.isPaused()) {
 			return;
 		}
+		CLODS.removeIf(c -> c.tick(mc));
 		Iterator<Effect> it = EFFECTS.iterator();
 		while (it.hasNext()) {
 			if (it.next().tick(mc)) {
@@ -276,14 +282,12 @@ public final class ClientEffects {
 			double elev = Math.toRadians(40 + rand() * 45);
 			Vec3 dir = new Vec3(Math.cos(a) * Math.cos(elev), Math.sin(elev), Math.sin(a) * Math.cos(elev));
 			double s = speed * (0.7 + rand() * 0.6);
-			for (int k = 0; k < 7; k++) {
-				double f = 0.35 + 0.65 * k / 6.0;
-				CloudParticle p = cloud(false, c.x, c.y + 0.5, c.z, dir.x * s * f, dir.y * s * f, dir.z * s * f);
-				if (p != null) {
-					p.configure(70 + RANDOM.nextInt(40), size * 0.4F, size * (1.0F + rand()), 0x5A4C3E, 0x4A443E, 0.9F)
-						.physics(0.975F, -0.035F)
-						.shade(0.75F + rand() * 0.3F);
-				}
+			// a clod of earth on a ballistic arc, trailing dust, thumping down in a puff
+			if (CLODS.size() < MAX_CLODS) {
+				CLODS.add(new Clod(new Vec3(c.x, c.y + 0.5, c.z), dir.scale(s * (0.8 + rand() * 0.4)), size * (0.6F + rand() * 0.6F), ground));
+			}
+			if (rand() < 0.5F && CLODS.size() < MAX_CLODS) {
+				CLODS.add(new Clod(new Vec3(c.x, c.y + 0.5, c.z), dir.scale(s * (0.4 + rand() * 0.4)), size * 0.4F, ground));
 			}
 			if (ground != null) {
 				for (int k = 0; k < 4; k++) {
@@ -323,6 +327,10 @@ public final class ClientEffects {
 
 	/** Brief condensation shell racing outward right after the blast. */
 	static void shockSphere(Vec3 c, double radius, int count) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level == null || !mc.level.isRaining()) {
+			return; // the condensation shell only forms in humid air
+		}
 		for (int i = 0; i < count; i++) {
 			Vec3 v = new Vec3(gauss(), Math.abs(gauss()) * 0.7, gauss()).normalize();
 			Vec3 p = c.add(v.scale(radius));
@@ -373,6 +381,94 @@ public final class ClientEffects {
 			playLoud(mc, crack, pos, 1.0F, p * 0.98F);
 		}
 		addShake((float) (f * f * 3.0));
+		if (f > 0.15) {
+			settleDust(mc, (float) f);
+		}
+	}
+
+	/**
+	 * The shock rattling everything around the listener: dust trickles from ceilings and overhangs,
+	 * bits of leaf fall from the trees, loose dirt is kicked up off the ground.
+	 */
+	static void settleDust(Minecraft mc, float strength) {
+		if (mc.level == null) {
+			return;
+		}
+		Vec3 cam = mc.gameRenderer.getMainCamera().position();
+		BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+		int tries = (int) (40 * strength) + 6;
+		for (int i = 0; i < tries; i++) {
+			double x = cam.x + gauss() * 5.0;
+			double z = cam.z + gauss() * 5.0;
+			int y0 = Mth.floor(cam.y);
+			for (int dy = 1; dy < 10; dy++) {
+				m.set(Mth.floor(x), y0 + dy, Mth.floor(z));
+				BlockState above = mc.level.getBlockState(m);
+				if (!above.isAir()) {
+					for (int k = 0; k < 3; k++) {
+						vanilla(new BlockParticleOption(ParticleTypes.FALLING_DUST, above), x + gauss() * 0.3, m.getY() - 0.05, z + gauss() * 0.3, 0, 0, 0);
+					}
+					break;
+				}
+			}
+			double gy = groundY(mc, x, cam.y - 1.6, z);
+			if (Math.abs(gy - cam.y) < 6 && rand() < 0.5F) {
+				CloudParticle p = cloud(false, x, gy + 0.2, z, gauss() * 0.05, 0.03, gauss() * 0.05);
+				if (p != null) {
+					p.configure(60 + RANDOM.nextInt(40), 0.5F, 1.6F, 0xB0A48E, 0x9A9080, 0.45F * strength).physics(0.95F, 0.002F);
+				}
+			}
+		}
+	}
+
+	/** A clod of earth thrown out of a crater: flies, trails dust, and lands with a puff. */
+	static final class Clod {
+		private Vec3 pos;
+		private Vec3 vel;
+		private final float size;
+		private final @Nullable BlockState ground;
+		private int age;
+
+		Clod(Vec3 pos, Vec3 vel, float size, @Nullable BlockState ground) {
+			this.pos = pos;
+			this.vel = vel;
+			this.size = size;
+			this.ground = ground;
+		}
+
+		/** @return true when it has landed */
+		boolean tick(Minecraft mc) {
+			this.age++;
+			this.vel = this.vel.scale(0.985).add(0, -0.075, 0);
+			this.pos = this.pos.add(this.vel);
+			// the dust it sheds, thinning out as it flies
+			float fresh = Math.max(0.25F, 1.0F - this.age / 50.0F);
+			CloudParticle p = cloud(false, this.pos.x, this.pos.y, this.pos.z, this.vel.x * 0.04, this.vel.y * 0.04, this.vel.z * 0.04);
+			if (p != null) {
+				p.configure(50 + RANDOM.nextInt(50), this.size * 0.25F, this.size * (0.9F + rand() * 0.5F), mix(0x6E5E4C, 0x5C544A, rand()), 0x524C46, 0.85F * fresh)
+					.physics(0.9F, 0.001F)
+					.litFrom(this.pos.x, this.pos.y + 2, this.pos.z)
+					.turbulence(0.02F);
+			}
+			if (this.ground != null && this.age % 2 == 0) {
+				vanilla(new BlockParticleOption(ParticleTypes.BLOCK, this.ground), this.pos.x, this.pos.y, this.pos.z, this.vel.x, this.vel.y, this.vel.z);
+			}
+			if (this.vel.y < 0 && this.pos.y <= groundY(mc, this.pos.x, this.pos.y - 1, this.pos.z) || this.age > 140) {
+				for (int i = 0; i < 3; i++) {
+					CloudParticle puff = cloud(false, this.pos.x + gauss() * 0.4, this.pos.y + 0.3, this.pos.z + gauss() * 0.4, gauss() * 0.06, 0.05, gauss() * 0.06);
+					if (puff != null) {
+						puff.configure(70 + RANDOM.nextInt(40), this.size * 0.4F, this.size * 1.4F, 0x8A7C68, 0x6E665C, 0.7F).physics(0.92F, 0.002F);
+					}
+				}
+				if (this.ground != null) {
+					for (int i = 0; i < 6; i++) {
+						vanilla(new BlockParticleOption(ParticleTypes.BLOCK, this.ground), this.pos.x, this.pos.y + 0.2, this.pos.z, gauss() * 0.2, 0.3, gauss() * 0.2);
+					}
+				}
+				return true;
+			}
+			return false;
+		}
 	}
 
 	/** Like {@link #playDistant} but on the master channel. */
@@ -539,7 +635,15 @@ public final class ClientEffects {
 					}
 				}
 			}
-			return t > Math.max(this.soundDelay, 100 * s) + 1;
+			// the crater smoulders for a while: thin grey wisps leaning with the wind
+			if (s >= 0.45 && t > 60 && t < 60 + 500 * s && t % 5 == 0) {
+				CloudParticle w = cloud(false, c.x + gauss() * 2.5 * s, c.y - 0.5, c.z + gauss() * 2.5 * s, 0, 0.06 + rand() * 0.05, 0);
+				if (w != null) {
+					w.configure(160 + RANDOM.nextInt(80), (float) (1.0 * s) + 0.5F, (float) (5.0 * s) + 2.0F, 0x5C5650, 0x8A8680, 0.5F)
+						.physics(0.98F, 0.004F).turbulence(0.03F);
+				}
+			}
+			return t > Math.max(this.soundDelay, s >= 0.45 ? 60 + 500 * s : 100 * s) + 1;
 		}
 	}
 

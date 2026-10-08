@@ -274,6 +274,7 @@ public final class DetonationManager {
 		broadcast(level, pos, Warhead.BOMBLET);
 		FlyingDebris.launch(level, pos, 2.0, 2, 0.9);
 		level.explode(source, pos.x, pos.y, pos.z, 3.2F, false, Level.ExplosionInteraction.TNT);
+		BlastPhysics.fragments(level, pos, source, 20, 14.0, 4.0F); // bomblets are fragmentation weapons
 	}
 
 	/**
@@ -327,6 +328,7 @@ public final class DetonationManager {
 			level.explode(source, pos.x + Math.cos(a) * 7, pos.y - 2, pos.z + Math.sin(a) * 7, 10.0F, false, Level.ExplosionInteraction.TNT);
 		}
 		Wasteland.crater(level, pos, 21.0, 15.0, random);
+		BlastPhysics.shatter(level, pos, 0.0, 90.0, 2500, 1.0F);
 		Wasteland.scorch(level, BlockPos.containing(pos), 20, random, 0.06F, false);
 		// the bottom of the crater is rock melted by the impact
 		schedule(level, 3, () -> {
@@ -406,13 +408,17 @@ public final class DetonationManager {
 		broadcast(level, pos, Warhead.BOMBLET);
 		FlyingDebris.launch(level, pos, 1.2, 4, 0.6);
 		level.explode(source, pos.x, pos.y, pos.z, 3.0F, false, Level.ExplosionInteraction.TNT);
-		scorch(level, BlockPos.containing(pos), 1, level.getRandom(), 0.12F);
+		BlastPhysics.fragments(level, pos, source, 14, 10.0, 3.5F);
+		BlastPhysics.shatter(level, pos, 0.0, 9.0, 40, 0.9F);
+		scorch(level, BlockPos.containing(pos), 1, level.getRandom(), 0.03F);
 	}
 
 	/** Small high-explosive round: 40 mm Bofors, 30 mm chain gun, Hydra 70 rocket. */
 	public static void detonateSmallRound(ServerLevel level, Vec3 pos, Entity source, float power) {
 		broadcast(level, pos, Warhead.BOMBLET);
 		level.explode(source, pos.x, pos.y, pos.z, power, false, Level.ExplosionInteraction.TNT);
+		BlastPhysics.fragments(level, pos, source, (int) (power * 4) + 4, power * 4.0, 3.0F);
+		BlastPhysics.shatter(level, pos, 0.0, power * 2.5, 30, 0.8F);
 	}
 
 	public static void detonateAerialBomb(ServerLevel level, Vec3 pos, Entity source) {
@@ -543,20 +549,22 @@ public final class DetonationManager {
 	/** @param depthRatio crater depth relative to its radius: about 0.45 for a ground burst, less for an air burst */
 	private static void highExplosive(ServerLevel level, Vec3 pos, @Nullable Entity source, float power, int secondaries, int scorchRadius, double depthRatio) {
 		RandomSource random = level.getRandom();
-		level.explode(source, pos.x, pos.y, pos.z, power, true, Level.ExplosionInteraction.TNT);
+		// high explosive hardly ever sets things alight: the fireball is gone in a fraction of a second
+		level.explode(source, pos.x, pos.y, pos.z, power, false, Level.ExplosionInteraction.TNT);
+		BlastPhysics.highExplosive(level, pos, source, power);
 		// A few secondary blasts make the crater irregular and the boom feel heavier.
 		for (int i = 0; i < secondaries; i++) {
 			double ox = pos.x + random.nextGaussian() * power * 0.35;
 			double oy = pos.y + random.nextGaussian() * 1.5;
 			double oz = pos.z + random.nextGaussian() * power * 0.35;
-			level.explode(source, ox, oy, oz, power * 0.55F, true, Level.ExplosionInteraction.TNT);
+			level.explode(source, ox, oy, oz, power * 0.55F, false, Level.ExplosionInteraction.TNT);
 		}
 		if (power >= 3.5F) {
 			// the explosion leaves a ragged hole: settle it into a real bowl with a thrown-up rim
 			double radius = power * 0.75;
 			Wasteland.crater(level, pos, radius, radius * depthRatio, random);
 		}
-		scorch(level, BlockPos.containing(pos), scorchRadius, random, 0.12F);
+		scorch(level, BlockPos.containing(pos), scorchRadius, random, 0.04F);
 	}
 
 	/** Drills along the flight direction, then detonates deep underground. */
@@ -591,6 +599,8 @@ public final class DetonationManager {
 			level.playSound(null, deep.x, deep.y, deep.z, ModRegistry.EXPLOSION_BUNKER, SoundSource.BLOCKS, 20.0F, 1.0F);
 			FlyingDebris.launch(level, deep, 6.0, 45, 1.9);
 			level.explode(source, deep.x, deep.y, deep.z, 13.0F, false, Level.ExplosionInteraction.TNT);
+			BlastPhysics.shatter(level, pos, 0.0, 40.0, 500, 1.0F);
+			BlastPhysics.overpressure(level, pos, source, 8.0F);
 			RandomSource random = level.getRandom();
 			for (int i = 0; i < 5; i++) {
 				level.explode(
@@ -619,6 +629,7 @@ public final class DetonationManager {
 		}
 		schedule(level, 6, () -> {
 			level.explode(source, pos.x, pos.y + 2, pos.z, 9.0F, true, Level.ExplosionInteraction.TNT);
+			BlastPhysics.shatter(level, pos, 0.0, 85.0, 1500, 1.0F); // the long, heavy pressure pulse of a fuel-air blast
 			for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box)) {
 				Vec3 out = e.position().subtract(pos);
 				double d = out.length();
