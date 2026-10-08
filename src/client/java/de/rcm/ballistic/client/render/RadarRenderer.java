@@ -7,6 +7,7 @@ import static de.rcm.ballistic.client.render.StructureKit.CONCRETE_DARK;
 import static de.rcm.ballistic.client.render.StructureKit.DISH;
 import static de.rcm.ballistic.client.render.StructureKit.DOOR;
 import static de.rcm.ballistic.client.render.StructureKit.GRATING;
+import static de.rcm.ballistic.client.render.StructureKit.LAMP;
 import static de.rcm.ballistic.client.render.StructureKit.OLIVE;
 import static de.rcm.ballistic.client.render.StructureKit.PANEL;
 import static de.rcm.ballistic.client.render.StructureKit.RED_LAMP;
@@ -38,6 +39,10 @@ import org.jspecify.annotations.Nullable;
  * antenna - a curved, doubly-curved reflector of mesh panels on a back truss, the feed horn on its
  * boom at the focus and the IFF array along the top edge. It turns at about 6 rpm and twice as fast
  * while a threat is tracked, when the beacons also flash.
+ * <p>
+ * Beside it the height-finder: a tall, narrow dish on its own pedestal that turns slowly and nods up
+ * and down to measure the altitude of what the search radar has found. A fence, a fuel tank for
+ * the generator and the lit windows of the operations shelter complete the site.
  */
 public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, RadarRenderer.State> {
 	private static final float MAST_TOP = 9.0F;
@@ -46,7 +51,13 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 	private static final int PANEL_COLUMNS = 12;
 	private static final float HALF_ARC = 0.8F;
 
+	private static final float[] FINDER = {-2.1F, -2.0F};
 	private static final BoxMesh STATION = buildStation();
+	private static final BoxMesh FINDER_DISH = buildHeightFinder();
+	private static final BoxMesh WINDOWS = new BoxMesh.Builder()
+		.box(3.0F, 1.2F, 0.4F, 3.02F, 1.6F, 1.1F, LAMP)
+		.box(1.8F, 1.2F, 1.4F, 2.6F, 1.6F, 1.42F, LAMP)
+		.build();
 	private static final BoxMesh ANTENNA = buildAntenna();
 	private static final BoxMesh BEACON = new BoxMesh.Builder()
 		.box(-0.1F, 3.55F, -0.1F, 0.1F, 3.75F, 0.1F, RED_LAMP)
@@ -86,6 +97,14 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> STATION.emit(pose, consumer, light));
+		collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> WINDOWS.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+		// height-finder: slow turn, nodding through the elevation sector
+		poseStack.pushPose();
+		poseStack.translate(FINDER[0], 2.4F, FINDER[1]);
+		poseStack.mulPose(new Quaternionf().rotationY(state.time * 0.013F));
+		poseStack.mulPose(new Quaternionf().rotationX(-0.25F - 0.22F * Mth.sin(state.time * (state.alert ? 0.16F : 0.08F))));
+		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> FINDER_DISH.emit(pose, consumer, light));
+		poseStack.popPose();
 		if (state.alert && Mth.sin(state.time * 1.3F) > 0.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> ALERT_BEACON.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 		}
@@ -146,6 +165,28 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 		b.box(-2.92F, 0.3F, 1.8F, -2.9F, 0.9F, 2.4F, VENT);
 		b.box(-2.6F, 1.1F, 1.9F, -2.45F, 1.6F, 2.05F, BLACK); // exhaust
 		b.box(1.95F, 2.3F, -0.1F, 2.15F, 2.6F, 0.1F, STEEL); // alert beacon housing
+		// generator fuel tank on its cradle, piped to the generator
+		b.revolve(WHITE, v(-2.9F, 0.55F, -0.2F), v(0, 0, 1), new float[][] {{0.0F, 0.0F}, {0.0F, 0.45F}, {1.6F, 0.45F}, {1.6F, 0.0F}}, 14);
+		b.box(-3.2F, 0.1F, 0.0F, -2.6F, 0.25F, 0.2F, STEEL);
+		b.box(-3.2F, 0.1F, 1.0F, -2.6F, 0.25F, 1.2F, STEEL);
+		b.beam(v(-2.9F, 0.2F, 1.4F), v(-2.6F, 0.2F, 1.8F), 0.06F, 0.06F, CABLE);
+		// height-finder pedestal
+		b.box(FINDER[0] - 0.5F, 0.1F, FINDER[1] - 0.5F, FINDER[0] + 0.5F, 0.3F, FINDER[1] + 0.5F, CONCRETE_DARK);
+		b.box(FINDER[0] - 0.25F, 0.3F, FINDER[1] - 0.25F, FINDER[0] + 0.25F, 2.2F, FINDER[1] + 0.25F, OLIVE);
+		b.box(FINDER[0] - 0.35F, 2.2F, FINDER[1] - 0.35F, FINDER[0] + 0.35F, 2.35F, FINDER[1] + 0.35F, STEEL);
+		// security fence round the site
+		float f = 3.6F;
+		for (float p = -f; p <= f + 0.01F; p += 1.2F) {
+			for (float[] post : new float[][] {{p, -f}, {p, f}, {-f, p}, {f, p}}) {
+				b.box(post[0] - 0.04F, 0.0F, post[1] - 0.04F, post[0] + 0.04F, 2.0F, post[1] + 0.04F, STEEL);
+			}
+		}
+		for (float h : new float[] {0.5F, 1.2F, 1.9F}) {
+			b.box(-f, h, -f - 0.015F, f, h + 0.025F, -f + 0.015F, STEEL);
+			b.box(-f, h, f - 0.015F, f, h + 0.025F, f + 0.015F, STEEL);
+			b.box(-f - 0.015F, h, -f, -f + 0.015F, h + 0.025F, f, STEEL);
+			b.box(f - 0.015F, h, -f, f + 0.015F, h + 0.025F, 0.8F, STEEL); // gate gap by the shelter door
+		}
 		return b.build();
 	}
 
@@ -206,6 +247,27 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 			b.box(x - 0.03F, 3.25F, 0.35F, x + 0.03F, 3.45F, 0.5F, WHITE);
 		}
 		b.box(-0.05F, 3.5F, 0.18F, 0.05F, 3.55F, 0.28F, STEEL);
+		return b.build();
+	}
+
+	/** Height-finder: a tall, narrow dish on a yoke, local to the top of its pedestal; +Z is the beam. */
+	private static BoxMesh buildHeightFinder() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		b.box(-0.35F, -0.1F, -0.2F, -0.25F, 0.4F, 0.2F, OLIVE);
+		b.box(0.25F, -0.1F, -0.2F, 0.35F, 0.4F, 0.2F, OLIVE);
+		// narrow vertical reflector, curved, with its back frame and feed
+		for (int i = 0; i < 6; i++) {
+			float y0 = -1.4F + i * 0.5F;
+			float y1 = y0 + 0.5F;
+			float z0 = 0.3F * ((y0 / 1.6F) * (y0 / 1.6F));
+			float z1 = 0.3F * ((y1 / 1.6F) * (y1 / 1.6F));
+			b.hexa(DISH,
+				v(-0.25F, y0 + 0.3F, z0), v(0.25F, y0 + 0.3F, z0), v(0.25F, y1 + 0.3F, z1), v(-0.25F, y1 + 0.3F, z1),
+				v(-0.25F, y0 + 0.3F, z0 - 0.04F), v(0.25F, y0 + 0.3F, z0 - 0.04F), v(0.25F, y1 + 0.3F, z1 - 0.04F), v(-0.25F, y1 + 0.3F, z1 - 0.04F));
+		}
+		b.box(-0.05F, -1.1F, -0.15F, 0.05F, 1.9F, -0.05F, STEEL);
+		b.beam(v(0.0F, 0.3F, 0.0F), v(0.0F, 0.3F, 0.9F), 0.07F, 0.07F, STEEL);
+		b.box(-0.1F, 0.2F, 0.9F, 0.1F, 0.4F, 1.05F, WHITE);
 		return b.build();
 	}
 

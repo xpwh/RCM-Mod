@@ -400,7 +400,7 @@ public final class ClientEffects {
 		if (mc.level == null) {
 			return;
 		}
-		double tube = launcher == de.rcm.ballistic.entity.InterceptorEntity.LAUNCHER_CANISTER ? 5.4 : launcher == de.rcm.ballistic.entity.InterceptorEntity.LAUNCHER_CELL ? 2.4 : 1.2;
+		double tube = launcher == de.rcm.ballistic.entity.InterceptorEntity.LAUNCHER_CANISTER ? 5.4 : launcher == de.rcm.ballistic.entity.InterceptorEntity.LAUNCHER_CELL ? 3.4 : 1.2;
 		float size = launcher == de.rcm.ballistic.entity.InterceptorEntity.LAUNCHER_CANISTER ? 1.0F : 0.7F;
 		Vec3 rear = mouth.subtract(dir.scale(tube));
 		double distance = distanceToCamera(mc, mouth);

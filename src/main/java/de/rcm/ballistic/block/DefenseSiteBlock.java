@@ -37,6 +37,10 @@ public class DefenseSiteBlock extends Block implements EntityBlock {
 		Component status();
 
 		void setOwner(@Nullable UUID owner);
+
+		/** Client-side animation, every tick. */
+		default void clientTick() {
+		}
 	}
 
 	public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
@@ -83,8 +87,15 @@ public class DefenseSiteBlock extends Block implements EntityBlock {
 
 	@Override
 	public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-		if (level.isClientSide() || type != this.type.get()) {
+		if (type != this.type.get()) {
 			return null;
+		}
+		if (level.isClientSide()) {
+			return (lvl, pos, st, be) -> {
+				if (be instanceof Site site) {
+					site.clientTick();
+				}
+			};
 		}
 		return (lvl, pos, st, be) -> {
 			if (lvl instanceof ServerLevel server && be instanceof Site site) {

@@ -33,13 +33,14 @@ import org.jspecify.annotations.Nullable;
  * its antenna and the cabling. Each tube shows a yellow cap while it still holds a round.
  */
 public class DecoyLauncherRenderer implements BlockEntityRenderer<DecoyLauncherBlockEntity, DecoyLauncherRenderer.State> {
-	private static final float TUBE_LENGTH = 1.5F;
-	private static final float TUBE_RADIUS = 0.14F;
-	/** Tube {yaw, elevation} in degrees; the six tubes in firing order. Declared before the meshes. */
-	private static final float[][] TUBES = {{-28, 45}, {28, 45}, {-28, 55}, {28, 55}, {-28, 65}, {28, 65}};
+	private static final float TUBE_LENGTH = DecoyLauncherBlockEntity.TUBE_LENGTH;
+	private static final float TUBE_RADIUS = DecoyLauncherBlockEntity.TUBE_RADIUS;
+	private static final float[][] TUBES = DecoyLauncherBlockEntity.TUBES;
 
 	private static final BoxMesh BASE = buildBase();
 	private static final BoxMesh[] CAPS = buildCaps();
+	private static final BoxMesh FLYING_CAP = new BoxMesh.Builder().revolve(YELLOW, v(0, 0, -0.03F), v(0, 0, 1),
+		new float[][] {{0.0F, 0.0F}, {0.0F, TUBE_RADIUS + 0.01F}, {0.06F, TUBE_RADIUS + 0.01F}, {0.07F, 0.0F}}, 12).build();
 
 	public DecoyLauncherRenderer(BlockEntityRendererProvider.Context context) {
 	}
@@ -47,6 +48,7 @@ public class DecoyLauncherRenderer implements BlockEntityRenderer<DecoyLauncherB
 	public static class State extends BlockEntityRenderState {
 		public float facingYaw;
 		public int salvos;
+		public final float[] pop = new float[6];
 	}
 
 	@Override
@@ -61,6 +63,9 @@ public class DecoyLauncherRenderer implements BlockEntityRenderer<DecoyLauncherB
 		Direction facing = state.blockState.hasProperty(DefenseSiteBlock.FACING) ? state.blockState.getValue(DefenseSiteBlock.FACING) : Direction.NORTH;
 		state.facingYaw = (float) Mth.atan2(facing.getStepX(), facing.getStepZ());
 		state.salvos = launcher.getAmmo();
+		for (int i = 0; i < 6; i++) {
+			state.pop[i] = launcher.popAge[i] < 0 ? -1.0F : launcher.popAge[i] + partialTick;
+		}
 	}
 
 	@Override
@@ -73,6 +78,19 @@ public class DecoyLauncherRenderer implements BlockEntityRenderer<DecoyLauncherB
 		for (int i = 0; i < TUBES.length; i++) {
 			BoxMesh cap = i < TUBES.length - state.salvos ? CAPS[i + TUBES.length] : CAPS[i];
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> cap.emit(pose, consumer, light));
+			float t = state.pop[i];
+			if (t >= 0.0F && t < 35.0F) {
+				// the cap blown off the muzzle, flying out along the tube and dropping
+				Vector3f a = axis(TUBES[i]);
+				Vector3f muzzle = new Vector3f(a).mul(TUBE_LENGTH).add(breech(i));
+				float out = 0.5F * (1.0F - (float) Math.pow(0.88, t)) / 0.12F;
+				Vector3f p = new Vector3f(a).mul(out).add(muzzle).add(0, -0.5F * 0.04F * t * t, 0);
+				poseStack.pushPose();
+				poseStack.translate(p.x, p.y, p.z);
+				poseStack.mulPose(new Quaternionf().rotationXYZ(t * 0.6F, t * 0.3F, 0.0F));
+				collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> FLYING_CAP.emit(pose, consumer, light));
+				poseStack.popPose();
+			}
 		}
 		poseStack.popPose();
 	}

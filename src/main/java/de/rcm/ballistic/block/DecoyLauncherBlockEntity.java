@@ -136,6 +136,76 @@ public class DecoyLauncherBlockEntity extends BlockEntity implements DefenseSite
 		this.setChanged();
 	}
 
+	// ------------------------------------------------------------------ tube geometry (shared with the renderer)
+
+	public static final float TUBE_LENGTH = 1.5F;
+	public static final float TUBE_RADIUS = 0.14F;
+	/** Tube {yaw, elevation} in degrees, in firing order. */
+	public static final float[][] TUBES = {{-28, 45}, {28, 45}, {-28, 55}, {28, 55}, {-28, 65}, {28, 65}};
+
+	/** Unit direction of a tube in launcher space (+Z = facing). */
+	public static Vec3 tubeAxis(int i) {
+		float yaw = TUBES[i][0] * Mth.DEG_TO_RAD;
+		float el = TUBES[i][1] * Mth.DEG_TO_RAD;
+		return new Vec3(Mth.sin(yaw) * Mth.cos(el), Mth.sin(el), Mth.cos(yaw) * Mth.cos(el));
+	}
+
+	/** Breech of a tube in launcher space. */
+	public static Vec3 tubeBreech(int i) {
+		float[] t = TUBES[i];
+		return new Vec3(Math.signum(t[0]) * 0.32F, 0.95F + (t[1] - 45.0F) * 0.006F, -0.15F + (t[1] - 45.0F) * 0.012F);
+	}
+
+	private Vec3 toWorld(Vec3 p) {
+		net.minecraft.core.Direction facing = this.getBlockState().hasProperty(DefenseSiteBlock.FACING)
+			? this.getBlockState().getValue(DefenseSiteBlock.FACING) : net.minecraft.core.Direction.NORTH;
+		double fx = facing.getStepX();
+		double fz = facing.getStepZ();
+		return new Vec3(p.x * fz + p.z * fx, p.y, -p.x * fx + p.z * fz);
+	}
+
+	/** Client: ticks since each tube's cap was blown off (-1 = not flying). */
+	public final int[] popAge = {-1, -1, -1, -1, -1, -1};
+	private int clientLastSalvos = -1;
+
+	/**
+	 * Client: a salvo leaves its tube - the cap is blown off, a flash and a puff of smoke at the
+	 * muzzle, and the round arcs away trailing sparks before it bursts into chaff and flares.
+	 */
+	@Override
+	public void clientTick() {
+		if (this.level == null) {
+			return;
+		}
+		if (this.clientLastSalvos >= 0 && this.salvos < this.clientLastSalvos) {
+			for (int a = this.clientLastSalvos; a > this.salvos; a--) {
+				int tube = MAGAZINE - a;
+				if (tube < 0 || tube >= MAGAZINE) {
+					continue;
+				}
+				this.popAge[tube] = 0;
+				Vec3 axis = this.toWorld(tubeAxis(tube));
+				Vec3 muzzle = Vec3.atBottomCenterOf(this.worldPosition).add(this.toWorld(tubeBreech(tube).add(tubeAxis(tube).scale(TUBE_LENGTH))));
+				RandomSource random = this.level.getRandom();
+				for (int i = 0; i < 8; i++) {
+					this.level.addParticle(ParticleTypes.FLAME, muzzle.x, muzzle.y, muzzle.z, axis.x * 0.3 + random.nextGaussian() * 0.05, axis.y * 0.3, axis.z * 0.3 + random.nextGaussian() * 0.05);
+					this.level.addParticle(ParticleTypes.LARGE_SMOKE, muzzle.x, muzzle.y, muzzle.z, axis.x * 0.15, axis.y * 0.15, axis.z * 0.15);
+				}
+				for (int i = 0; i < 24; i++) {
+					// the round's spark trail along its arc
+					double s = 0.6 + i * 0.05;
+					this.level.addParticle(ParticleTypes.FIREWORK, muzzle.x, muzzle.y, muzzle.z, axis.x * s, axis.y * s, axis.z * s);
+				}
+			}
+		}
+		this.clientLastSalvos = this.salvos;
+		for (int i = 0; i < this.popAge.length; i++) {
+			if (this.popAge[i] >= 0 && ++this.popAge[i] > 40) {
+				this.popAge[i] = -1;
+			}
+		}
+	}
+
 	public int getAmmo() {
 		return this.salvos;
 	}

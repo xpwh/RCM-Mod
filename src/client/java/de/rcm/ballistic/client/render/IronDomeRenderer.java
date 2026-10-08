@@ -10,6 +10,7 @@ import static de.rcm.ballistic.client.render.StructureKit.OLIVE_DARK;
 import static de.rcm.ballistic.client.render.StructureKit.PANEL;
 import static de.rcm.ballistic.client.render.StructureKit.RED;
 import static de.rcm.ballistic.client.render.StructureKit.RED_LAMP;
+import static de.rcm.ballistic.client.render.StructureKit.SOOT;
 import static de.rcm.ballistic.client.render.StructureKit.STEEL;
 import static de.rcm.ballistic.client.render.StructureKit.VENT;
 import static de.rcm.ballistic.client.render.StructureKit.v;
@@ -39,10 +40,10 @@ import org.jspecify.annotations.Nullable;
  */
 public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity, IronDomeRenderer.State> {
 	/** Pack geometry, shared by the meshes: pivot and elevation. Declared before the meshes. */
-	private static final float PIVOT_Y = 1.25F;
-	private static final float PIVOT_Z = -1.6F;
-	private static final float ELEVATION = 55.0F * Mth.DEG_TO_RAD;
-	private static final float PACK_LENGTH = 3.4F;
+	private static final float PIVOT_Y = IronDomeBlockEntity.PIVOT_Y;
+	private static final float PIVOT_Z = IronDomeBlockEntity.PIVOT_Z;
+	private static final float ELEVATION = IronDomeBlockEntity.ELEVATION;
+	private static final float PACK_LENGTH = IronDomeBlockEntity.PACK_LENGTH;
 	private static final float RADAR_X = 3.6F;
 
 	private static final BoxMesh TRAILER = buildTrailer();
@@ -57,6 +58,7 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 	public static class State extends BlockEntityRenderState {
 		public float facingYaw;
 		public int ammo;
+		public final float[] pop = new float[20];
 		public float time;
 	}
 
@@ -71,6 +73,9 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 		Direction facing = state.blockState.hasProperty(DefenseSiteBlock.FACING) ? state.blockState.getValue(DefenseSiteBlock.FACING) : Direction.NORTH;
 		state.facingYaw = (float) Mth.atan2(facing.getStepX(), facing.getStepZ());
 		state.ammo = dome.getAmmo();
+		for (int i = 0; i < 20; i++) {
+			state.pop[i] = dome.popAge[i] < 0 ? -1.0F : dome.popAge[i] + partialTick;
+		}
 		state.time = dome.getLevel() == null ? 0.0F : (dome.getLevel().getGameTime() % 24000L) + partialTick;
 	}
 
@@ -103,6 +108,19 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 		for (int i = 0; i < 20; i++) {
 			BoxMesh cap = i < 20 - state.ammo ? CAPS[i + 20] : CAPS[i];
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> cap.emit(pose, consumer, light));
+			float t = state.pop[i];
+			if (t >= 0.0F && t < 45.0F) {
+				// the blown-off cover, thrown out by the motor and falling away (gravity in pack space)
+				float[] c = IronDomeBlockEntity.cellCentre(i);
+				float ahead = 0.6F * (1.0F - (float) Math.pow(0.9, t)) / 0.1F;
+				float fall = 0.5F * 0.045F * t * t;
+				BoxMesh flying = CAPS[40];
+				poseStack.pushPose();
+				poseStack.translate(c[0] + (i % 2 == 0 ? -0.03F : 0.03F) * t, c[1] - fall * Mth.cos(ELEVATION), PACK_LENGTH + 0.07F + ahead - fall * Mth.sin(ELEVATION));
+				poseStack.mulPose(new Quaternionf().rotationXYZ(t * 0.5F, t * 0.21F, t * 0.13F));
+				collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> flying.emit(pose, consumer, light));
+				poseStack.popPose();
+			}
 		}
 		poseStack.popPose();
 	}
@@ -193,16 +211,21 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 
 	/** Cell covers: 0-19 closed (loaded, red cover), 20-39 open (fired, dark tube mouth). Row 0 at the top. */
 	private static BoxMesh[] buildCaps() {
-		BoxMesh[] caps = new BoxMesh[40];
+		BoxMesh[] caps = new BoxMesh[41];
+		float r = 0.13F;
 		for (int i = 0; i < 20; i++) {
-			int row = i / 4;
-			int col = i % 4;
-			float x = -0.75F + col * 0.5F;
-			float y = 1.3F - row * 0.3F;
-			float r = 0.13F;
+			float[] c = IronDomeBlockEntity.cellCentre(i);
+			float x = c[0];
+			float y = c[1];
 			caps[i] = new BoxMesh.Builder().box(x - r, y - r, PACK_LENGTH + 0.05F, x + r, y + r, PACK_LENGTH + 0.09F, RED).build();
-			caps[i + 20] = new BoxMesh.Builder().box(x - r, y - r, PACK_LENGTH + 0.05F, x + r, y + r, PACK_LENGTH + 0.06F, BLACK).build();
+			// fired: the dark tube mouth with a sooty rim
+			caps[i + 20] = new BoxMesh.Builder()
+				.box(x - r, y - r, PACK_LENGTH - 0.2F, x + r, y + r, PACK_LENGTH - 0.15F, BLACK)
+				.box(x - r - 0.02F, y - r - 0.02F, PACK_LENGTH + 0.05F, x + r + 0.02F, y - r, PACK_LENGTH + 0.07F, SOOT)
+				.box(x - r - 0.02F, y + r, PACK_LENGTH + 0.05F, x + r + 0.02F, y + r + 0.02F, PACK_LENGTH + 0.07F, SOOT)
+				.build();
 		}
+		caps[40] = new BoxMesh.Builder().box(-r, -r, -0.02F, r, r, 0.02F, RED).build(); // a flying cover, centred
 		return caps;
 	}
 

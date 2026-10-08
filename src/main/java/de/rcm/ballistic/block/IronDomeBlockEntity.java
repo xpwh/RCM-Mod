@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
@@ -89,15 +90,13 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 		if (best == null) {
 			return;
 		}
-		// vertical launch, the interceptor turns over towards the target right after leaving the cell
-		int cell = this.launches % 20;
-		net.minecraft.core.Direction facing = this.getBlockState().hasProperty(DefenseSiteBlock.FACING)
-			? this.getBlockState().getValue(DefenseSiteBlock.FACING) : net.minecraft.core.Direction.NORTH;
-		Vec3 fwd = new Vec3(facing.getStepX(), 0, facing.getStepZ());
-		Vec3 right = new Vec3(-fwd.z, 0, fwd.x);
-		Vec3 mouth = Vec3.atBottomCenterOf(this.worldPosition).add(fwd.scale(0.4 + (cell / 4) * 0.05)).add(right.scale((cell % 4 - 1.5) * 0.5)).add(0, 4.2 + (cell / 4) * 0.2, 0);
+		// out of the next loaded cell along the launcher's 55-degree axis; the Tamir turns over towards
+		// the target right after leaving it
+		int cell = MAGAZINE - this.ammo;
+		Vec3 mouth = this.toWorld(cellLocal(cell, PACK_LENGTH + 0.3F));
+		Vec3 axis = this.toWorld(new float[] {0.0F, PIVOT_Y + Mth.sin(ELEVATION), PIVOT_Z + Mth.cos(ELEVATION)}).subtract(this.toWorld(new float[] {0.0F, PIVOT_Y, PIVOT_Z}));
 		float pk = Math.min(0.95F, best.killProbability() + 0.15F);
-		if (InterceptorEntity.launch(level, this.worldPosition, mouth, best, pk, new Vec3(0, 1, 0)) != null) {
+		if (InterceptorEntity.launch(level, this.worldPosition, mouth, best, pk, axis) != null) {
 			best.setEngagements(best.getEngagements() + 1);
 			this.ammo--;
 			this.launches++;
@@ -106,6 +105,65 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 			level.playSound(null, mouth.x, mouth.y, mouth.z, ModRegistry.SAM_LAUNCH, SoundSource.BLOCKS, 9.0F, 1.15F + level.getRandom().nextFloat() * 0.15F);
 			level.sendParticles(ParticleTypes.CLOUD, mouth.x, mouth.y, mouth.z, 20, 0.4, 0.3, 0.4, 0.06);
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, here.x, here.y + 0.5, here.z, 10, 0.8, 0.2, 0.8, 0.04);
+		}
+	}
+
+	// ------------------------------------------------------------------ launcher geometry (shared with the renderer)
+
+	/** Pack pivot (trailer space), fixed elevation and tube length. */
+	public static final float PIVOT_Y = 1.25F;
+	public static final float PIVOT_Z = -1.6F;
+	public static final float ELEVATION = 55.0F * Mth.DEG_TO_RAD;
+	public static final float PACK_LENGTH = 3.4F;
+
+	/** Centre of a cell (0 = top left, row by row) in pack space: {x, y}. */
+	public static float[] cellCentre(int cell) {
+		return new float[] {-0.75F + (cell % 4) * 0.5F, 1.3F - (cell / 4) * 0.3F};
+	}
+
+	/** A point on a cell's axis, {@code along} blocks from the pack's rear, in trailer space. */
+	private static float[] cellLocal(int cell, float along) {
+		float[] c = cellCentre(cell);
+		float sin = Mth.sin(ELEVATION);
+		float cos = Mth.cos(ELEVATION);
+		return new float[] {c[0], PIVOT_Y + c[1] * cos + along * sin, PIVOT_Z - c[1] * sin + along * cos};
+	}
+
+	/** Trailer space (+Z = facing) to world space. */
+	private Vec3 toWorld(float[] p) {
+		net.minecraft.core.Direction facing = this.getBlockState().hasProperty(DefenseSiteBlock.FACING)
+			? this.getBlockState().getValue(DefenseSiteBlock.FACING) : net.minecraft.core.Direction.NORTH;
+		double fx = facing.getStepX();
+		double fz = facing.getStepZ();
+		// local +Z = facing, local +X = facing rotated like the renderer's rotationY(atan2(fx, fz))
+		return Vec3.atBottomCenterOf(this.worldPosition).add(p[0] * fz + p[2] * fx, p[1], -p[0] * fx + p[2] * fz);
+	}
+
+	// ------------------------------------------------------------------ client animation
+
+	/** Client: ticks since each cell's cover was blown off (-1 = not flying). */
+	public final int[] popAge = new int[MAGAZINE];
+	private int clientLastAmmo = -1;
+
+	{
+		java.util.Arrays.fill(this.popAge, -1);
+	}
+
+	@Override
+	public void clientTick() {
+		if (this.clientLastAmmo >= 0 && this.ammo < this.clientLastAmmo) {
+			for (int a = this.clientLastAmmo; a > this.ammo; a--) {
+				int cell = MAGAZINE - a;
+				if (cell >= 0 && cell < MAGAZINE) {
+					this.popAge[cell] = 0;
+				}
+			}
+		}
+		this.clientLastAmmo = this.ammo;
+		for (int i = 0; i < this.popAge.length; i++) {
+			if (this.popAge[i] >= 0 && ++this.popAge[i] > 50) {
+				this.popAge[i] = -1;
+			}
 		}
 	}
 
