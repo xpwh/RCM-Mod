@@ -79,6 +79,14 @@ public final class AkClient {
 		ClientHooks.bulletClientTick = AkClient::bulletTick;
 		ClientPlayNetworking.registerGlobalReceiver(GunshotPayload.TYPE, (payload, context) -> remoteShot(payload));
 		HudElementRegistry.addLast(BallisticMissiles.id("ammo"), (graphics, tickCounter) -> hud(graphics));
+		// looking through the sights (AK or RPG) there is no crosshair: the sights are the aim
+		HudElementRegistry.replaceElement(net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.CROSSHAIR, crosshair -> (graphics, tickCounter) -> {
+			Minecraft mc = Minecraft.getInstance();
+			if (mc.player != null && (AkItem.isAiming(mc.player) || de.rcm.ballistic.item.RocketLauncherItem.isAiming(mc.player))) {
+				return;
+			}
+			crosshair.render(graphics, tickCounter);
+		});
 	}
 
 	/** 0 at the hip, 1 with the eye behind the rear sight. */
