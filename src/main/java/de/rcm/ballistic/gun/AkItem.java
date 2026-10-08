@@ -39,7 +39,7 @@ public class AkItem extends Item {
 	public static final int MAG_CAPACITY = 30;
 	/** Ticks between shots in automatic fire (600 rounds per minute). */
 	public static final int CYCLE = 2;
-	public static final int RELOAD_TACTICAL = 52;
+	public static final int RELOAD_TACTICAL = 44;
 	public static final int RELOAD_EMPTY = 72;
 	/** Reload choreography (ticks after the start): magazine out, new magazine in, bolt charged. */
 	public static final int T_MAG_OUT = 12;
@@ -47,6 +47,12 @@ public class AkItem extends Item {
 	public static final int T_MAG_DROP = 15;
 	public static final int T_MAG_IN = 30;
 	public static final int T_CHARGE = 52;
+	/**
+	 * A reload with rounds left goes magazine to magazine: the fresh one knocks the release and the old
+	 * one out of the well at {@code T_TAC_OUT} and goes straight in, seated at {@code T_TAC_IN}.
+	 */
+	public static final int T_TAC_OUT = 14;
+	public static final int T_TAC_IN = 23;
 	/** Muzzle velocity, blocks per tick (715 m/s). */
 	public static final double MUZZLE_VELOCITY = 35.75;
 
@@ -279,7 +285,8 @@ public class AkItem extends Item {
 		}
 		long t = level.getGameTime() - state.reloadStart();
 		int duration = state.reloadKind() == GunState.EMPTY ? RELOAD_EMPTY : RELOAD_TACTICAL;
-		if (t == T_MAG_OUT && state.hasMag()) {
+		boolean tactical = state.reloadKind() == GunState.TACTICAL;
+		if (t == (tactical ? T_TAC_OUT : T_MAG_OUT) && state.hasMag()) {
 			this.sound(level, player, ModRegistry.AK_MAG_OUT, 1.0F);
 		} else if (t == T_MAG_DROP && state.hasMag() && state.reloadKind() == GunState.EMPTY) {
 			// a speed reload: the empty magazine is let go and falls where you stand - pick it up again later
@@ -294,7 +301,7 @@ public class AkItem extends Item {
 					1.3F + level.getRandom().nextFloat() * 0.2F);
 				level.playSound(null, dropped.getX(), dropped.getY(), dropped.getZ(), SoundEvents.LANTERN_FALL, SoundSource.PLAYERS, 0.6F, 1.5F);
 			}
-		} else if (t == T_MAG_IN) {
+		} else if (t == (tactical ? T_TAC_IN : T_MAG_IN)) {
 			this.sound(level, player, ModRegistry.AK_MAG_IN, 1.0F);
 		} else if (t == T_CHARGE && state.reloadKind() == GunState.EMPTY) {
 			this.sound(level, player, ModRegistry.AK_CHARGE, 1.0F);

@@ -63,6 +63,10 @@ public final class AkAnim {
 	/** Rounds showing in the feed lips. */
 	public boolean magLoaded;
 	public final Matrix4f mag = new Matrix4f();
+	/** A second magazine in the hand (the fresh one, during a magazine-to-magazine reload). */
+	public final Matrix4f mag2 = new Matrix4f();
+	public boolean mag2Visible;
+	public boolean mag2Tracer;
 	public final Vector3f leftHand = new Vector3f();
 	public final Vector3f rightHand = new Vector3f();
 
@@ -142,6 +146,93 @@ public final class AkAnim {
 		return out.add(-0.035F * bulge, -0.03F * bulge, 0.0F);
 	}
 
+	/** The fresh magazine through a magazine-to-magazine reload: {tick, x, y, z, roll, pitch (about its top), rocked out}. */
+	private static final Keys TAC_FRESH = new Keys(
+		new float[] {5.0F, POUCH.x, POUCH.y, POUCH.z, -35.0F, -25.0F, 0.0F},
+		new float[] {8.0F, -0.12F, -0.27F, 0.12F, -22.0F, -16.0F, 0.0F},
+		// up behind the old one, parallel to it, its front edge at the release paddle ...
+		new float[] {11.0F, -0.006F, -0.05F, 0.078F, -5.0F, -6.0F, 0.0F},
+		// ... and pushed up against it: the paddle gives, the old one is knocked out forward
+		new float[] {AkItem.T_TAC_OUT, -0.003F, -0.032F, 0.066F, -2.0F, -8.0F, 0.0F},
+		// into the space it left, nose forward
+		new float[] {16.5F, -0.002F, -0.05F, 0.03F, 0.0F, -4.0F, 0.6F},
+		new float[] {18.5F, 0.0F, -0.03F, 0.0F, 0.0F, 0.0F, 1.0F},
+		new float[] {20.5F, 0.0F, -0.004F, 0.0F, 0.0F, 0.0F, 1.0F},
+		new float[] {AkItem.T_TAC_IN, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F});
+	/** The old magazine, knocked out by the fresh one: {tick, rocked out, drop, back, aside} - then held in the fingers under it and stowed. */
+	private static final Keys TAC_OLD = new Keys(
+		new float[] {12.5F, 0.0F, 0.0F, 0.0F, 0.0F},
+		new float[] {AkItem.T_TAC_OUT + 0.5F, 0.45F, 0.0F, 0.0F, 0.0F},
+		new float[] {16.5F, 1.0F, 0.03F, -0.01F, -0.022F},
+		new float[] {19.0F, 1.0F, 0.08F, 0.01F, -0.04F},
+		new float[] {AkItem.T_TAC_IN, 1.0F, 0.09F, 0.02F, -0.04F});
+	/** Where a magazine's top sits (the pivot for tilting one in the hand). */
+	private static final Vector3f MAG_TOP = new Vector3f(0.0F, 0.036F, -0.06F);
+
+	/**
+	 * A reload with rounds left, magazine to magazine: the left hand fetches a full one from the pouch,
+	 * brings it up behind the old one and knocks the release paddle with it, so the old one rocks out
+	 * forward into the same hand; the fresh one goes straight in, nose first, and rocks back until it
+	 * clicks; then the old one goes to the pouch and the hand comes back to the handguard.
+	 */
+	private AkAnim magToMag(GunState state, float r) {
+		Matrix4f fresh = this.mag2;
+		fresh.identity().translate(TAC_FRESH.at(r, 0), TAC_FRESH.at(r, 1), TAC_FRESH.at(r, 2));
+		fresh.translate(MAG_TOP).rotate(Axis.ZP.rotationDegrees(TAC_FRESH.at(r, 3))).rotate(Axis.XP.rotationDegrees(TAC_FRESH.at(r, 4)));
+		fresh.translate(-MAG_TOP.x, -MAG_TOP.y, -MAG_TOP.z);
+		Matrix4f rock = new Matrix4f();
+		magPose(rock, Mth.clamp(TAC_FRESH.at(r, 5), 0.0F, 1.0F), 0.0F);
+		fresh.mul(rock);
+		this.mag2Visible = r >= 5.5F && r < AkItem.T_TAC_IN;
+		this.mag2Tracer = state.reloadAmmo() == GunState.TRACER;
+
+		// the old one: out into the hand, held under the fresh one, then away to the pouch
+		Matrix4f old = this.mag;
+		float away = Keys.ease(r, AkItem.T_TAC_IN + 1.0F, 31.0F);
+		magPose(old, Math.max(0.0F, TAC_OLD.at(r, 0)), away);
+		old.translateLocal(TAC_OLD.at(r, 3) * (1.0F - away), -TAC_OLD.at(r, 1) * (1.0F - away), TAC_OLD.at(r, 2) * (1.0F - away));
+		this.magVisible = r < 31.0F;
+		if (r >= AkItem.T_TAC_IN) {
+			// the fresh one is in the rifle now: draw it there, and the old one in the hand
+			this.mag2.set(old);
+			this.mag2Visible = this.magVisible;
+			this.mag2Tracer = state.ammo() == GunState.TRACER;
+			magPose(this.mag, 0.0F, 0.0F);
+			if (r < AkItem.T_TAC_IN + 3) {
+				// the tug against the catch
+				this.mag.translate(0.0F, -0.006F * Mth.sin((r - AkItem.T_TAC_IN) / 3.0F * Mth.PI), 0.0F);
+			}
+			this.magVisible = true;
+			this.magTracer = state.reloadAmmo() == GunState.TRACER;
+			this.magLoaded = true;
+		}
+
+		Vector3f freshHold = fresh.transformPosition(MAG_HOLD, new Vector3f());
+		Matrix4f oldNow = r >= AkItem.T_TAC_IN ? this.mag2 : this.mag;
+		Vector3f oldHold = oldNow.transformPosition(MAG_HOLD, new Vector3f());
+		if (r < 5.0F) {
+			// down to the pouch
+			Matrix4f pouch = new Matrix4f();
+			magPose(pouch, 0.0F, 1.0F);
+			swing(HANDGUARD, pouch.transformPosition(MAG_HOLD, new Vector3f()), r / 5.0F, this.leftHand);
+		} else if (r < 21.5F) {
+			this.leftHand.set(freshHold);
+		} else if (r < AkItem.T_TAC_IN + 1.0F) {
+			// letting go of the seated one, the fingers close round the old one below it
+			Matrix4f seated = new Matrix4f();
+			magPose(seated, 0.0F, 0.0F);
+			Vector3f from = r < AkItem.T_TAC_IN ? freshHold : seated.transformPosition(MAG_HOLD, new Vector3f());
+			lerp(from, oldHold, (r - 21.5F) / 2.5F, this.leftHand);
+		} else if (r < 31.0F) {
+			this.leftHand.set(oldHold);
+		} else {
+			Matrix4f pouch = new Matrix4f();
+			magPose(pouch, 1.0F, 1.0F);
+			swing(pouch.transformPosition(MAG_HOLD, new Vector3f()), HANDGUARD, (r - 31.0F) / 9.0F, this.leftHand);
+		}
+		return this;
+	}
+
 	/**
 	 * @param lastShot game tick of the last shot (the client's own for the local player)
 	 */
@@ -161,6 +252,7 @@ public final class AkAnim {
 		this.magLoaded = state.rounds() > 0;
 		this.leftHand.set(HANDGUARD);
 		this.rightHand.set(GRIP);
+		this.mag2Visible = false;
 		if (!state.reloading()) {
 			if (check >= 0.0F && state.hasMag()) {
 				this.magCheck(check);
@@ -170,6 +262,9 @@ public final class AkAnim {
 
 		float r = now - state.reloadStart();
 		boolean empty = state.reloadKind() == GunState.EMPTY;
+		if (!empty && state.hasMag()) {
+			return this.magToMag(state, r);
+		}
 		if (r < AkItem.T_MAG_DROP && state.hasMag()) {
 			this.hadMag = state.reloadStart();
 		}

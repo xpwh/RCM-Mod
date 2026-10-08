@@ -88,16 +88,19 @@ public final class AkFirstPerson {
 	private static float lastYaw;
 	private static float lastPitch;
 
-	/** The rifle through a reload with rounds left: {tick, x, y, z, roll, pitch, yaw}. */
+	/**
+	 * The rifle through a reload with rounds left (magazine to magazine): {tick, x, y, z, roll, pitch, yaw}.
+	 * It stays nearer the target than for an empty gun, canted just enough to see the well.
+	 */
 	private static final Keys RELOAD_TACTICAL = new Keys(
 		new float[] {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F},
-		new float[] {7.0F, -0.08F, 0.15F, -0.09F, -24.0F, 7.0F, 30.0F},
-		new float[] {12.0F, -0.095F, 0.185F, -0.11F, -30.0F, 8.0F, 38.0F},
-		new float[] {18.0F, -0.1F, 0.19F, -0.115F, -33.0F, 6.0F, 42.0F},
-		new float[] {25.0F, -0.1F, 0.19F, -0.115F, -31.0F, 7.0F, 40.0F},
-		new float[] {30.0F, -0.1F, 0.2F, -0.115F, -29.0F, 9.0F, 38.0F},
-		new float[] {36.0F, -0.095F, 0.19F, -0.11F, -28.0F, 7.0F, 36.0F},
-		new float[] {44.0F, -0.04F, 0.08F, -0.045F, -10.0F, 2.0F, 14.0F},
+		new float[] {6.0F, -0.05F, 0.09F, -0.055F, -15.0F, 4.0F, 18.0F},
+		new float[] {11.0F, -0.08F, 0.15F, -0.09F, -24.0F, 7.0F, 30.0F},
+		new float[] {AkItem.T_TAC_OUT, -0.085F, 0.16F, -0.095F, -26.0F, 7.0F, 32.0F},
+		new float[] {19.0F, -0.085F, 0.165F, -0.095F, -25.0F, 8.0F, 32.0F},
+		new float[] {AkItem.T_TAC_IN, -0.085F, 0.17F, -0.095F, -24.0F, 9.0F, 31.0F},
+		new float[] {28.0F, -0.07F, 0.14F, -0.08F, -19.0F, 6.0F, 25.0F},
+		new float[] {36.0F, -0.025F, 0.045F, -0.025F, -6.0F, 2.0F, 8.0F},
 		new float[] {AkItem.RELOAD_TACTICAL, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F});
 	/** The same with an empty gun: then rolled over to the right for the charging handle. */
 	private static final Keys RELOAD_EMPTY = new Keys(
@@ -302,10 +305,12 @@ public final class AkFirstPerson {
 		if (state.reloading()) {
 			float r = now - state.reloadStart();
 			Keys keys = state.reloadKind() == GunState.EMPTY ? RELOAD_EMPTY : RELOAD_TACTICAL;
-			float slap = r > AkItem.T_MAG_IN + 2 && r < AkItem.T_MAG_IN + 7 ? Mth.sin((r - (AkItem.T_MAG_IN + 2)) / 5.0F * Mth.PI) : 0.0F;
-			float tug = jolt(r - AkItem.T_MAG_OUT, 4.0F);
+			boolean tactical = state.reloadKind() == GunState.TACTICAL;
+			int magIn = tactical ? AkItem.T_TAC_IN : AkItem.T_MAG_IN;
+			float slap = r > magIn + 2 && r < magIn + 7 ? Mth.sin((r - (magIn + 2)) / 5.0F * Mth.PI) : 0.0F;
+			float tug = jolt(r - (tactical ? AkItem.T_TAC_OUT : AkItem.T_MAG_OUT), 4.0F);
 			float slam = state.reloadKind() == GunState.EMPTY ? jolt(r - (AkItem.T_CHARGE + 3), 5.0F) : 0.0F;
-			float settle = r > AkItem.T_MAG_IN + 4 ? jolt(r - (AkItem.T_MAG_IN + 4), 6.0F) * -0.4F : 0.0F;
+			float settle = r > magIn + 4 ? jolt(r - (magIn + 4), 6.0F) * -0.4F : 0.0F;
 			// a flick of the rifle to let the empty magazine fall clear
 			float flick = state.reloadKind() == GunState.EMPTY ? jolt(r - AkItem.T_MAG_DROP, 5.0F) : 0.0F;
 			poseStack.translate(keys.at(r, 0), keys.at(r, 1) + 0.012F * (slap + settle) - 0.014F * tug + 0.006F * slam,

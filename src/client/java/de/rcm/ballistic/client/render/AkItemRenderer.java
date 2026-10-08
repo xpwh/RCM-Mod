@@ -124,6 +124,14 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 			poseStack.popPose();
 		}
 
+		if (anim.mag2Visible) {
+			BoxMesh mag2 = anim.mag2Tracer ? MAG_TRACER : MAG;
+			poseStack.pushPose();
+			poseStack.mulPose(anim.mag2);
+			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> mag2.emit(pose, consumer, light));
+			poseStack.popPose();
+		}
+
 		// ---- muzzle flash, for the first frame or two of each shot
 		float shot = now - lastShot;
 		if (shot >= 0.0F && shot < 1.4F) {
