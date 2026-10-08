@@ -67,6 +67,7 @@ public final class ClientEffects {
 			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, METEOR, SEA_MINE, EARTH_PENETRATOR, POSEIDON, KINETIC_ROD -> {
 			}
 			case BOMBLET -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.25, 0xFFB060);
+			case GRENADE -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.3, 0xFFC070);
 			default -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.5, 0xFFB060);
 		}
 		EFFECTS.add(switch (warhead) {
@@ -77,6 +78,7 @@ public final class ClientEffects {
 			case CRUISE -> new BlastEffect(pos, 0.85);
 			case CLUSTER -> new BlastEffect(pos, 0.6);
 			case BOMBLET -> new BlastEffect(pos, 0.32);
+			case GRENADE -> new BlastEffect(pos, 0.45, true);
 			case CLUSTER_RELEASE, MIRV_RELEASE -> new ReleaseEffect(pos);
 			case HYPERSONIC -> new BlastEffect(pos, 1.25);
 			case MIRV -> new NukeEffect(pos, 1.0);
@@ -581,7 +583,15 @@ public final class ClientEffects {
 		private final double distance;
 		private int age;
 
+		/** A hand grenade: the same fireball, earth and smoke, with its own recorded report. */
+		private final boolean grenade;
+
 		BlastEffect(Vec3 pos, double scale) {
+			this(pos, scale, false);
+		}
+
+		BlastEffect(Vec3 pos, double scale, boolean grenade) {
+			this.grenade = grenade;
 			this.pos = pos;
 			this.scale = scale;
 			Minecraft mc = Minecraft.getInstance();
@@ -595,7 +605,17 @@ public final class ClientEffects {
 			int t = this.age++;
 			double s = this.scale;
 			Vec3 c = this.pos.add(0, 1, 0);
-			if (t == this.soundDelay) {
+			if (t == this.soundDelay && this.grenade) {
+				float pitch = 0.95F + rand() * 0.1F;
+				if (this.distance < 140.0) {
+					playDistant(mc, ModRegistry.GRENADE_EXPLODE, this.pos, (float) Math.min(1.0, 1.15 - this.distance / 160.0), pitch);
+					playDistant(mc, ModRegistry.EXPLOSION_DEBRIS, this.pos, (float) Math.max(0.0, 0.5 - this.distance / 80.0), 1.2F);
+					deafen(mc, (float) (1.0 - this.distance / 24.0), 40);
+				} else {
+					playDistant(mc, ModRegistry.GRENADE_EXPLODE_FAR, this.pos, (float) (1.1 - this.distance / 700.0), pitch);
+				}
+				addShake((float) Mth.clamp(2.2 - this.distance / 25.0, 0.0, 2.2));
+			} else if (t == this.soundDelay) {
 				shockCrack(mc, s >= 0.8 ? ModRegistry.SHOCK_HEAVY : ModRegistry.SHOCK_HE, this.pos, this.distance, 450.0 * s + 60.0, s < 0.4 ? 1.35F : s < 0.6 ? 1.15F : 1.0F);
 				float pitch = (float) ((0.9F + rand() * 0.2F) / Math.pow(s, 0.25));
 				if (this.distance < 170 * s) {

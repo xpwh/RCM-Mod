@@ -95,7 +95,9 @@ public enum MissileType {
 		/** Poseidon nuclear torpedo going off under the sea off a coast. */
 		POSEIDON,
 		/** A tungsten rod from orbit striking the ground. */
-		KINETIC_ROD
+		KINETIC_ROD,
+		/** Not a missile: a thrown RGD-5 hand grenade. */
+		GRENADE
 	}
 
 	public enum Model {

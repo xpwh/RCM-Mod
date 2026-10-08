@@ -38,7 +38,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
@@ -411,6 +414,37 @@ public final class DetonationManager {
 		BlastPhysics.fragments(level, pos, source, 14, 10.0, 3.5F);
 		BlastPhysics.shatter(level, pos, 0.0, 9.0, 40, 0.9F);
 		scorch(level, BlockPos.containing(pos), 1, level.getRandom(), 0.03F);
+	}
+
+	/**
+	 * RGD-5 hand grenade: 110 g of TNT in a thin steel shell. Deadly within a few metres, its
+	 * fragments dangerous out to some 25; earth thrown up, windows blown in, no crater to speak of.
+	 */
+	public static void detonateGrenade(ServerLevel level, Vec3 pos, @Nullable Entity source) {
+		broadcast(level, pos, Warhead.GRENADE);
+		// the blast itself, close in: through walls it does not reach
+		double radius = 5.5;
+		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(pos, pos).inflate(radius))) {
+			double d = e.position().add(0, e.getBbHeight() * 0.5, 0).distanceTo(pos);
+			if (d > radius || e instanceof net.minecraft.world.entity.player.Player p && (p.isCreative() || p.isSpectator())) {
+				continue;
+			}
+			if (level.clip(new ClipContext(pos, e.getEyePosition(), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty())).getType()
+				!= HitResult.Type.MISS && level.clip(new ClipContext(pos, e.position().add(0, 0.2, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+					CollisionContext.empty())).getType() != HitResult.Type.MISS) {
+				continue;
+			}
+			double f = 1.0 - d / radius;
+			e.hurtServer(level, level.damageSources().explosion(source, source), (float) (2.0 + 26.0 * f * f));
+			Vec3 push = e.position().subtract(pos).normalize().scale(0.9 * f).add(0, 0.35 * f, 0);
+			e.push(push.x, push.y, push.z);
+			e.hurtMarked = true;
+		}
+		BlastPhysics.overpressure(level, pos, source, 2.2F);
+		BlastPhysics.fragments(level, pos, source, 45, 25.0, 5.0F);
+		BlastPhysics.shatter(level, pos, 0.0, 7.0, 40, 0.9F);
+		FlyingDebris.launch(level, pos, 0.8, 3, 0.45);
+		scorch(level, BlockPos.containing(pos), 1, level.getRandom(), 0.02F);
 	}
 
 	/** Small high-explosive round: 40 mm Bofors, 30 mm chain gun, Hydra 70 rocket. */

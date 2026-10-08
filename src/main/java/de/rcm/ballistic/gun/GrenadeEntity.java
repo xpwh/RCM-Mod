@@ -108,20 +108,7 @@ public class GrenadeEntity extends Entity {
 	private void detonate(ServerLevel level) {
 		Vec3 pos = this.position().add(0, 0.15, 0);
 		this.discard();
-		// the bang: blast damage close in, no cratering; our own recorded report
-		level.explode(this, null, null, pos.x, pos.y, pos.z, 2.6F, false, Level.ExplosionInteraction.NONE, ParticleTypes.EXPLOSION,
-			ParticleTypes.EXPLOSION, WeightedList.of(), Holder.direct(ModRegistry.GRENADE_EXPLODE));
-		level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.GRENADE_EXPLODE_FAR, SoundSource.BLOCKS, 6.0F, 0.95F + this.random.nextFloat() * 0.1F);
-		// some 350 fragments: dangerous well beyond the blast
-		BlastPhysics.fragments(level, pos, this.thrower, 40, 25.0, 5.0F);
-		BlastPhysics.shatter(level, pos, 0.0, 6.0, 30, 0.8F);
-		// a quick dark cloud of smoke and earth thrown up
-		BlockState ground = level.getBlockState(BlockPos.containing(pos.x, pos.y - 0.5, pos.z));
-		if (!ground.isAir()) {
-			level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, ground), pos.x, pos.y, pos.z, 60, 0.6, 0.3, 0.6, 0.35);
-		}
-		level.sendParticles(ParticleTypes.LARGE_SMOKE, pos.x, pos.y + 0.5, pos.z, 24, 0.7, 0.6, 0.7, 0.04);
-		level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, pos.x, pos.y + 0.3, pos.z, 8, 0.5, 0.3, 0.5, 0.02);
+		de.rcm.ballistic.explosion.DetonationManager.detonateGrenade(level, pos, this.thrower);
 	}
 
 	@Override
