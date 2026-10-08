@@ -50,6 +50,10 @@ final class StructureKit {
 	static final int HOT = 33;
 	static final int FLASH = 34;
 	static final int MINE = 35;
+	static final int WOOD = 36;
+	static final int GUNMETAL = 37;
+	static final int BAKELITE = 38;
+	static final int LENS = 39;
 
 	private StructureKit() {
 	}

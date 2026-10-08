@@ -3,8 +3,10 @@
 	"package": "de.rcm.ballistic.client.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
+		"AvatarRendererMixin",
 		"GameRendererAccessor",
 		"GameRendererMixin",
+		"ItemInHandRendererMixin",
 		"SoundEngineMixin"
 	],
 	"injectors": {

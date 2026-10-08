@@ -350,5 +350,14 @@
 	"message.ballisticmissiles.ship_salvo": "Tomahawk-Salve: %s Marschflugkörper",
 	"message.ballisticmissiles.ship_empty": "Keine Tomahawks mehr – die Zellen werden auf See nachgeladen",
 	"message.ballisticmissiles.ship_stop": "Maschinen stopp",
-	"message.ballisticmissiles.ship_status": "Zerstörer: %s/%s Tomahawks · %s Knoten · Zustand %s"
+	"message.ballisticmissiles.ship_status": "Zerstörer: %s/%s Tomahawks · %s Knoten · Zustand %s",
+	"item.ballisticmissiles.rocket_launcher": "RPG-7 Panzerbüchse",
+	"item.ballisticmissiles.rpg_rocket": "PG-7V Panzergranate",
+	"entity.ballisticmissiles.rpg_grenade": "PG-7V Panzergranate",
+	"tooltip.ballisticmissiles.rocket_launcher.loaded": "Geladen",
+	"tooltip.ballisticmissiles.rocket_launcher.empty": "Leer",
+	"tooltip.ballisticmissiles.rocket_launcher.1": "Rechtsklick: feuern · lädt in der Hand automatisch aus PG-7V-Granaten im Inventar nach",
+	"tooltip.ballisticmissiles.rocket_launcher.2": "Hohlladung: durchschlägt Wände, Fahrzeuge, Schiffe und Jets",
+	"tooltip.ballisticmissiles.rocket_launcher.3": "Achtung Rückstrahl: niemand direkt hinter dir stehen lassen!",
+	"message.ballisticmissiles.rpg_no_ammo": "Keine PG-7V-Granaten im Inventar"
 }

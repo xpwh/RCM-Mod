@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"III",
+		"GWT"
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"G": "minecraft:glass_pane",
+		"W": "#minecraft:planks",
+		"T": "minecraft:tripwire_hook"
+	},
+	"result": {
+		"id": "ballisticmissiles:rocket_launcher",
+		"count": 1
+	}
+}

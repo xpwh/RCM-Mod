@@ -312,6 +312,14 @@ public final class DetonationManager {
 		highExplosive(level, pos, source, 4.2F, 0, 4);
 	}
 
+	/** PG-7V shaped-charge grenade from the RPG-7: a sharp, small blast that punches through a wall. */
+	public static void detonateRpg(ServerLevel level, Vec3 pos, Entity source) {
+		broadcast(level, pos, Warhead.BOMBLET);
+		FlyingDebris.launch(level, pos, 1.2, 4, 0.6);
+		level.explode(source, pos.x, pos.y, pos.z, 3.0F, false, Level.ExplosionInteraction.TNT);
+		scorch(level, BlockPos.containing(pos), 1, level.getRandom(), 0.12F);
+	}
+
 	/** Small high-explosive round: 40 mm Bofors, 30 mm chain gun, Hydra 70 rocket. */
 	public static void detonateSmallRound(ServerLevel level, Vec3 pos, Entity source, float power) {
 		broadcast(level, pos, Warhead.BOMBLET);
