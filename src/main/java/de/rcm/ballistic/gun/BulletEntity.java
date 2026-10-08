@@ -71,6 +71,11 @@ public class BulletEntity extends Entity {
 		b.setPos(from);
 		b.setDeltaMovement(velocity);
 		level.addFreshEntity(b);
+		// fly the first tenth of a second (some 70 m) at once, in the same tick as the shot: what is
+		// that close is hit now, not a tick or two later
+		for (int i = 0; i < 2 && !b.isRemoved(); i++) {
+			b.flyServer(level);
+		}
 	}
 
 	@Override
@@ -105,7 +110,14 @@ public class BulletEntity extends Entity {
 			this.setPos(next);
 			return;
 		}
-		ServerLevel server = (ServerLevel) level;
+		this.flyServer((ServerLevel) level);
+	}
+
+	/** One tick of flight on the server: hits on the way, then the move. */
+	private void flyServer(ServerLevel server) {
+		Vec3 pos = this.position();
+		Vec3 vel = this.getDeltaMovement();
+		Vec3 next = pos.add(vel);
 		BlockHitResult hit = server.clip(new ClipContext(pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.WATER, CollisionContext.empty()));
 		Vec3 end = hit.getType() == HitResult.Type.MISS ? next : hit.getLocation();
 		Entity struck = this.firstHit(server, pos, end);
@@ -215,9 +227,9 @@ public class BulletEntity extends Entity {
 			this.power -= resist;
 			if (resist > 0.06F) {
 				int kind = holeKind(state);
-				hole(level, at, face, kind);
+				hole(level, at, face, kind, dir);
 				Direction out = Direction.getApproximateNearest(dir.x, dir.y, dir.z);
-				hole(level, exit.subtract(dir.scale(0.03)), out, kind);
+				hole(level, exit.subtract(dir.scale(0.03)), out, kind, dir.scale(-1.0));
 				level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), exit.x, exit.y, exit.z, 6, 0.04, 0.04, 0.04, 0.2);
 				level.playSound(null, at.x, at.y, at.z, kind == 1 ? ModRegistry.BULLET_IMPACT_WOOD : ModRegistry.BULLET_IMPACT_DIRT, SoundSource.PLAYERS, 0.8F,
 					1.0F + this.random.nextFloat() * 0.2F);
@@ -242,7 +254,7 @@ public class BulletEntity extends Entity {
 			: sound == SoundType.WOOD || sound == SoundType.NETHER_WOOD || sound == SoundType.BAMBOO_WOOD || sound == SoundType.CHERRY_WOOD
 				? ModRegistry.BULLET_IMPACT_WOOD : ModRegistry.BULLET_IMPACT_DIRT;
 		level.playSound(null, at.x, at.y, at.z, impact, SoundSource.PLAYERS, 1.2F, 0.9F + this.random.nextFloat() * 0.2F);
-		hole(level, at, face, holeKind(state));
+		hole(level, at, face, holeKind(state), dir);
 		// glancing off something hard it skips away, tumbling and whining
 		// (tracers, lighter at the base and spinning hard, skip off almost anything at a flat enough angle)
 		if ((hard && incidence < 0.35 || this.isTracer() && incidence < 0.2) && this.ricochets < 3 && this.random.nextFloat() < 0.7F) {
@@ -312,8 +324,9 @@ public class BulletEntity extends Entity {
 	}
 
 	/** A bullet hole on that face, for everyone near enough to see it. */
-	private static void hole(ServerLevel level, Vec3 at, Direction face, int kind) {
-		var payload = new de.rcm.ballistic.network.ModNetworking.BulletHolePayload(at.x, at.y, at.z, face.get3DDataValue(), kind);
+	private static void hole(ServerLevel level, Vec3 at, Direction face, int kind, Vec3 dir) {
+		var payload = new de.rcm.ballistic.network.ModNetworking.BulletHolePayload(at.x, at.y, at.z, face.get3DDataValue(), kind,
+			(float) dir.x, (float) dir.y, (float) dir.z);
 		for (var player : level.players()) {
 			if (player.position().distanceToSqr(at) < 96.0 * 96.0) {
 				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, payload);

@@ -206,7 +206,7 @@ public final class AkClient {
 			var struck = mc.level.getBlockState(sight.getBlockPos());
 			if (!(struck.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) && !struck.is(net.minecraft.world.level.block.Blocks.GLASS)
 				&& !(struck.getBlock() instanceof net.minecraft.world.level.block.IronBarsBlock)) {
-				de.rcm.ballistic.client.render.BulletHoles.predict(sight.getLocation(), sight.getDirection(), BulletEntity.holeKind(struck));
+				de.rcm.ballistic.client.render.BulletHoles.predict(sight.getLocation(), sight.getDirection(), BulletEntity.holeKind(struck), sight.getLocation().subtract(muzzle));
 			}
 		}
 		effects(player, seen, player.getLookAngle(), true);

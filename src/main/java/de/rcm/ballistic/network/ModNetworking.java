@@ -375,7 +375,7 @@ public final class ModNetworking {
 	}
 
 	/** A bullet hole at (x, y, z) on face {@code face} (Direction 3D data value), {@code kind}: 0 rock, 1 wood, 2 metal, 3 earth. */
-	public record BulletHolePayload(double x, double y, double z, int face, int kind) implements CustomPacketPayload {
+	public record BulletHolePayload(double x, double y, double z, int face, int kind, float dx, float dy, float dz) implements CustomPacketPayload {
 		public static final Type<BulletHolePayload> TYPE = new Type<>(BallisticMissiles.id("bullet_hole"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, BulletHolePayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.DOUBLE, BulletHolePayload::x,
@@ -383,6 +383,9 @@ public final class ModNetworking {
 			ByteBufCodecs.DOUBLE, BulletHolePayload::z,
 			ByteBufCodecs.VAR_INT, BulletHolePayload::face,
 			ByteBufCodecs.VAR_INT, BulletHolePayload::kind,
+			ByteBufCodecs.FLOAT, BulletHolePayload::dx,
+			ByteBufCodecs.FLOAT, BulletHolePayload::dy,
+			ByteBufCodecs.FLOAT, BulletHolePayload::dz,
 			BulletHolePayload::new
 		);
 
