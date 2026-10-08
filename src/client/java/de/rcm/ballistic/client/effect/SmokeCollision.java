@@ -150,6 +150,28 @@ public final class SmokeCollision {
 		return hit;
 	}
 
+	/** Shelter: open air, down in a pit or crater, or with something solid overhead. */
+	public static final int OPEN = 0;
+	public static final int PIT = 1;
+	public static final int COVERED = 2;
+
+	/**
+	 * How sheltered smoke at (x, y, z) is. Under a roof or in a tunnel the air hardly moves; down in
+	 * a crater or a trench the wind passes over the top: either way the smoke lingers.
+	 */
+	public static int shelter(Level level, double x, double y, double z) {
+		if (top(level, x, z) > y + 0.5) {
+			return COVERED;
+		}
+		int walls = 0;
+		for (int[] d : new int[][] {{3, 0}, {-3, 0}, {0, 3}, {0, -3}}) {
+			if (top(level, x + d[0], z + d[1]) > y + 1.5) {
+				walls++;
+			}
+		}
+		return walls >= 3 ? PIT : OPEN;
+	}
+
 	/**
 	 * The way out from under a ceiling: the nearest horizontal direction (within a few blocks) where
 	 * the smoke is not walled in and the space above opens up. Written to {@code out} as a unit

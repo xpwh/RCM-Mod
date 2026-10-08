@@ -204,6 +204,8 @@ public class CloudParticle extends SingleQuadParticle {
 	private double escX;
 	private double escZ;
 	private int escAge;
+	private int shelter;
+	private final int shelterPhase = (int) (Math.random() * 10);
 
 	@Override
 	public void tick() {
@@ -214,6 +216,14 @@ public class CloudParticle extends SingleQuadParticle {
 		if (this.age++ >= this.lifetime) {
 			this.remove();
 			return;
+		}
+		// sheltered smoke - in a crater, under a roof - hangs about far longer, out of the wind
+		if ((this.age + this.shelterPhase) % 10 == 0) {
+			this.shelter = de.rcm.ballistic.client.effect.SmokeCollision.shelter(this.level, this.x, this.y, this.z);
+		}
+		boolean sheltered = this.shelter != de.rcm.ballistic.client.effect.SmokeCollision.OPEN;
+		if (sheltered && (this.cooled || !this.emissive) && this.random.nextFloat() < 0.7F) {
+			this.age--; // ages at a third of the pace
 		}
 		float t = (float) this.age / this.lifetime;
 
@@ -254,7 +264,10 @@ public class CloudParticle extends SingleQuadParticle {
 			sz = Mth.cos(a * 1.3F + this.phaseB) * this.turb;
 			sy = Mth.sin(a * 0.7F + this.phaseB) * this.turb * 0.5;
 		}
-		double windRamp = this.wind * Math.min(1.0, this.age / 40.0);
+		double windRamp = this.wind * Math.min(1.0, this.age / 40.0) * (sheltered ? 0.12 : 1.0);
+		if (this.shelter == de.rcm.ballistic.client.effect.SmokeCollision.PIT && t > 0.25F) {
+			this.yd *= 0.8; // cooled, it no longer climbs out of the hole
+		}
 		double[] w = wind(this.level.getGameTime(), this.y);
 		double mx = this.xd + sx + w[0] * windRamp;
 		double my = this.yd + sy;

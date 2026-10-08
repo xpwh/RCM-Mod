@@ -60,6 +60,8 @@ public final class SmokeField {
 	private static final float[] ESC_X = new float[CAP];
 	private static final float[] ESC_Z = new float[CAP];
 	private static final int[] ESC_AGE = new int[CAP];
+	/** {@link SmokeCollision#shelter} of each puff, looked up every few ticks. */
+	private static final byte[] SHELTER = new byte[CAP];
 	private static final double[] MOVE = new double[3];
 	/** Smoke further than this from the camera is not collided (it is out of sight anyway). */
 	private static final double COLLIDE_RANGE = 160.0;
@@ -127,6 +129,7 @@ public final class SmokeField {
 		LIFT[i] = lift;
 		SEED[i] = ClientEffects.rand() * 1000.0F;
 		ESC_AGE[i] = 0;
+		SHELTER[i] = 0;
 	}
 
 	/** A cloud of {@code n} puffs around {@code c} spreading at {@code speed} (launch clouds, back-blast). */
@@ -208,6 +211,7 @@ public final class SmokeField {
 			ESC_X[i] = ESC_X[last];
 			ESC_Z[i] = ESC_Z[last];
 			ESC_AGE[i] = ESC_AGE[last];
+			SHELTER[i] = SHELTER[last];
 		}
 	}
 
@@ -258,6 +262,17 @@ public final class SmokeField {
 				remove(i);
 				continue;
 			}
+			// sheltered smoke - in a crater, under a roof - hangs about far longer, out of the wind
+			double sx0 = X[i] - cam.x;
+			double sz0 = Z[i] - cam.z;
+			if ((clock + i) % 10 == 0) {
+				SHELTER[i] = sx0 * sx0 + sz0 * sz0 < COLLIDE_RANGE * COLLIDE_RANGE ? (byte) SmokeCollision.shelter(mc.level, X[i], Y[i], Z[i]) : 0;
+			}
+			boolean sheltered = SHELTER[i] != SmokeCollision.OPEN;
+			if (sheltered && ClientEffects.rand() < 0.7F) {
+				BORN[i]++; // ages at a third of the pace
+				age = clock - BORN[i];
+			}
 			float t = (float) age / LIFE[i];
 			// the push from the exhaust dies away; hot gas rises a little, then drifts with the air
 			VX[i] *= 0.9F;
@@ -271,9 +286,13 @@ public final class SmokeField {
 			double tx = Mth.sin(age * 0.011F + s) * twist + Mth.sin((float) (Y[i] * 0.05) + s * 0.3F) * twist * 0.6;
 			double tz = Mth.cos(age * 0.009F + s * 1.7F) * twist + Mth.cos((float) (Y[i] * 0.043) + s) * twist * 0.6;
 			double ty = Mth.sin(age * 0.007F + s * 2.3F) * twist * 0.3;
-			double mx = VX[i] + WIND_X[band] * ramp + tx;
+			double windHere = sheltered ? 0.12 : 1.0;
+			if (SHELTER[i] == SmokeCollision.PIT && t > 0.2F) {
+				VY[i] *= 0.8F; // cooled, it no longer climbs out of the hole
+			}
+			double mx = VX[i] + WIND_X[band] * ramp * windHere + tx;
 			double my = VY[i] + ty;
-			double mz = VZ[i] + WIND_Z[band] * ramp + tz;
+			double mz = VZ[i] + WIND_Z[band] * ramp * windHere + tz;
 			float rad = radius(i, t);
 			// the smoke meets the world: under a roof it pools and spreads to the edge and out
 			double cx = X[i] - cam.x;

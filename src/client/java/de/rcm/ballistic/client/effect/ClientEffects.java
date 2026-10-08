@@ -173,15 +173,49 @@ public final class ClientEffects {
 		CLODS.removeIf(c -> c.tick(mc));
 		Iterator<Effect> it = EFFECTS.iterator();
 		while (it.hasNext()) {
-			if (it.next().tick(mc)) {
+			Effect e = it.next();
+			spawnOrigin = e.origin();
+			boolean done = e.tick(mc);
+			spawnOrigin = null;
+			if (done) {
 				it.remove();
 			}
 		}
 	}
 
+	/**
+	 * The blast whose effect is spawning smoke right now: smoke only appears where the blast could
+	 * reach - not on the far side of a crater rim or a wall - and there the shaken ground only gives
+	 * off a little sand and dust.
+	 */
+	@Nullable
+	private static Vec3 spawnOrigin;
+
 	// ------------------------------------------------------------------ helpers
 
 	public static @Nullable CloudParticle cloud(boolean fire, double x, double y, double z, double dx, double dy, double dz) {
+		Vec3 origin = spawnOrigin;
+		Minecraft mc = Minecraft.getInstance();
+		if (origin != null && mc.level != null) {
+			// out of the blast's reach (behind the rim of its crater, through a wall): no smoke here,
+			// only the shaken ground giving off a little sand
+			Vec3 from = origin.add(0, 1.2, 0);
+			Vec3 to = new Vec3(x, y + 1.2, z);
+			if (from.distanceToSqr(to) > 1.0 && mc.level.clip(new net.minecraft.world.level.ClipContext(from, to, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+				net.minecraft.world.level.ClipContext.Fluid.NONE, net.minecraft.world.phys.shapes.CollisionContext.empty())).getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+				if (!fire && RANDOM.nextInt(3) == 0) {
+					BlockState ground = groundBlock(mc, new Vec3(x, y, z));
+					if (ground != null) {
+						double gy = groundY(mc, x, y, z);
+						mc.particleEngine.createParticle(new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.FALLING_DUST,
+							ground), x + gauss() * 0.6, gy + 0.1, z + gauss() * 0.6, 0.0, 0.0, 0.0);
+						mc.particleEngine.createParticle(new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK,
+							ground), x + gauss() * 0.6, gy + 0.05, z + gauss() * 0.6, gauss() * 0.05, 0.12 + rand() * 0.1, gauss() * 0.05);
+					}
+				}
+				return null;
+			}
+		}
 		Particle p = Minecraft.getInstance().particleEngine.createParticle(fire ? ModRegistry.FIRE : ModRegistry.SMOKE, x, y, z, dx, dy, dz);
 		return p instanceof CloudParticle c ? c : null;
 	}
@@ -283,6 +317,12 @@ public final class ClientEffects {
 	interface Effect {
 		/** @return true when finished */
 		boolean tick(Minecraft mc);
+
+		/** Where the blast is, if its smoke should stay on its side of walls and rims. */
+		@Nullable
+		default Vec3 origin() {
+			return null;
+		}
 	}
 
 	// ------------------------------------------------------------------ building blocks
@@ -578,6 +618,11 @@ public final class ClientEffects {
 
 	static final class BlastEffect implements Effect {
 		private final Vec3 pos;
+
+		@Override
+		public Vec3 origin() {
+			return this.pos;
+		}
 		private final double scale;
 		private final int soundDelay;
 		private final double distance;
@@ -855,6 +900,11 @@ public final class ClientEffects {
 	/** Fuel-air explosive: a ground-hugging fuel cloud ignites into an enormous rolling fireball. */
 	static final class ThermobaricEffect implements Effect {
 		private final Vec3 pos;
+
+		@Override
+		public Vec3 origin() {
+			return this.pos;
+		}
 		private final double distance;
 		private final int soundDelay;
 		private int age;
