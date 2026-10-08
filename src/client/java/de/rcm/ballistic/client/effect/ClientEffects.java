@@ -204,13 +204,41 @@ public final class ClientEffects {
 		if (volume <= 0.01F) {
 			return;
 		}
-		Vec3 ear = mc.gameRenderer.getMainCamera().position();
-		Vec3 dir = source.subtract(ear);
-		double len = dir.length();
-		Vec3 at = len < 8 ? source : ear.add(dir.scale(8.0 / len));
-		mc.getSoundManager().play(new SimpleSoundInstance(
-			sound.location(), SoundSource.BLOCKS, Mth.clamp(volume, 0.0F, 1.0F), pitch, RANDOM, false, 0, SoundInstance.Attenuation.NONE, at.x, at.y, at.z, false
-		));
+		mc.getSoundManager().play(new AnchoredSound(sound, SoundSource.BLOCKS, source, Mth.clamp(volume, 0.0F, 1.0F), pitch));
+	}
+
+	/**
+	 * A loud far-off sound that stays put where it happened. It is played a few blocks from the ear in
+	 * the explosion's direction (so distance does not silence it), and that point follows you every
+	 * tick: walk or turn while the rumble rolls on and it still comes from the blast.
+	 */
+	static final class AnchoredSound extends net.minecraft.client.resources.sounds.AbstractTickableSoundInstance {
+		private final Vec3 source;
+
+		AnchoredSound(SoundEvent sound, SoundSource channel, Vec3 source, float volume, float pitch) {
+			super(sound, channel, net.minecraft.util.RandomSource.create(RANDOM.nextLong()));
+			this.source = source;
+			this.volume = volume;
+			this.pitch = pitch;
+			this.attenuation = SoundInstance.Attenuation.NONE;
+			this.relative = false;
+			this.place();
+		}
+
+		private void place() {
+			Vec3 ear = Minecraft.getInstance().gameRenderer.getMainCamera().position();
+			Vec3 dir = this.source.subtract(ear);
+			double len = dir.length();
+			Vec3 at = len < 8.0 ? this.source : ear.add(dir.scale(8.0 / len));
+			this.x = at.x;
+			this.y = at.y;
+			this.z = at.z;
+		}
+
+		@Override
+		public void tick() {
+			this.place();
+		}
 	}
 
 	public static double distanceToCamera(Minecraft mc, Vec3 pos) {
@@ -371,15 +399,8 @@ public final class ClientEffects {
 		float far = (float) Mth.clamp(distance / reach, 0.0, 1.0);
 		float p = pitch * (1.0F - 0.18F * far) * (0.97F + rand() * 0.06F);
 		float vol = (float) Math.min(1.0, 0.45 + f);
-		// on the master channel (only the master slider turns it down), stacked for loudness
-		playLoud(mc, crack, pos, vol, p);
-		playLoud(mc, crack, pos, vol, p * 0.99F);
-		if (f > 0.3) {
-			playLoud(mc, crack, pos, 1.0F, p * 1.01F);
-		}
-		if (f > 0.6) {
-			playLoud(mc, crack, pos, 1.0F, p * 0.98F);
-		}
+		// on the master channel (only the master slider turns it down): one real blast front
+		playLoud(mc, crack, pos, f > 0.3 ? 1.0F : vol, p);
 		addShake((float) (f * f * 3.0));
 		if (f > 0.15) {
 			settleDust(mc, (float) f);
@@ -476,13 +497,7 @@ public final class ClientEffects {
 		if (volume <= 0.01F) {
 			return;
 		}
-		Vec3 ear = mc.gameRenderer.getMainCamera().position();
-		Vec3 dir = source.subtract(ear);
-		double len = dir.length();
-		Vec3 at = len < 8 ? source : ear.add(dir.scale(8.0 / len));
-		mc.getSoundManager().play(new SimpleSoundInstance(
-			sound.location(), SoundSource.MASTER, Mth.clamp(volume, 0.0F, 1.0F), pitch, RANDOM, false, 0, SoundInstance.Attenuation.NONE, at.x, at.y, at.z, false
-		));
+		mc.getSoundManager().play(new AnchoredSound(sound, SoundSource.MASTER, source, Mth.clamp(volume, 0.0F, 1.0F), pitch));
 	}
 
 	// ------------------------------------------------------------------ interceptor launch
