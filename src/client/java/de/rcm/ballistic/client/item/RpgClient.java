@@ -56,6 +56,19 @@ public final class RpgClient {
 
 	public static void init() {
 		RocketLauncherItem.clientFired = RpgClient::fired;
+		// while the right button holds the launcher up, Minecraft swallows left clicks (no attacking while
+		// using an item): take them first, they are the trigger
+		ClientTickEvents.START_CLIENT_TICK.register(mc -> {
+			if (mc.player != null && mc.screen == null && RocketLauncherItem.isAiming(mc.player)) {
+				boolean fired = false;
+				while (mc.options.keyAttack.consumeClick()) {
+					if (!fired) {
+						trigger(mc.player);
+						fired = true;
+					}
+				}
+			}
+		});
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			prevAim = aim;
 			boolean aiming = mc.player != null && RocketLauncherItem.isAiming(mc.player) && !reloadingNow(mc);
