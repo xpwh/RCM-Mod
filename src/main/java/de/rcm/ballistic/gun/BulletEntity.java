@@ -2,6 +2,7 @@ package de.rcm.ballistic.gun;
 
 import de.rcm.ballistic.ModRegistry;
 import java.util.List;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -48,6 +49,8 @@ public class BulletEntity extends Entity {
 
 	private @Nullable Entity shooter;
 	private int ricochets;
+	/** What is left of the round's punch after going through things (1 = straight from the muzzle). */
+	private float power = 1.0F;
 	/** Client: the near-miss crack has been played. */
 	public boolean crackPlayed;
 	public Vec3 clientPrev = Vec3.ZERO;
@@ -144,7 +147,7 @@ public class BulletEntity extends Entity {
 	private void hitEntity(ServerLevel level, Entity e, Vec3 from, Vec3 to) {
 		Vec3 at = e.getBoundingBox().inflate(0.2).clip(from, to).orElse(e.position());
 		float speed = (float) this.getDeltaMovement().length();
-		float damage = DAMAGE * Math.min(1.0F, 0.35F + speed / (float) AkItem.MUZZLE_VELOCITY);
+		float damage = DAMAGE * Math.min(1.0F, 0.35F + speed / (float) AkItem.MUZZLE_VELOCITY) * (0.25F + 0.75F * this.power);
 		boolean head = e instanceof LivingEntity living && at.y > living.getEyeY() - 0.22;
 		if (head) {
 			damage *= 2.0F;
@@ -187,6 +190,42 @@ public class BulletEntity extends Entity {
 		Direction face = hit.getDirection();
 		Vec3 n = new Vec3(face.getStepX(), face.getStepY(), face.getStepZ());
 		Vec3 dir = vel.normalize();
+		// through it: leaves, wool, wood, thin walls and doors - losing punch each time
+		float resist = resistance(level, hit.getBlockPos(), state);
+		if (resist >= 0.0F && this.power - resist > 0.15F) {
+			BlockPos inside = hit.getBlockPos();
+			Vec3 exit = at.add(dir.scale(1.8));
+			for (int k = 1; k <= 30; k++) {
+				Vec3 p = at.add(dir.scale(k * 0.06));
+				if (!BlockPos.containing(p).equals(inside) || state.getCollisionShape(level, inside).isEmpty()) {
+					exit = p;
+					break;
+				}
+				var shape = state.getCollisionShape(level, inside);
+				Vec3 local = p.subtract(inside.getX(), inside.getY(), inside.getZ());
+				boolean in = false;
+				for (var box : shape.toAabbs()) {
+					in |= box.contains(local);
+				}
+				if (!in) {
+					exit = p;
+					break;
+				}
+			}
+			this.power -= resist;
+			if (resist > 0.06F) {
+				int kind = holeKind(state);
+				hole(level, at, face, kind);
+				Direction out = Direction.getApproximateNearest(dir.x, dir.y, dir.z);
+				hole(level, exit.subtract(dir.scale(0.03)), out, kind);
+				level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), exit.x, exit.y, exit.z, 6, 0.04, 0.04, 0.04, 0.2);
+				level.playSound(null, at.x, at.y, at.z, kind == 1 ? ModRegistry.BULLET_IMPACT_WOOD : ModRegistry.BULLET_IMPACT_DIRT, SoundSource.PLAYERS, 0.8F,
+					1.0F + this.random.nextFloat() * 0.2F);
+			}
+			this.setDeltaMovement(vel.scale(1.0 - resist * 0.5).add(0, -GRAVITY, 0));
+			this.setPos(exit.add(dir.scale(0.02)));
+			return false;
+		}
 		double incidence = -dir.dot(n); // 1 = head on, 0 = grazing
 		SoundType sound = state.getSoundType();
 		boolean hard = sound == SoundType.STONE || sound == SoundType.METAL || sound == SoundType.DEEPSLATE || sound == SoundType.DEEPSLATE_BRICKS
@@ -203,6 +242,7 @@ public class BulletEntity extends Entity {
 			: sound == SoundType.WOOD || sound == SoundType.NETHER_WOOD || sound == SoundType.BAMBOO_WOOD || sound == SoundType.CHERRY_WOOD
 				? ModRegistry.BULLET_IMPACT_WOOD : ModRegistry.BULLET_IMPACT_DIRT;
 		level.playSound(null, at.x, at.y, at.z, impact, SoundSource.PLAYERS, 1.2F, 0.9F + this.random.nextFloat() * 0.2F);
+		hole(level, at, face, holeKind(state));
 		// glancing off something hard it skips away, tumbling and whining
 		// (tracers, lighter at the base and spinning hard, skip off almost anything at a flat enough angle)
 		if ((hard && incidence < 0.35 || this.isTracer() && incidence < 0.2) && this.ricochets < 3 && this.random.nextFloat() < 0.7F) {
@@ -216,6 +256,69 @@ public class BulletEntity extends Entity {
 		}
 		this.discard();
 		return true;
+	}
+
+	/**
+	 * How much of its punch a 7.62x39 round loses going through this block, or -1 if it stops it:
+	 * leaves next to nothing, wool and snow little, thin wooden things (doors, trapdoors, fences,
+	 * slabs) some, a whole wooden block or log most of it, thin sheet metal nearly all; stone, earth
+	 * and solid metal stop it.
+	 */
+	private static float resistance(ServerLevel level, BlockPos pos, BlockState state) {
+		if (state.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) {
+			return 0.04F;
+		}
+		SoundType sound = state.getSoundType();
+		boolean full = state.isCollisionShapeFullBlock(level, pos);
+		if (sound == SoundType.WOOL) {
+			return 0.12F;
+		}
+		if (sound == SoundType.SNOW || sound == SoundType.POWDER_SNOW) {
+			return 0.2F;
+		}
+		if (state.is(Blocks.HAY_BLOCK)) {
+			return 0.3F;
+		}
+		if (state.is(Blocks.IRON_BARS)) {
+			return 0.15F;
+		}
+		boolean wood = sound == SoundType.WOOD || sound == SoundType.NETHER_WOOD || sound == SoundType.BAMBOO_WOOD || sound == SoundType.CHERRY_WOOD
+			|| sound == SoundType.BAMBOO || sound == SoundType.SCAFFOLDING || sound == SoundType.LADDER;
+		if (wood) {
+			return full ? 0.6F : 0.25F;
+		}
+		if (!full && (state.is(Blocks.IRON_DOOR) || state.is(Blocks.IRON_TRAPDOOR))) {
+			return 0.75F;
+		}
+		return -1.0F;
+	}
+
+	/** Which bullet hole the block shows: 0 rock/concrete, 1 wood, 2 metal, 3 earth. */
+	private static int holeKind(BlockState state) {
+		SoundType sound = state.getSoundType();
+		if (sound == SoundType.WOOD || sound == SoundType.NETHER_WOOD || sound == SoundType.BAMBOO_WOOD || sound == SoundType.CHERRY_WOOD
+			|| sound == SoundType.BAMBOO || sound == SoundType.SCAFFOLDING || sound == SoundType.LADDER) {
+			return 1;
+		}
+		if (sound == SoundType.METAL || sound == SoundType.ANVIL || sound == SoundType.COPPER || sound == SoundType.NETHERITE_BLOCK
+			|| sound == SoundType.IRON) {
+			return 2;
+		}
+		if (sound == SoundType.GRAVEL || sound == SoundType.SAND || sound == SoundType.GRASS || sound == SoundType.ROOTED_DIRT || sound == SoundType.MUD
+			|| sound == SoundType.SNOW || sound == SoundType.WOOL || sound == SoundType.SOUL_SAND || sound == SoundType.SOUL_SOIL) {
+			return 3;
+		}
+		return 0;
+	}
+
+	/** A bullet hole on that face, for everyone near enough to see it. */
+	private static void hole(ServerLevel level, Vec3 at, Direction face, int kind) {
+		var payload = new de.rcm.ballistic.network.ModNetworking.BulletHolePayload(at.x, at.y, at.z, face.get3DDataValue(), kind);
+		for (var player : level.players()) {
+			if (player.position().distanceToSqr(at) < 96.0 * 96.0) {
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, payload);
+			}
+		}
 	}
 
 	@Override

@@ -8,7 +8,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 
 /**
- * Out of breath. Sprinting (and jumping) winds you; standing still you get your breath back over a
+ * Out of breath (and under fire). Sprinting (and jumping) winds you; standing still you get your breath back over a
  * few seconds. While winded you hear yourself panting - real breaths, quicker and louder the worse it
  * is - and a rifle or launcher in your hands heaves with every breath and wanders off the point you
  * are aiming at, less so when you have it up at the eye.
@@ -77,6 +77,10 @@ public final class Fatigue {
 		float t = age / 20.0F;
 		float yaw = amp * (Mth.sin(t * 1.1F) * 0.7F + Mth.sin(t * 2.9F + 1.3F) * 0.3F);
 		float pitch = amp * (Mth.sin(phase) * 0.8F + Mth.sin(t * 1.7F + 0.4F) * 0.25F);
+		// under fire the hands shake: quick and jittery, it fades as the shooting stops
+		float fear = de.rcm.ballistic.client.effect.BlastShader.suppression() * (armed ? 1.6F : 0.8F);
+		yaw += fear * (Mth.sin(t * 7.3F) * 0.6F + Mth.sin(t * 13.1F + 0.7F) * 0.4F);
+		pitch += fear * (Mth.sin(t * 9.1F + 2.1F) * 0.55F + Mth.sin(t * 15.7F) * 0.35F);
 		player.setYRot(player.getYRot() + (yaw - swayYaw));
 		player.setXRot(Mth.clamp(player.getXRot() + (pitch - swayPitch), -90.0F, 90.0F));
 		swayYaw = yaw;

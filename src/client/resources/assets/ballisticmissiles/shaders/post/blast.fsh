@@ -61,6 +61,7 @@ void main() {
     float shock = p0.b;      // shell shock / deafness
     int kind = int(p0.a * 255.0 / 36.0 + 0.5); // 0 fire, 1 nuclear, 2 antimatter, 3 emp, 4 underground, 5 kinetic, 6 water
     float quake = p4.b;          // earthquake
+    float suppress = p4.r;       // under fire: rounds cracking past
     float drench = p4.a;         // water on the lens
     vec2 afterPos = p6.rg;
     float afterimage = p6.b;
@@ -279,6 +280,24 @@ void main() {
         col *= 1.0 - 0.6 * afterimage * blot;
         col += vec3(0.16, 0.02, 0.22) * afterimage * blot * pulse;
         col += vec3(0.0, 0.08, 0.04) * afterimage * max(halo, 0.0) * 0.6;
+    }
+
+    // ---- under fire: the edges of the picture go soft and dark, the colour drains, the eye
+    // narrows onto the middle
+    if (suppress > 0.0) {
+        float edge = smoothstep(0.12, 0.7, length(c * vec2(aspect * 0.8, 1.0)));
+        float rad = (1.5 + 5.5 * edge) * suppress;
+        vec3 soft = vec3(0.0);
+        for (int i = 0; i < 8; i++) {
+            float a = float(i) * 0.7854 + time * 0.3;
+            soft += texture(InSampler, uv + vec2(cos(a), sin(a)) * px * rad).rgb;
+            soft += texture(InSampler, uv + vec2(cos(a + 0.39), sin(a + 0.39)) * px * rad * 2.0).rgb;
+        }
+        soft /= 16.0;
+        col = mix(col, soft, clamp(suppress * (0.35 + 0.65 * edge), 0.0, 1.0));
+        col = mix(col, vec3(luma(col)), 0.3 * suppress);
+        float tunnel = 1.0 - smoothstep(0.18, 0.85, length(c * vec2(aspect * 0.8, 1.0)));
+        col *= mix(1.0, tunnel, 0.6 * suppress);
     }
 
     // ---- tunnel vision and grain

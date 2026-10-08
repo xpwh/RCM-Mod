@@ -374,6 +374,24 @@ public final class ModNetworking {
 		}
 	}
 
+	/** A bullet hole at (x, y, z) on face {@code face} (Direction 3D data value), {@code kind}: 0 rock, 1 wood, 2 metal, 3 earth. */
+	public record BulletHolePayload(double x, double y, double z, int face, int kind) implements CustomPacketPayload {
+		public static final Type<BulletHolePayload> TYPE = new Type<>(BallisticMissiles.id("bullet_hole"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BulletHolePayload> CODEC = StreamCodec.composite(
+			ByteBufCodecs.DOUBLE, BulletHolePayload::x,
+			ByteBufCodecs.DOUBLE, BulletHolePayload::y,
+			ByteBufCodecs.DOUBLE, BulletHolePayload::z,
+			ByteBufCodecs.VAR_INT, BulletHolePayload::face,
+			ByteBufCodecs.VAR_INT, BulletHolePayload::kind,
+			BulletHolePayload::new
+		);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** Gun keys: {@link #RELOAD}, {@link #RELOAD_SWITCH} (other ammunition), {@link #SELECTOR}. */
 	public record GunInputPayload(int action) implements CustomPacketPayload {
 		public static final int RELOAD = 0;
@@ -394,6 +412,7 @@ public final class ModNetworking {
 
 	public static void init() {
 		PayloadTypeRegistry.playS2C().register(GunshotPayload.TYPE, GunshotPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(BulletHolePayload.TYPE, BulletHolePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(GunInputPayload.TYPE, GunInputPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(GunInputPayload.TYPE, (payload, context) -> {
 			switch (payload.action()) {

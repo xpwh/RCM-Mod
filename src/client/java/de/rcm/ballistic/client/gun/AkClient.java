@@ -283,6 +283,8 @@ public final class AkClient {
 		}
 		bullet.crackPlayed = true;
 		float near = (float) (1.0 - d / 6.0);
+		// under fire: the picture closes in and the hands start to shake
+		de.rcm.ballistic.client.effect.BlastShader.suppress(0.18F + 0.45F * near * near);
 		if (Math.sqrt(len2) > 17.5) {
 			// supersonic: the sharp snap of its shock wave going past your ear
 			GunAudio.play(ModRegistry.BULLET_CRACK, closest, 0.45F + 0.55F * near, 0.92F + ClientEffects.rand() * 0.16F);

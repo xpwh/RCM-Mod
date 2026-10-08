@@ -54,6 +54,8 @@ public final class BlastShader {
 	private static float quake;
 	/** Water running down the lens after the spray or the wave (0-1). */
 	private static float drench;
+	/** Under fire: rounds cracking past close (0-1). */
+	private static float suppression;
 	/** Negative afterimage burnt into the eye by a flash, fixed on screen (0-1). */
 	private static float afterimage;
 	private static float afterX = 0.5F;
@@ -85,6 +87,15 @@ public final class BlastShader {
 	}
 
 	/** Spray or the wave hitting the camera: drops run down the lens. */
+	/** A round cracking past close by: the picture closes in for a moment. */
+	public static void suppress(float amount) {
+		suppression = Math.min(1.0F, suppression + Mth.clamp(amount, 0.0F, 1.0F));
+	}
+
+	public static float suppression() {
+		return suppression;
+	}
+
 	public static void drench(float amount) {
 		drench = Math.max(drench, Mth.clamp(amount, 0.0F, 1.0F));
 	}
@@ -112,6 +123,7 @@ public final class BlastShader {
 		dust = Math.max(0.0F, dust * 0.985F - 0.002F);
 		quake = Math.max(0.0F, quake * 0.985F - 0.002F);
 		drench = Math.max(0.0F, drench * 0.996F - 0.0008F);
+		suppression = Math.max(0.0F, suppression * 0.96F - 0.006F);
 		afterimage = Math.max(0.0F, afterimage * 0.991F - 0.0008F);
 		GameRenderer renderer = mc.gameRenderer;
 		Identifier current = renderer.currentPostEffect();
@@ -121,7 +133,7 @@ public final class BlastShader {
 			return;
 		}
 		boolean wanted = mc.level != null && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
-			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F);
+			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F || suppression > 0.01F);
 		if (!wanted) {
 			if (ours) {
 				renderer.clearPostEffect();
@@ -171,7 +183,7 @@ public final class BlastShader {
 		img.setPixel(1, 0, argb(byteOf(rays), (time & 0xFF) / 255.0F, ((time >> 8) & 0xFF) / 255.0F, heat));
 		img.setPixel(2, 0, byteOf(WinterClient.amount()) << 24 | (tint & 0xFFFFFF)); // alpha: nuclear winter
 		img.setPixel(3, 0, argb(byteOf(dust), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
-		img.setPixel(4, 0, argb(byteOf(drench), 0.0F, 0.0F, quake));
+		img.setPixel(4, 0, argb(byteOf(drench), suppression, 0.0F, quake));
 		img.setPixel(5, 0, byteOf(SmokeField.fog()) << 24 | (SmokeField.fogColor() & 0xFFFFFF)); // standing in thick smoke
 		img.setPixel(6, 0, argb(255, afterX, afterY, afterimage));
 		img.setPixel(7, 0, 0);
