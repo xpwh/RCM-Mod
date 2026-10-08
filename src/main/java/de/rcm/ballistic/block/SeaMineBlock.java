@@ -29,7 +29,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Contact sea mine: a horned steel sphere that sits in (or on) water. Anything that comes close -
  * a boat, a swimmer, a mob - sets it off: a heavy underwater blast and a column of spray.
  */
-public class SeaMineBlock extends Block implements SimpleWaterloggedBlock {
+public class SeaMineBlock extends Block implements SimpleWaterloggedBlock, net.minecraft.world.level.block.EntityBlock {
 	public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 	private static final VoxelShape SHAPE = Block.box(2, 1, 2, 14, 15, 14);
 	private static final int CHECK_INTERVAL = 5;
@@ -66,6 +66,16 @@ public class SeaMineBlock extends Block implements SimpleWaterloggedBlock {
 	}
 
 	@Override
+	public net.minecraft.world.level.block.entity.@org.jspecify.annotations.Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new SeaMineBlockEntity(pos, state);
+	}
+
+	@Override
+	protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+		return net.minecraft.world.level.block.RenderShape.INVISIBLE; // drawn with its mooring by SeaMineRenderer
+	}
+
+	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
 		return SHAPE;
 	}
@@ -83,6 +93,7 @@ public class SeaMineBlock extends Block implements SimpleWaterloggedBlock {
 		boolean contact = !level.getEntities((Entity) null, zone, e -> e.isAlive() && (e instanceof AbstractBoat || e instanceof LivingEntity && !e.isSpectator())).isEmpty();
 		if (contact) {
 			level.removeBlock(pos, false);
+			// (the blast itself checks whether it happens under water)
 			DetonationManager.detonateSeaMine(level, pos.getCenter());
 			return;
 		}

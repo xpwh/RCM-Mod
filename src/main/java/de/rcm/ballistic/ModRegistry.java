@@ -294,6 +294,9 @@ public final class ModRegistry {
 	public static final BlockEntityType<de.rcm.ballistic.block.CommandCenterBlockEntity> COMMAND_CENTER_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("command_center"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.CommandCenterBlockEntity::new, COMMAND_CENTER).build()
 	);
+	public static final BlockEntityType<de.rcm.ballistic.block.SeaMineBlockEntity> SEA_MINE_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("sea_mine"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.SeaMineBlockEntity::new, SEA_MINE).build()
+	);
 	public static final BlockEntityType<de.rcm.ballistic.block.DecoyLauncherBlockEntity> DECOY_LAUNCHER_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("decoy_launcher"), FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.DecoyLauncherBlockEntity::new, DECOY_LAUNCHER).build()
 	);

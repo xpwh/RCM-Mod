@@ -81,6 +81,9 @@ public class AirDefenseBlockEntity extends BlockEntity {
 	public float clientYawO;
 	public float clientElevation;
 	public float clientElevationO;
+	/** Client: ticks since each cell's cover was blown off (-1 = not flying). */
+	public final int[] popAge = {-1, -1, -1, -1, -1, -1, -1, -1};
+	private int clientLastAmmo = -1;
 
 	public AirDefenseBlockEntity(BlockPos pos, BlockState state) {
 		super(ModRegistry.AIR_DEFENSE_BE, pos, state);
@@ -145,10 +148,8 @@ public class AirDefenseBlockEntity extends BlockEntity {
 
 		float pk = Mth.clamp(best.killProbability() + (battery.linked ? 0.1F : 0.0F), 0.05F, 0.97F);
 		Vec3 axis = battery.launcherAxis();
-		// alternate between the four canisters
-		int canister = battery.ammo % 4;
-		Vec3 side = new Vec3(Mth.cos(battery.yaw), 0, -Mth.sin(battery.yaw)).scale(canister % 2 == 0 ? -0.5 : 0.5);
-		Vec3 mouth = launch.add(axis.scale(CANISTER_LENGTH + 0.3)).add(side).add(0, canister < 2 ? 0.2 : 0.9, 0);
+		// out of the next loaded cell: the four canisters in turn, each holding two rounds side by side
+		Vec3 mouth = battery.cellMouth(coverIndex(battery.ammo));
 		if (InterceptorEntity.launch(server, pos, mouth, best, pk, axis) != null) {
 			best.setEngagements(best.getEngagements() + 1);
 			battery.ammo--;
@@ -206,6 +207,30 @@ public class AirDefenseBlockEntity extends BlockEntity {
 		return Vec3.atBottomCenterOf(this.worldPosition).add(0, PIVOT_HEIGHT, 0);
 	}
 
+	/**
+	 * Which of the eight cells (canister * 2 + side) fires when {@code ammo} rounds are left: the
+	 * four canisters in turn, the left cells first.
+	 */
+	public static int coverIndex(int ammo) {
+		return (ammo % 4) * 2 + (ammo > 4 ? 0 : 1);
+	}
+
+	/** Centre of a cell's mouth in the launcher frame: {x, y}. */
+	public static float[] cellCentre(int cell) {
+		int canister = cell / 2;
+		float x = (canister % 2 == 0 ? -0.52F : 0.52F) + (cell % 2 == 0 ? -0.24F : 0.24F);
+		float y = canister < 2 ? 0.365F : 1.055F;
+		return new float[] {x, y};
+	}
+
+	/** World position just in front of a cell's mouth. */
+	public Vec3 cellMouth(int cell) {
+		float[] c = cellCentre(cell);
+		Vec3 right = new Vec3(Mth.cos(this.yaw), 0, -Mth.sin(this.yaw));
+		Vec3 up = new Vec3(-Mth.sin(this.elevation) * Mth.sin(this.yaw), Mth.cos(this.elevation), -Mth.sin(this.elevation) * Mth.cos(this.yaw));
+		return this.pivot().add(this.launcherAxis().scale(CANISTER_LENGTH + 0.3)).add(right.scale(c[0])).add(up.scale(c[1]));
+	}
+
 	/** Unit vector along the canisters. */
 	public Vec3 launcherAxis() {
 		return new Vec3(Mth.sin(this.yaw) * Mth.cos(this.elevation), Mth.sin(this.elevation), Mth.cos(this.yaw) * Mth.cos(this.elevation));
@@ -224,6 +249,18 @@ public class AirDefenseBlockEntity extends BlockEntity {
 	}
 
 	public static void clientTick(Level level, BlockPos pos, BlockState state, AirDefenseBlockEntity battery) {
+		// a round left: its cell's frangible cover is blown off and tumbles away
+		if (battery.clientLastAmmo >= 0 && battery.ammo < battery.clientLastAmmo) {
+			for (int a = battery.clientLastAmmo; a > battery.ammo; a--) {
+				battery.popAge[coverIndex(a)] = 0;
+			}
+		}
+		battery.clientLastAmmo = battery.ammo;
+		for (int i = 0; i < battery.popAge.length; i++) {
+			if (battery.popAge[i] >= 0 && ++battery.popAge[i] > 50) {
+				battery.popAge[i] = -1;
+			}
+		}
 		battery.clientYawO = battery.clientYaw;
 		battery.clientElevationO = battery.clientElevation;
 		battery.clientYaw = approachAngle(battery.clientYaw, battery.yaw, TRAIN_RATE);

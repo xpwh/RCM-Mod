@@ -49,6 +49,16 @@ public class JammerBlockEntity extends BlockEntity {
 	}
 
 	/** On and not knocked out by an EMP. */
+	/** Client: how far the antenna is raised (0 stowed on the roof, 1 up and working). */
+	public float deploy;
+	public float deployO;
+
+	public static void clientTick(Level level, BlockPos pos, BlockState state, JammerBlockEntity jammer) {
+		jammer.deployO = jammer.deploy;
+		float target = jammer.active ? 1.0F : 0.0F;
+		jammer.deploy += Math.max(-1.0F / 70.0F, Math.min(1.0F / 70.0F, target - jammer.deploy)); // hydraulics: 3.5 s
+	}
+
 	public boolean isJamming() {
 		return this.active && (this.level == null || !EmpManager.isJammed(this.level, this.worldPosition));
 	}

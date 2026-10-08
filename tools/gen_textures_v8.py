@@ -6,6 +6,7 @@
 32 BEAM_HAZE  the laser beam's scattered glow: faint, translucent cyan-white
 33 HOT        white-hot glowing metal for the laser's burn spot
 34 FLASH      bright orange-yellow muzzle/launch flash
+35 MINE       sea mine steel: dark grey-green paint, rust streaks and spots, a few barnacles
 """
 import os
 import random
@@ -44,6 +45,20 @@ def deck():
     return Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
 
 
+def mine():
+    img = np.full((P, P, 3), (52, 58, 54), dtype=float)
+    img *= (0.88 + 0.24 * np.random.rand(P, P))[..., None]
+    for _ in range(4):  # rust streaks running down
+        x = random.randrange(P)
+        y0 = random.randrange(P // 2)
+        for y in range(y0, min(P, y0 + random.randint(4, 9))):
+            img[y, x] = (118, 62, 34)
+    for _ in range(8):
+        x, y = random.randrange(P), random.randrange(P)
+        img[y, x] = random.choice([(132, 74, 40), (96, 52, 30), (190, 186, 172)])  # rust, barnacles
+    return Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+
+
 if __name__ == "__main__":
     atlas = Image.open(PATH).convert("RGBA")
     put(atlas, 30, tiles())
@@ -51,5 +66,6 @@ if __name__ == "__main__":
     put(atlas, 32, Image.new("RGBA", (P, P), (170, 235, 255, 60)))
     put(atlas, 33, Image.new("RGBA", (P, P), (255, 236, 200, 255)))
     put(atlas, 34, Image.new("RGBA", (P, P), (255, 170, 60, 200)))
+    put(atlas, 35, mine())
     atlas.save(PATH)
     print("ok")

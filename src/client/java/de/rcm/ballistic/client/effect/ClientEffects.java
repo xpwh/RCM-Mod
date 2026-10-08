@@ -61,7 +61,7 @@ public final class ClientEffects {
 			case MOAB -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.9, 0xFFA040);
 			case THERMOBARIC -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.8, 0xFF9030);
 			case INCENDIARY -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.6, 0xFF8020);
-			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, METEOR -> {
+			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, METEOR, SEA_MINE -> {
 			}
 			case BOMBLET -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.25, 0xFFB060);
 			default -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.5, 0xFFB060);
@@ -90,6 +90,7 @@ public final class ClientEffects {
 			case TSAR -> new NukeEffect(pos, 2.2);
 			case ANTIMATTER -> new AntimatterEffect(pos);
 			case METEOR_IMPACT -> new BlastEffect(pos, 0.75);
+			case SEA_MINE -> new WaterBlastEffect(pos);
 			case METEOR -> mc -> true;
 			default -> new BlastEffect(pos, 1.0);
 		});
@@ -536,6 +537,110 @@ public final class ClientEffects {
 				}
 			}
 			return t > Math.max(this.soundDelay, 100 * s) + 1;
+		}
+	}
+
+	// ------------------------------------------------------------------ underwater blast
+
+	/**
+	 * A mine going off under water: a dull thump through the water first, the sea surface lifting into
+	 * a white dome, then a tall column of spray and dirty water shooting up and raining back, a ring of
+	 * foam spreading out and a cloud of bubbles boiling up. No fireball: the water swallows it.
+	 */
+	static final class WaterBlastEffect implements Effect {
+		private final Vec3 pos;
+		private final Vec3 surface;
+		private final double distance;
+		private final int soundDelay;
+		private int age;
+
+		WaterBlastEffect(Vec3 pos) {
+			this.pos = pos;
+			Minecraft mc = Minecraft.getInstance();
+			BlockPos.MutableBlockPos m = BlockPos.containing(pos).mutable();
+			int up = 0;
+			while (up < 30 && mc.level != null && !mc.level.getFluidState(m).isEmpty()) {
+				m.move(0, 1, 0);
+				up++;
+			}
+			this.surface = new Vec3(pos.x, m.getY(), pos.z);
+			this.distance = distanceToCamera(mc, pos);
+			this.soundDelay = (int) (this.distance / SPEED_OF_SOUND);
+		}
+
+		@Override
+		public boolean tick(Minecraft mc) {
+			int t = this.age++;
+			Vec3 s = this.surface;
+			if (t == 0) {
+				// the shock is felt (through the water and the ground) before it is heard
+				addShake((float) Mth.clamp(2.5 - this.distance / 60.0, 0.0, 2.5));
+				for (int i = 0; i < 120; i++) {
+					vanilla(ParticleTypes.BUBBLE, this.pos.x + gauss() * 2.0, this.pos.y + gauss(), this.pos.z + gauss() * 2.0, gauss() * 0.2, 0.4 + rand() * 0.5, gauss() * 0.2);
+				}
+			}
+			if (t == this.soundDelay) {
+				float near = (float) Mth.clamp(1.2 - this.distance / 500.0, 0.0, 1.2);
+				playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, near, 0.55F);
+				playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, near, 0.7F);
+				playDistant(mc, ModRegistry.EXPLOSION_FAR, this.pos, near * 0.7F, 0.6F);
+				playDistant(mc, net.minecraft.sounds.SoundEvents.GENERIC_SPLASH, s, Math.min(1.0F, near), 0.4F);
+				if (this.distance < 60) {
+					deafen(mc, (float) (0.6 - this.distance / 100.0), 40);
+				}
+			}
+			// the surface heaves up into a white dome
+			if (t < 6) {
+				double r = 1.0 + t * 0.9;
+				for (int i = 0; i < 30; i++) {
+					double a = rand() * Mth.TWO_PI;
+					double rr = r * Math.sqrt(rand());
+					double h = Math.sqrt(Math.max(0.0, r * r - rr * rr)) * 0.6;
+					CloudParticle p = cloud(false, s.x + Math.cos(a) * rr, s.y + h, s.z + Math.sin(a) * rr, Math.cos(a) * 0.15, 0.25, Math.sin(a) * 0.15);
+					if (p != null) {
+						p.configure(25 + RANDOM.nextInt(15), 1.2F, 3.0F, 0xFFFFFF, 0xE6EEF0, 0.85F).physics(0.9F, -0.03F).wind(0.0F);
+					}
+				}
+			}
+			// then the column of spray and muddy water bursts out of it
+			if (t >= 4 && t < 22) {
+				for (int i = 0; i < 26; i++) {
+					double a = rand() * Mth.TWO_PI;
+					double rr = rand() * 2.2;
+					double vy = 1.0 + rand() * 1.6 - (t - 4) * 0.04;
+					boolean dirty = rand() < 0.25F;
+					CloudParticle p = cloud(false, s.x + Math.cos(a) * rr, s.y + 0.5, s.z + Math.sin(a) * rr, Math.cos(a) * 0.12, vy, Math.sin(a) * 0.12);
+					if (p != null) {
+						p.configure(55 + RANDOM.nextInt(40), 1.4F, 5.0F, dirty ? 0xA8A090 : 0xFFFFFF, dirty ? 0x8A8478 : 0xDCE4E8, 0.85F)
+							.physics(0.96F, -0.05F).turbulence(0.02F).wind(0.4F);
+					}
+				}
+				for (int i = 0; i < 12; i++) {
+					vanilla(ParticleTypes.SPLASH, s.x + gauss() * 2.0, s.y + 0.3, s.z + gauss() * 2.0, gauss() * 0.4, 0.8, gauss() * 0.4);
+				}
+			}
+			// spray raining back down
+			if (t > 18 && t < 110) {
+				for (int i = 0; i < 6; i++) {
+					vanilla(ParticleTypes.FALLING_WATER, s.x + gauss() * 4.0, s.y + 4.0 + rand() * 18.0, s.z + gauss() * 4.0, 0, 0, 0);
+				}
+			}
+			// ring of foam spreading on the surface, and bubbles boiling up for a while
+			if (t == 10) {
+				for (int i = 0; i < 50; i++) {
+					double a = rand() * Mth.TWO_PI;
+					CloudParticle p = cloud(false, s.x + Math.cos(a) * 3.0, s.y + 0.15, s.z + Math.sin(a) * 3.0, Math.cos(a) * 0.18, 0.0, Math.sin(a) * 0.18);
+					if (p != null) {
+						p.configure(260 + RANDOM.nextInt(100), 2.0F, 7.0F, 0xFFFFFF, 0xE8F0F2, 0.55F).physics(0.97F, 0.0F);
+					}
+				}
+			}
+			if (t < 80 && t % 2 == 0) {
+				for (int i = 0; i < 8; i++) {
+					vanilla(ParticleTypes.BUBBLE_COLUMN_UP, this.pos.x + gauss() * 2.5, this.pos.y + rand() * (s.y - this.pos.y), this.pos.z + gauss() * 2.5, 0, 0.3, 0);
+				}
+			}
+			return t > Math.max(110, this.soundDelay + 1);
 		}
 	}
 

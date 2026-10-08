@@ -11,6 +11,7 @@ import static de.rcm.ballistic.client.render.StructureKit.OLIVE;
 import static de.rcm.ballistic.client.render.StructureKit.OLIVE_DARK;
 import static de.rcm.ballistic.client.render.StructureKit.PANEL;
 import static de.rcm.ballistic.client.render.StructureKit.RED_LAMP;
+import static de.rcm.ballistic.client.render.StructureKit.SOOT;
 import static de.rcm.ballistic.client.render.StructureKit.STEEL;
 import static de.rcm.ballistic.client.render.StructureKit.VENT;
 import static de.rcm.ballistic.client.render.StructureKit.WHITE;
@@ -35,8 +36,9 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Patriot-style fire unit around the battery block: an M860-type semitrailer with outriggers and its
- * electric power unit, the trainable launcher with four PAC canisters that turns towards the threat
- * and elevates to 38 degrees to fire (empty canisters show their open, scorched mouths), plus the
+ * electric power unit, the trainable launcher with four PAC canisters of two cells each that turns
+ * towards the threat and elevates to 38 degrees to fire. Every cell is closed by a frangible cover;
+ * when its round fires the cover is blown off and tumbles away, leaving the open, scorched mouth. Plus the
  * phased-array engagement radar on its own trailer and an antenna mast group. The trailer is laid out
  * along the block's facing.
  */
@@ -52,7 +54,8 @@ public class AirDefenseRenderer implements BlockEntityRenderer<AirDefenseBlockEn
 	private static final BoxMesh SITE = buildSite();
 	private static final BoxMesh TURNTABLE = buildTurntable();
 	private static final BoxMesh PACK = buildPack();
-	private static final BoxMesh[] COVERS = buildCovers();
+	/** Per cell: [0] the intact cover, [1] the open, scorched mouth, [2] the cover centred on the origin (flying). */
+	private static final BoxMesh[][] CELLS = buildCells();
 
 	public AirDefenseRenderer(BlockEntityRendererProvider.Context context) {
 	}
@@ -61,7 +64,9 @@ public class AirDefenseRenderer implements BlockEntityRenderer<AirDefenseBlockEn
 		public float facingYaw;
 		public float yaw;
 		public float elevation;
-		public int loadedCanisters;
+		public int ammo;
+		/** Per cell: ticks the blown-off cover has been flying, or -1. */
+		public final float[] pop = new float[8];
 	}
 
 	@Override
@@ -76,7 +81,10 @@ public class AirDefenseRenderer implements BlockEntityRenderer<AirDefenseBlockEn
 		state.facingYaw = (float) Mth.atan2(facing.getStepX(), facing.getStepZ());
 		state.yaw = Mth.rotLerpRad(partialTick, battery.clientYawO, battery.clientYaw);
 		state.elevation = Mth.lerp(partialTick, battery.clientElevationO, battery.clientElevation);
-		state.loadedCanisters = (battery.getAmmo() + 1) / 2;
+		state.ammo = battery.getAmmo();
+		for (int i = 0; i < 8; i++) {
+			state.pop[i] = battery.popAge[i] < 0 ? -1.0F : battery.popAge[i] + partialTick;
+		}
 	}
 
 	@Override
@@ -106,10 +114,23 @@ public class AirDefenseRenderer implements BlockEntityRenderer<AirDefenseBlockEn
 		poseStack.translate(0.0F, PIVOT, 0.0F);
 		poseStack.mulPose(tilt);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> PACK.emit(pose, consumer, light));
-		for (int i = 0; i < 4; i++) {
-			// canisters are fired top row first; a fired canister shows its open mouth
-			BoxMesh cover = i < 4 - state.loadedCanisters ? COVERS[i + 4] : COVERS[i];
-			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> cover.emit(pose, consumer, light));
+		for (int cell = 0; cell < 8; cell++) {
+			BoxMesh face = fired(cell, state.ammo) ? CELLS[cell][1] : CELLS[cell][0];
+			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> face.emit(pose, consumer, light));
+			float t = state.pop[cell];
+			if (t >= 0.0F && t < 45.0F) {
+				// the blown-off cover: thrown forward by the motor blast, tumbling, falling (gravity in launcher space)
+				float[] c = AirDefenseBlockEntity.cellCentre(cell);
+				float ahead = 0.75F * (1.0F - (float) Math.pow(0.9, t)) / 0.1F;
+				float fall = 0.5F * 0.045F * t * t;
+				float sideways = (cell % 2 == 0 ? -1.0F : 1.0F) * 0.04F * t;
+				BoxMesh flying = CELLS[cell][2];
+				poseStack.pushPose();
+				poseStack.translate(c[0] + sideways, c[1] - fall * Mth.cos(state.elevation), LENGTH + 0.03F + ahead - fall * Mth.sin(state.elevation));
+				poseStack.mulPose(new Quaternionf().rotationXYZ(t * 0.45F * (cell % 2 == 0 ? 1.0F : -1.0F), t * 0.17F, t * 0.08F));
+				collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> flying.emit(pose, consumer, light));
+				poseStack.popPose();
+			}
 		}
 		poseStack.popPose();
 	}
@@ -259,22 +280,50 @@ public class AirDefenseRenderer implements BlockEntityRenderer<AirDefenseBlockEn
 		b.box(-0.9F, 1.37F, 1.4F, -0.2F, 1.38F, 2.2F, YELLOW);
 		b.box(0.2F, 1.37F, 1.4F, 0.9F, 1.38F, 2.2F, WHITE);
 		b.box(-1.0F, 0.0F, -0.05F, 1.0F, 1.42F, 0.0F, HAZARD);
-		// rear covers (blow-out plugs)
+		// rear covers (blow-out plugs) and the web between each canister's two cells
 		for (float[] cs : CANISTERS) {
 			b.box(cs[0] + 0.05F, cs[2] + 0.05F, -0.08F, cs[1] - 0.05F, cs[3] - 0.05F, -0.05F, BLACK);
+			float xm = (cs[0] + cs[1]) * 0.5F;
+			b.box(xm - 0.03F, cs[2], LENGTH - 0.02F, xm + 0.03F, cs[3], LENGTH + 0.04F, OLIVE_DARK);
 		}
 		return b.build();
 	}
 
-	/** Front covers: 0-3 intact (loaded), 4-7 open scorched mouths (fired). Ordered top row first. */
-	private static BoxMesh[] buildCovers() {
-		BoxMesh[] covers = new BoxMesh[8];
-		int[] order = {2, 3, 0, 1};
-		for (int i = 0; i < 4; i++) {
-			float[] cs = CANISTERS[order[i]];
-			covers[i] = new BoxMesh.Builder().box(cs[0] + 0.03F, cs[2] + 0.03F, LENGTH, cs[1] - 0.03F, cs[3] - 0.03F, LENGTH + 0.05F, DISH).build();
-			covers[i + 4] = new BoxMesh.Builder().box(cs[0] + 0.06F, cs[2] + 0.06F, LENGTH - 0.3F, cs[1] - 0.06F, cs[3] - 0.06F, LENGTH - 0.25F, BLACK).build();
+	/** Whether the round of a cell has been fired, with {@code ammo} rounds left. */
+	private static boolean fired(int cell, int ammo) {
+		for (int a = AirDefenseBlockEntity.MAGAZINE; a > ammo; a--) {
+			if (AirDefenseBlockEntity.coverIndex(a) == cell) {
+				return true;
+			}
 		}
-		return covers;
+		return false;
+	}
+
+	/** The eight cells' covers, open mouths and flying covers (see {@link #CELLS}). */
+	private static BoxMesh[][] buildCells() {
+		BoxMesh[][] cells = new BoxMesh[8][];
+		float hw = 0.2F;
+		float hh = 0.28F;
+		for (int cell = 0; cell < 8; cell++) {
+			float[] c = AirDefenseBlockEntity.cellCentre(cell);
+			BoxMesh cover = new BoxMesh.Builder()
+				.box(c[0] - hw, c[1] - hh, LENGTH, c[0] + hw, c[1] + hh, LENGTH + 0.05F, DISH)
+				.box(c[0] - hw * 0.7F, c[1] - 0.02F, LENGTH + 0.05F, c[0] + hw * 0.7F, c[1] + 0.02F, LENGTH + 0.06F, BLACK) // scored burst lines
+				.box(c[0] - 0.02F, c[1] - hh * 0.7F, LENGTH + 0.05F, c[0] + 0.02F, c[1] + hh * 0.7F, LENGTH + 0.06F, BLACK)
+				.build();
+			BoxMesh mouth = new BoxMesh.Builder()
+				.box(c[0] - hw, c[1] - hh, LENGTH - 0.35F, c[0] + hw, c[1] + hh, LENGTH - 0.3F, BLACK)
+				.box(c[0] - hw, c[1] - hh, LENGTH - 0.3F, c[0] - hw + 0.03F, c[1] + hh, LENGTH + 0.02F, SOOT)
+				.box(c[0] + hw - 0.03F, c[1] - hh, LENGTH - 0.3F, c[0] + hw, c[1] + hh, LENGTH + 0.02F, SOOT)
+				.box(c[0] - hw, c[1] - hh, LENGTH - 0.3F, c[0] + hw, c[1] - hh + 0.03F, LENGTH + 0.02F, SOOT)
+				.box(c[0] - hw, c[1] + hh - 0.03F, LENGTH - 0.3F, c[0] + hw, c[1] + hh, LENGTH + 0.02F, SOOT)
+				.build();
+			BoxMesh flying = new BoxMesh.Builder()
+				.box(-hw, -hh, -0.025F, hw, hh, 0.025F, DISH)
+				.box(-hw * 0.7F, -0.02F, 0.025F, hw * 0.7F, 0.02F, 0.035F, BLACK)
+				.build();
+			cells[cell] = new BoxMesh[] {cover, mouth, flying};
+		}
+		return cells;
 	}
 }

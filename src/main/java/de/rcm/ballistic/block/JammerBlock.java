@@ -53,6 +53,8 @@ public class JammerBlock extends Block implements EntityBlock {
 		if (type != ModRegistry.JAMMER_BE) {
 			return null;
 		}
-		return level.isClientSide() ? null : (BlockEntityTicker<T>) (BlockEntityTicker<JammerBlockEntity>) JammerBlockEntity::serverTick;
+		return level.isClientSide()
+			? (BlockEntityTicker<T>) (BlockEntityTicker<JammerBlockEntity>) JammerBlockEntity::clientTick
+			: (BlockEntityTicker<T>) (BlockEntityTicker<JammerBlockEntity>) JammerBlockEntity::serverTick;
 	}
 }

@@ -87,7 +87,9 @@ public enum MissileType {
 		/** One meteor of the shower hitting the ground. */
 		METEOR_IMPACT,
 		/** The B-2's GBU-43 air blast bomb. */
-		MOAB
+		MOAB,
+		/** A sea mine going off under water. */
+		SEA_MINE
 	}
 
 	public enum Model {

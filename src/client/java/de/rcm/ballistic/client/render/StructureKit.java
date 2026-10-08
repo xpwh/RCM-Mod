@@ -49,6 +49,7 @@ final class StructureKit {
 	static final int BEAM_HAZE = 32;
 	static final int HOT = 33;
 	static final int FLASH = 34;
+	static final int MINE = 35;
 
 	private StructureKit() {
 	}

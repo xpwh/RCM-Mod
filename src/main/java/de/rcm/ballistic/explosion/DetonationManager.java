@@ -263,7 +263,8 @@ public final class DetonationManager {
 	/** Free-fall bomb from an airstrike jet (Mk 82-class): a solid blast with a small crater. */
 	/** Contact sea mine: a heavy underwater blast throwing up a column of spray. */
 	public static void detonateSeaMine(ServerLevel level, Vec3 pos) {
-		broadcast(level, pos, Warhead.AERIAL_BOMB);
+		boolean underwater = !level.getFluidState(BlockPos.containing(pos)).isEmpty() || !level.getFluidState(BlockPos.containing(pos).above()).isEmpty();
+		broadcast(level, pos, underwater ? Warhead.SEA_MINE : Warhead.AERIAL_BOMB);
 		level.sendParticles(ParticleTypes.SPLASH, pos.x, pos.y + 1.0, pos.z, 400, 2.5, 3.0, 2.5, 1.2);
 		level.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, pos.x, pos.y, pos.z, 200, 2.0, 1.0, 2.0, 0.6);
 		level.sendParticles(ParticleTypes.CLOUD, pos.x, pos.y + 2.0, pos.z, 80, 2.0, 4.0, 2.0, 0.2);
