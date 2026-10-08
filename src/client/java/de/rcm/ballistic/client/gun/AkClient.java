@@ -190,9 +190,9 @@ public final class AkClient {
 		AkFirstPerson.kickSide = ClientEffects.rand() * 2.0F - 1.0F;
 		AkFirstPerson.kickRoll = ClientEffects.rand() * 2.0F - 0.6F; // the AK's kick rolls it a little to the right
 		// the muzzle climbs through a burst and wanders a little to the side
-		float climb = 0.75F + Math.min(burst, 10) * 0.09F + ClientEffects.rand() * 0.3F;
+		float climb = (0.4F + Math.min(burst, 10) * 0.05F + ClientEffects.rand() * 0.15F) * (AkItem.isAiming(player) ? 0.7F : 1.0F);
 		player.setXRot(Mth.clamp(player.getXRot() - climb, -90.0F, 90.0F));
-		player.setYRot(player.getYRot() + (ClientEffects.rand() - 0.45F) * 0.7F);
+		player.setYRot(player.getYRot() + (ClientEffects.rand() - 0.45F) * 0.35F);
 		ClientEffects.addShake(0.12F);
 		Vec3 muzzle = muzzle(player, 1.0F);
 		GunAudio.shot(muzzle, true);

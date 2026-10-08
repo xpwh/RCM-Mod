@@ -156,12 +156,26 @@ public class AkItem extends Item {
 		Vec3 right = look.cross(new Vec3(0, 1, 0));
 		right = right.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : right.normalize();
 		Vec3 muzzle = player.getEyePosition().add(look.scale(0.9)).add(right.scale(0.12)).add(0, -0.1, 0);
-		// a long burst walks: the barrel climbs and wanders, the spread opens up
-		double spread = 0.0035 + Math.min(burst, 12) * 0.0018 + (player.isCrouching() ? -0.0015 : 0.0) + (player.onGround() ? 0.0 : 0.012);
-		// over the sights it goes where you look; from the hip only roughly
-		spread *= isAiming(player) ? 0.45 : 1.7;
+		// the round goes where the crosshair is: aimed from the muzzle at what the eye is looking at
+		Vec3 eye = player.getEyePosition();
+		Vec3 far = eye.add(look.scale(300.0));
+		net.minecraft.world.phys.BlockHitResult sight = level.clip(new net.minecraft.world.level.ClipContext(eye, far,
+			net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+		Vec3 target = sight.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? far : sight.getLocation();
+		net.minecraft.world.phys.EntityHitResult body = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(level, player, eye, target,
+			new net.minecraft.world.phys.AABB(eye, target).inflate(1.0), e -> e.isPickable() && !e.isSpectator() && e != player, 0.0F);
+		if (body != null) {
+			target = body.getLocation();
+		}
+		if (target.distanceToSqr(eye) < 4.0) {
+			target = eye.add(look.scale(2.0));
+		}
+		Vec3 aim = target.subtract(muzzle).normalize();
+		// spread: the first round of a burst goes true, then the barrel climbs and wanders a little
+		double spread = 0.0012 + Math.min(burst, 10) * 0.0009 + (player.isCrouching() ? -0.0005 : 0.0) + (player.onGround() ? 0.0 : 0.006);
+		spread *= isAiming(player) ? 0.35 : 1.3;
 		var random = level.getRandom();
-		Vec3 dir = look.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
+		Vec3 dir = aim.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
 		boolean tracer = state.ammo() == GunState.TRACER;
 		BulletEntity.fire(level, player, muzzle, dir.scale(MUZZLE_VELOCITY), tracer);
 		// everybody near hears it; the shooter gets it too, for the tracer on the bullet's true line

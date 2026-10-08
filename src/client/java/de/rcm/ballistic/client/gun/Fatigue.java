@@ -73,7 +73,7 @@ public final class Fatigue {
 
 		// the weapon wandering with the breath and the pounding heart: it moves your aim
 		boolean armed = player.getMainHandItem().getItem() instanceof AkItem || player.getMainHandItem().getItem() instanceof RocketLauncherItem;
-		float amp = armed ? level * level * (AkItem.isAiming(player) || RocketLauncherItem.isAiming(player) ? 1.1F : 1.8F) : 0.0F;
+		float amp = armed ? level * level * (AkItem.isAiming(player) || RocketLauncherItem.isAiming(player) ? 0.7F : 1.2F) : 0.0F;
 		float t = age / 20.0F;
 		float yaw = amp * (Mth.sin(t * 1.1F) * 0.7F + Mth.sin(t * 2.9F + 1.3F) * 0.3F);
 		float pitch = amp * (Mth.sin(phase) * 0.8F + Mth.sin(t * 1.7F + 0.4F) * 0.25F);

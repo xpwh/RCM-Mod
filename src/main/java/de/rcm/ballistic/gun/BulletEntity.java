@@ -129,7 +129,7 @@ public class BulletEntity extends Entity {
 		Entity best = null;
 		double bestDist = Double.MAX_VALUE;
 		for (Entity e : list) {
-			var clip = e.getBoundingBox().inflate(0.1).clip(from, to);
+			var clip = e.getBoundingBox().inflate(0.2).clip(from, to);
 			if (clip.isPresent()) {
 				double d = clip.get().distanceToSqr(from);
 				if (d < bestDist) {
@@ -142,7 +142,7 @@ public class BulletEntity extends Entity {
 	}
 
 	private void hitEntity(ServerLevel level, Entity e, Vec3 from, Vec3 to) {
-		Vec3 at = e.getBoundingBox().inflate(0.1).clip(from, to).orElse(e.position());
+		Vec3 at = e.getBoundingBox().inflate(0.2).clip(from, to).orElse(e.position());
 		float speed = (float) this.getDeltaMovement().length();
 		float damage = DAMAGE * Math.min(1.0F, 0.35F + speed / (float) AkItem.MUZZLE_VELOCITY);
 		boolean head = e instanceof LivingEntity living && at.y > living.getEyeY() - 0.22;
@@ -151,6 +151,12 @@ public class BulletEntity extends Entity {
 		}
 		DamageSource source = level.damageSources().thrown(this, this.shooter);
 		e.invulnerableTime = 0; // rounds of a burst all land
+		if (this.shooter instanceof net.minecraft.server.level.ServerPlayer shooterPlayer) {
+			// the shooter hears the hit land
+			shooterPlayer.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+				net.minecraft.core.Holder.direct(net.minecraft.sounds.SoundEvents.ARROW_HIT_PLAYER), SoundSource.PLAYERS,
+				shooterPlayer.getX(), shooterPlayer.getEyeY(), shooterPlayer.getZ(), head ? 0.5F : 0.3F, head ? 1.6F : 1.25F, this.random.nextLong()));
+		}
 		if (e.hurtServer(level, source, damage)) {
 			Vec3 push = this.getDeltaMovement().normalize().scale(0.12);
 			e.push(push.x, 0.02, push.z);
