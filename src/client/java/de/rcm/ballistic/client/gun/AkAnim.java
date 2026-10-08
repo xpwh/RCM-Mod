@@ -108,16 +108,23 @@ public final class AkAnim {
 		if (t < 7.0F) {
 			Matrix4f seated = new Matrix4f();
 			magPose(seated, 0.0F, 0.0F);
-			lerp(HANDGUARD, seated.transformPosition(MAG_HOLD, new Vector3f()), t / 7.0F, this.leftHand);
+			swing(HANDGUARD, seated.transformPosition(MAG_HOLD, new Vector3f()), t / 7.0F, this.leftHand);
 		} else if (t < 31.0F) {
 			this.leftHand.set(hold);
 		} else {
-			lerp(hold, HANDGUARD, (t - 31.0F) / 8.0F, this.leftHand);
+			swing(hold, HANDGUARD, (t - 31.0F) / 8.0F, this.leftHand);
 		}
 	}
 
 	private static Vector3f lerp(Vector3f a, Vector3f b, float t, Vector3f out) {
 		return out.set(a).lerp(b, smooth(t));
+	}
+
+	/** The support hand between the handguard and the magazine: around the outside and under, not through the rifle. */
+	private static Vector3f swing(Vector3f a, Vector3f b, float t, Vector3f out) {
+		lerp(a, b, t, out);
+		float bulge = Mth.sin(Mth.clamp(t, 0.0F, 1.0F) * Mth.PI);
+		return out.add(-0.035F * bulge, -0.03F * bulge, 0.0F);
 	}
 
 	/**
@@ -156,7 +163,7 @@ public final class AkAnim {
 			// reaching for the magazine
 			magPose(m, 0.0F, 0.0F);
 			m.transformPosition(MAG_HOLD, hold);
-			lerp(HANDGUARD, hold, r / 8.0F, this.leftHand);
+			swing(HANDGUARD, hold, r / 8.0F, this.leftHand);
 		} else if (r < 17.0F) {
 			out = (r - AkItem.T_MAG_OUT) / 5.0F;
 		} else if (r < 24.0F) {
@@ -182,7 +189,7 @@ public final class AkAnim {
 			if (r < 36.0F) {
 				this.leftHand.set(hold);
 			} else {
-				lerp(hold, HANDGUARD, (r - 36.0F) / 8.0F, this.leftHand);
+				swing(hold, HANDGUARD, (r - 36.0F) / 8.0F, this.leftHand);
 			}
 		}
 		if (fresh) {

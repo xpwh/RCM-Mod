@@ -11,8 +11,9 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
- * The rifle in first person: a slow breathing sway, the stock punching back into the shoulder and
- * the muzzle jumping with every shot (more as a burst goes on), and the reload - the rifle brought
+ * The rifle in first person: a slow breathing sway, its weight lagging behind as you turn and
+ * leaning into a sidestep, the stock punching back into the shoulder and the muzzle jumping with
+ * every shot (springs, so a burst stacks up and shakes), and the reload - the rifle brought
  * in to the middle of the view and rolled so the magazine well faces you, the old magazine rocked out,
  * the new one rocked in and slapped home, then for an empty gun the rifle turned right and the
  * charging handle racked, and back up on target.
@@ -43,6 +44,54 @@ public final class AkFirstPerson {
 	/** Random lean of the current shot's kick (set per shot). */
 	static float kickSide;
 	static float kickRoll;
+	/** Shots fired since the springs last took them in. */
+	private static int pendingKicks;
+	private static float strafe;
+	private static float prevStrafe;
+
+	/**
+	 * A damped spring (time in ticks): the rifle's recoil and its lag behind the view are a handful of
+	 * these, kicked by shots and by turning, so a burst stacks up and shakes and every movement
+	 * overshoots a little and settles, the way a rifle hanging off your shoulder and hands does.
+	 */
+	private static final class Spring {
+		final float stiffness;
+		final float damping;
+		float x;
+		float v;
+
+		Spring(float frequency, float ratio) {
+			this.stiffness = frequency * frequency;
+			this.damping = 2.0F * ratio * frequency;
+		}
+
+		void step(float dt) {
+			// semi-implicit Euler in small steps: stable at any frame rate
+			int n = Math.max(1, (int) Math.ceil(dt / 0.1F));
+			float h = dt / n;
+			for (int i = 0; i < n; i++) {
+				this.v += (-this.stiffness * this.x - this.damping * this.v) * h;
+				this.x += this.v * h;
+			}
+		}
+	}
+
+	// recoil: straight back into the shoulder, muzzle up, a twist and roll to the side
+	private static final Spring BACK = new Spring(1.25F, 0.5F);
+	private static final Spring PITCH = new Spring(1.0F, 0.45F);
+	private static final Spring YAW = new Spring(0.9F, 0.4F);
+	private static final Spring ROLL = new Spring(1.1F, 0.4F);
+	// the rifle's weight lagging behind the view as you turn
+	private static final Spring LAG_YAW = new Spring(0.75F, 0.55F);
+	private static final Spring LAG_PITCH = new Spring(0.8F, 0.6F);
+	private static float lastFrame = -1.0F;
+	private static float lastYaw;
+	private static float lastPitch;
+
+	/** A shot of our own: the springs take it in on the next frame. */
+	static void kick() {
+		pendingKicks++;
+	}
 
 	/** Called every client tick. */
 	static void tick(Minecraft mc) {
@@ -80,6 +129,49 @@ public final class AkFirstPerson {
 			landHard = (float) Mth.clamp((fallFrom - player.getY()) / 3.0, 0.25, 1.0);
 		}
 		wasOnGround = player.onGround();
+		// stepping sideways leans the rifle into the step
+		prevStrafe = strafe;
+		float yaw = player.getYRot() * Mth.DEG_TO_RAD;
+		double side = player.getDeltaMovement().x * Math.cos(yaw) + player.getDeltaMovement().z * Math.sin(yaw);
+		strafe += ((float) Mth.clamp(side / 0.13, -1.0, 1.0) - strafe) * 0.2F;
+	}
+
+	/** Steps the springs to this frame and feeds them the shots fired and the turn of the view since the last. */
+	private static void physics(Minecraft mc, float now, float partialTick) {
+		var player = mc.player;
+		float yaw = player.getViewYRot(partialTick);
+		float pitch = player.getViewXRot(partialTick);
+		float dt = now - lastFrame;
+		if (lastFrame < 0.0F || dt < 0.0F || dt > 2.0F) {
+			// first frame with the rifle in hand (again): nothing to catch up on
+			dt = 0.0F;
+			lastYaw = yaw;
+			lastPitch = pitch;
+		}
+		lastFrame = now;
+		float aiming = AkClient.aimProgress(partialTick);
+		while (pendingKicks > 0) {
+			pendingKicks--;
+			float build = 1.0F + Math.min(AkClient.burst, 10) * 0.05F;
+			float braced = 1.0F - 0.35F * aiming - (player.isCrouching() ? 0.15F : 0.0F);
+			BACK.v += 0.15F * braced * (0.9F + 0.2F * (float) Math.random());
+			PITCH.v += 6.0F * braced * build * (0.85F + 0.3F * (float) Math.random());
+			YAW.v += -1.8F * kickSide * braced;
+			ROLL.v += 3.2F * kickRoll * braced;
+		}
+		// the view turned: the rifle stays behind for a moment (a little, it is held tight)
+		float dy = Mth.wrapDegrees(yaw - lastYaw);
+		float dp = pitch - lastPitch;
+		lastYaw = yaw;
+		lastPitch = pitch;
+		float hold = 1.0F - 0.55F * aiming;
+		LAG_YAW.v += Mth.clamp(dy, -25.0F, 25.0F) * 0.09F * hold;
+		LAG_PITCH.v += Mth.clamp(dp, -25.0F, 25.0F) * 0.09F * hold;
+		for (Spring sp : new Spring[] {BACK, PITCH, YAW, ROLL, LAG_YAW, LAG_PITCH}) {
+			sp.step(dt);
+		}
+		LAG_YAW.x = Mth.clamp(LAG_YAW.x, -7.0F, 7.0F);
+		LAG_PITCH.x = Mth.clamp(LAG_PITCH.x, -6.0F, 6.0F);
 	}
 
 	private static float smooth(float x) {
@@ -94,6 +186,9 @@ public final class AkFirstPerson {
 		}
 		float now = mc.level.getGameTime() + partialTick;
 		GunState state = AkItem.state(stack);
+		if (mc.player != null) {
+			physics(mc, now, partialTick);
+		}
 
 		// up to the eye: rear notch and front post lined up on the middle of the view
 		float aim = AkClient.aimProgress(partialTick);
@@ -105,7 +200,20 @@ public final class AkFirstPerson {
 			Vector3f shift = new Vector3f(CAMERA).sub(toView.transform(new Vector3f(eye)));
 			poseStack.translate(shift.x * aim, shift.y * aim, shift.z * aim);
 			poseStack.mulPose(new Quaternionf().slerp(toView, aim));
+			// on the way: the muzzle dips and the rifle cants as the stock comes up into the shoulder
+			float arc = Mth.sin(aim * Mth.PI);
+			poseStack.translate(0.0F, -0.02F * arc, 0.015F * arc);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-6.0F * arc));
+			poseStack.mulPose(Axis.XP.rotationDegrees(-2.5F * arc));
 		}
+
+		// its weight: lagging behind as you turn, leaning into a sidestep
+		poseStack.translate(-LAG_YAW.x * 0.0022F, LAG_PITCH.x * 0.0018F, 0.0F);
+		poseStack.mulPose(Axis.YP.rotationDegrees(LAG_YAW.x * 0.5F));
+		poseStack.mulPose(Axis.XP.rotationDegrees(LAG_PITCH.x * 0.45F));
+		float lean = Mth.lerp(partialTick, prevStrafe, strafe) * (1.0F - 0.6F * aim);
+		poseStack.mulPose(Axis.ZP.rotationDegrees(-3.5F * lean));
+		poseStack.translate(-0.008F * lean, 0.0F, 0.0F);
 
 		// breathing: a slow heave, heavy and quick when out of breath
 		float tired = Fatigue.level();
@@ -171,23 +279,33 @@ public final class AkFirstPerson {
 			if (state.reloadKind() == GunState.EMPTY) {
 				rack = smooth((r - (AkItem.T_CHARGE - 12)) / 8.0F) * (1.0F - smooth((r - (AkItem.T_CHARGE + 6)) / 8.0F));
 			}
+			// the old magazine wrenched out of the well: the rifle tugged down and forward with it
+			float tug = jolt(r - AkItem.T_MAG_OUT, 4.0F);
+			// the bolt slamming home once the handle is let go: a jolt forward
+			float slam = state.reloadKind() == GunState.EMPTY ? jolt(r - (AkItem.T_CHARGE + 3), 5.0F) : 0.0F;
+			// the slap overshoots and springs back
+			float settle = r > AkItem.T_MAG_IN + 4 ? jolt(r - (AkItem.T_MAG_IN + 4), 6.0F) * -0.4F : 0.0F;
 			// brought in towards the middle of the view and up, rolled so the magazine well faces you
-			poseStack.translate(-0.1F * tilt + 0.06F * rack, 0.2F * tilt + 0.012F * slap, -0.12F * tilt);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-30.0F * tilt + 52.0F * rack));
-			poseStack.mulPose(Axis.XP.rotationDegrees(5.0F * tilt - 3.0F * slap));
+			poseStack.translate(-0.1F * tilt + 0.06F * rack, 0.2F * tilt + 0.012F * (slap + settle) - 0.014F * tug + 0.006F * slam,
+				-0.12F * tilt - 0.01F * tug - 0.018F * slam);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-30.0F * tilt + 52.0F * rack + 4.0F * tug));
+			poseStack.mulPose(Axis.XP.rotationDegrees(5.0F * tilt - 3.0F * (slap + settle) - 4.0F * tug + 2.5F * slam));
 			poseStack.mulPose(Axis.YP.rotationDegrees(40.0F * tilt + 8.0F * rack));
 		}
 
-		// recoil: the local player's own shots (instant), everybody else's from the synced state
-		float shot = AkClient.lastShotTick > 0 ? now - AkClient.lastShotTick : now - state.lastShot();
-		if (shot >= 0.0F && shot < 10.0F) {
-			// slammed back into the shoulder, then the buffer spring pushes it back past rest and it settles
-			float kick = shot < 0.5F ? shot / 0.5F : (float) (Math.exp(-(shot - 0.5F) * 0.8F) * Math.cos((shot - 0.5F) * 1.3F));
-			float build = 1.0F + Math.min(AkClient.burst, 10) * 0.06F;
-			poseStack.translate(0.004F * kickSide * kick, 0.014F * kick, 0.08F * kick * build);
-			poseStack.mulPose(Axis.XP.rotationDegrees(3.6F * kick * build));
-			poseStack.mulPose(Axis.YP.rotationDegrees(-1.2F * kickSide * kick));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(2.2F * kickRoll * kick));
+		// recoil: the springs, kicked by every shot
+		poseStack.translate(0.0F, 0.12F * Math.max(0.0F, PITCH.x) * 0.02F, Math.max(-0.02F, BACK.x));
+		poseStack.mulPose(Axis.XP.rotationDegrees(PITCH.x));
+		poseStack.mulPose(Axis.YP.rotationDegrees(YAW.x));
+		poseStack.mulPose(Axis.ZP.rotationDegrees(ROLL.x));
+	}
+
+	/** A quick knock that starts at t = 0 and has died away by t = length (0 outside). */
+	private static float jolt(float t, float length) {
+		if (t < 0.0F || t > length) {
+			return 0.0F;
 		}
+		float f = t / length;
+		return Mth.sin(Math.min(1.0F, f * 3.0F) * Mth.PI * 0.5F) * (1.0F - f) * (1.0F - f);
 	}
 }

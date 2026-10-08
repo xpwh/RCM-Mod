@@ -197,6 +197,7 @@ public final class AkClient {
 		burst++;
 		AkFirstPerson.kickSide = ClientEffects.rand() * 2.0F - 1.0F;
 		AkFirstPerson.kickRoll = ClientEffects.rand() * 2.0F - 0.6F; // the AK's kick rolls it a little to the right
+		AkFirstPerson.kick();
 		// the muzzle climbs through a burst and wanders a little to the side
 		float climb = (0.4F + Math.min(burst, 10) * 0.05F + ClientEffects.rand() * 0.15F) * (AkItem.isAiming(player) ? 0.7F : 1.0F);
 		player.setXRot(Mth.clamp(player.getXRot() - climb, -90.0F, 90.0F));
