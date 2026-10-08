@@ -97,6 +97,11 @@ def save(name, x, highpass=60.0):
     print("  %-26s %.2fs" % (name, len(x) / SR))
 
 
+def loud(name, x, highpass=60.0):
+    """A rifle report as loud as it is beside you: compressed up to full scale."""
+    save(name, s.limiter(fft_filter(x, low=highpass, slope=1.5), 0.98, 2.0), highpass=highpass)
+
+
 def main():
     # ---- close shots: Felix Blume's AK-47 at an outdoor range (CC0), a Saiga in 7.62x39 (CC0)
     shots = []
@@ -110,14 +115,14 @@ def main():
     # keep the cleanest, strongest takes
     shots.sort(key=lambda x: -np.sqrt(np.mean(x[: int(0.05 * SR)] ** 2)))
     for i, x in enumerate(shots[:5]):
-        save("ak/shot%d" % (i + 1), x)
+        loud("ak/shot%d" % (i + 1), x)
 
     # ---- medium distance: the same shots as heard a few hundred metres off - the highs gone,
     # the report smeared by ground reflections
     for i, x in enumerate(shots[:3]):
         y = fft_filter(x, low=60.0, high=2600.0, slope=1.5)
         y = y + np.concatenate([np.zeros(int(0.018 * SR)), y])[: len(y)] * 0.5
-        save("ak/shot_mid%d" % (i + 1), y)
+        loud("ak/shot_mid%d" % (i + 1), y)
 
     # ---- far: real distant gunfire across open country (army training, Denmark, CC BY 4.0;
     # hunting rifles in Provence, CC0)
@@ -132,7 +137,7 @@ def main():
     for o in onsets(hunt, rel=0.45, gap=0.5)[:2]:
         far.append(cut(hunt, o, 1.8, pre=0.01))
     for i, x in enumerate(far[:4]):
-        save("ak/shot_far%d" % (i + 1), x, highpass=35.0)
+        loud("ak/shot_far%d" % (i + 1), x, highpass=35.0)
 
     # ---- handling: an AKM foley set (DrinkingWindGames, CC BY 4.0), racks by dwightsabeast (CC BY 3.0)
     save("ak/dry", load("c5_fs851754_dwg_akm_trigger_dry"), highpass=150.0)
@@ -159,15 +164,15 @@ def main():
         return t * np.clip(np.arange(len(t)) / (0.015 * SR), 0, 1)
     saiga_on = peaks(saiga, rel=0.3, gap=1.0)[:3]
     for i, o in enumerate(saiga_on):
-        save("ak/tail_outdoor%d" % (i + 1), tail(saiga, o, 0.07, 1.0))
+        loud("ak/tail_outdoor%d" % (i + 1), tail(saiga, o, 0.07, 1.0))
     rooms = []
     for n in ("c1_fs812210_mahecic_kalash_indoor1", "c1_fs812211_mahecic_kalash_indoor2"):
         x = load(n)
         rooms.append(tail(x, onsets(x, rel=0.4)[0], 0.05, 1.4))
     for i, x in enumerate(rooms):
-        save("ak/tail_indoor%d" % (i + 1), x)
+        loud("ak/tail_indoor%d" % (i + 1), x)
         # a cave: the same room sound, bigger and darker
-        save("ak/tail_cave%d" % (i + 1), fft_filter(stretch(x, 1.35), high=3500.0, slope=1.2))
+        loud("ak/tail_cave%d" % (i + 1), fft_filter(stretch(x, 1.35), high=3500.0, slope=1.2))
 
     # ---- a real bullet going past (after an M240 burst, NATO footage, CC0)
     fly = load("c4_fs855248_qubodup_real_bullet_flyby")

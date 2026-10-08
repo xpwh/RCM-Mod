@@ -196,7 +196,9 @@ public final class AkClient {
 		ClientEffects.addShake(0.12F);
 		Vec3 muzzle = muzzle(player, 1.0F);
 		GunAudio.shot(muzzle, true);
-		effects(player, muzzle, player.getLookAngle(), true);
+		// smoke and brass from the rifle we see in our hands
+		Vec3 seen = mc.options.getCameraType().isFirstPerson() ? viewMuzzleInWorld(mc) : muzzle;
+		effects(player, seen, player.getLookAngle(), true);
 	}
 
 	private static void remoteShot(GunshotPayload p) {
@@ -207,7 +209,15 @@ public final class AkClient {
 		Vec3 muzzle = new Vec3(p.x(), p.y(), p.z());
 		Vec3 dir = new Vec3(p.dx(), p.dy(), p.dz());
 		if ((p.flags() & GunshotPayload.TRACER) != 0) {
-			TracerFx.fire(muzzle, dir.scale(de.rcm.ballistic.gun.AkItem.MUZZLE_VELOCITY), p.shooter());
+			Vec3 from = muzzle;
+			Vec3 velocity = dir.scale(de.rcm.ballistic.gun.AkItem.MUZZLE_VELOCITY);
+			if (mc.player != null && p.shooter() == mc.player.getId() && mc.options.getCameraType().isFirstPerson()) {
+				// our own round: out of the muzzle we see, converging on the bullet's true line
+				from = viewMuzzleInWorld(mc);
+				Vec3 aimed = muzzle.add(dir.scale(120.0));
+				velocity = aimed.subtract(from).normalize().scale(de.rcm.ballistic.gun.AkItem.MUZZLE_VELOCITY);
+			}
+			TracerFx.fire(from, velocity, p.shooter());
 		}
 		if (mc.player != null && p.shooter() == mc.player.getId()) {
 			return; // our own shot: heard and seen already
@@ -217,6 +227,23 @@ public final class AkClient {
 		if (shooter instanceof Player other && muzzle.distanceTo(mc.gameRenderer.getMainCamera().position()) < 96.0) {
 			effects(other, muzzle, new Vec3(p.dx(), p.dy(), p.dz()), false);
 		}
+	}
+
+	/** The muzzle of the rifle as drawn in first person, in world space. */
+	static Vec3 viewMuzzleInWorld(Minecraft mc) {
+		var camera = mc.gameRenderer.getMainCamera();
+		org.joml.Vector3f v = de.rcm.ballistic.client.render.AkItemRenderer.VIEW_MUZZLE;
+		org.joml.Vector3f fwd = new org.joml.Vector3f(camera.forwardVector());
+		org.joml.Vector3f up = new org.joml.Vector3f(camera.upVector());
+		org.joml.Vector3f right = new org.joml.Vector3f(fwd).cross(up).normalize();
+		Vec3 cam = camera.position();
+		// the hand is drawn with the plain field of view, the world with zoom and sprint applied:
+		// keep the muzzle where it is on screen
+		float base = mc.options.fov().get().floatValue();
+		float mod = mc.player == null ? 1.0F : mc.player.getFieldOfViewModifier(true, mc.options.fovEffectScale().get().floatValue());
+		float k = (float) (Math.tan(Math.toRadians(base * 0.5)) / Math.tan(Math.toRadians(base * mod * 0.5)));
+		v = new org.joml.Vector3f(v.x * k, v.y * k, v.z);
+		return cam.add(right.x * v.x + up.x * v.y - fwd.x * v.z, right.y * v.x + up.y * v.y - fwd.y * v.z, right.z * v.x + up.z * v.y - fwd.z * v.z);
 	}
 
 	/** Brass and powder smoke. */

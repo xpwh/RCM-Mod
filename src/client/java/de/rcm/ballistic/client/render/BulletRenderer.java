@@ -34,6 +34,7 @@ public class BulletRenderer extends EntityRenderer<BulletEntity, BulletRenderer.
 		public float night;
 		public float age;
 		public int id;
+		public boolean ownFirstPerson;
 	}
 
 	@Override
@@ -59,6 +60,7 @@ public class BulletRenderer extends EntityRenderer<BulletEntity, BulletRenderer.
 		state.tracer = entity.isTracer();
 		state.age = entity.tickCount + partialTick;
 		state.id = entity.getId();
+		state.ownFirstPerson = mc.player != null && entity.shooterId() == mc.player.getId() && mc.options.getCameraType().isFirstPerson();
 		state.burn = entity.isTracer() ? Mth.clamp(1.0F - (state.age - (BulletEntity.TRACER_BURN - 4)) / 4.0F, 0.0F, 1.0F) : 0.0F;
 		state.night = night(entity.level().getDayTime()) * (1.0F - entity.level().getRainLevel(partialTick) * 0.3F);
 	}
@@ -83,7 +85,7 @@ public class BulletRenderer extends EntityRenderer<BulletEntity, BulletRenderer.
 		float travelled = state.age * state.speed;
 		if (state.tracer) {
 			// drawn by TracerFx from the moment of the shot
-		} else if (travelled > 2.0F && state.age < 6.0F) {
+		} else if (travelled > 2.0F && state.age < 6.0F && !state.ownFirstPerson) {
 			// a ball round: a faint grey flick of disturbed air
 			float trail = Math.min(travelled - 1.5F, 3.5F);
 			SkyGlow.streak(poseStack, collector, state.toCamera, state.back, trail, 0.012F + state.distance * 0.0006F, 0xC8C8C0, 0.22F);

@@ -66,6 +66,8 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 	private static final net.minecraft.client.renderer.rendertype.RenderType FLASH_TYPE = net.minecraft.client.renderer.rendertype.RenderTypes.eyes(
 		BallisticMissiles.id("textures/effect/muzzle_flash.png"));
 	private static final AkAnim ANIM = new AkAnim();
+	/** The first-person muzzle in camera space (x right, y up, -z ahead), as last drawn. */
+	public static final Vector3f VIEW_MUZZLE = new Vector3f(0.36F, -0.3F, -1.4F);
 
 	public static void register() {
 		SpecialModelRenderers.ID_MAPPER.put(BallisticMissiles.id("ak47"), Unbaked.MAP_CODEC);
@@ -80,6 +82,10 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		AkAnim anim = ANIM.compute(state, now, lastShot, context.firstPerson() ? AkClient.checkTime(now) : -1.0F);
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.5F, 0.5F); // undo the item transform's corner offset
+		if (context.firstPerson()) {
+			// where the muzzle is on screen, in camera space: tracers of our own shots start there
+			poseStack.last().pose().transformPosition(0.0F, BORE_Y, MUZZLE_Z - 0.02F, VIEW_MUZZLE);
+		}
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> BODY.emit(pose, consumer, light));
 
 		// ---- fire selector: safe (up, blocking the handle), full auto (middle), semi (down)
@@ -148,8 +154,8 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		java.util.Random r = new java.util.Random(seed * 31L + 7L);
 		float fade = age < 0.35F ? 1.0F : Math.max(0.0F, 1.0F - (age - 0.35F) / 1.05F);
 		float dark = 1.0F - ambient;
-		float bright = fade * (0.55F + 0.45F * dark);
-		float scale = (0.75F + 0.5F * dark) * (0.85F + 0.3F * r.nextFloat()) * (0.8F + 0.25F * Math.min(1.0F, age * 2.0F));
+		float bright = fade * (0.85F + 0.15F * dark);
+		float scale = (1.15F + 0.55F * dark) * (0.85F + 0.3F * r.nextFloat()) * (0.8F + 0.25F * Math.min(1.0F, age * 2.0F));
 		int side = r.nextInt(4);
 		int front = r.nextInt(4);
 		float roll = r.nextFloat() * 360.0F;
@@ -159,18 +165,22 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		poseStack.translate(0.0F, BORE_Y, MUZZLE_Z);
 		poseStack.scale(scale, scale, scale);
 		poseStack.mulPose(Axis.ZP.rotationDegrees(roll));
-		float len = 0.3F;
-		float half = 0.05F;
+		float len = 0.36F;
+		float half = 0.065F;
 		collector.submitCustomGeometry(poseStack, FLASH_TYPE, (pose, consumer) -> {
 			for (int k = 0; k < 3; k++) {
 				float a = k * Mth.PI / 3.0F;
 				sheet(pose, consumer, Mth.cos(a) * half, Mth.sin(a) * half, 0.0F, 0.0F, 0.0F, -len, side, color);
 			}
 			// head-on star, just ahead of the brake
-			float s = 0.075F;
+			float s = 0.11F;
 			float u0 = 0.75F;
 			float v0 = front * 0.25F;
-			quad(pose, consumer, new float[][] {{-s, -s, -0.01F, u0, v0 + 0.25F}, {s, -s, -0.01F, 1.0F, v0 + 0.25F}, {s, s, -0.01F, 1.0F, v0}, {-s, s, -0.01F, u0, v0}}, color);
+			// drawn twice: additive, so the white-hot core burns out to full brightness
+			for (int k = 0; k < 2; k++) {
+				float z = -0.01F - k * 0.004F;
+				quad(pose, consumer, new float[][] {{-s, -s, z, u0, v0 + 0.25F}, {s, -s, z, 1.0F, v0 + 0.25F}, {s, s, z, 1.0F, v0}, {-s, s, z, u0, v0}}, color);
+			}
 		});
 		poseStack.popPose();
 		// the brake's ports vent up and to the right
@@ -178,7 +188,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		poseStack.translate(0.0F, BORE_Y + 0.01F, MUZZLE_Z + 0.012F);
 		poseStack.scale(scale, scale, scale);
 		int jet = r.nextInt(4);
-		int jc = Mth.clamp((int) (bright * 200.0F), 0, 255);
+		int jc = Mth.clamp((int) (bright * 255.0F), 0, 255);
 		int jetColor = 0xFF000000 | jc << 16 | jc << 8 | jc;
 		collector.submitCustomGeometry(poseStack, FLASH_TYPE, (pose, consumer) -> {
 			sheet(pose, consumer, 0.0F, 0.0F, 0.03F, 0.025F, 0.075F, -0.015F, jet, jetColor);
