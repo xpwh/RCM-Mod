@@ -1,6 +1,12 @@
 package de.rcm.ballistic.client.render;
 
 import static de.rcm.ballistic.client.render.StructureKit.BLACK;
+import static de.rcm.ballistic.client.render.StructureKit.CABLE;
+import static de.rcm.ballistic.client.render.StructureKit.GRATING;
+import static de.rcm.ballistic.client.render.StructureKit.LAMP;
+import static de.rcm.ballistic.client.render.StructureKit.RED;
+import static de.rcm.ballistic.client.render.StructureKit.SOOT;
+import static de.rcm.ballistic.client.render.StructureKit.YELLOW;
 import static de.rcm.ballistic.client.render.StructureKit.CONCRETE;
 import static de.rcm.ballistic.client.render.StructureKit.CONCRETE_DARK;
 import static de.rcm.ballistic.client.render.StructureKit.DOOR;
@@ -15,6 +21,7 @@ import static de.rcm.ballistic.client.render.StructureKit.VENT;
 import static de.rcm.ballistic.client.render.StructureKit.v;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import de.rcm.ballistic.block.MissileSiloBlock;
 import de.rcm.ballistic.block.MissileSiloBlockEntity;
 import de.rcm.ballistic.block.SubmarineBlock;
 import de.rcm.ballistic.entity.MissileType;
@@ -34,8 +41,13 @@ import org.jspecify.annotations.Nullable;
 /**
  * Minuteman-style silo headworks on top of the hatch block: a raised concrete launcher closure
  * with sloped berms, a pair of armoured sliding doors on rails that roll aside before launch, the
- * dark shaft with the missile's nose cone inside, a security fence, warning beacons that flash during
- * the countdown, an antenna mast, a ventilation stack and the personnel access hatch.
+ * launch tube below with the missile standing on its floor, a security fence, warning beacons that
+ * flash during the countdown, an antenna mast, a ventilation stack and the personnel access hatch.
+ * <p>
+ * The tube ({@link MissileSiloBlock#digShaft dug into the ground} when the silo is placed) is fitted
+ * out like a Minuteman launch tube: a steel liner with stiffening rings, cable runs, folded-back
+ * work platforms, lamps every few metres, an umbilical to the missile and the shock-isolated launch
+ * platform it stands on.
  */
 public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity, SiloRenderer.State> {
 	/** Top of the hatch block = ground level. */
@@ -48,6 +60,11 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 	private static final BoxMesh HEADWORKS = buildHeadworks();
 	private static final BoxMesh[] DOORS = {buildDoor(-1.0F), buildDoor(1.0F)};
 	private static final BoxMesh BEACON_GLOW = buildBeaconGlow();
+	/** Floor of the tube in block space (the hatch block's bottom is 0). */
+	private static final float FLOOR = -MissileSiloBlock.SHAFT_DEPTH;
+	private static final float PLATFORM = FLOOR + 0.3F;
+	private static final BoxMesh TUBE = buildTube();
+	private static final BoxMesh TUBE_LAMPS = buildTubeLamps();
 
 	public SiloRenderer(BlockEntityRendererProvider.Context context) {
 	}
@@ -93,15 +110,20 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 		}
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> HEADWORKS.emit(pose, consumer, light));
 
-		// the missile waiting in the shaft: only its nose cone shows above the shaft floor
+		// the launch tube, lit by its own lamps
+		int tubeLight = LightTexture.pack(Math.max(LightTexture.block(light), 11), LightTexture.sky(light));
+		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> TUBE.emit(pose, consumer, tubeLight));
+		collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> TUBE_LAMPS.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+
+		// the missile standing on the launch platform at the bottom of the tube
 		MissileType missile = state.missile;
 		if (missile != null) {
 			MissileMesh mesh = MissileMesh.of(missile);
 			float s = missile.scale;
 			poseStack.pushPose();
-			poseStack.translate(0.0F, DECK - 0.15F - mesh.length() * s, 0.0F);
+			poseStack.translate(0.0F, PLATFORM, 0.0F);
 			poseStack.scale(s, s, s);
-			collector.submitCustomGeometry(poseStack, MissileRenderer.bodyType(missile), (pose, consumer) -> mesh.emit(pose, consumer, light));
+			collector.submitCustomGeometry(poseStack, MissileRenderer.bodyType(missile), (pose, consumer) -> mesh.emit(pose, consumer, tubeLight));
 			poseStack.popPose();
 		}
 
@@ -179,7 +201,6 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 		b.box(o - 0.08F, GROUND, -o, o, DECK, o, SHAFT);
 		b.box(-o, GROUND, -o, o, DECK, -o + 0.08F, SHAFT);
 		b.box(-o, GROUND, o - 0.08F, o, DECK, o, SHAFT);
-		b.box(-o, GROUND, -o, o, GROUND + 0.02F, o, BLACK);
 		// hazard rim around the opening
 		b.box(-o - 0.2F, DECK, -o - 0.2F, o + 0.2F, DECK + 0.015F, -o, HAZARD);
 		b.box(-o - 0.2F, DECK, o, o + 0.2F, DECK + 0.015F, o + 0.2F, HAZARD);
@@ -221,6 +242,68 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 		b.box(-3.15F, DECK + 0.25F, -3.15F, -2.45F, DECK + 0.3F, -2.45F, DOOR);
 		b.box(-1.0F, DECK, -3.4F, 0.4F, DECK + 0.9F, -2.6F, OLIVE);
 		b.box(-0.95F, DECK + 0.1F, -2.62F, -0.35F, DECK + 0.8F, -2.58F, PANEL);
+		return b.build();
+	}
+
+	/** The fittings of the launch tube (inside a 3x3 hole, walls at +-1.5). */
+	private static BoxMesh buildTube() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		float w = 1.5F;
+		float l = 0.06F;
+		// steel liner on the four walls
+		b.box(-w, FLOOR, -w, -w + l, GROUND, w, SHAFT);
+		b.box(w - l, FLOOR, -w, w, GROUND, w, SHAFT);
+		b.box(-w, FLOOR, -w, w, GROUND, -w + l, SHAFT);
+		b.box(-w, FLOOR, w - l, w, GROUND, w, SHAFT);
+		// stiffening rings every two metres
+		for (float y = FLOOR + 1.5F; y < GROUND - 0.5F; y += 2.0F) {
+			b.box(-w + l, y, -w + l, -w + 0.16F, y + 0.12F, w - l, STEEL);
+			b.box(w - 0.16F, y, -w + l, w - l, y + 0.12F, w - l, STEEL);
+			b.box(-w + l, y, -w + l, w - l, y + 0.12F, -w + 0.16F, STEEL);
+			b.box(-w + l, y, w - 0.16F, w - l, y + 0.12F, w - l, STEEL);
+		}
+		// cable runs down two corners and a ladder down a third
+		b.box(-w + l, FLOOR, -w + l, -w + 0.26F, GROUND, -w + 0.26F, CABLE);
+		b.box(w - 0.26F, FLOOR, -w + l, w - l, GROUND, -w + 0.26F, CABLE);
+		b.box(-w + 0.12F, FLOOR, w - 0.2F, -w + 0.18F, GROUND, w - 0.14F, STEEL);
+		b.box(-w + 0.52F, FLOOR, w - 0.2F, -w + 0.58F, GROUND, w - 0.14F, STEEL);
+		for (float y = FLOOR + 0.3F; y < GROUND; y += 0.3F) {
+			b.box(-w + 0.12F, y, w - 0.19F, -w + 0.58F, y + 0.04F, w - 0.15F, STEEL);
+		}
+		// work platforms folded back against the walls
+		for (float y : new float[] {FLOOR + 6.0F, FLOOR + 12.0F, FLOOR + 18.0F}) {
+			b.box(-w + l, y, -w + l, -w + 0.3F, y + 0.06F, w - l, GRATING);
+			b.box(w - 0.3F, y, -w + l, w - l, y + 0.06F, w - l, GRATING);
+			b.box(-w + 0.3F, y - 0.4F, 0.6F, -w + 0.34F, y + 0.7F, 0.66F, YELLOW); // folded railing
+			b.box(w - 0.34F, y - 0.4F, -0.66F, w - 0.3F, y + 0.7F, -0.6F, YELLOW);
+		}
+		// lamp housings
+		for (float y = FLOOR + 2.5F; y < GROUND - 1.0F; y += 4.0F) {
+			b.box(-w + l, y, -0.15F, -w + 0.14F, y + 0.3F, 0.15F, BLACK);
+			b.box(w - 0.14F, y + 2.0F, -0.15F, w - l, y + 2.3F, 0.15F, BLACK);
+		}
+		// umbilical from the wall to the missile's equipment section
+		b.beam(v(w - l, FLOOR + 7.5F, 0.4F), v(0.62F, FLOOR + 7.2F, 0.3F), 0.12F, 0.12F, CABLE);
+		b.box(w - 0.12F, FLOOR + 6.8F, 0.25F, w - l, FLOOR + 8.0F, 0.55F, PANEL);
+		// launch platform on shock isolators, over the gas generator's vent
+		b.box(-1.2F, FLOOR, -1.2F, 1.2F, FLOOR + 0.02F, 1.2F, SOOT);
+		b.box(-1.0F, FLOOR + 0.18F, -1.0F, 1.0F, PLATFORM, 1.0F, STEEL);
+		b.box(-0.7F, PLATFORM, -0.7F, 0.7F, PLATFORM + 0.02F, 0.7F, HAZARD);
+		for (float[] c : new float[][] {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}}) {
+			// suspension struts from the tube wall to the platform corners
+			b.beam(v(c[0] * (w - l), FLOOR + 2.4F, c[1] * (w - l)), v(c[0] * 0.95F, PLATFORM - 0.05F, c[1] * 0.95F), 0.1F, 0.1F, RED);
+			b.box(c[0] * 0.95F - 0.12F, FLOOR, c[1] * 0.95F - 0.12F, c[0] * 0.95F + 0.12F, FLOOR + 0.18F, c[1] * 0.95F + 0.12F, BLACK);
+		}
+		return b.build();
+	}
+
+	private static BoxMesh buildTubeLamps() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		float w = 1.5F;
+		for (float y = FLOOR + 2.5F; y < GROUND - 1.0F; y += 4.0F) {
+			b.box(-w + 0.14F, y + 0.05F, -0.11F, -w + 0.17F, y + 0.25F, 0.11F, LAMP);
+			b.box(w - 0.17F, y + 2.05F, -0.11F, w - 0.14F, y + 2.25F, 0.11F, LAMP);
+		}
 		return b.build();
 	}
 

@@ -48,6 +48,8 @@ public class MissileSiloBlockEntity extends BlockEntity {
 
 	/** Client: door travel, 0 = closed, 1 = fully open. */
 	public float doorOpen;
+	/** The launch tube has been dug under this silo. */
+	private boolean shaftDug;
 	public float doorOpenO;
 
 	public MissileSiloBlockEntity(BlockPos pos, BlockState state) {
@@ -147,6 +149,12 @@ public class MissileSiloBlockEntity extends BlockEntity {
 			return;
 		}
 		DefenseNetwork.register(level, pos, DefenseNetwork.Kind.SILO);
+		if (!silo.shaftDug && state.getBlock() instanceof MissileSiloBlock block && block.hasShaft()) {
+			// dig the launch tube the first time the silo ticks (also for silos built before it existed)
+			silo.shaftDug = true;
+			MissileSiloBlock.digShaft(level, pos);
+			silo.setChanged();
+		}
 		if (silo.hatchTimer > 0 && --silo.hatchTimer == 0 && !silo.counting) {
 			silo.setHatch(false);
 		}
@@ -199,7 +207,12 @@ public class MissileSiloBlockEntity extends BlockEntity {
 		if (entity == null || t == null) {
 			return;
 		}
-		entity.setPos(top.x, top.y - type.length - 0.3, top.z);
+		if (this.getBlockState().getBlock() instanceof SubmarineBlock) {
+			entity.setPos(top.x, top.y - type.length - 0.3, top.z);
+		} else {
+			// standing on the floor of the launch tube
+			entity.setPos(top.x, this.worldPosition.getY() - MissileSiloBlock.SHAFT_DEPTH + 0.3, top.z);
+		}
 		entity.startSiloLaunch(t, top);
 		level.addFreshEntity(entity);
 	}
@@ -262,6 +275,7 @@ public class MissileSiloBlockEntity extends BlockEntity {
 			output.putString("Missile", this.missile.id);
 		}
 		output.putBoolean("Counting", this.counting);
+		output.putBoolean("ShaftDug", this.shaftDug);
 		output.putInt("Age", this.age);
 		output.putInt("Hatch", this.hatchTimer);
 		if (this.target != null) {
@@ -274,6 +288,7 @@ public class MissileSiloBlockEntity extends BlockEntity {
 		super.loadAdditional(input);
 		this.missile = input.getString("Missile").map(MissileType::byId).orElse(null);
 		this.counting = input.getBooleanOr("Counting", false);
+		this.shaftDug = input.getBooleanOr("ShaftDug", false);
 		this.age = input.getIntOr("Age", 0);
 		this.hatchTimer = input.getIntOr("Hatch", 0);
 		this.target = input.read("Target", TargetData.CODEC).orElse(null);

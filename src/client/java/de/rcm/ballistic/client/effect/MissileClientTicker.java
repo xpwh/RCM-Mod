@@ -67,6 +67,16 @@ public final class MissileClientTicker {
 
 	private static void countdown(MissileEntity missile, float scale) {
 		int remaining = missile.getMissileType().countdownTicks - missile.clientStateAge;
+		if (onPad(missile) && missile.clientStateAge % 2 == 0) {
+			// liquid oxygen boiling off: a white plume from the sphere's vent stack, sinking as it drifts
+			double vx = missile.getX() - 9.5;
+			double vy = Math.floor(missile.getY()) + 7.4;
+			double vz = missile.getZ() - 8.5;
+			CloudParticle p = ClientEffects.cloud(false, vx, vy, vz, ClientEffects.gauss() * 0.02, 0.06, ClientEffects.gauss() * 0.02);
+			if (p != null) {
+				p.configure(120 + (int) (ClientEffects.rand() * 60), 0.5F, 3.5F, 0xFFFFFF, 0xEEF2F4, 0.55F).physics(0.95F, -0.002F).turbulence(0.015F);
+			}
+		}
 		// Cryogenic vapor venting from the side valves during the last seconds.
 		if (remaining < 100 && missile.clientStateAge % 2 == 0) {
 			double h = missile.getMissileType().length * 0.55;
@@ -223,6 +233,18 @@ public final class MissileClientTicker {
 			CloudParticle f = ClientEffects.cloud(true, x + 1.0 + ClientEffects.rand() * 2.5, y, z + ClientEffects.gauss() * 0.3, 1.2, 0.15, 0);
 			if (f != null) {
 				f.configure(10 + (int) (ClientEffects.rand() * 8), 1.0F * scale, 2.6F * scale, 0xFFE8B0, 0xFF6010, 0.95F).physics(0.85F, 0.0F);
+			}
+		}
+		// rainbirds: the two water cannons on the deck hosing the table
+		for (int side = -1; side <= 1; side += 2) {
+			double nx = x + 1.7;
+			double nz = z + side * 2.4;
+			for (int i = 0; i < 3; i++) {
+				ClientEffects.vanilla(ParticleTypes.SPLASH, nx, y + 0.8, nz, -0.45 + ClientEffects.gauss() * 0.05, 0.25, -side * 0.55 + ClientEffects.gauss() * 0.05);
+			}
+			CloudParticle w = ClientEffects.cloud(false, nx, y + 0.8, nz, -0.3, 0.12, -side * 0.38);
+			if (w != null) {
+				w.configure(25 + (int) (ClientEffects.rand() * 15), 0.4F * scale, 2.0F * scale, 0xFFFFFF, 0xDDE6EA, 0.7F).physics(0.92F, -0.02F);
 			}
 		}
 		// deluge: water gushing from the ring nozzles, flashing to steam around the table

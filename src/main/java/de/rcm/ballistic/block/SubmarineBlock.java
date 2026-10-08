@@ -29,6 +29,11 @@ public class SubmarineBlock extends MissileSiloBlock {
 	}
 
 	@Override
+	public boolean hasShaft() {
+		return false;
+	}
+
+	@Override
 	public BlockState getStateForPlacement(BlockPlaceContext context) {
 		return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection());
 	}
