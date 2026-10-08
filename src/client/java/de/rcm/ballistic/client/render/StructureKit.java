@@ -59,6 +59,12 @@ final class StructureKit {
 	static final int ABLATIVE = 42;
 	static final int SHELTER = 43;
 	static final int AK_MAG = 44;
+	static final int AK_BLUED = 45;
+	static final int AK_LAMINATE = 46;
+	static final int AK_GRIP = 47;
+	static final int BRASS = 48;
+	static final int AK_BRIGHT = 49;
+	static final int AK_WORN = 50;
 
 	private StructureKit() {
 	}

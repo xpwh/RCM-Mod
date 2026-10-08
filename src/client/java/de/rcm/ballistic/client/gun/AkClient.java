@@ -43,6 +43,10 @@ public final class AkClient {
 
 	/** Local recoil state, for the first-person animation. */
 	static long lastShotTick = -100;
+
+	public static long lastShotTick() {
+		return lastShotTick;
+	}
 	static float lastShotPartial;
 	static int burst;
 

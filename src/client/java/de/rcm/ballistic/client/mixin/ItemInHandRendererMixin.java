@@ -2,18 +2,22 @@ package de.rcm.ballistic.client.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import de.rcm.ballistic.ModRegistry;
+import de.rcm.ballistic.client.gun.AkArms;
+import de.rcm.ballistic.client.gun.AkFirstPerson;
 import de.rcm.ballistic.client.item.RpgClient;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
+import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Recoil and reload animation of the RPG-7 in first person. */
+/** First-person recoil and reload animation of the RPG-7 and the AK, and the arms holding the AK. */
 @Mixin(ItemInHandRenderer.class)
 public abstract class ItemInHandRendererMixin {
 	@Inject(
@@ -28,7 +32,11 @@ public abstract class ItemInHandRendererMixin {
 		if (stack.is(ModRegistry.ROCKET_LAUNCHER)) {
 			RpgClient.transform(poseStack, partialTick);
 		} else if (stack.is(ModRegistry.AK47)) {
-			de.rcm.ballistic.client.gun.AkFirstPerson.transform(poseStack, partialTick, stack);
+			Matrix4f base = new Matrix4f(poseStack.last().pose());
+			AkFirstPerson.transform(poseStack, partialTick, stack);
+			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
+				AkArms.render(player, stack, base, poseStack, collector, light, partialTick);
+			}
 		}
 	}
 }

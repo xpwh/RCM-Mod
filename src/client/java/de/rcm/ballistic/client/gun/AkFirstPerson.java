@@ -42,14 +42,14 @@ public final class AkFirstPerson {
 			int duration = state.reloadKind() == GunState.EMPTY ? AkItem.RELOAD_EMPTY : AkItem.RELOAD_TACTICAL;
 			float tilt = smooth(r / 9.0F) * (1.0F - smooth((r - (duration - 9)) / 9.0F));
 			// the slap of the new magazine going home
-			float slap = r > AkItem.T_MAG_IN - 1 && r < AkItem.T_MAG_IN + 4 ? Mth.sin((r - (AkItem.T_MAG_IN - 1)) / 5.0F * Mth.PI) : 0.0F;
+			float slap = r > AkItem.T_MAG_IN + 2 && r < AkItem.T_MAG_IN + 7 ? Mth.sin((r - (AkItem.T_MAG_IN + 2)) / 5.0F * Mth.PI) : 0.0F;
 			// racking the handle: the rifle is turned right to bring the handle under your hand
 			float rack = 0.0F;
 			if (state.reloadKind() == GunState.EMPTY) {
-				rack = smooth((r - (AkItem.T_CHARGE - 12)) / 6.0F) * (1.0F - smooth((r - (AkItem.T_CHARGE + 2)) / 8.0F));
+				rack = smooth((r - (AkItem.T_CHARGE - 12)) / 8.0F) * (1.0F - smooth((r - (AkItem.T_CHARGE + 6)) / 8.0F));
 			}
 			poseStack.translate(-0.06F * tilt, -0.12F * tilt + 0.02F * slap, 0.05F * tilt);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(28.0F * tilt - 45.0F * rack));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(28.0F * tilt - 40.0F * rack));
 			poseStack.mulPose(Axis.XP.rotationDegrees(-14.0F * tilt + 4.0F * slap));
 			poseStack.mulPose(Axis.YP.rotationDegrees(10.0F * tilt - 12.0F * rack));
 		}
