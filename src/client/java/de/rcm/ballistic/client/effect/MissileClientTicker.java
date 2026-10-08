@@ -204,6 +204,9 @@ public final class MissileClientTicker {
 		if (age == 0) {
 			ClientEffects.addShake((float) Math.max(0.0, 1.6 - mc.gameRenderer.getMainCamera().position().distanceTo(top) / 60.0));
 		}
+		// the gas generator's cloud boils out of the shaft and hangs over the silo
+		SmokeField.burst(new Vec3(top.x, top.y + 1.0, top.z), age < 6 ? 5 : 2, 1.5 * scale, new Vec3(0, 0.25, 0), 0.6, 2000,
+			1.8F * scale, 10.0F * scale, 0xF2F0EC, 0.8F, 0.002F);
 	}
 
 	/** True when the missile stands (or stood) on a launch pad, whose flame trench points along +X. */
@@ -217,6 +220,11 @@ public final class MissileClientTicker {
 	 * into a wall of steam, is blasted down the flame trench and thrown up by the deflector at its end.
 	 */
 	private static void padIgnition(double x, double y, double z, int age, float scale) {
+		// the steam and smoke blasted down the trench and up off the deflector hang about for minutes
+		if (age % 2 == 0) {
+			SmokeField.burst(new Vec3(x + 4.0, y + 0.5, z), 2, 2.0 * scale, new Vec3(0.8, 0.12, 0), 0.6, 2200,
+				2.0F * scale, 12.0F * scale, 0xF4F4F2, 0.8F, 0.003F);
+		}
 		int plume = 5 + Math.min(14, age / 2);
 		for (int i = 0; i < plume; i++) {
 			double speed = 1.1 + ClientEffects.rand() * 1.1;
@@ -302,19 +310,9 @@ public final class MissileClientTicker {
 		missile.lastNozzlePos = nozzle;
 		double speed = nozzle.distanceTo(prev);
 
+		SmokeField.trail(missile.getId() * 4 + 1, nozzle.subtract(dir.scale(1.0 + MissileMesh.CRUISE_BOOSTER_LENGTH)),
+			SmokeField.Style.smallRocket(1.0F), missile.isBoosterBurning() ? 1.0F : 0.0F);
 		if (missile.isBoosterBurning()) {
-			int puffs = Mth.clamp((int) (speed / 0.7), 2, 10);
-			for (int i = 0; i < puffs; i++) {
-				double f = ClientEffects.rand();
-				Vec3 p = prev.lerp(nozzle, f).subtract(dir.scale(1.0 + MissileMesh.CRUISE_BOOSTER_LENGTH));
-				CloudParticle c = ClientEffects.cloud(false, p.x, p.y, p.z, -dir.x * 0.1 + ClientEffects.gauss() * 0.02, -dir.y * 0.1, -dir.z * 0.1 + ClientEffects.gauss() * 0.02);
-				if (c != null) {
-					c.configure(200 + (int) (ClientEffects.rand() * 100), 1.0F, 4.5F, 0xF4F1EC, 0xB8B4AE, 0.85F)
-						.physics(0.9F, 0.0015F)
-						.shade(0.82F + ClientEffects.rand() * 0.22F)
-						.turbulence(0.02F);
-				}
-			}
 			Vec3 b = nozzle.subtract(dir.scale(MissileMesh.CRUISE_BOOSTER_LENGTH + 0.3));
 			nozzleFire(b.x, b.y, b.z, dir, scale, 3);
 		} else {
@@ -389,30 +387,10 @@ public final class MissileClientTicker {
 		missile.lastNozzlePos = nozzle;
 
 		double speed = path.velocity(age).length();
-		int puffs = Mth.clamp((int) (speed / 0.9), 2, 16);
-		for (int i = 0; i < puffs; i++) {
-			double f = ClientEffects.rand();
-			double px = Mth.lerp(f, prev.x, nozzle.x) - dir.x * 1.5;
-			double py = Mth.lerp(f, prev.y, nozzle.y) - dir.y * 1.5;
-			double pz = Mth.lerp(f, prev.z, nozzle.z) - dir.z * 1.5;
-			double sx = ClientEffects.gauss() * 0.35;
-			double sz = ClientEffects.gauss() * 0.35;
-			CloudParticle p = ClientEffects.cloud(false, px + sx, py, pz + sz, -dir.x * 0.15 + sx * 0.04, -dir.y * 0.15, -dir.z * 0.15 + sz * 0.04);
-			if (p != null) {
-				p.configure(240 + (int) (ClientEffects.rand() * 140), 1.4F * scale, 6.0F * scale, 0xF4F1EC, 0xB8B4AE, 0.85F)
-					.physics(0.9F, 0.0015F)
-					.shade(0.82F + ClientEffects.rand() * 0.22F);
-			}
-			if (i % 2 == 0) {
-				// thin outer sheath that spreads wider and lingers
-				CloudParticle o = ClientEffects.cloud(false, px, py, pz, ClientEffects.gauss() * 0.06, -dir.y * 0.08, ClientEffects.gauss() * 0.06);
-				if (o != null) {
-					o.configure(320 + (int) (ClientEffects.rand() * 160), 2.5F * scale, 10.0F * scale, 0xE6E3DE, 0xA8A49E, 0.38F)
-						.physics(0.94F, 0.0008F)
-						.shade(0.75F + ClientEffects.rand() * 0.2F);
-				}
-			}
-		}
+		// the exhaust trail: a thick, billowing column that hangs in the air for minutes, kinks and
+		// spreads in the wind; high up it turns into the contrail instead
+		float exhaust = missile.isBoosterBurning() ? (float) (1.0 - 0.75 * Contrails.altitudeFactor(nozzle.y)) : 0.0F;
+		SmokeField.trail(missile.getId() * 4 + 1, nozzle.subtract(dir.scale(1.5)), SmokeField.Style.exhaust(scale), exhaust);
 		nozzleFire(nozzle.x, nozzle.y, nozzle.z, dir, scale, 3);
 		// high up the exhaust trail freezes into a contrail that hangs in the sky and twists in the wind
 		Contrails.trail(missile.getId() * 4, nozzle.subtract(dir.scale(1.5)), 2.2 * scale,
@@ -459,14 +437,9 @@ public final class MissileClientTicker {
 					}
 				}
 			}
-			for (int i = 0; i < (onPad(missile) ? 3 : 8); i++) {
-				double a = ClientEffects.rand() * Mth.TWO_PI;
-				double sp = 0.6 + ClientEffects.rand() * 0.8;
-				CloudParticle p = ClientEffects.cloud(false, pad.x, pad.y + 0.5, pad.z, Math.cos(a) * sp, 0.05, Math.sin(a) * sp);
-				if (p != null) {
-					p.configure(180, 2.2F * scale, 9.0F * scale, 0xDCD8D2, 0xA4A09A, 0.85F).physics(0.93F, 0.004F).shade(0.72F + ClientEffects.rand() * 0.3F);
-				}
-			}
+			// the launch cloud: rolls out over the ground and hangs over the site for minutes
+			SmokeField.burst(new Vec3(pad.x, pad.y + 0.8, pad.z), onPad(missile) ? 2 : 4, 2.5 * scale, Vec3.ZERO, 0.9, 2400,
+				2.5F * scale, 13.0F * scale, 0xE2DED8, 0.82F, 0.0015F);
 			ClientEffects.addShake((float) Math.max(0.0, 0.5 - mc.gameRenderer.getMainCamera().position().distanceTo(pad) / 200.0));
 		}
 
@@ -495,14 +468,8 @@ public final class MissileClientTicker {
 					ClientEffects.canisterLaunch(pos.subtract(dir.scale(flown)), dir, interceptor.getLauncher());
 				}
 			}
-			for (int i = 0; i < 3; i++) {
-				double back = 0.4 + ClientEffects.rand() * 3.0;
-				CloudParticle p = ClientEffects.cloud(false, pos.x - dir.x * back, pos.y - dir.y * back, pos.z - dir.z * back,
-					ClientEffects.gauss() * 0.02, 0.0, ClientEffects.gauss() * 0.02);
-				if (p != null) {
-					p.configure(110 + (int) (ClientEffects.rand() * 60), 0.5F, 2.6F, 0xF4F2EE, 0xB4B0AA, 0.75F).physics(0.92F, 0.001F).turbulence(0.01F);
-				}
-			}
+			// the interceptor's motor trail: a thin white column that hangs where it climbed
+			SmokeField.trail(entity.getId() * 4 + 1, pos.subtract(dir.scale(0.8)), SmokeField.Style.smallRocket(0.6F), 1.0F);
 			nozzleFire(pos.x, pos.y, pos.z, dir, 0.3F, 2);
 			Contrails.trail(entity.getId() * 4, pos.subtract(dir.scale(0.8)), 1.0, Contrails.altitudeFactor(pos.y));
 		} else if (entity instanceof ReentryVehicleEntity) {

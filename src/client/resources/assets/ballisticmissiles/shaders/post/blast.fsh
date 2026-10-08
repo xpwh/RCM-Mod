@@ -8,7 +8,8 @@
 //  * exposure flash in the colour of the blast, bloom on everything hot
 //  * shell shock afterwards: washed-out colours, soft focus, tunnel vision while the ears ring
 //  * per weapon: nuclear bleach, antimatter violet negative flash, EMP signal glitches
-//  * giant blasts: the earthquake rolling the picture, water running down the lens after the tsunami's spray,
+//  * giant blasts: the earthquake rolling the picture, water running down the lens
+//  * standing inside thick smoke: the view fades into swirling grey after the tsunami's spray,
 //    and the negative afterimage a nuclear flash burns into the eye
 // Expensive parts only run while they are visible; idle the shader is not even active.
 
@@ -53,6 +54,7 @@ void main() {
     vec4 p2 = param(2);
     vec4 p3 = param(3);
     vec4 p4 = param(4);
+    vec4 p5 = param(5);
     vec4 p6 = param(6);
     float strength = p0.r;   // shock hitting the camera
     float exposure = p0.g;   // flash
@@ -62,6 +64,8 @@ void main() {
     float drench = p4.a;         // water on the lens
     vec2 afterPos = p6.rg;
     float afterimage = p6.b;
+    float smoke = p5.a;          // standing inside dense smoke
+    vec3 smokeCol = p5.rgb;
     float time = (p1.r + p1.g * 256.0) * 255.0 / 100.0;
     float heat = p1.b;
     float rays = p1.a;       // fireball light streaming out
@@ -192,6 +196,17 @@ void main() {
             thick = 0.5;
         }
         col = mix(col, dustCol * (0.7 + 0.5 * luma(col)), dust * thick * drift);
+    }
+
+    // ---- inside a smoke cloud: the world fades into the billowing grey, swirling past
+    if (smoke > 0.0) {
+        float swirl = noise(uv * vec2(4.0, 6.0) + vec2(time * 0.21, time * 0.13)) * 0.55
+            + noise(uv * vec2(11.0, 9.0) - vec2(time * 0.37, time * 0.05)) * 0.45;
+        vec3 soft = (texture(InSampler, uv + vec2(0.004, 0.0)).rgb + texture(InSampler, uv - vec2(0.004, 0.0)).rgb
+            + texture(InSampler, uv + vec2(0.0, 0.005)).rgb + texture(InSampler, uv - vec2(0.0, 0.005)).rgb) * 0.25;
+        col = mix(col, soft, 0.5 * smoke);
+        float thick = clamp(smoke * (0.75 + 0.5 * swirl), 0.0, 0.97);
+        col = mix(col, smokeCol * (0.8 + 0.4 * swirl), thick);
     }
 
     // ---- water on the lens: a cool, smeared look inside the drops

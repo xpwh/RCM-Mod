@@ -552,6 +552,9 @@ public final class ClientEffects {
 			}
 		}
 		groundRing(mc, rear, 2.0, 20, 3.5F * size, 0.5, 0xB8A890);
+		// what stays: the motor smoke over the launcher and the back-blast dust behind it, for minutes
+		SmokeField.burst(mouth.add(dir.scale(2.0)), 6, 1.5 * size, dir.scale(0.3), 0.4, 1500, 1.2F * size, 7.0F * size, 0xEEECE8, 0.8F, 0.002F);
+		SmokeField.burst(rear, 5, 1.2 * size, dir.scale(-0.4), 0.5, 1200, 1.2F * size, 6.0F * size, 0xC8BCA8, 0.7F, 0.001F);
 	}
 
 	// ------------------------------------------------------------------ conventional blast

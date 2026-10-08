@@ -145,10 +145,9 @@ public class KineticRodEntity extends Entity {
 				if (i % 2 == 0) {
 					level.addParticle(ParticleTypes.CLOUD, p.x, p.y, p.z, 0, 0.02, 0);
 				}
-				if (heat > 0.3F && i % 3 == 0) {
-					// a lasting column of smoke where it tore through the air
-					level.addParticle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, p.x, p.y, p.z, 0, 0.01, 0);
-					level.addParticle(ParticleTypes.LARGE_SMOKE, p.x, p.y, p.z, 0, 0.0, 0);
+				if (i == 0) {
+					// a lasting column of smoke and vapour where it tore through the air
+					de.rcm.ballistic.ClientHooks.smokeTrail.emit(this.getId(), p, 1.1F, heat);
 				}
 			} else if (i % 4 == 0) {
 				level.addParticle(ParticleTypes.FIREWORK, p.x, p.y, p.z, 0, 0, 0);

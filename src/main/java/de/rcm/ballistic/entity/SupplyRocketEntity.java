@@ -81,14 +81,16 @@ public class SupplyRocketEntity extends Entity {
 				level.addParticle(ParticleTypes.CLOUD, pos.x, pos.y - Math.min(t * 0.1, 3.0), pos.z, Math.cos(a) * s, 0.02, Math.sin(a) * s);
 			}
 			level.addParticle(ParticleTypes.LARGE_SMOKE, pos.x, pos.y, pos.z, 0, 0.05, 0);
+			if (t % 3 == 0) {
+				de.rcm.ballistic.ClientHooks.smokeCloud.emit(pos.subtract(0, Math.min(t * 0.1, 3.0), 0), new Vec3(0, 0.02, 0), 3, 2.2F);
+			}
 		}
+		de.rcm.ballistic.ClientHooks.smokeTrail.emit(this.getId(), pos.subtract(dir.scale(0.4)), 0.9F, 1.0F);
 		int steps = Math.max(1, (int) Math.ceil(vel.length() / 0.8));
 		for (int i = 0; i < steps; i++) {
 			Vec3 p = pos.subtract(vel.scale((double) i / steps)).subtract(dir.scale(0.4));
 			level.addParticle(ParticleTypes.FLAME, p.x, p.y, p.z, -dir.x * 0.2, -dir.y * 0.2, -dir.z * 0.2);
-			if (i % 2 == 0) {
-				level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, p.x, p.y, p.z, 0, 0.0, 0);
-			}
+
 		}
 	}
 

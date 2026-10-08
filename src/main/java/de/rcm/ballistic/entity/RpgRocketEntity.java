@@ -142,16 +142,22 @@ public class RpgRocketEntity extends Entity {
 		Level level = this.level();
 		Vec3 dir = vel.lengthSqr() > 1.0E-6 ? vel.normalize() : new Vec3(0, 0, 1);
 		Vec3 tail = pos.subtract(dir.scale(0.7));
+		if (this.tickCount == 1) {
+			// the launch: a cloud from the muzzle, and the back-blast roaring out behind the shooter
+			Vec3 launcher = pos.subtract(dir.scale(1.1));
+			de.rcm.ballistic.ClientHooks.smokeCloud.emit(launcher, dir.scale(0.15), 4, 0.9F);
+			de.rcm.ballistic.ClientHooks.smokeCloud.emit(launcher.subtract(dir.scale(2.4)), dir.scale(-0.6), 10, 1.4F);
+		}
 		if (this.tickCount < SUSTAINER_IGNITION) {
 			// only a thin wisp from the booster that burnt out in the tube
 			level.addParticle(ParticleTypes.SMOKE, tail.x, tail.y, tail.z, 0, 0.01, 0);
 			return;
 		}
+		de.rcm.ballistic.ClientHooks.smokeTrail.emit(this.getId(), tail, 0.32F, this.sustainerBurning() ? 1.0F : 0.0F);
 		if (this.sustainerBurning()) {
 			int steps = 4;
 			for (int i = 0; i < steps; i++) {
 				Vec3 p = tail.subtract(vel.scale((double) i / steps));
-				level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, p.x, p.y, p.z, -dir.x * 0.02, 0.012, -dir.z * 0.02);
 				if (i < 2) {
 					level.addParticle(ParticleTypes.FLAME, p.x, p.y, p.z, -dir.x * 0.08, -dir.y * 0.08, -dir.z * 0.08);
 				}

@@ -121,7 +121,7 @@ public final class BlastShader {
 			return;
 		}
 		boolean wanted = mc.level != null && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
-			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F);
+			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F);
 		if (!wanted) {
 			if (ours) {
 				renderer.clearPostEffect();
@@ -172,7 +172,7 @@ public final class BlastShader {
 		img.setPixel(2, 0, byteOf(WinterClient.amount()) << 24 | (tint & 0xFFFFFF)); // alpha: nuclear winter
 		img.setPixel(3, 0, argb(byteOf(dust), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
 		img.setPixel(4, 0, argb(byteOf(drench), 0.0F, 0.0F, quake));
-		img.setPixel(5, 0, 0);
+		img.setPixel(5, 0, byteOf(SmokeField.fog()) << 24 | (SmokeField.fogColor() & 0xFFFFFF)); // standing in thick smoke
 		img.setPixel(6, 0, argb(255, afterX, afterY, afterimage));
 		img.setPixel(7, 0, 0);
 		params.upload();

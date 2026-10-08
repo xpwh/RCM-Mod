@@ -111,6 +111,9 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientEffects.clear());
 		ClientTickEvents.END_CLIENT_TICK.register(ClientEffects::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.Contrails::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.SmokeField::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.SmokeField.clear());
+		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_ENTITIES.register(de.rcm.ballistic.client.effect.SmokeField::render);
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.FalloutPayload.TYPE,
 			(payload, context) -> de.rcm.ballistic.client.effect.FalloutClient.receive(payload));
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.FalloutClient::tick);
@@ -132,6 +135,10 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientHooks.missileClientTick = MissileClientTicker::tick;
 		ClientHooks.projectileClientTick = MissileClientTicker::projectileTick;
 		ClientHooks.jetClientTick = JetClientTicker::tick;
+		ClientHooks.smokeTrail = (key, at, width, strength) ->
+			de.rcm.ballistic.client.effect.SmokeField.trail(key * 4 + 2, at, de.rcm.ballistic.client.effect.SmokeField.Style.smallRocket(width), strength);
+		ClientHooks.smokeCloud = (at, drift, puffs, size) ->
+			de.rcm.ballistic.client.effect.SmokeField.burst(at, puffs, size * 0.8, drift, 0.35, 1500, size * 0.5F, size * 3.2F, 0xE4E0DA, 0.8F, 0.0015F);
 		ClientHooks.bombClientTick = bomb -> {
 			// every third bomb of a stick (and always the MOAB) whistles on the way down
 			if (bomb.tickCount == 1 && (bomb.isMoab() || bomb.getId() % 3 == 0)) {

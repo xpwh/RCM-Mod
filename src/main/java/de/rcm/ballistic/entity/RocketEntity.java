@@ -116,10 +116,7 @@ public class RocketEntity extends Entity implements de.rcm.ballistic.defense.Air
 		} else {
 			// smoke trail and motor flame
 			Vec3 back = vel.lengthSqr() > 1.0E-6 ? vel.normalize().scale(-0.8) : Vec3.ZERO;
-			for (int i = 0; i < 3; i++) {
-				Vec3 p = pos.add(vel.scale(-i / 3.0)).add(back);
-				this.level().addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, p.x, p.y, p.z, 0, 0.01, 0);
-			}
+			de.rcm.ballistic.ClientHooks.smokeTrail.emit(this.getId(), pos.add(back), this.getKind() == Kind.HYDRA ? 0.35F : 0.45F, 1.0F);
 			this.level().addParticle(ParticleTypes.FLAME, pos.x + back.x, pos.y + back.y, pos.z + back.z, 0, 0, 0);
 		}
 		this.setDeltaMovement(vel);
