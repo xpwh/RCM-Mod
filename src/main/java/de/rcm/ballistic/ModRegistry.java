@@ -244,6 +244,41 @@ public final class ModRegistry {
 			.noOcclusion()
 	);
 
+	// ---------- Wasteland: what blasts, fireballs and fallout leave behind ----------
+	public static final Block SCORCHED_EARTH = registerBlock(
+		"scorched_earth", Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(0.6F).sound(SoundType.GRAVEL)
+	);
+	public static final Block SMOLDERING_EARTH = registerBlock(
+		"smoldering_earth", de.rcm.ballistic.block.SmolderingBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(0.6F).sound(SoundType.GRAVEL)
+			.lightLevel(de.rcm.ballistic.block.SmolderingBlock::light).emissiveRendering((s, l, p) -> true)
+	);
+	public static final Block CHARRED_LOG = registerBlock(
+		"charred_log", net.minecraft.world.level.block.RotatedPillarBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(1.2F).sound(SoundType.WOOD).ignitedByLava()
+	);
+	public static final Block CRATER_GLASS = registerBlock(
+		"crater_glass", Block::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(6.0F, 40.0F).sound(SoundType.GLASS).requiresCorrectToolForDrops()
+	);
+	public static final Block MOLTEN_ROCK = registerBlock(
+		"molten_rock", de.rcm.ballistic.block.MoltenRockBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(3.0F, 20.0F).sound(SoundType.BASALT).requiresCorrectToolForDrops()
+			.lightLevel(s -> 12).emissiveRendering((s, l, p) -> true).isValidSpawn((s, l, p, e) -> false)
+	);
+	public static final Block TRINITITE = registerBlock(
+		"trinitite", Block::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GREEN).strength(1.5F, 6.0F).sound(SoundType.GLASS).requiresCorrectToolForDrops()
+	);
+	public static final Block FALLOUT = registerBlock(
+		"fallout", props -> new de.rcm.ballistic.block.DustLayerBlock(true, props),
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.1F).sound(SoundType.SAND).replaceable().pushReaction(PushReaction.DESTROY)
+	);
+	public static final Block ASH = registerBlock(
+		"ash", props -> new de.rcm.ballistic.block.DustLayerBlock(false, props),
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(0.1F).sound(SoundType.SAND).replaceable().pushReaction(PushReaction.DESTROY)
+	);
+
 	public static final BlockEntityType<LaunchPadBlockEntity> LAUNCH_PAD_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("launch_pad"), FabricBlockEntityTypeBuilder.create(LaunchPadBlockEntity::new, LAUNCH_PAD).build()
 	);
@@ -324,6 +359,17 @@ public final class ModRegistry {
 	public static final Item BLAST_DOOR_ITEM = registerItem(
 		"blast_door", props -> new DoubleHighBlockItem(BLAST_DOOR, props), new Item.Properties().useBlockDescriptionPrefix()
 	);
+
+	public static final Item SCORCHED_EARTH_ITEM = registerItem("scorched_earth", props -> new BlockItem(SCORCHED_EARTH, props), new Item.Properties().useBlockDescriptionPrefix());
+	public static final Item SMOLDERING_EARTH_ITEM = registerItem("smoldering_earth", props -> new BlockItem(SMOLDERING_EARTH, props), new Item.Properties().useBlockDescriptionPrefix());
+	public static final Item CHARRED_LOG_ITEM = registerItem("charred_log", props -> new BlockItem(CHARRED_LOG, props), new Item.Properties().useBlockDescriptionPrefix());
+	public static final Item CRATER_GLASS_ITEM = registerItem("crater_glass", props -> new BlockItem(CRATER_GLASS, props), new Item.Properties().useBlockDescriptionPrefix());
+	public static final Item MOLTEN_ROCK_ITEM = registerItem("molten_rock", props -> new BlockItem(MOLTEN_ROCK, props), new Item.Properties().useBlockDescriptionPrefix());
+	public static final Item TRINITITE_ITEM = registerItem(
+		"trinitite", props -> new BlockItem(TRINITITE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.UNCOMMON)
+	);
+	public static final Item FALLOUT_ITEM = registerItem("fallout", props -> new BlockItem(FALLOUT, props), new Item.Properties().useBlockDescriptionPrefix());
+	public static final Item ASH_ITEM = registerItem("ash", props -> new BlockItem(ASH, props), new Item.Properties().useBlockDescriptionPrefix());
 
 	public static final ArmorMaterial HAZMAT_MATERIAL = new ArmorMaterial(
 		15, Map.of(ArmorType.HELMET, 1, ArmorType.CHESTPLATE, 3, ArmorType.LEGGINGS, 2, ArmorType.BOOTS, 1, ArmorType.BODY, 3), 9,
@@ -433,6 +479,14 @@ public final class ModRegistry {
 				output.accept(REINFORCED_CONCRETE_ITEM);
 				output.accept(BLAST_DOOR_ITEM);
 				output.accept(SEA_MINE_ITEM);
+				output.accept(SCORCHED_EARTH_ITEM);
+				output.accept(SMOLDERING_EARTH_ITEM);
+				output.accept(CHARRED_LOG_ITEM);
+				output.accept(ASH_ITEM);
+				output.accept(CRATER_GLASS_ITEM);
+				output.accept(MOLTEN_ROCK_ITEM);
+				output.accept(TRINITITE_ITEM);
+				output.accept(FALLOUT_ITEM);
 				for (MissileType type : MissileType.values()) {
 					output.accept(missileItem(type));
 				}

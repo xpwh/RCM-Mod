@@ -72,7 +72,7 @@
 	"entity.ballisticmissiles.interceptor": "Interceptor",
 	"tooltip.ballisticmissiles.hypersonic_missile": "Flat hypersonic flight in a plasma sheath – nearly impossible to intercept",
 	"tooltip.ballisticmissiles.mirv_missile": "☢ 5 independent nuclear warheads in a cross pattern around the target",
-	"tooltip.ballisticmissiles.geiger": "Hold it: measures radiation (µSv/h)",
+	"tooltip.ballisticmissiles.geiger": "Hold it: measures radiation (µSv/h) - fallout and trinitite on the ground too",
 	"message.ballisticmissiles.radar": "RADAR: %s missile(s) inbound – %s, %s blocks, impact in %s s",
 	"subtitles.ballisticmissiles.ringing": "Ears ringing",
 	"subtitles.ballisticmissiles.sonic_boom": "Sonic boom",
@@ -288,5 +288,14 @@
 	"message.ballisticmissiles.jammer_on": "⚡ Jammer ON – missiles aimed within %s blocks lose their GPS fix",
 	"message.ballisticmissiles.jammer_off": "Jammer off",
 	"message.ballisticmissiles.jammer_deflect": "JAMMER: %s lost its GPS fix and goes off course!",
-	"subtitles.ballisticmissiles.laser": "Laser burns"
+	"subtitles.ballisticmissiles.laser": "Laser burns",
+	"block.ballisticmissiles.scorched_earth": "Scorched Earth",
+	"block.ballisticmissiles.smoldering_earth": "Smoldering Embers",
+	"block.ballisticmissiles.charred_log": "Charred Log",
+	"block.ballisticmissiles.crater_glass": "Crater Glass",
+	"block.ballisticmissiles.molten_rock": "Molten Rock",
+	"block.ballisticmissiles.trinitite": "Trinitite",
+	"block.ballisticmissiles.fallout": "Radioactive Fallout",
+	"block.ballisticmissiles.ash": "Ash",
+	"message.ballisticmissiles.fallout_warning": "☢ Radioactive fallout! Get out from downwind or put on a radiation suit!"
 }

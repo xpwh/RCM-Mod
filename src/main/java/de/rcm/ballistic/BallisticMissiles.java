@@ -26,6 +26,8 @@ public class BallisticMissiles implements ModInitializer {
 	public void onInitialize() {
 		ModRegistry.init();
 		ModNetworking.init();
+		// charred wood still burns, just not as eagerly as fresh logs
+		net.fabricmc.fabric.api.registry.FlammableBlockRegistry.getDefaultInstance().add(ModRegistry.CHARRED_LOG, 3, 4);
 		ServerTickEvents.END_WORLD_TICK.register(DetonationManager::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RemoteLaunch::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RadiationManager::tick);
@@ -36,6 +38,10 @@ public class BallisticMissiles implements ModInitializer {
 			}
 		});
 		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
+		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
+			(handler, sender, server) -> RadiationManager.sync(handler.player.level(), handler.player));
+		net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
+			(player, origin, destination) -> RadiationManager.sync(destination, player));
 		ServerLifecycleEvents.SERVER_STOPPING.register(RadiationManager::save);
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ThreatTracker.clear();

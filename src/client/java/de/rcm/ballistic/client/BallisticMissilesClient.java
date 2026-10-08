@@ -99,6 +99,11 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FarTrackClient.clear());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientEffects.clear());
 		ClientTickEvents.END_CLIENT_TICK.register(ClientEffects::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.Contrails::tick);
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.FalloutPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.FalloutClient.receive(payload));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.FalloutClient::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FalloutClient.clear());
 		ClientTickEvents.END_CLIENT_TICK.register(BallisticMissilesClient::debrisTrails);
 
 		HudElementRegistry.addLast(BallisticMissiles.id("flash"), (graphics, tickCounter) -> {

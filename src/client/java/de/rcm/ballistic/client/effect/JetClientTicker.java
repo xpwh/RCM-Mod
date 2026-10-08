@@ -43,8 +43,14 @@ public final class JetClientTicker {
 					.physics(0.95F, 0.0F);
 			}
 		}
-		// wingtip vortices while pulling hard (banked turns, the climb-out)
+		// condensation trails high up: one per engine pair, merging and spreading behind the aircraft
 		boolean jetAircraft = type == JetType.STRIKE || type == JetType.WARTHOG || type == JetType.SPIRIT;
+		double contrail = jetAircraft ? Contrails.altitudeFactor(center.y) : 0.0;
+		for (int s = -1; s <= 1; s += 2) {
+			Vec3 tail = center.subtract(dir.scale(tailBack + 1.5)).add(side.scale(tailSide * s)).add(0, tailUp, 0);
+			Contrails.trail(jet.getId() * 4 + (s + 1) / 2, tail, type == JetType.SPIRIT ? 1.3 : 0.9, contrail);
+		}
+		// wingtip vortices while pulling hard (banked turns, the climb-out)
 		if (jetAircraft && (Math.abs(jet.getBank()) > 0.35F || burner && jet.getMach() < 1.1F)) {
 			for (int s = -1; s <= 1; s += 2) {
 				Vec3 tip = center.subtract(dir.scale(type == JetType.SPIRIT ? 4.0 : 3.4)).add(side.scale(tipSpan * s));

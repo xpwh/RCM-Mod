@@ -31,9 +31,6 @@ public class CloudParticle extends SingleQuadParticle {
 	/** Smoke sprites, so fire particles can turn into smoke. Set when the smoke provider is created. */
 	private static @Nullable SpriteSet smokeSprites;
 
-	/** Mean wind speed at ground level, blocks per tick (about 0.5 m/s). */
-	private static final double WIND_BASE = 0.022;
-
 	private SpriteSet sprites;
 	private int shapes;
 	private final int shape;
@@ -187,12 +184,7 @@ public class CloudParticle extends SingleQuadParticle {
 	 * columns lean over.
 	 */
 	public static double[] wind(long gameTime, double y) {
-		double t = gameTime;
-		double direction = 0.4 + 0.9 * Math.sin(t / 24000.0 * Mth.TWO_PI * 0.7) + 0.25 * Math.sin(t / 3100.0);
-		double gust = 1.0 + 0.35 * Math.sin(t * 0.047) + 0.2 * Math.sin(t * 0.131 + 1.3);
-		double shear = Mth.clamp(1.0 + (y - 70.0) / 110.0, 0.6, 3.2);
-		double speed = WIND_BASE * gust * shear;
-		return new double[] {Math.cos(direction) * speed, Math.sin(direction) * speed};
+		return de.rcm.ballistic.explosion.Wind.at(gameTime, y);
 	}
 
 	/** Direction the light comes from: the sun by day, the moon at night, always a bit from above. */

@@ -19,9 +19,9 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import de.rcm.ballistic.ModRegistry;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -32,7 +32,8 @@ import org.jspecify.annotations.Nullable;
  *   <li>tick 0: blast wave hits entities (lethal core, heavy damage + fire + knockback further out)</li>
  *   <li>then: crater carved slice by slice from the center outwards, with a scorched glassy floor,
  *       an ejecta rim and a burnt blast zone (leaves stripped, glass shattered, fires)</li>
- *   <li>afterwards: radioactive fallout around ground zero for one minute</li>
+ *   <li>afterwards: radioactive fallout around ground zero, and a fallout plume carried off by the
+ *       high-altitude wind that rains radioactive dust onto the land downwind</li>
  * </ul>
  */
 public class NukeDetonation {
@@ -78,6 +79,7 @@ public class NukeDetonation {
 	private final Set<Integer> shocked = new HashSet<>();
 	private int nextSlice;
 	private int falloutAge = -1;
+	private final RadiationManager.Plume plume;
 
 	public NukeDetonation(ServerLevel level, Vec3 pos, @Nullable Entity source, Yield yield) {
 		this.craterRadius = yield.craterRadius;
@@ -86,6 +88,10 @@ public class NukeDetonation {
 		this.falloutTicks = yield.falloutTicks;
 		// contamination lingers far longer than the acute fallout phase
 		RadiationManager.addZone(level, pos, yield.craterRadius * 3.2, yield.craterRadius * 400.0, yield.falloutTicks * 12L);
+		// the mushroom cloud drifts off with the wind at its own height and rains out on the way
+		double cloudY = pos.y + yield.craterRadius * 3.5;
+		this.plume = RadiationManager.addPlume(level, pos, Wind.direction(level.getGameTime(), cloudY),
+			yield.craterRadius * 14.0, yield.craterRadius * 2.2, yield.craterRadius * 110.0, yield.falloutTicks * 12L);
 		this.level = level;
 		this.exact = pos;
 		this.center = BlockPos.containing(pos);
@@ -123,6 +129,9 @@ public class NukeDetonation {
 
 		if (this.falloutAge % 20 == 0) {
 			this.fallout();
+		}
+		if (this.falloutAge % 5 == 0) {
+			this.depositFallout();
 		}
 		return ++this.falloutAge > this.falloutTicks;
 	}
@@ -254,12 +263,13 @@ public class NukeDetonation {
 			this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
 		}
 
-		// Molten, glassy crater floor.
+		// Molten, glassy crater floor; sand fused into trinitite.
 		for (int i = 1; i <= 2; i++) {
 			pos.set(x, floorY - i, z);
 			BlockState state = this.level.getBlockState(pos);
-			if (!state.isAir() && breakable(state, pos)) {
-				this.level.setBlock(pos, this.floorBlock(d / r), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+			if (!state.isAir() && breakable(state, pos) && !state.hasBlockEntity()) {
+				BlockState floor = state.is(BlockTags.SAND) || state.is(Blocks.SANDSTONE) ? ModRegistry.TRINITITE.defaultBlockState() : this.floorBlock(d / r, i);
+				this.level.setBlock(pos, floor, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
 			}
 		}
 		pos.set(x, floorY, z);
@@ -268,27 +278,28 @@ public class NukeDetonation {
 		}
 	}
 
-	private BlockState floorBlock(double relative) {
+	/**
+	 * Crater floor: rock molten by the fireball, still glowing in the middle and set into black glass
+	 * further out, over shattered, baked rock ({@code layer} 1 is the surface).
+	 */
+	private BlockState floorBlock(double relative, int layer) {
 		float roll = this.random.nextFloat();
-		if (relative < 0.45 && roll < 0.18F) {
-			return Blocks.MAGMA_BLOCK.defaultBlockState();
+		if (layer == 1) {
+			if (relative < 0.5 && roll < 0.35F) {
+				return ModRegistry.MOLTEN_ROCK.defaultBlockState();
+			}
+			if (roll < 0.7F - relative * 0.3) {
+				return ModRegistry.CRATER_GLASS.defaultBlockState();
+			}
+			return roll < 0.85F ? ModRegistry.SCORCHED_EARTH.defaultBlockState() : Blocks.BLACKSTONE.defaultBlockState();
 		}
 		if (roll < 0.35F) {
-			return Blocks.BLACKSTONE.defaultBlockState();
+			return ModRegistry.CRATER_GLASS.defaultBlockState();
 		}
-		if (roll < 0.55F) {
+		if (roll < 0.6F) {
 			return Blocks.BASALT.defaultBlockState();
 		}
-		if (roll < 0.68F) {
-			return Blocks.TUFF.defaultBlockState();
-		}
-		if (roll < 0.76F) {
-			return Blocks.OBSIDIAN.defaultBlockState();
-		}
-		if (roll < 0.86F) {
-			return Blocks.COAL_BLOCK.defaultBlockState();
-		}
-		return Blocks.NETHERRACK.defaultBlockState();
+		return roll < 0.8F ? Blocks.BLACKSTONE.defaultBlockState() : Blocks.TUFF.defaultBlockState();
 	}
 
 	private void placeRim(int x, int z, double d, double r, BlockPos.MutableBlockPos pos) {
@@ -301,74 +312,23 @@ public class NukeDetonation {
 				break;
 			}
 			float roll = this.random.nextFloat();
-			BlockState debris = roll < 0.35F
-				? Blocks.COARSE_DIRT.defaultBlockState()
-				: roll < 0.6F ? Blocks.GRAVEL.defaultBlockState() : roll < 0.8F ? Blocks.COBBLESTONE.defaultBlockState() : Blocks.BLACKSTONE.defaultBlockState();
+			// the overturned rim: excavated earth and rock, burnt on top, with chunks of fused glass
+			BlockState debris = roll < 0.3F
+				? ModRegistry.SCORCHED_EARTH.defaultBlockState()
+				: roll < 0.5F ? Blocks.COARSE_DIRT.defaultBlockState()
+				: roll < 0.7F ? Blocks.GRAVEL.defaultBlockState()
+				: roll < 0.85F ? Blocks.COBBLESTONE.defaultBlockState()
+				: roll < 0.93F ? ModRegistry.CRATER_GLASS.defaultBlockState() : Blocks.BLACKSTONE.defaultBlockState();
+			if (i == lip - 1 && this.random.nextFloat() < 0.15F) {
+				debris = ModRegistry.SMOLDERING_EARTH.defaultBlockState();
+			}
 			this.level.setBlock(pos, debris, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
 		}
 	}
 
 	private void scorchSurface(int x, int z, double d, double r, BlockPos.MutableBlockPos pos) {
 		double intensity = 1.0 - (d - r) / (this.blastRadius - r); // 1 at the rim, 0 at the edge
-		int top = this.level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1;
-		int flags = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
-
-		for (int y = top; y > top - 24 && y > this.level.getMinY(); y--) {
-			pos.set(x, y, z);
-			BlockState state = this.level.getBlockState(pos);
-			if (state.isAir()) {
-				continue;
-			}
-			if (!state.getFluidState().isEmpty()) {
-				return; // water surface: the blast skims over it
-			}
-			if (state.is(BlockTags.LEAVES)) {
-				if (this.random.nextDouble() < 0.55 + 0.45 * intensity) {
-					this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), flags);
-				}
-				continue;
-			}
-			if (state.is(BlockTags.LOGS)) {
-				if (this.random.nextDouble() < intensity * 0.8) {
-					this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), flags);
-				} else if (this.random.nextDouble() < 0.3) {
-					this.igniteAbove(pos);
-				}
-				continue;
-			}
-			if (state.canBeReplaced() || state.is(BlockTags.FLOWERS) || state.is(Blocks.SNOW_BLOCK)) {
-				this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), flags);
-				continue;
-			}
-			if (state.is(BlockTags.IMPERMEABLE) || state.getBlock() instanceof IronBarsBlock) {
-				this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), flags); // shattered glass
-				continue;
-			}
-
-			// First real ground block: scorch it and maybe start a fire.
-			if (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT) || state.is(Blocks.PODZOL) || state.is(Blocks.MYCELIUM) || state.is(Blocks.MOSS_BLOCK)) {
-				if (this.random.nextDouble() < 0.4 + 0.6 * intensity) {
-					BlockState burnt = this.random.nextDouble() < intensity * 0.5 ? Blocks.BLACKSTONE.defaultBlockState() : Blocks.COARSE_DIRT.defaultBlockState();
-					this.level.setBlock(pos, burnt, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
-				}
-			} else if (state.is(BlockTags.SAND) && this.random.nextDouble() < intensity * 0.45) {
-				this.level.setBlock(pos, Blocks.GLASS.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
-			} else if (state.is(Blocks.STONE) && this.random.nextDouble() < intensity * 0.5) {
-				this.level.setBlock(pos, Blocks.BASALT.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
-			}
-
-			if (this.random.nextDouble() < 0.03 + 0.17 * intensity || (state.ignitedByLava() && this.random.nextDouble() < 0.5)) {
-				this.igniteAbove(pos);
-			}
-			return;
-		}
-	}
-
-	private void igniteAbove(BlockPos pos) {
-		BlockPos above = pos.above();
-		if (this.level.getBlockState(above).isAir()) {
-			this.level.setBlock(above, BaseFireBlock.getState(this.level, above), Block.UPDATE_ALL);
-		}
+		Wasteland.scorchColumn(this.level, x, z, intensity, 0.22F, true, this.random);
 	}
 
 	/** Blast-rated construction (reinforced concrete, blast doors) survives everywhere but the core. */
@@ -412,6 +372,42 @@ public class NukeDetonation {
 	}
 
 	// ------------------------------------------------------------------ fallout
+
+	/**
+	 * Radioactive dust raining out of the drifting cloud: settles as a fallout layer on the ground
+	 * the front has already passed, thickest close to ground zero and along the plume's centre line.
+	 */
+	private void depositFallout() {
+		long now = this.level.getGameTime();
+		double front = this.plume.front(now);
+		int tries = 6 + this.craterRadius / 3;
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		for (int i = 0; i < tries; i++) {
+			double along = -this.craterRadius + this.random.nextDouble() * (front + this.craterRadius);
+			double halfWidth = this.plume.width() * (0.35 + 0.65 * Math.max(0.0, along) / this.plume.length());
+			double across = this.random.nextGaussian() * halfWidth * 0.5;
+			double x = this.exact.x + this.plume.dirX() * along - this.plume.dirZ() * across;
+			double z = this.exact.z + this.plume.dirZ() * along + this.plume.dirX() * across;
+			double strength = this.plume.strength(x, z, now);
+			if (this.random.nextDouble() > strength * 1.5 + 0.1) {
+				continue;
+			}
+			int bx = Mth.floor(x);
+			int bz = Mth.floor(z);
+			if (!this.level.hasChunk(bx >> 4, bz >> 4)) {
+				continue;
+			}
+			pos.set(bx, this.level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz), bz);
+			BlockState at = this.level.getBlockState(pos);
+			if (!(at.isAir() || at.is(ModRegistry.ASH)) || !at.getFluidState().isEmpty()) {
+				continue;
+			}
+			BlockState fallout = ModRegistry.FALLOUT.defaultBlockState();
+			if (fallout.canSurvive(this.level, pos)) {
+				this.level.setBlock(pos, fallout, Block.UPDATE_CLIENTS);
+			}
+		}
+	}
 
 	private void fallout() {
 		double radius = this.craterRadius * 1.8;

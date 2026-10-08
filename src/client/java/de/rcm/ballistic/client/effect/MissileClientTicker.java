@@ -212,6 +212,9 @@ public final class MissileClientTicker {
 			}
 		}
 		nozzleFire(nozzle.x, nozzle.y, nozzle.z, dir, scale, 3);
+		// high up the exhaust trail freezes into a contrail that hangs in the sky and twists in the wind
+		Contrails.trail(missile.getId() * 4, nozzle.subtract(dir.scale(1.5)), 2.2 * scale,
+			missile.isBoosterBurning() ? Contrails.altitudeFactor(nozzle.y) : 0.0);
 
 		float t = (float) age / Math.max(1, path.duration());
 		boolean hypersonic = missile.getMissileType().warhead == MissileType.Warhead.HYPERSONIC;
@@ -275,6 +278,7 @@ public final class MissileClientTicker {
 				}
 			}
 			nozzleFire(pos.x, pos.y, pos.z, dir, 0.3F, 2);
+			Contrails.trail(entity.getId() * 4, pos.subtract(dir.scale(0.8)), 1.0, Contrails.altitudeFactor(pos.y));
 		} else if (entity instanceof ReentryVehicleEntity) {
 			Vec3 v = entity.getDeltaMovement();
 			Vec3 dir = v.lengthSqr() < 1.0E-6 ? new Vec3(0, -1, 0) : v.normalize();

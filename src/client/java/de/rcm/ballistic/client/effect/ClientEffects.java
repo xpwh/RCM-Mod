@@ -1084,6 +1084,24 @@ public final class ClientEffects {
 				}
 			}
 
+			// ---- fallout: grey veils of dust raining out under the cap as it drifts off downwind
+			if (t > 140 && t < 800 && t % 2 == 0) {
+				double h = this.capHeight(Math.min(t, 640));
+				double rc = this.capRadiusAt(Math.min(t, 640));
+				double[] w = CloudParticle.wind(mc.level.getGameTime(), cy + h);
+				double drift = 0.6 * Math.max(0, t - 40); // the cap puffs ride the wind at 60 %
+				for (int i = 0; i < 3; i++) {
+					double a = rand() * Mth.TWO_PI;
+					double r = rc * 0.8 * Math.sqrt(rand());
+					double x = cx + w[0] * drift + Math.cos(a) * r;
+					double z = cz + w[1] * drift + Math.sin(a) * r;
+					CloudParticle p = cloud(false, x, cy + h - rc * 0.3, z, 0, -0.35 - rand() * 0.2, 0);
+					if (p != null) {
+						p.configure(220 + RANDOM.nextInt(80), 5.0F * ps, 12.0F * ps, 0x8C867C, 0x77736C, 0.3F).physics(0.995F, -0.001F).wind(1.0F);
+					}
+				}
+			}
+
 			return t > Math.max(DURATION, this.soundDelay + 2);
 		}
 	}

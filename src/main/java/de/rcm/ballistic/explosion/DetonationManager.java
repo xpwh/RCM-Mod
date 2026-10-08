@@ -347,12 +347,12 @@ public final class DetonationManager {
 		BlockPos center = BlockPos.containing(pos);
 		RandomSource random = level.getRandom();
 		int r = (int) (3 + 2 * size);
+		Wasteland.crater(level, pos, r, r * 0.5, random);
 		for (int i = 0; i < 30; i++) {
-			BlockPos p = center.offset(random.nextInt(2 * r + 1) - r, -random.nextInt(3) - 1, random.nextInt(2 * r + 1) - r);
+			BlockPos p = center.offset(random.nextInt(2 * r + 1) - r, -random.nextInt(3) - 1 - (int) (r * 0.4), random.nextInt(2 * r + 1) - r);
 			BlockState state = level.getBlockState(p);
-			if (!state.isAir() && state.getDestroySpeed(level, p) >= 0.0F && state.getBlock().getExplosionResistance() < 1200.0F) {
-				level.setBlock(p, random.nextFloat() < 0.35F ? Blocks.MAGMA_BLOCK.defaultBlockState() : random.nextFloat() < 0.5F
-					? Blocks.BLACKSTONE.defaultBlockState() : Blocks.BASALT.defaultBlockState(), 3);
+			if (!state.isAir() && state.getDestroySpeed(level, p) >= 0.0F && state.getBlock().getExplosionResistance() < 1200.0F && !state.hasBlockEntity()) {
+				level.setBlock(p, random.nextFloat() < 0.4F ? ModRegistry.MOLTEN_ROCK.defaultBlockState() : ModRegistry.CRATER_GLASS.defaultBlockState(), 3);
 			}
 		}
 		scorch(level, center, r + 6, random, 0.35F);
@@ -366,7 +366,7 @@ public final class DetonationManager {
 	public static void detonateMoab(ServerLevel level, Vec3 pos, @Nullable Entity source) {
 		broadcast(level, pos, Warhead.MOAB);
 		FlyingDebris.launch(level, pos, 14.0, 220, 2.8);
-		highExplosive(level, pos.add(0, 2.0, 0), source, 15.0F, 8, 42);
+		highExplosive(level, pos.add(0, 2.0, 0), source, 15.0F, 8, 42, 0.18); // air burst: wide but shallow
 		double radius = 80.0;
 		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(pos, pos).inflate(radius))) {
 			double d = e.position().distanceTo(pos);
@@ -424,6 +424,11 @@ public final class DetonationManager {
 	// ------------------------------------------------------------------ warheads
 
 	private static void highExplosive(ServerLevel level, Vec3 pos, @Nullable Entity source, float power, int secondaries, int scorchRadius) {
+		highExplosive(level, pos, source, power, secondaries, scorchRadius, 0.45);
+	}
+
+	/** @param depthRatio crater depth relative to its radius: about 0.45 for a ground burst, less for an air burst */
+	private static void highExplosive(ServerLevel level, Vec3 pos, @Nullable Entity source, float power, int secondaries, int scorchRadius, double depthRatio) {
 		RandomSource random = level.getRandom();
 		level.explode(source, pos.x, pos.y, pos.z, power, true, Level.ExplosionInteraction.TNT);
 		// A few secondary blasts make the crater irregular and the boom feel heavier.
@@ -432,6 +437,11 @@ public final class DetonationManager {
 			double oy = pos.y + random.nextGaussian() * 1.5;
 			double oz = pos.z + random.nextGaussian() * power * 0.35;
 			level.explode(source, ox, oy, oz, power * 0.55F, true, Level.ExplosionInteraction.TNT);
+		}
+		if (power >= 3.5F) {
+			// the explosion leaves a ragged hole: settle it into a real bowl with a thrown-up rim
+			double radius = power * 0.75;
+			Wasteland.crater(level, pos, radius, radius * depthRatio, random);
 		}
 		scorch(level, BlockPos.containing(pos), scorchRadius, random, 0.12F);
 	}
@@ -475,6 +485,9 @@ public final class DetonationManager {
 					Level.ExplosionInteraction.TNT
 				);
 			}
+			// the cavity below caves in: a subsidence crater opens at the surface
+			Wasteland.crater(level, pos, 7.5, 4.5, random);
+			Wasteland.scorch(level, BlockPos.containing(pos), 9, random, 0.05F, false);
 		});
 	}
 
@@ -513,31 +526,7 @@ public final class DetonationManager {
 
 	/** Blackens and ignites the surface around a blast. */
 	static void scorch(ServerLevel level, BlockPos center, int radius, RandomSource random, float fireChance) {
-		for (int dx = -radius; dx <= radius; dx++) {
-			for (int dz = -radius; dz <= radius; dz++) {
-				double d = Math.sqrt(dx * dx + dz * dz);
-				if (d > radius || random.nextFloat() > 1.0 - d / radius * 0.6) {
-					continue;
-				}
-				int x = center.getX() + dx;
-				int z = center.getZ() + dz;
-				if (!level.hasChunk(x >> 4, z >> 4)) {
-					continue;
-				}
-				int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
-				BlockPos ground = new BlockPos(x, y, z);
-				BlockState state = level.getBlockState(ground);
-				if (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT) || state.is(Blocks.PODZOL) || state.is(Blocks.MYCELIUM)) {
-					level.setBlock(ground, random.nextFloat() < 0.3F ? Blocks.BLACKSTONE.defaultBlockState() : Blocks.COARSE_DIRT.defaultBlockState(), 3);
-				} else if (state.is(Blocks.STONE) && random.nextFloat() < 0.4F) {
-					level.setBlock(ground, Blocks.BASALT.defaultBlockState(), 3);
-				}
-				BlockPos above = ground.above();
-				if (random.nextFloat() < fireChance * (1.0F - (float) (d / radius) * 0.5F) && level.getBlockState(above).isAir()) {
-					level.setBlock(above, BaseFireBlock.getState(level, above), 3);
-				}
-			}
-		}
+		Wasteland.scorch(level, center, radius, random, fireChance, false);
 	}
 
 	public static void tick(ServerLevel level) {

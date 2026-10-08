@@ -72,7 +72,7 @@
 	"entity.ballisticmissiles.interceptor": "Abfangrakete",
 	"tooltip.ballisticmissiles.hypersonic_missile": "Flacher Hyperschallflug mit Plasmahülle – kaum abzufangen",
 	"tooltip.ballisticmissiles.mirv_missile": "☢ 5 unabhängige Atomsprengköpfe im Kreuzmuster ums Ziel",
-	"tooltip.ballisticmissiles.geiger": "In der Hand halten: misst die Strahlung (µSv/h)",
+	"tooltip.ballisticmissiles.geiger": "In der Hand halten: misst die Strahlung (µSv/h) – auch von Fallout und Trinitit am Boden",
 	"message.ballisticmissiles.radar": "RADAR: %s Rakete(n) im Anflug – %s, %s Blöcke, Einschlag in %s s",
 	"subtitles.ballisticmissiles.ringing": "Ohren pfeifen",
 	"subtitles.ballisticmissiles.sonic_boom": "Überschallknall",
@@ -288,5 +288,14 @@
 	"message.ballisticmissiles.jammer_on": "⚡ Störsender AN – Raketen mit Ziel im Umkreis von %s Blöcken verlieren ihr GPS",
 	"message.ballisticmissiles.jammer_off": "Störsender aus",
 	"message.ballisticmissiles.jammer_deflect": "STÖRSENDER: %s hat das GPS verloren und fliegt daneben!",
-	"subtitles.ballisticmissiles.laser": "Laser brennt"
+	"subtitles.ballisticmissiles.laser": "Laser brennt",
+	"block.ballisticmissiles.scorched_earth": "Verbrannte Erde",
+	"block.ballisticmissiles.smoldering_earth": "Schwelende Glut",
+	"block.ballisticmissiles.charred_log": "Verkohlter Stamm",
+	"block.ballisticmissiles.crater_glass": "Kraterglas",
+	"block.ballisticmissiles.molten_rock": "Geschmolzenes Gestein",
+	"block.ballisticmissiles.trinitite": "Trinitit",
+	"block.ballisticmissiles.fallout": "Radioaktiver Fallout",
+	"block.ballisticmissiles.ash": "Asche",
+	"message.ballisticmissiles.fallout_warning": "☢ Radioaktiver Niederschlag! Raus aus der Windrichtung oder Strahlenschutzanzug anziehen!"
 }

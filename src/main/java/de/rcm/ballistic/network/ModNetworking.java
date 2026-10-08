@@ -296,7 +296,51 @@ public final class ModNetworking {
 		}
 	}
 
+	/**
+	 * A fallout plume in the receiving player's dimension: origin, downwind direction, length and width,
+	 * peak dose rate, ticks since detonation and lifetime.
+	 */
+	public record FalloutPlume(float x, float z, float dirX, float dirZ, float length, float width, float peak, int age, int duration) {
+	}
+
+	/** Server -> client: the fallout plumes, so ash can be shown raining out of them. */
+	public record FalloutPayload(List<FalloutPlume> plumes) implements CustomPacketPayload {
+		public static final Type<FalloutPayload> TYPE = new Type<>(BallisticMissiles.id("fallout"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, FalloutPayload> CODEC = StreamCodec.of(FalloutPayload::write, FalloutPayload::read);
+
+		private static void write(RegistryFriendlyByteBuf buf, FalloutPayload p) {
+			buf.writeVarInt(p.plumes.size());
+			for (FalloutPlume f : p.plumes) {
+				buf.writeFloat(f.x());
+				buf.writeFloat(f.z());
+				buf.writeFloat(f.dirX());
+				buf.writeFloat(f.dirZ());
+				buf.writeFloat(f.length());
+				buf.writeFloat(f.width());
+				buf.writeFloat(f.peak());
+				buf.writeVarInt(f.age());
+				buf.writeVarInt(f.duration());
+			}
+		}
+
+		private static FalloutPayload read(RegistryFriendlyByteBuf buf) {
+			int n = Math.min(64, buf.readVarInt());
+			List<FalloutPlume> plumes = new ArrayList<>(n);
+			for (int i = 0; i < n; i++) {
+				plumes.add(new FalloutPlume(buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+					buf.readVarInt(), buf.readVarInt()));
+			}
+			return new FalloutPayload(plumes);
+		}
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	public static void init() {
+		PayloadTypeRegistry.playS2C().register(FalloutPayload.TYPE, FalloutPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(DetonationPayload.TYPE, DetonationPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(RadarDataPayload.TYPE, RadarDataPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(SetTargetPayload.TYPE, SetTargetPayload.CODEC);

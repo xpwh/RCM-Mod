@@ -66,16 +66,11 @@ public final class FarTrackClient {
 			double d = p.distanceTo(eye);
 			float size = (float) Math.max(2.0, d * 0.004);
 			if (t.burning() || t.kind() == 2) {
-				// contrail puffs strung along the last tick's path
-				int puffs = t.kind() == 2 ? 1 : 2;
-				for (int i = 0; i < puffs; i++) {
-					Vec3 q = p.subtract(v.scale((double) i / puffs));
-					CloudParticle c = ClientEffects.cloud(false, q.x, q.y, q.z, 0, 0, 0);
-					if (c != null) {
-						float s = t.kind() == 2 ? size * 0.6F : size;
-						c.configure(t.kind() == 2 ? 80 : 140, s * 0.6F, s * 1.8F, 0xF2F2F2, 0xD8D8D8, t.kind() == 2 ? 0.45F : 0.7F).physics(0.98F, 0.0F);
-					}
-				}
+				// the same contrail the entity leaves when close (same key, so it continues seamlessly);
+				// thicker far away so it stays visible, and a short smoke trail even down low
+				double strength = Math.max(Contrails.altitudeFactor(p.y), t.kind() == 2 ? 0.0 : 0.25);
+				double width = Math.max(t.kind() == 2 ? 0.9 : 2.2, size * (t.kind() == 2 ? 0.5 : 0.9));
+				Contrails.trail(t.id() * 4, p, width, strength);
 			}
 			if (t.burning() && night > 0.02F) {
 				// the motor (or the re-entry plasma) as a short-lived bright point, renewed every tick
