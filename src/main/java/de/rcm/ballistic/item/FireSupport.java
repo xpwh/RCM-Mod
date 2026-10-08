@@ -76,8 +76,10 @@ public final class FireSupport {
 			double z = target.z + random.nextGaussian() * spread * 0.6;
 			DetonationManager.later(level, 1 + fire, () ->
 				level.playSound(null, guns.x, guns.y, guns.z, ModRegistry.GUN_105, SoundSource.HOSTILE, 18.0F, 0.6F + random.nextFloat() * 0.1F));
-			DetonationManager.later(level, 1 + fire + flight - 26, () ->
-				level.playSound(null, x, target.y + 20, z, ModRegistry.BOMB_WHISTLE, SoundSource.HOSTILE, 6.0F, 1.5F + random.nextFloat() * 0.2F));
+			// the incoming shriek: the whistle (four seconds at pitch 1) sped up, ending as the shell lands
+			float shriek = 1.25F + random.nextFloat() * 0.1F;
+			DetonationManager.later(level, 1 + fire + flight - (int) (80 / shriek), () ->
+				level.playSound(null, x, target.y + 20, z, ModRegistry.BOMB_WHISTLE, SoundSource.HOSTILE, 6.0F, shriek));
 			DetonationManager.later(level, 1 + fire + flight, () -> {
 				int bx = Mth.floor(x);
 				int bz = Mth.floor(z);

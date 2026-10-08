@@ -68,3 +68,12 @@ Bullet impacts on earth, stone, wood and flesh use Minecraft's own sounds. Other
 | 105 mm | https://freesound.org/s/239137/ (artillery gunfire, US Government footage) | qubodup | CC0 1.0 |
 | CIWS | https://freesound.org/s/163119/ (Phalanx CIWS, US Government footage) | qubodup | CC0 1.0 |
 | Air-raid siren | https://freesound.org/s/382611/ (siren test, Prague) | nooly | CC0 1.0 |
+
+## Bomb whistle, cruise missile, alarm, beep (`tools/import_misc_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Bomb / shell whistle | https://freesound.org/s/434739/ "Whizzbang Drop" (WW2 footage) | SvennSound | CC0 1.0 |
+| Cruise missile engine (loop) | https://freesound.org/s/824805/ "cruise-missiles-interception-and-fly-by" (Kh-101 over Kyiv) | Invadium | CC0 1.0 |
+| Radar alarm | https://freesound.org/s/156672/ "dive.wav" (USS Woodrow Wilson diving alarm) | mkjunker | CC0 1.0 |
+| Countdown beep | https://freesound.org/s/536422/ "Setting Electronic Timer 1 Beep" | Rudmer_Rotteveel | CC0 1.0 |
