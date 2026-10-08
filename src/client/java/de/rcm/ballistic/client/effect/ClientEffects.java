@@ -586,7 +586,6 @@ public final class ClientEffects {
 				if (this.distance < 170 * s) {
 					float vol = (float) Math.min(1.0, s * 1.2);
 					playDistant(mc, ModRegistry.EXPLOSION_NEAR, this.pos, vol, pitch);
-					playDistant(mc, ModRegistry.EXPLOSION_NEAR, this.pos, vol, pitch * 0.97F); // doubled for real-life loudness
 					playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, vol, pitch);
 					playDistant(mc, ModRegistry.EXPLOSION_DEBRIS, this.pos, (float) ((1.0 - this.distance / 200.0) * s), 1.0F);
 					deafen(mc, (float) ((1.0 - this.distance / (70.0 * s)) * Math.min(1.0, s * 1.2)), (int) (60 * s));
@@ -890,7 +889,6 @@ public final class ClientEffects {
 				shockCrack(mc, ModRegistry.SHOCK_THERMO, this.pos, this.distance, 900.0, 1.0F);
 				if (this.distance < 220) {
 					playDistant(mc, ModRegistry.EXPLOSION_THERMOBARIC, this.pos, 1.0F, 1.0F);
-					playDistant(mc, ModRegistry.EXPLOSION_THERMOBARIC, this.pos, 1.0F, 0.97F);
 					playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, 1.0F, 0.85F);
 					deafen(mc, (float) (1.0 - this.distance / 160.0), 100);
 					playDistant(mc, ModRegistry.NUKE_WIND, this.pos, 0.7F, 1.25F);
@@ -1195,7 +1193,6 @@ public final class ClientEffects {
 				float pitch = s > 1.2 ? 0.8F : 1.0F;
 				if (this.distance < 320 * s) {
 					playDistant(mc, ModRegistry.NUKE_NEAR, this.pos, 1.0F, pitch);
-					playDistant(mc, ModRegistry.NUKE_NEAR, this.pos, 1.0F, pitch * 0.96F); // doubled for real-life loudness
 					playDistant(mc, ModRegistry.NUKE_SUB, this.pos, 1.0F, pitch);
 					playDistant(mc, ModRegistry.NUKE_WIND, this.pos, 1.0F, pitch);
 					playDistant(mc, ModRegistry.EXPLOSION_DEBRIS, this.pos, 1.0F, 0.8F);

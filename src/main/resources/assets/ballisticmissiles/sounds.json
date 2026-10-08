@@ -47,7 +47,23 @@
 		"subtitle": "subtitles.ballisticmissiles.explosion",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/near",
+				"name": "ballisticmissiles:explosion/near1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/near2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/near3",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/near4",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/near5",
 				"stream": true
 			}
 		]
@@ -56,7 +72,23 @@
 		"subtitle": "subtitles.ballisticmissiles.explosion",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/far",
+				"name": "ballisticmissiles:explosion/far1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/far2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/far3",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/far4",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/far5",
 				"stream": true
 			}
 		]
@@ -65,7 +97,11 @@
 		"subtitle": "subtitles.ballisticmissiles.nuke",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:nuke/near",
+				"name": "ballisticmissiles:nuke/near1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/near2",
 				"stream": true
 			}
 		]
@@ -74,7 +110,11 @@
 		"subtitle": "subtitles.ballisticmissiles.nuke",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:nuke/far",
+				"name": "ballisticmissiles:nuke/far1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/far2",
 				"stream": true
 			}
 		]
@@ -83,7 +123,15 @@
 		"subtitle": "subtitles.ballisticmissiles.shockwave",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:nuke/wind",
+				"name": "ballisticmissiles:nuke/wind1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/wind2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/wind3",
 				"stream": true
 			}
 		]
@@ -118,7 +166,15 @@
 		"subtitle": "subtitles.ballisticmissiles.explosion",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/sub",
+				"name": "ballisticmissiles:explosion/sub1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/sub2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/sub3",
 				"stream": true
 			}
 		]
@@ -127,7 +183,15 @@
 		"subtitle": "subtitles.ballisticmissiles.debris",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/debris",
+				"name": "ballisticmissiles:explosion/debris1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/debris2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/debris3",
 				"stream": true
 			}
 		]
@@ -136,7 +200,7 @@
 		"subtitle": "subtitles.ballisticmissiles.nuke",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:nuke/sub",
+				"name": "ballisticmissiles:nuke/sub1",
 				"stream": true
 			}
 		]
@@ -154,7 +218,11 @@
 		"subtitle": "subtitles.ballisticmissiles.cluster",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:missile/cluster_pop",
+				"name": "ballisticmissiles:missile/cluster_pop1",
+				"attenuation_distance": 192
+			},
+			{
+				"name": "ballisticmissiles:missile/cluster_pop2",
 				"attenuation_distance": 192
 			}
 		]
@@ -163,7 +231,11 @@
 		"subtitle": "subtitles.ballisticmissiles.thermobaric",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/thermobaric",
+				"name": "ballisticmissiles:explosion/thermobaric1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/thermobaric2",
 				"stream": true
 			}
 		]
@@ -172,7 +244,12 @@
 		"subtitle": "subtitles.ballisticmissiles.bunker",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/bunker",
+				"name": "ballisticmissiles:explosion/bunker1",
+				"stream": true,
+				"attenuation_distance": 320
+			},
+			{
+				"name": "ballisticmissiles:explosion/bunker2",
 				"stream": true,
 				"attenuation_distance": 320
 			}
@@ -182,7 +259,15 @@
 		"subtitle": "subtitles.ballisticmissiles.explosion",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/mid",
+				"name": "ballisticmissiles:explosion/mid1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/mid2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/mid3",
 				"stream": true
 			}
 		]
@@ -191,7 +276,11 @@
 		"subtitle": "subtitles.ballisticmissiles.nuke",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:nuke/mid",
+				"name": "ballisticmissiles:nuke/mid1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/mid2",
 				"stream": true
 			}
 		]
@@ -403,7 +492,16 @@
 		"subtitle": "subtitles.ballisticmissiles.shock_wave",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/shock_he"
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
 			}
 		]
 	},
@@ -411,7 +509,16 @@
 		"subtitle": "subtitles.ballisticmissiles.shock_wave",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/shock_heavy"
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
 			}
 		]
 	},
@@ -419,7 +526,16 @@
 		"subtitle": "subtitles.ballisticmissiles.shock_wave",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/shock_thermo"
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
 			}
 		]
 	},
@@ -427,7 +543,16 @@
 		"subtitle": "subtitles.ballisticmissiles.shock_wave",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/shock_bunker"
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
 			}
 		]
 	},
@@ -435,7 +560,16 @@
 		"subtitle": "subtitles.ballisticmissiles.shock_wave",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/shock_nuke"
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
 			}
 		]
 	},
@@ -443,7 +577,16 @@
 		"subtitle": "subtitles.ballisticmissiles.shock_wave",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/shock_emp"
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
 			}
 		]
 	},
@@ -451,7 +594,16 @@
 		"subtitle": "subtitles.ballisticmissiles.shock_wave",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:explosion/shock_antimatter"
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
 			}
 		]
 	},
@@ -822,6 +974,92 @@
 			{
 				"name": "minecraft:damage/hit3",
 				"attenuation_distance": 24
+			}
+		]
+	},
+	"grenade.pin": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_pin",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/pin",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"grenade.spoon": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_spoon",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/spoon",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"grenade.bounce": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_bounce",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/bounce1",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:grenade/bounce2",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:grenade/bounce3",
+				"attenuation_distance": 20
+			}
+		]
+	},
+	"grenade.explode": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_explode",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/explode1",
+				"attenuation_distance": 120
+			},
+			{
+				"name": "ballisticmissiles:grenade/explode2",
+				"attenuation_distance": 120
+			}
+		]
+	},
+	"grenade.explode_far": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_explode",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/explode_far1",
+				"attenuation_distance": 400
+			}
+		]
+	},
+	"player.breath": {
+		"subtitle": "subtitles.ballisticmissiles.breath",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:player/breath1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath2",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath3",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath4",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath5",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath6",
+				"attenuation_distance": 12
 			}
 		]
 	}
