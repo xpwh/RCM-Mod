@@ -50,3 +50,21 @@ Bullet impacts on earth, stone, wood and flesh use Minecraft's own sounds. Other
 | Grenade landing | https://freesound.org/s/93839/ (grenade toss on cement) | CGEffex | CC BY 4.0 |
 | Grenade explosion | https://freesound.org/s/256300/, https://freesound.org/s/256295/ (hand grenade) | YleArkisto | CC BY 4.0 |
 | Breathing | https://freesound.org/s/395563/ (panting after a run) | SoundsForHim | CC0 1.0 |
+
+## Aircraft, guns and siren (`tools/import_aircraft_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Fighter jet roar (loop) | https://freesound.org/s/395419/ (F/A-18 Hornet airshow) | hhoffren | CC0 1.0 |
+| Fighter jet far + low end (loops) | https://freesound.org/s/742242/ (high-altitude F-16) | klankbeeld | CC BY 4.0 |
+| Afterburner (loop) | https://freesound.org/s/349713/ (CF-18 vertical climb) | lonemonk | CC BY 4.0 |
+| Sonic boom | https://freesound.org/s/182050/ (US Government footage) | qubodup | CC0 1.0 |
+| A-10 engines (loop) | https://freesound.org/s/189644/ (A-10 Warthog flyby) | qubodup (Iwan Gabovitch) | CC BY 4.0 |
+| B-2 engines (loop) | https://freesound.org/s/437931/ (B-52 flyby) | craigsmith | CC0 1.0 |
+| AC-130 engines (loop) | https://freesound.org/s/581835/ (two Hercules overhead) | klankbeeld | CC BY 4.0 |
+| Helicopter rotor (loop) | https://freesound.org/s/162437/ (MH-60S rotor, US Government footage) | qubodup | CC0 1.0 |
+| Reaper engine (loop) | https://freesound.org/s/537598/ (surveillance drone) | PostProdDog | CC0 1.0 |
+| Chain gun, 40 mm | https://freesound.org/s/854186/ (25 mm autocannon burst, US Government footage) | qubodup | CC0 1.0 |
+| 105 mm | https://freesound.org/s/239137/ (artillery gunfire, US Government footage) | qubodup | CC0 1.0 |
+| CIWS | https://freesound.org/s/163119/ (Phalanx CIWS, US Government footage) | qubodup | CC0 1.0 |
+| Air-raid siren | https://freesound.org/s/382611/ (siren test, Prague) | nooly | CC0 1.0 |
