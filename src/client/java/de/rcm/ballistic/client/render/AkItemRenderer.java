@@ -325,10 +325,11 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		BoxMesh.Builder b = new BoxMesh.Builder();
 		float w = W;
 
-		// ===== milled receiver (AK-47 Type 3): one machined block, no trunnion rivets; the long
+		// ===== milled receiver (AK-47 Type 3): one machined block reaching forward to the handguard (the
+		// trunnion is part of it), no trunnion rivets; the long
 		// lightening cut milled into each side above the magazine well
 		float skin = 0.004F;
-		loft(b, AK_BLUED, new float[] {-0.205F, 0.112F, 0.03F, w - skin, 0.004F}, new float[] {0.165F, 0.112F, 0.03F, w - skin, 0.004F});
+		loft(b, AK_BLUED, new float[] {-0.242F, 0.112F, 0.03F, w - skin, 0.004F}, new float[] {0.165F, 0.112F, 0.03F, w - skin, 0.004F});
 		float cutFront = -0.158F;
 		float cutBack = -0.062F;
 		float cutLow = 0.05F;
@@ -336,7 +337,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		for (float sx : new float[] {-1.0F, 1.0F}) {
 			float x0 = sx > 0 ? w - skin : -w;
 			float x1 = sx > 0 ? w : -w + skin;
-			b.box(x0, 0.035F, -0.205F, x1, 0.107F, cutFront, AK_BLUED);
+			b.box(x0, 0.035F, -0.242F, x1, 0.107F, cutFront, AK_BLUED);
 			b.box(x0, 0.035F, cutBack, x1, 0.107F, 0.165F, AK_BLUED);
 			b.box(x0, 0.035F, cutFront, x1, cutLow, cutBack, AK_BLUED);
 			b.box(x0, cutHigh, cutFront, x1, 0.107F, cutBack, AK_BLUED);
