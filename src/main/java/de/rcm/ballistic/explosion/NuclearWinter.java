@@ -39,7 +39,7 @@ public final class NuclearWinter {
 	/** Soot rains out with a half-life of three in-game days. */
 	private static final double DECAY = Math.pow(0.5, 1.0 / 72000.0);
 	/** Above this the winter is noticeable; the announcement is made when it is crossed. */
-	public static final double ONSET = 0.15;
+	public static final double ONSET = 0.3;
 	private static final String FILE = "ballisticmissiles_winter.json";
 
 	private static double soot;
@@ -71,7 +71,7 @@ public final class NuclearWinter {
 
 	/** Whether a random growth tick at {@code pos} is lost to the cold and the dark. */
 	public static boolean stuntsGrowth(ServerLevel level, BlockPos pos, RandomSource random) {
-		return soot > 0.05 && level.dimension() == Level.OVERWORLD && level.canSeeSky(pos.above()) && random.nextDouble() < Math.min(0.9, soot * 1.4);
+		return soot > ONSET && level.dimension() == Level.OVERWORLD && level.canSeeSky(pos.above()) && random.nextDouble() < Math.min(0.9, (soot - ONSET) * 2.0 + 0.3);
 	}
 
 	public static void tick(ServerLevel level) {
@@ -142,7 +142,7 @@ public final class NuclearWinter {
 
 	/** In a deep winter, being outdoors away from a fire slowly freezes you (frost overlay, then damage). */
 	private static void freeze(ServerLevel level, ServerPlayer player) {
-		if (soot < 0.5 || player.isCreative() || player.isSpectator()) {
+		if (soot < 0.65 || player.isCreative() || player.isSpectator()) {
 			return;
 		}
 		BlockPos pos = player.blockPosition();
@@ -150,7 +150,7 @@ public final class NuclearWinter {
 		boolean warm = level.getBrightness(LightLayer.BLOCK, pos) >= 10;
 		if (outdoors && !warm && player.canFreeze()) {
 			// vanilla thaws 2 per tick outside powder snow; this outpaces it slowly
-			int add = 2 + Mth.ceil((soot - 0.5) * 3.0);
+			int add = 2 + Mth.ceil((soot - 0.65) * 3.0);
 			player.setTicksFrozen(Math.min(player.getTicksRequiredToFreeze() + 20, player.getTicksFrozen() + add));
 		}
 	}

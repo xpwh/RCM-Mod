@@ -35,9 +35,10 @@ public final class WinterClient {
 
 	public static void tick(Minecraft mc) {
 		boolean overworld = mc.level != null && mc.level.dimension() == Level.OVERWORLD;
-		float target = overworld ? Mth.clamp((soot - 0.03F) / 0.6F, 0.0F, 1.0F) : 0.0F;
+		float onset = (float) NuclearWinter.ONSET;
+		float target = overworld ? Mth.clamp((soot - onset * 0.85F) / 0.5F, 0.0F, 1.0F) : 0.0F;
 		shown += Mth.clamp(target - shown, -0.005F, 0.005F);
-		if (mc.level == null || mc.isPaused() || soot < NuclearWinter.ONSET * 0.6F || !overworld) {
+		if (mc.level == null || mc.isPaused() || soot < NuclearWinter.ONSET || !overworld) {
 			return;
 		}
 		Vec3 eye = mc.gameRenderer.getMainCamera().position();

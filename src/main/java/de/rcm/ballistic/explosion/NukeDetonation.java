@@ -88,12 +88,13 @@ public class NukeDetonation {
 		this.falloutTicks = yield.falloutTicks;
 		// contamination lingers far longer than the acute fallout phase
 		RadiationManager.addZone(level, pos, yield.craterRadius * 3.2, yield.craterRadius * 400.0, yield.falloutTicks * 12L);
-		// soot from the firestorm rises into the stratosphere: several bursts bring on a nuclear winter
+		// soot from the firestorm rises into the stratosphere: it takes a real nuclear war - a dozen or
+		// so strategic warheads, or three Tsar Bombas - to bring on a nuclear winter
 		NuclearWinter.add(level, switch (yield) {
-			case TACTICAL -> 0.05;
-			case FISSION -> 0.1;
-			case THERMONUCLEAR -> 0.2;
-			case TSAR -> 0.35;
+			case TACTICAL -> 0.01;
+			case FISSION -> 0.025;
+			case THERMONUCLEAR -> 0.05;
+			case TSAR -> 0.1;
 		});
 		// the mushroom cloud drifts off with the wind at its own height and rains out on the way
 		double cloudY = pos.y + yield.craterRadius * 3.5;
