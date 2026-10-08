@@ -50,12 +50,6 @@ public final class BlastShader {
 	/** Dust and smoke haze kicked up by the shock wave (0-1), lingers a few seconds. */
 	private static float dust;
 	private static boolean active;
-	/** The visible shock front: a refracting ring expanding from {@link #shockPos}. */
-	private static Vec3 shockPos = Vec3.ZERO;
-	private static double shockSpeed;
-	private static double shockMax;
-	private static float shockStrength;
-	private static int shockAge = -1;
 	/** Earthquake: the picture bounces and rolls (0-1). */
 	private static float quake;
 	/** Water running down the lens after the spray or the wave (0-1). */
@@ -83,22 +77,6 @@ public final class BlastShader {
 			heat = Math.max(heat, (float) Math.min(1.0, near * (0.35 + 0.45 * scale)));
 			heatDecay = (float) Mth.clamp(0.9 + 0.045 * scale, 0.9, 0.993);
 		}
-	}
-
-	/**
-	 * A shock front running out from {@code pos} at {@code speed} blocks per tick, seen as a ring of
-	 * refracting air (and condensation) until it passes the camera or has run {@code max} blocks.
-	 */
-	public static void shockwave(Vec3 pos, double speed, double max, float strength) {
-		double distance = ClientEffects.distanceToCamera(Minecraft.getInstance(), pos);
-		if (distance > 4000.0) {
-			return;
-		}
-		shockPos = pos;
-		shockSpeed = speed;
-		shockMax = max;
-		shockStrength = strength;
-		shockAge = 0;
 	}
 
 	/** Ground shock: the picture jolts and rolls. */
@@ -135,13 +113,6 @@ public final class BlastShader {
 		quake = Math.max(0.0F, quake * 0.985F - 0.002F);
 		drench = Math.max(0.0F, drench * 0.996F - 0.0008F);
 		afterimage = Math.max(0.0F, afterimage * 0.991F - 0.0008F);
-		if (shockAge >= 0) {
-			shockAge++;
-			double r = shockAge * shockSpeed;
-			if (r > shockMax || mc.level == null || r > ClientEffects.distanceToCamera(mc, shockPos)) {
-				shockAge = -1;
-			}
-		}
 		GameRenderer renderer = mc.gameRenderer;
 		Identifier current = renderer.currentPostEffect();
 		boolean ours = EFFECT.equals(current);
@@ -150,7 +121,7 @@ public final class BlastShader {
 			return;
 		}
 		boolean wanted = mc.level != null && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
-			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || shockAge >= 0);
+			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F);
 		if (!wanted) {
 			if (ours) {
 				renderer.clearPostEffect();
@@ -195,25 +166,13 @@ public final class BlastShader {
 			afterX = Mth.clamp(sx, 0.0F, 1.0F);
 			afterY = Mth.clamp(sy, 0.0F, 1.0F);
 		}
-		float ringR = 0.0F;
-		float ringStrength = 0.0F;
-		float[] shock = {0.5F, 0.5F, 0.0F, 0.0F};
-		if (shockAge >= 0) {
-			double r = (shockAge + partialTick) * shockSpeed;
-			shock = project(camera, shockPos, tanHalf, aspect);
-			if (shock[3] > 0.5F) {
-				ringR = (float) (r / (shock[3] * tanHalf) * 0.5);
-				ringStrength = shockStrength * (float) Mth.clamp(1.0 - r / shockMax, 0.0, 1.0);
-			}
-		}
 		// light streaming out of the fireball: only while it is in view and still glowing
 		float rays = onScreen ? Mth.clamp(heat * 1.3F + exposure * 0.6F, 0.0F, 1.0F) : exposure * 0.25F;
 		img.setPixel(1, 0, argb(byteOf(rays), (time & 0xFF) / 255.0F, ((time >> 8) & 0xFF) / 255.0F, heat));
 		img.setPixel(2, 0, byteOf(WinterClient.amount()) << 24 | (tint & 0xFFFFFF)); // alpha: nuclear winter
 		img.setPixel(3, 0, argb(byteOf(dust), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
-		img.setPixel(4, 0, argb(byteOf(drench), Mth.clamp(ringR / 2.0F, 0.0F, 1.0F), ringStrength, quake));
-		// the ring's centre may be off screen (it is still visible as an arc): stored with a margin
-		img.setPixel(5, 0, argb(255, Mth.clamp((shock[0] + 1.0F) / 3.0F, 0.0F, 1.0F), Mth.clamp((shock[1] + 1.0F) / 3.0F, 0.0F, 1.0F), 0.0F));
+		img.setPixel(4, 0, argb(byteOf(drench), 0.0F, 0.0F, quake));
+		img.setPixel(5, 0, 0);
 		img.setPixel(6, 0, argb(255, afterX, afterY, afterimage));
 		img.setPixel(7, 0, 0);
 		params.upload();

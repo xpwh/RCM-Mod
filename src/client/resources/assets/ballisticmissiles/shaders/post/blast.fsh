@@ -8,8 +8,7 @@
 //  * exposure flash in the colour of the blast, bloom on everything hot
 //  * shell shock afterwards: washed-out colours, soft focus, tunnel vision while the ears ring
 //  * per weapon: nuclear bleach, antimatter violet negative flash, EMP signal glitches
-//  * giant blasts: the shock front as a ring of refracting air, the earthquake rolling the picture,
-//    water running down the lens after the tsunami's spray,
+//  * giant blasts: the earthquake rolling the picture, water running down the lens after the tsunami's spray,
 //    and the negative afterimage a nuclear flash burns into the eye
 // Expensive parts only run while they are visible; idle the shader is not even active.
 
@@ -54,17 +53,13 @@ void main() {
     vec4 p2 = param(2);
     vec4 p3 = param(3);
     vec4 p4 = param(4);
-    vec4 p5 = param(5);
     vec4 p6 = param(6);
     float strength = p0.r;   // shock hitting the camera
     float exposure = p0.g;   // flash
     float shock = p0.b;      // shell shock / deafness
     int kind = int(p0.a * 255.0 / 36.0 + 0.5); // 0 fire, 1 nuclear, 2 antimatter, 3 emp, 4 underground, 5 kinetic, 6 water
-    float ringR = p4.r * 2.0;    // shock front radius on screen (screen heights)
-    float ringStrength = p4.g;
     float quake = p4.b;          // earthquake
     float drench = p4.a;         // water on the lens
-    vec2 shockC = p5.rg * 3.0 - 1.0;
     vec2 afterPos = p6.rg;
     float afterimage = p6.b;
     float time = (p1.r + p1.g * 256.0) * 255.0 / 100.0;
@@ -88,17 +83,6 @@ void main() {
         float column = heat * exp(-dot(rel, rel) * 3.0);
         vec2 n = vec2(noise(uv * vec2(10.0, 22.0) + vec2(0.0, -time * 2.2)), noise(uv * vec2(10.0, 22.0) + vec2(4.7, -time * 2.5))) - 0.5;
         uv += n * column * 0.006;
-    }
-
-    // ---- the shock front: a thin shell of compressed air bending the light as it races outwards
-    float ringBand = 0.0;
-    if (ringStrength > 0.0 && ringR > 0.0) {
-        vec2 rel = (uv - shockC) * vec2(aspect, 1.0);
-        float d = length(rel);
-        float w = 0.008 + ringR * 0.035;
-        float k = (d - ringR) / w;
-        ringBand = exp(-k * k) * ringStrength;
-        uv -= rel / max(d, 1.0e-4) * vec2(1.0 / aspect, 1.0) * ringBand * 0.018 * sign(d - ringR + 1.0e-4);
     }
 
     // ---- earthquake: the ground (and the camera on it) bounces and rolls
@@ -209,9 +193,6 @@ void main() {
         }
         col = mix(col, dustCol * (0.7 + 0.5 * luma(col)), dust * thick * drift);
     }
-
-    // ---- the shock front catches the light: a faint bright edge of condensation
-    col += vec3(0.9, 0.93, 1.0) * ringBand * 0.12;
 
     // ---- water on the lens: a cool, smeared look inside the drops
     if (drench > 0.0) {

@@ -199,7 +199,6 @@ final class GiantEffects {
 			this.distance = distanceToCamera(mc, pos);
 			this.soundDelay = (int) (this.distance / SPEED_OF_SOUND);
 			BlastShader.blast(BlastShader.Kind.WATER, new Vec3(pos.x, this.sea, pos.z), 1.8, 0xD8F0FF);
-			BlastShader.shockwave(new Vec3(pos.x, this.sea, pos.z), 12.0, 500.0, 1.0F);
 			setFlash((float) Mth.clamp(0.75 - this.distance / 4000.0, 0.1, 0.75), 0xE8F4FF);
 		}
 
@@ -345,7 +344,6 @@ final class GiantEffects {
 			this.ground = g != null ? g : net.minecraft.world.level.block.Blocks.STONE.defaultBlockState();
 			// no flash: there is no fireball, only the impact itself
 			BlastShader.blast(BlastShader.Kind.KINETIC, pos, 0.35, 0xD8C8B0);
-			BlastShader.shockwave(pos, 14.0, 220.0, 0.9F);
 		}
 
 		@Override
