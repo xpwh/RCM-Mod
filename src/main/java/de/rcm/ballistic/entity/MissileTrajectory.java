@@ -92,6 +92,11 @@ public final class MissileTrajectory {
 		return this.duration;
 	}
 
+	/** Ticks of powered flight. */
+	public int boostTicks() {
+		return this.boostTicks;
+	}
+
 	public Vec3 position(double tick) {
 		if (tick >= this.duration) {
 			return this.position(this.duration - 0.001).add(this.endVelocity.scale(tick - this.duration));

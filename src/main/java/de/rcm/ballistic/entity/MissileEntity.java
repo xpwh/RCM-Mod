@@ -63,6 +63,8 @@ public class MissileEntity extends Entity implements AirThreat {
 	private static final EntityDataAccessor<Vector3fc> DATA_LAUNCH = SynchedEntityData.defineId(MissileEntity.class, EntityDataSerializers.VECTOR3);
 	/** Nose direction of free-flying (cruise) missiles; ballistic ones derive it from the trajectory. */
 	private static final EntityDataAccessor<Vector3fc> DATA_DIR = SynchedEntityData.defineId(MissileEntity.class, EntityDataSerializers.VECTOR3);
+	/** MIRV bus: warheads still on board, or -1 before the bus has started releasing them. */
+	private static final EntityDataAccessor<Integer> DATA_BUS = SynchedEntityData.defineId(MissileEntity.class, EntityDataSerializers.INT);
 
 	private static final int CRUISE_BOOST_TICKS = 32;
 	private static final double CRUISE_ALTITUDE = 22.0;
@@ -88,6 +90,12 @@ public class MissileEntity extends Entity implements AirThreat {
 	public int lastSeenState = -1;
 	public boolean engineSoundStarted;
 	public boolean incomingPlayed;
+	/** Client: stages seen separated (for the separation effect). */
+	public int clientStagesSeen;
+	/** Server: stages separated so far. */
+	private int stagesDropped;
+	/** Server: warheads the MIRV bus has let go of (-1 = not yet releasing). */
+	private int mirvReleased = -1;
 	/** Client: a submarine-launched missile has broken the surface (spray already shown). */
 	public boolean clientBroached;
 	public @Nullable Vec3 lastNozzlePos;
@@ -118,6 +126,7 @@ public class MissileEntity extends Entity implements AirThreat {
 		builder.define(DATA_TARGET, BlockPos.ZERO);
 		builder.define(DATA_LAUNCH, new Vector3f());
 		builder.define(DATA_DIR, new Vector3f(0, 1, 0));
+		builder.define(DATA_BUS, -1);
 	}
 
 	// ------------------------------------------------------------------ state accessors
@@ -429,6 +438,25 @@ public class MissileEntity extends Entity implements AirThreat {
 		}
 
 		this.setPos(next);
+		// staging: a burnt-out stage separates and falls away, the next one lights
+		int dropped = MissileStages.dropped(this.missileType, path, this.stateAge);
+		while (this.stagesDropped < dropped) {
+			SpentStageEntity.separate(level, this.missileType, this.stagesDropped, next, dirNew, path.velocity(this.stateAge));
+			this.stagesDropped++;
+		}
+		if (this.mirvReleased >= 0) {
+			// the bus manoeuvres between releases and lets its warheads go one after the other
+			if (this.stateAge % 5 == 0) {
+				Vec3 bus = next.add(dirNew.scale(9.6 * this.missileType.scale));
+				DetonationManager.releaseMirvWarhead(level, bus, Vec3.atBottomCenterOf(this.getTarget()), this.mirvReleased, this);
+				this.mirvReleased++;
+				this.entityData.set(DATA_BUS, DetonationManager.MIRV_WARHEADS - this.mirvReleased);
+				if (this.mirvReleased >= DetonationManager.MIRV_WARHEADS) {
+					this.discard();
+				}
+			}
+			return;
+		}
 		if (this.missileType.warhead == MissileType.Warhead.METEOR && this.stateAge > 30 && (next.y > level.getMaxY() + 40 || dirNew.y < 0.0)) {
 			// gone into space: the payload comes back as a meteor shower
 			DetonationManager.meteorShower(level, Vec3.atBottomCenterOf(this.getTarget()), this);
@@ -441,10 +469,11 @@ public class MissileEntity extends Entity implements AirThreat {
 			this.discard();
 			return;
 		}
-		if (this.missileType.warhead == MissileType.Warhead.MIRV && this.stateAge > path.duration() * 0.55 && dirNew.y < -0.2
-			&& next.y - this.getTarget().getY() < 260) {
-			DetonationManager.releaseMirv(level, next, Vec3.atBottomCenterOf(this.getTarget()), this);
-			this.discard();
+		if (this.missileType.warhead == MissileType.Warhead.MIRV && this.stateAge > path.duration() * 0.45 && dirNew.y < 0.05) {
+			// out in space just past the top of the arc
+			// the shroud comes off and the post-boost vehicle starts dispensing its warheads
+			this.mirvReleased = 0;
+			this.entityData.set(DATA_BUS, DetonationManager.MIRV_WARHEADS);
 			return;
 		}
 		if (this.missileType.warhead == MissileType.Warhead.INCENDIARY && this.stateAge > path.duration() * 0.6 && dirNew.y < -0.3
@@ -653,6 +682,11 @@ public class MissileEntity extends Entity implements AirThreat {
 
 	/** Interceptors currently flying at this missile, so batteries don't waste them. */
 	private int engagements;
+
+	/** MIRV bus: warheads still on board, or -1 while it is a whole missile. */
+	public int getBusWarheads() {
+		return this.entityData.get(DATA_BUS);
+	}
 
 	public boolean isInFlight() {
 		return this.getState() == FLIGHT;

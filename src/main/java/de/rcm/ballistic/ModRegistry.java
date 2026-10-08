@@ -151,6 +151,11 @@ public final class ModRegistry {
 		"rocket",
 		EntityType.Builder.<de.rcm.ballistic.entity.RocketEntity>of(de.rcm.ballistic.entity.RocketEntity::new, MobCategory.MISC).sized(0.4F, 0.4F).clientTrackingRange(24).updateInterval(1).noLootTable()
 	);
+	public static final EntityType<de.rcm.ballistic.entity.SpentStageEntity> SPENT_STAGE = registerEntity(
+		"spent_stage",
+		EntityType.Builder.<de.rcm.ballistic.entity.SpentStageEntity>of(de.rcm.ballistic.entity.SpentStageEntity::new, MobCategory.MISC).sized(1.0F, 1.0F)
+			.clientTrackingRange(32).updateInterval(1).fireImmune().noLootTable()
+	);
 	public static final EntityType<AerialBombEntity> AERIAL_BOMB = registerEntity(
 		"aerial_bomb",
 		EntityType.Builder.<AerialBombEntity>of(AerialBombEntity::new, MobCategory.MISC).sized(0.45F, 0.45F).clientTrackingRange(24).updateInterval(1).noLootTable()

@@ -18,7 +18,7 @@ import org.joml.Quaternionf;
 
 /** Renders MIRV re-entry vehicles (glowing) and air-defense interceptors (with exhaust flame). */
 public class ProjectileRenderer<T extends Entity> extends EntityRenderer<T, ProjectileRenderer.State> {
-	private static final RenderType RV_TYPE = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/entity/reentry_vehicle.png"));
+	static final RenderType RV_TYPE = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/entity/reentry_vehicle.png"));
 	private static final RenderType INTERCEPTOR_TYPE = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/entity/interceptor.png"));
 	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
 
@@ -32,6 +32,7 @@ public class ProjectileRenderer<T extends Entity> extends EntityRenderer<T, Proj
 	public static class State extends EntityRenderState {
 		public final Quaternionf rotation = new Quaternionf();
 		public float time;
+		public float distance;
 	}
 
 	@Override
@@ -50,6 +51,7 @@ public class ProjectileRenderer<T extends Entity> extends EntityRenderer<T, Proj
 		Vec3 dir = entity instanceof InterceptorEntity i ? i.getDir() : entity.getDeltaMovement();
 		MissileRenderer.orient(state.rotation, dir.lengthSqr() < 1.0E-6 ? new Vec3(0, -1, 0) : dir.normalize());
 		state.time = entity.tickCount + partialTick;
+		state.distance = (float) Math.sqrt(state.distanceToCameraSq);
 		state.lightCoords = LightTexture.FULL_BRIGHT;
 	}
 
@@ -70,6 +72,17 @@ public class ProjectileRenderer<T extends Entity> extends EntityRenderer<T, Proj
 			collector.submitCustomGeometry(poseStack, MissileRenderer.PLASMA_TYPE, (pose, consumer) -> MissileMesh.REENTRY_VEHICLE.emit(pose, consumer, light, a));
 		}
 		poseStack.popPose();
+		if (!this.interceptor && camera.orientation != null) {
+			// re-entering warheads seen from afar: glowing points streaking down, day and night
+			float r = Math.max(0.8F, state.distance * 0.006F) * (0.9F + 0.1F * (float) Math.sin(t * 2.7F));
+			poseStack.pushPose();
+			poseStack.mulPose(camera.orientation);
+			collector.submitCustomGeometry(poseStack, MissileRenderer.GLOW_TYPE, (pose, consumer) -> {
+				MissileRenderer.glowQuad(pose, consumer, r, 0xFFFFE6C8);
+				MissileRenderer.glowQuad(pose, consumer, r * 2.4F, 0x66FF9040);
+			});
+			poseStack.popPose();
+		}
 		super.submit(state, poseStack, collector, camera);
 	}
 }

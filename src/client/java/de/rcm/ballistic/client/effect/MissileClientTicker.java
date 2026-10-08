@@ -10,6 +10,7 @@ import de.rcm.ballistic.entity.MissileEntity;
 import de.rcm.ballistic.entity.MissileType;
 import de.rcm.ballistic.entity.ReentryVehicleEntity;
 import net.minecraft.world.entity.Entity;
+import de.rcm.ballistic.entity.MissileStages;
 import de.rcm.ballistic.entity.MissileTrajectory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -347,8 +348,43 @@ public final class MissileClientTicker {
 		}
 		MissileTrajectory path = missile.getTrajectory();
 		int age = missile.clientStateAge;
-		Vec3 nozzle = missile.position();
 		Vec3 dir = path.direction(age);
+		MissileType type = missile.getMissileType();
+		if (missile.getBusWarheads() >= 0) {
+			// the post-boost vehicle: no main engine, just puffs from its attitude thrusters
+			Vec3 bus = missile.position().add(dir.scale(9.4 * type.scale));
+			if (age % 3 == 0) {
+				Vec3 side = new Vec3(ClientEffects.gauss(), ClientEffects.gauss(), ClientEffects.gauss()).normalize();
+				CloudParticle p = ClientEffects.cloud(false, bus.x, bus.y, bus.z, side.x * 0.15, side.y * 0.15, side.z * 0.15);
+				if (p != null) {
+					p.configure(30, 0.3F, 1.2F, 0xFFFFFF, 0xDDDDDD, 0.5F).physics(0.9F, 0.0F).wind(0.0F);
+				}
+			}
+			missile.lastNozzlePos = null;
+			return;
+		}
+		// staging: the stack loses its lower stages, the flame comes from the stage still burning
+		int dropped = MissileStages.dropped(type, path, age);
+		Vec3 nozzle = missile.position().add(dir.scale(MissileStages.bottom(type, dropped) * type.scale));
+		if (dropped > missile.clientStagesSeen) {
+			missile.clientStagesSeen = dropped;
+			// separation: the joint's charges fire, a ring of smoke, the next stage lights with a flash
+			for (int i = 0; i < 30; i++) {
+				double a = ClientEffects.rand() * Mth.TWO_PI;
+				Vec3 out = new Vec3(Math.cos(a), 0, Math.sin(a));
+				CloudParticle p = ClientEffects.cloud(false, nozzle.x, nozzle.y, nozzle.z, out.x * 0.5, out.y * 0.5 - dir.y * 0.2, out.z * 0.5);
+				if (p != null) {
+					p.configure(70 + (int) (ClientEffects.rand() * 40), 0.8F * scale, 4.0F * scale, 0xF4F2EE, 0xB8B4AE, 0.8F).physics(0.9F, 0.0F);
+				}
+			}
+			for (int i = 0; i < 10; i++) {
+				CloudParticle f = ClientEffects.cloud(true, nozzle.x, nozzle.y, nozzle.z, ClientEffects.gauss() * 0.3, ClientEffects.gauss() * 0.3, ClientEffects.gauss() * 0.3);
+				if (f != null) {
+					f.configure(6 + (int) (ClientEffects.rand() * 6), 1.5F * scale, 4.0F * scale, 0xFFF4D0, 0xFF7020, 1.0F).physics(0.8F, 0.0F);
+				}
+			}
+			missile.lastNozzlePos = nozzle;
+		}
 		Vec3 prev = missile.lastNozzlePos != null && missile.lastSeenState == MissileEntity.FLIGHT ? missile.lastNozzlePos : nozzle;
 		missile.lastNozzlePos = nozzle;
 

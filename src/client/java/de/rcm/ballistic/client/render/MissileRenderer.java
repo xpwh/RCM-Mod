@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import de.rcm.ballistic.BallisticMissiles;
 import de.rcm.ballistic.entity.MissileEntity;
+import de.rcm.ballistic.entity.MissileStages;
 import de.rcm.ballistic.entity.MissileType;
 import java.util.EnumMap;
 import java.util.Map;
@@ -27,7 +28,7 @@ import org.joml.Vector3f;
 public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRenderer.State> {
 	private static final Identifier FLAME_TEXTURE = BallisticMissiles.id("textures/entity/exhaust_flame.png");
 	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(FLAME_TEXTURE);
-	private static final RenderType GLOW_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/glow.png"));
+	static final RenderType GLOW_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/glow.png"));
 	static final RenderType PLASMA_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/plasma.png"));
 	private static final Map<MissileType, RenderType> BODY_TYPES = new EnumMap<>(MissileType.class);
 
@@ -76,6 +77,9 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		/** Night-time light dot seen from afar: strength (0..1) and distance to the camera. */
 		public float nightGlow;
 		public float distance;
+		/** Stages separated so far, and warheads left on the MIRV bus (-1 = whole missile). */
+		public int dropped;
+		public int bus = -1;
 	}
 
 	/** Nozzle exits per model: {x, z, radius} in model space, all at y = 0. */
@@ -104,6 +108,9 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 	public void extractRenderState(MissileEntity entity, State state, float partialTick) {
 		super.extractRenderState(entity, state, partialTick);
 		state.missileType = entity.getMissileType();
+		boolean ballisticFlight = entity.getState() == MissileEntity.FLIGHT && !state.missileType.isCruise();
+		state.dropped = ballisticFlight ? MissileStages.dropped(state.missileType, entity.getTrajectory(), entity.clientStateAge + partialTick) : 0;
+		state.bus = entity.getBusWarheads();
 		Vec3 dir = entity.getNoseDirection(partialTick);
 		orient(state.rotation, dir);
 		state.engineOn = entity.isBoosterBurning();
@@ -132,7 +139,8 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 
 	@Override
 	public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
-		MissileMesh mesh = MissileMesh.of(state.missileType);
+		MissileMesh mesh = MissileMesh.stack(state.missileType, state.dropped);
+		float stageBottom = MissileStages.bottom(state.missileType, state.dropped);
 		RenderType bodyType = BODY_TYPES.get(state.missileType);
 		int light = state.lightCoords;
 		float scale = state.missileType.scale;
@@ -141,6 +149,24 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		poseStack.translate(state.shakeX, 0.0F, state.shakeZ);
 		poseStack.mulPose(state.rotation);
 		poseStack.scale(scale, scale, scale);
+		if (state.bus >= 0) {
+			// MIRV bus: the shroud is gone; the post-boost vehicle with its remaining warheads
+			MissileMesh busMesh = MissileMesh.bus(state.missileType);
+			collector.submitCustomGeometry(poseStack, bodyType, (pose, consumer) -> busMesh.emit(pose, consumer, light));
+			float top = MissileMesh.busTop(state.missileType);
+			for (int i = 0; i < state.bus; i++) {
+				float a = i * Mth.TWO_PI / 4.0F + 0.4F;
+				float r = i == 4 ? 0.0F : 0.28F;
+				poseStack.pushPose();
+				poseStack.translate(Mth.cos(a) * r, top, Mth.sin(a) * r);
+				poseStack.scale(0.4F, 0.4F, 0.4F);
+				collector.submitCustomGeometry(poseStack, ProjectileRenderer.RV_TYPE, (pose, consumer) -> MissileMesh.REENTRY_VEHICLE.emit(pose, consumer, light));
+				poseStack.popPose();
+			}
+			poseStack.popPose();
+			super.submit(state, poseStack, collector, camera);
+			return;
+		}
 		collector.submitCustomGeometry(poseStack, bodyType, (pose, consumer) -> mesh.emit(pose, consumer, light));
 		boolean cruise = state.missileType.isCruise();
 		if (cruise && state.engineOn) {
@@ -169,6 +195,12 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			float flicker = 0.85F + 0.15F * Mth.sin(t * 1.9F) * Mth.cos(t * 3.1F);
 			float[][] exits = nozzles(state.missileType.model);
 			float exitY = 0.0F;
+			if (state.dropped > 0) {
+				// an upper stage burning: one nozzle at the bottom of what is left
+				float r = MissileStages.radii(state.missileType)[state.dropped - 1];
+				exits = new float[][] {{0.0F, 0.0F, r * 0.32F}};
+				exitY = stageBottom - 0.5F;
+			}
 			if (cruise && state.engineOn) {
 				exits = new float[][] {{0.0F, 0.0F, 0.17F}};
 				exitY = -MissileMesh.CRUISE_BOOSTER_LENGTH - 0.28F;
@@ -205,7 +237,7 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		super.submit(state, poseStack, collector, camera);
 	}
 
-	private static void glowQuad(PoseStack.Pose pose, VertexConsumer consumer, float r, int color) {
+	static void glowQuad(PoseStack.Pose pose, VertexConsumer consumer, float r, int color) {
 		float[][] c = {{-r, -r, 0, 1}, {r, -r, 1, 1}, {r, r, 1, 0}, {-r, r, 0, 0}};
 		for (float[] v : c) {
 			consumer.addVertex(pose, v[0], v[1], 0.0F).setColor(color).setUv(v[2], v[3]).setOverlay(OverlayTexture.NO_OVERLAY)

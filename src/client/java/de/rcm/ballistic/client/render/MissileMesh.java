@@ -113,6 +113,75 @@ public final class MissileMesh {
 		return this.length;
 	}
 
+	// ------------------------------------------------------------------ staging
+
+	private static final java.util.Map<String, MissileMesh> STAGE_CACHE = new java.util.HashMap<>();
+
+	/**
+	 * What is still flying after {@code dropped} stages have separated: the upper stages only, closed
+	 * at the bottom with the next stage's nozzle.
+	 */
+	public static MissileMesh stack(MissileType type, int dropped) {
+		if (dropped <= 0) {
+			return of(type);
+		}
+		return STAGE_CACHE.computeIfAbsent(type.model + "/stack/" + dropped, k -> {
+			MissileMesh base = of(type);
+			float cut = de.rcm.ballistic.entity.MissileStages.bottom(type, dropped);
+			float r = de.rcm.ballistic.entity.MissileStages.radii(type)[dropped - 1];
+			Builder b = new Builder(base.length);
+			b.copy(base.data, cut - 0.01F, base.length + 1.0F);
+			b.disc(cut, r, true, Skin.METAL);
+			b.lathe(new float[][] {{cut, r * 0.38F}, {cut - 0.25F, r * 0.36F}, {cut - 0.45F, r * 0.3F}, {cut - 0.5F, r * 0.32F}}, Skin.METAL);
+			b.lathe(new float[][] {{cut - 0.48F, r * 0.3F}, {cut - 0.02F, r * 0.1F}}, Skin.DARK);
+			return b.build();
+		});
+	}
+
+	/** Top of the post-boost vehicle (model space), where its warheads sit. */
+	public static float busTop(MissileType type) {
+		return type.model == MissileType.Model.HEAVY_ICBM ? 10.45F : 9.8F;
+	}
+
+	/**
+	 * The MIRV post-boost vehicle once the last stage and the shroud are gone: the equipment
+	 * section with its attitude thrusters, closed top and bottom.
+	 */
+	public static MissileMesh bus(MissileType type) {
+		return STAGE_CACHE.computeIfAbsent(type.model + "/bus", k -> {
+			MissileMesh base = of(type);
+			float hi = busTop(type);
+			float lo = type.model == MissileType.Model.HEAVY_ICBM ? 10.1F : 9.28F;
+			Builder b = new Builder(base.length);
+			b.copy(base.data, lo, hi + 0.01F);
+			b.lathe(new float[][] {{lo, 0.0F}, {lo, 0.5F}, {hi, 0.5F}, {hi, 0.0F}}, Skin.METAL);
+			for (int i = 0; i < 4; i++) {
+				b.radialBox(i * Mth.HALF_PI, 0.5F, 0.1F, 0.12F, lo + 0.1F, lo + 0.3F, Skin.DARK); // thruster pods
+			}
+			b.lathe(new float[][] {{lo, 0.2F}, {lo - 0.25F, 0.16F}}, Skin.DARK); // its small engine
+			return b.build();
+		});
+	}
+
+	/** A spent stage on its own: open interstage skirt on top, its nozzles below. */
+	public static MissileMesh spent(MissileType type, int stage) {
+		return STAGE_CACHE.computeIfAbsent(type.model + "/spent/" + stage, k -> {
+			MissileMesh base = of(type);
+			float lo = de.rcm.ballistic.entity.MissileStages.bottom(type, stage);
+			float hi = de.rcm.ballistic.entity.MissileStages.cuts(type)[stage];
+			float rTop = de.rcm.ballistic.entity.MissileStages.radii(type)[stage];
+			Builder b = new Builder(base.length);
+			b.copy(base.data, lo - 0.01F, hi + 0.01F);
+			b.disc(hi - 0.15F, rTop, false, Skin.DARK); // the dome of the stage seen inside the open skirt
+			if (stage > 0) {
+				float r = de.rcm.ballistic.entity.MissileStages.radii(type)[stage - 1];
+				b.disc(lo, r, true, Skin.METAL);
+				b.lathe(new float[][] {{lo, r * 0.38F}, {lo - 0.25F, r * 0.36F}, {lo - 0.45F, r * 0.3F}, {lo - 0.5F, r * 0.32F}}, Skin.METAL);
+			}
+			return b.build();
+		});
+	}
+
 	// ------------------------------------------------------------------ real-world inspired models
 
 	/** Iskander-style quasi-ballistic missile: tail skirt, recessed nozzle with jet vanes, long ogive. */
@@ -685,6 +754,23 @@ public final class MissileMesh {
 
 		MissileMesh build() {
 			return new MissileMesh(this.out.toFloatArray(), this.length);
+		}
+
+		/** Copies the quads of another mesh that lie entirely between heights lo and hi. */
+		void copy(float[] data, float lo, float hi) {
+			int quad = STRIDE * 4;
+			for (int q = 0; q + quad <= data.length; q += quad) {
+				boolean inside = true;
+				for (int v = 0; v < 4 && inside; v++) {
+					float y = data[q + v * STRIDE + 1];
+					inside = y >= lo && y <= hi;
+				}
+				if (inside) {
+					for (int i = 0; i < quad; i++) {
+						this.out.add(data[q + i]);
+					}
+				}
+			}
 		}
 
 		private float bodyV(float y) {

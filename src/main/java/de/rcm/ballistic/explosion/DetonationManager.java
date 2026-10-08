@@ -213,26 +213,41 @@ public final class DetonationManager {
 		}
 	}
 
+	/** Number of warheads a MIRV bus carries. */
+	public static final int MIRV_WARHEADS = 5;
+
 	/** MIRV bus: five re-entry vehicles fan out onto a cross pattern around the aim point. */
 	public static void releaseMirv(ServerLevel level, Vec3 pos, Vec3 aim, Entity source) {
-		broadcast(level, pos, Warhead.MIRV_RELEASE);
-		level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.CLUSTER_POP, SoundSource.BLOCKS, 16.0F, 0.6F);
+		for (int i = 0; i < MIRV_WARHEADS; i++) {
+			releaseMirvWarhead(level, pos, aim, i, source);
+		}
+	}
+
+	/**
+	 * The bus lets go of warhead {@code i}: a puff from its spring/thrusters and the re-entry vehicle
+	 * falls away towards its own aim point (a cross pattern around the target).
+	 */
+	public static void releaseMirvWarhead(ServerLevel level, Vec3 pos, Vec3 aim, int i, Entity source) {
+		if (i == 0) {
+			broadcast(level, pos, Warhead.MIRV_RELEASE);
+		}
+		level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.CLUSTER_POP, SoundSource.BLOCKS, 12.0F, 0.55F + i * 0.05F);
 		double spacing = 70.0;
 		Vec3[] aims = {
 			aim, aim.add(spacing, 0, 0), aim.add(-spacing, 0, 0), aim.add(0, 0, spacing), aim.add(0, 0, -spacing)
 		};
-		for (int i = 0; i < aims.length; i++) {
+		{
 			ReentryVehicleEntity rv = ModRegistry.REENTRY_VEHICLE.create(level, EntitySpawnReason.TRIGGERED);
 			if (rv == null) {
-				continue;
+				return;
 			}
-			Vec3 target = aims[i];
+			Vec3 target = aims[i % aims.length];
 			int x = Mth.floor(target.x);
 			int z = Mth.floor(target.z);
 			if (level.hasChunk(x >> 4, z >> 4)) {
 				target = new Vec3(target.x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z), target.z);
 			}
-			Vec3 start = pos.add((i - 2) * 1.5, 0, 0);
+			Vec3 start = pos.add(0, -1.0, 0);
 			Vec3 dir = target.subtract(start).normalize();
 			rv.setPos(start);
 			rv.setAim(target);
