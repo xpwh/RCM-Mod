@@ -56,6 +56,14 @@ public final class SmokeField {
 	private static final float[] GLOW = new float[CAP];
 	private static final float[] LIFT = new float[CAP];
 	private static final float[] SEED = new float[CAP];
+	/** Way out from under a ceiling (unit x, z), and when it was last looked for. */
+	private static final float[] ESC_X = new float[CAP];
+	private static final float[] ESC_Z = new float[CAP];
+	private static final int[] ESC_AGE = new int[CAP];
+	private static final double[] MOVE = new double[3];
+	/** Smoke further than this from the camera is not collided (it is out of sight anyway). */
+	private static final double COLLIDE_RANGE = 160.0;
+	private static final double[] WAY = new double[2];
 	private static int count;
 	private static long clock;
 	private static float fog;
@@ -118,6 +126,7 @@ public final class SmokeField {
 		GLOW[i] = glow;
 		LIFT[i] = lift;
 		SEED[i] = ClientEffects.rand() * 1000.0F;
+		ESC_AGE[i] = 0;
 	}
 
 	/** A cloud of {@code n} puffs around {@code c} spreading at {@code speed} (launch clouds, back-blast). */
@@ -196,6 +205,9 @@ public final class SmokeField {
 			GLOW[i] = GLOW[last];
 			LIFT[i] = LIFT[last];
 			SEED[i] = SEED[last];
+			ESC_X[i] = ESC_X[last];
+			ESC_Z[i] = ESC_Z[last];
+			ESC_AGE[i] = ESC_AGE[last];
 		}
 	}
 
@@ -259,11 +271,48 @@ public final class SmokeField {
 			double tx = Mth.sin(age * 0.011F + s) * twist + Mth.sin((float) (Y[i] * 0.05) + s * 0.3F) * twist * 0.6;
 			double tz = Mth.cos(age * 0.009F + s * 1.7F) * twist + Mth.cos((float) (Y[i] * 0.043) + s) * twist * 0.6;
 			double ty = Mth.sin(age * 0.007F + s * 2.3F) * twist * 0.3;
-			X[i] += VX[i] + WIND_X[band] * ramp + tx;
-			Y[i] += VY[i] + ty;
-			Z[i] += VZ[i] + WIND_Z[band] * ramp + tz;
-			// thickness of the smoke at the camera
+			double mx = VX[i] + WIND_X[band] * ramp + tx;
+			double my = VY[i] + ty;
+			double mz = VZ[i] + WIND_Z[band] * ramp + tz;
 			float rad = radius(i, t);
+			// the smoke meets the world: under a roof it pools and spreads to the edge and out
+			double cx = X[i] - cam.x;
+			double cz = Z[i] - cam.z;
+			if (cx * cx + cz * cz < COLLIDE_RANGE * COLLIDE_RANGE) {
+				int hit = SmokeCollision.move(mc.level, X[i], Y[i], Z[i], mx, my, mz, rad, MOVE);
+				mx = MOVE[0];
+				my = MOVE[1];
+				mz = MOVE[2];
+				if ((hit & SmokeCollision.CEILING) != 0) {
+					VY[i] = Math.min(VY[i], 0.0F);
+					if (ESC_AGE[i] <= 0) {
+						SmokeCollision.escape(mc.level, X[i], Y[i], Z[i], SEED[i], rad, WAY);
+						ESC_X[i] = (float) WAY[0];
+						ESC_Z[i] = (float) WAY[1];
+						ESC_AGE[i] = 10;
+					}
+					// the rising push turns sideways along the ceiling
+					float push = 0.03F + LIFT[i] * 0.6F;
+					VX[i] += ESC_X[i] * push;
+					VZ[i] += ESC_Z[i] * push;
+				}
+				if ((hit & SmokeCollision.WALL_X) != 0) {
+					VX[i] *= -0.25F;
+				}
+				if ((hit & SmokeCollision.WALL_Z) != 0) {
+					VZ[i] *= -0.25F;
+				}
+				if ((hit & SmokeCollision.FLOOR) != 0) {
+					VY[i] = 0.0F;
+				}
+				if (ESC_AGE[i] > 0) {
+					ESC_AGE[i]--;
+				}
+			}
+			X[i] += mx;
+			Y[i] += my;
+			Z[i] += mz;
+			// thickness of the smoke at the camera
 			double dx = X[i] - cam.x;
 			double dy = Y[i] - cam.y;
 			double dz = Z[i] - cam.z;

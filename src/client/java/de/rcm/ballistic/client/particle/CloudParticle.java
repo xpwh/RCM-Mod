@@ -199,6 +199,12 @@ public class CloudParticle extends SingleQuadParticle {
 		return new Vec3(sx * 0.8, sy + 0.55, 0.25).normalize();
 	}
 
+	private static final double[] MOVE = new double[3];
+	private static final double[] WAY = new double[2];
+	private double escX;
+	private double escZ;
+	private int escAge;
+
 	@Override
 	public void tick() {
 		this.xo = this.x;
@@ -250,7 +256,38 @@ public class CloudParticle extends SingleQuadParticle {
 		}
 		double windRamp = this.wind * Math.min(1.0, this.age / 40.0);
 		double[] w = wind(this.level.getGameTime(), this.y);
-		this.move(this.xd + sx + w[0] * windRamp, this.yd + sy, this.zd + sz + w[1] * windRamp);
+		double mx = this.xd + sx + w[0] * windRamp;
+		double my = this.yd + sy;
+		double mz = this.zd + sz + w[1] * windRamp;
+		// the cloud meets the world: under a roof or an overhang it spreads out and pours round the edge
+		int hit = de.rcm.ballistic.client.effect.SmokeCollision.move(this.level, this.x, this.y, this.z, mx, my, mz, this.quadSize, MOVE);
+		if (hit != 0) {
+			mx = MOVE[0];
+			my = MOVE[1];
+			mz = MOVE[2];
+			if ((hit & de.rcm.ballistic.client.effect.SmokeCollision.CEILING) != 0) {
+				this.yd = Math.min(this.yd, 0.0);
+				if (this.escAge-- <= 0) {
+					de.rcm.ballistic.client.effect.SmokeCollision.escape(this.level, this.x, this.y, this.z, this.phaseA * 100.0F, this.quadSize, WAY);
+					this.escX = WAY[0];
+					this.escZ = WAY[1];
+					this.escAge = 10;
+				}
+				double push = 0.03 + this.buoyancy * 0.6;
+				this.xd += this.escX * push;
+				this.zd += this.escZ * push;
+			}
+			if ((hit & de.rcm.ballistic.client.effect.SmokeCollision.WALL_X) != 0) {
+				this.xd *= -0.25;
+			}
+			if ((hit & de.rcm.ballistic.client.effect.SmokeCollision.WALL_Z) != 0) {
+				this.zd *= -0.25;
+			}
+			if ((hit & de.rcm.ballistic.client.effect.SmokeCollision.FLOOR) != 0) {
+				this.yd = 0.0;
+			}
+		}
+		this.move(mx, my, mz);
 		this.roll += this.spin;
 		this.updateSprite();
 
