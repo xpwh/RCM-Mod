@@ -123,11 +123,17 @@ public final class Rpg7ItemRenderer implements SpecialModelRenderer<Boolean> {
 		b.box(-0.008F, AXIS_Y - r - 0.02F, 0.06F, 0.008F, AXIS_Y - r + 0.005F, 0.085F, STEEL); // hammer
 		// folding iron sights: front post near the muzzle, rear leaf above the grip
 		b.box(-0.012F, top - 0.004F, MUZZLE_Z + 0.04F, 0.012F, top + 0.012F, MUZZLE_Z + 0.07F, GUNMETAL);
-		b.box(-0.003F, top + 0.012F, MUZZLE_Z + 0.05F, 0.003F, top + 0.055F, MUZZLE_Z + 0.057F, GUNMETAL);
-		// rear leaf with its notch
-		b.box(-0.016F, top - 0.004F, -0.03F, 0.016F, top + 0.05F, -0.022F, GUNMETAL);
-		b.box(-0.016F, top + 0.05F, -0.03F, -0.004F, top + 0.062F, -0.022F, GUNMETAL);
-		b.box(0.004F, top + 0.05F, -0.03F, 0.016F, top + 0.062F, -0.022F, GUNMETAL);
+		// front post on its folding stem, with protective ears
+		b.box(-0.004F, top + 0.012F, MUZZLE_Z + 0.048F, 0.004F, top + 0.096F, MUZZLE_Z + 0.058F, GUNMETAL);
+		b.box(-0.0025F, top + 0.096F, MUZZLE_Z + 0.05F, 0.0025F, top + 0.106F, MUZZLE_Z + 0.056F, STEEL);
+		for (float sx : new float[] {-1.0F, 1.0F}) {
+			b.box(sx > 0 ? 0.008F : -0.012F, top + 0.012F, MUZZLE_Z + 0.046F, sx > 0 ? 0.012F : -0.008F, top + 0.11F, MUZZLE_Z + 0.06F, GUNMETAL);
+		}
+		// rear leaf with its notch, on a folding base
+		b.box(-0.016F, top - 0.004F, -0.034F, 0.016F, top + 0.012F, -0.018F, GUNMETAL);
+		b.box(-0.016F, top + 0.012F, -0.03F, 0.016F, top + 0.098F, -0.023F, GUNMETAL);
+		b.box(-0.016F, top + 0.098F, -0.03F, -0.0045F, top + 0.112F, -0.023F, GUNMETAL);
+		b.box(0.0045F, top + 0.098F, -0.03F, 0.016F, top + 0.112F, -0.023F, GUNMETAL);
 		// PGO-7 optical sight on the left: bracket, body, objective lens, rubber eye-cup
 		float sx = -0.065F;
 		float sy = AXIS_Y + 0.05F;

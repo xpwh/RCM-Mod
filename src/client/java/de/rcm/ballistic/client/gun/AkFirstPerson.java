@@ -22,9 +22,10 @@ public final class AkFirstPerson {
 	}
 
 	/** Line of sight: from the rear notch to the tip of the front post, and the eye behind it (item space). */
-	private static final Vector3f NOTCH = new Vector3f(0.0F, 0.155F, -0.126F);
+	private static final Vector3f NOTCH = new Vector3f(0.0F, 0.175F, -0.126F);
 	private static final Vector3f SIGHT_LINE = new Vector3f(0.0F, 0.01F, -0.518F).normalize();
-	private static final Vector3f EYE = new Vector3f(NOTCH).sub(new Vector3f(SIGHT_LINE).mul(0.17F));
+	/** Cheek on the stock: the eye well behind the rear sight, as on the real rifle. */
+	private static final Vector3f EYE = new Vector3f(NOTCH).sub(new Vector3f(SIGHT_LINE).mul(0.32F));
 	/** Camera position in the hand space vanilla sets up for the main hand. */
 	private static final Vector3f CAMERA = new Vector3f(-0.56F, 0.52F, 0.72F);
 

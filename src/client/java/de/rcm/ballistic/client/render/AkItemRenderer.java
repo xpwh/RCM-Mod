@@ -375,17 +375,19 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		loft(b, AK_WORN, new float[] {0.168F, 0.13F, 0.114F, 0.008F, 0.003F}, new float[] {0.182F, 0.128F, 0.116F, 0.008F, 0.003F});
 
 		// ===== rear sight: block on the front trunnion, the sloping tangent leaf, the range slider
-		loft(b, AK_BLUED, new float[] {-0.245F, 0.146F, 0.11F, 0.021F, 0.006F}, new float[] {-0.195F, 0.15F, 0.11F, 0.022F, 0.006F},
-			new float[] {-0.135F, 0.132F, 0.11F, 0.02F, 0.006F});
+		loft(b, AK_BLUED, new float[] {-0.245F, 0.158F, 0.11F, 0.021F, 0.006F}, new float[] {-0.195F, 0.168F, 0.11F, 0.022F, 0.006F},
+			new float[] {-0.135F, 0.15F, 0.11F, 0.02F, 0.006F});
 		b.hexa(AK_BLUED,
-			v(-0.015F, 0.149F, -0.2F), v(0.015F, 0.149F, -0.2F), v(0.015F, 0.154F, -0.2F), v(-0.015F, 0.154F, -0.2F),
-			v(-0.015F, 0.15F, -0.122F), v(0.015F, 0.15F, -0.122F), v(0.015F, 0.155F, -0.122F), v(-0.015F, 0.155F, -0.122F));
+			v(-0.015F, 0.167F, -0.2F), v(0.015F, 0.167F, -0.2F), v(0.015F, 0.172F, -0.2F), v(-0.015F, 0.172F, -0.2F),
+			v(-0.015F, 0.17F, -0.122F), v(0.015F, 0.17F, -0.122F), v(0.015F, 0.175F, -0.122F), v(-0.015F, 0.175F, -0.122F));
+		// the leaf's support down to the block at the back
+		b.box(-0.011F, 0.148F, -0.135F, 0.011F, 0.171F, -0.127F, AK_BLUED);
 		for (float sx : new float[] {-1.0F, 1.0F}) {
 			// the ears either side of the notch
-			b.box(sx > 0 ? 0.003F : -0.012F, 0.153F, -0.13F, sx > 0 ? 0.012F : -0.003F, 0.163F, -0.122F, AK_BLUED);
+			b.box(sx > 0 ? 0.0035F : -0.012F, 0.173F, -0.13F, sx > 0 ? 0.012F : -0.0035F, 0.184F, -0.122F, AK_BLUED);
 		}
-		b.box(-0.018F, 0.146F, -0.172F, 0.018F, 0.159F, -0.16F, AK_WORN); // range slider
-		b.box(0.018F, 0.148F, -0.17F, 0.023F, 0.156F, -0.162F, AK_WORN);  // slider catch
+		b.box(-0.018F, 0.164F, -0.172F, 0.018F, 0.177F, -0.16F, AK_WORN); // range slider
+		b.box(0.018F, 0.166F, -0.17F, 0.023F, 0.174F, -0.162F, AK_WORN);  // slider catch
 		// gas tube lock lever on the right of the sight block
 		b.beam(v(0.022F, 0.135F, -0.214F), v(0.026F, 0.12F, -0.185F), 0.005F, 0.008F, AK_WORN);
 
@@ -475,10 +477,10 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 			v(-0.012F, 0.108F, -0.66F), v(0.012F, 0.108F, -0.66F), v(0.012F, 0.12F, -0.656F), v(-0.012F, 0.12F, -0.656F));
 		for (float sx : new float[] {-1.0F, 1.0F}) {
 			b.hexa(AK_BLUED,
-				v(sx * 0.0125F, 0.108F, -0.628F), v(sx * 0.018F, 0.108F, -0.628F), v(sx * 0.016F, 0.168F, -0.636F), v(sx * 0.0125F, 0.168F, -0.636F),
-				v(sx * 0.0125F, 0.108F, -0.658F), v(sx * 0.018F, 0.108F, -0.658F), v(sx * 0.016F, 0.168F, -0.652F), v(sx * 0.0125F, 0.168F, -0.652F));
+				v(sx * 0.0125F, 0.108F, -0.628F), v(sx * 0.018F, 0.108F, -0.628F), v(sx * 0.016F, 0.19F, -0.636F), v(sx * 0.0125F, 0.19F, -0.636F),
+				v(sx * 0.0125F, 0.108F, -0.658F), v(sx * 0.018F, 0.108F, -0.658F), v(sx * 0.016F, 0.19F, -0.652F), v(sx * 0.0125F, 0.19F, -0.652F));
 		}
-		b.revolve(AK_WORN, v(0, 0.12F, -0.644F), v(0, 1, 0), new float[][] {{0.0F, 0.0028F}, {0.041F, 0.0024F}, {0.045F, 0.0F}}, 6);
+		b.revolve(AK_WORN, v(0, 0.12F, -0.644F), v(0, 1, 0), new float[][] {{0.0F, 0.0034F}, {0.063F, 0.003F}, {0.066F, 0.0F}}, 6);
 		b.box(-0.006F, 0.044F, -0.66F, 0.006F, 0.06F, -0.618F, AK_BLUED);
 		b.box(-0.004F, 0.04F, -0.656F, 0.004F, 0.044F, -0.645F, AK_BLUED);
 		// cleaning rod under the barrel, its notched head at the front

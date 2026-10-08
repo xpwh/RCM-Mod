@@ -40,8 +40,9 @@ public final class RpgClient {
 	private static final Vector3f WARHEAD_HOLD = new Vector3f(0.0F, 0.03F, -0.6F);
 	private static final float INSERT = 0.42F;
 	/** Eye behind the rear sight, and the line of sight to the front post. */
-	private static final Vector3f SIGHT_LINE = new Vector3f(0.0F, 0.005F, -0.28F).normalize();
-	private static final Vector3f EYE = new Vector3f(0.0F, 0.2F, -0.026F).sub(new Vector3f(SIGHT_LINE).mul(0.2F));
+	private static final Vector3f SIGHT_LINE = new Vector3f(0.0F, 0.008F, -0.28F).normalize();
+	/** Eye well behind the raised rear sight, cheek on the heat shield. */
+	private static final Vector3f EYE = new Vector3f(0.0F, 0.248F, -0.026F).sub(new Vector3f(SIGHT_LINE).mul(0.44F));
 	/** Camera position in the hand space vanilla sets up for the main hand. */
 	private static final Vector3f CAMERA = new Vector3f(-0.56F, 0.52F, 0.72F);
 
