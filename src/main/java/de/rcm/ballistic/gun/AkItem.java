@@ -20,6 +20,8 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
@@ -41,6 +43,8 @@ public class AkItem extends Item {
 	public static final int RELOAD_EMPTY = 72;
 	/** Reload choreography (ticks after the start): magazine out, new magazine in, bolt charged. */
 	public static final int T_MAG_OUT = 12;
+	/** A speed reload lets the empty magazine go here (just out of the well). */
+	public static final int T_MAG_DROP = 15;
 	public static final int T_MAG_IN = 30;
 	public static final int T_CHARGE = 52;
 	/** Muzzle velocity, blocks per tick (715 m/s). */
@@ -277,6 +281,19 @@ public class AkItem extends Item {
 		int duration = state.reloadKind() == GunState.EMPTY ? RELOAD_EMPTY : RELOAD_TACTICAL;
 		if (t == T_MAG_OUT && state.hasMag()) {
 			this.sound(level, player, ModRegistry.AK_MAG_OUT, 1.0F);
+		} else if (t == T_MAG_DROP && state.hasMag() && state.reloadKind() == GunState.EMPTY) {
+			// a speed reload: the empty magazine is let go and falls where you stand - pick it up again later
+			this.dropMagazine(level, player, state);
+			setState(stack, new GunState(0, state.ammo(), false, state.mode(), state.lastShot(), state.reloadStart(), state.reloadKind(), state.reloadAmmo()));
+			state = state(stack);
+		} else if (t == T_MAG_DROP + 9) {
+			// and lands with a clatter
+			for (ItemEntity dropped : level.getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(3.0),
+				e -> e.getItem().getItem() instanceof AkMagazineItem && e.getAge() < 14)) {
+				level.playSound(null, dropped.getX(), dropped.getY(), dropped.getZ(), SoundEvents.CHAIN_FALL, SoundSource.PLAYERS, 0.9F,
+					1.3F + level.getRandom().nextFloat() * 0.2F);
+				level.playSound(null, dropped.getX(), dropped.getY(), dropped.getZ(), SoundEvents.LANTERN_FALL, SoundSource.PLAYERS, 0.6F, 1.5F);
+			}
 		} else if (t == T_MAG_IN) {
 			this.sound(level, player, ModRegistry.AK_MAG_IN, 1.0F);
 		} else if (t == T_CHARGE && state.reloadKind() == GunState.EMPTY) {
@@ -308,6 +325,24 @@ public class AkItem extends Item {
 		}
 		int chambered = state.reloadKind() == GunState.TACTICAL ? 1 : 0;
 		setState(stack, state.loaded(newRounds + chambered, state.reloadAmmo()));
+	}
+
+	/** The empty magazine, let go below the rifle: it drops at your feet with a little toss forward. */
+	private void dropMagazine(ServerLevel level, Player player, GunState state) {
+		if (player.getAbilities().instabuild) {
+			return;
+		}
+		ItemStack old = new ItemStack(state.ammo() == GunState.TRACER ? ModRegistry.AK_MAG_TRACER : ModRegistry.AK_MAG);
+		AkMagazineItem.setRounds(old, 0);
+		Vec3 look = Vec3.directionFromRotation(0.0F, player.getYRot());
+		Vec3 right = new Vec3(-look.z, 0.0, look.x);
+		boolean leftHanded = player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT;
+		Vec3 at = player.position().add(0.0, player.getBbHeight() * 0.55, 0.0).add(look.scale(0.45)).add(right.scale(leftHanded ? -0.15 : 0.15));
+		ItemEntity item = new ItemEntity(level, at.x, at.y, at.z, old);
+		var random = level.getRandom();
+		item.setDeltaMovement(look.x * 0.06 + random.triangle(0.0, 0.03), 0.02, look.z * 0.06 + random.triangle(0.0, 0.03));
+		item.setPickUpDelay(30);
+		level.addFreshEntity(item);
 	}
 
 	private void sound(ServerLevel level, Player player, SoundEvent sound, float volume) {

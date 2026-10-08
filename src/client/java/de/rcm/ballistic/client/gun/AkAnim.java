@@ -189,7 +189,9 @@ public final class AkAnim {
 			this.magVisible = true;
 			this.magLoaded = true;
 			this.magTracer = state.reloadAmmo() == GunState.TRACER;
-		} else if (r >= AkItem.T_MAG_OUT && !state.hasMag()) {
+		} else if (r >= AkItem.T_MAG_OUT && !state.hasMag()
+			|| state.reloadKind() == GunState.EMPTY && r >= AkItem.T_MAG_DROP) {
+			// gone: there was none, or (a speed reload) the empty one was let fall
 			this.magVisible = false;
 		}
 

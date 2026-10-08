@@ -1,4 +1,4 @@
-"""Bullet hole decals, textures/effect/bullet_hole.png (512 x 256: eight 128 px cells, two of each kind).
+"""Bullet hole decals, textures/effect/bullet_hole.png (512 x 384: 128 px cells, two of each kind).
 
 Cell (kind * 2 + variant) at column index % 4, row index // 4:
 
@@ -7,6 +7,7 @@ Cell (kind * 2 + variant) at column index % 4, row index // 4:
 1 wood: a dark core torn open along the grain, pale fresh splinters standing out above and below
 2 metal: a punched hole in a dished, bright ring of bare scraped steel, a grey lead smear round it
 3 earth: a soft dark crater, damp soil thrown out round it in crumbs
+4 glass: a star of cracks round a small hole (drawn much larger)
 
 The light parts are pale greys: the game tints them with the colour of the block that was struck,
 so the broken surface looks like that block's own material, freshly exposed. The spall is thrown a
@@ -186,10 +187,61 @@ def cell_earth(rng):
     return L.rgba()
 
 
+def segment(x, y, a, b):
+    """Distance from every pixel to the segment a-b."""
+    ax, ay = a
+    bx, by = b
+    dx, dy = bx - ax, by - ay
+    t = np.clip(((x - ax) * dx + (y - ay) * dy) / max(dx * dx + dy * dy, 1e-9), 0, 1)
+    return np.sqrt((x - ax - t * dx) ** 2 + (y - ay - t * dy) ** 2)
+
+
+def cell_glass(rng):
+    """A star of cracks in a pane: straight radial cracks, rings of short cracks between them, a frosted
+    crush round a small hole. Drawn much larger than the other holes."""
+    x, y, r, a = grid()
+    L = Layers()
+    count = rng.integers(9, 14)
+    angles = np.sort(rng.random(count) * 2 * np.pi)
+    reach = 0.65 + 0.33 * rng.random(count)
+    lines = np.zeros((S, S))
+    # the radial cracks, each a couple of straight runs with a kink
+    pts = []
+    for ang, rr in zip(angles, reach):
+        kink = ang + rng.normal(0, 0.08)
+        mid = (np.cos(kink) * rr * 0.5, np.sin(kink) * rr * 0.5)
+        end = (np.cos(ang) * rr, np.sin(ang) * rr)
+        d = np.minimum(segment(x, y, (0, 0), mid), segment(x, y, mid, end))
+        w = 0.022 * (1 - 0.5 * r)
+        lines = np.maximum(lines, (1 - smooth(w * 0.4, w, d)) * (1 - smooth(rr * 0.9, rr, r)))
+        pts.append((ang, rr))
+    # rings of cracks joining neighbouring radials
+    for ring in (0.22, 0.4, 0.6):
+        for i in range(count):
+            if rng.random() < 0.25:
+                continue
+            a0, r0 = pts[i]
+            a1, r1 = pts[(i + 1) % count]
+            if ring > min(r0, r1) * 0.95:
+                continue
+            j0, j1 = ring * (1 + rng.normal(0, 0.08)), ring * (1 + rng.normal(0, 0.08))
+            d = segment(x, y, (np.cos(a0) * j0, np.sin(a0) * j0), (np.cos(a1) * j1, np.sin(a1) * j1))
+            w = 0.017
+            lines = np.maximum(lines, (1 - smooth(w * 0.4, w, d)) * 0.8)
+    L.over(240, lines * 0.85)
+    # a faint sheen of strain round the middle
+    L.over(255, (1 - smooth(0.1, 0.35, r)) * 0.18)
+    # the crushed, frosted glass round the hole, and the hole
+    crush = 0.13 + 0.03 * np.sin(a * 6 + rng.random() * 6)
+    L.over(225, (1 - smooth(crush - 0.02, crush + 0.02, r)) * 0.8)
+    L.over(40, (1 - smooth(0.04, 0.06, r)) * 0.85)
+    return L.rgba()
+
+
 def main():
     rng = np.random.default_rng(39)
-    img = np.zeros((2 * S, 4 * S, 4))
-    for kind, f in enumerate((cell_rock, cell_wood, cell_metal, cell_earth)):
+    img = np.zeros((3 * S, 4 * S, 4))
+    for kind, f in enumerate((cell_rock, cell_wood, cell_metal, cell_earth, cell_glass)):
         for variant in range(2):
             i = kind * 2 + variant
             cx, cy = (i % 4) * S, (i // 4) * S

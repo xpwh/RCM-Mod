@@ -212,7 +212,7 @@ public final class AkClient {
 			net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
 		if (sight.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
 			var struck = mc.level.getBlockState(sight.getBlockPos());
-			if (!(struck.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) && !struck.is(net.minecraft.world.level.block.Blocks.GLASS)
+			if (!(struck.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) && !BulletEntity.isGlass(struck)
 				&& !(struck.getBlock() instanceof net.minecraft.world.level.block.IronBarsBlock)) {
 				de.rcm.ballistic.client.render.BulletHoles.predict(sight.getLocation(), sight.getDirection(), BulletEntity.holeKind(struck), sight.getLocation().subtract(muzzle));
 			}

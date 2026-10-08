@@ -97,6 +97,9 @@ public final class BulletHoles {
 				stretch = Math.min(stretch, 2.3F);
 			}
 		}
+		if (kind == 4) {
+			stretch = Math.min(stretch, 1.25F); // a crack star stays round
+		}
 		float size = 0.8F + (float) Math.random() * 0.4F;
 		HOLES.add(new Hole(at, face, kind, angle, stretch, size, (int) (Math.random() * 2), tint(mc, block, state, kind), block, state,
 			mc.level.getGameTime(), counter++ % 9, predicted));
@@ -118,6 +121,7 @@ public final class BulletHoles {
 			case 1 -> new float[] {1.0F, 0.95F, 0.85F, 0.45F};
 			case 2 -> new float[] {0.8F, 0.8F, 0.82F, 0.65F};
 			case 3 -> new float[] {0.0F, 0.0F, 0.0F, 0.25F};
+			case 4 -> new float[] {1.0F, 1.0F, 1.0F, 1.0F};
 			default -> new float[] {1.0F, 1.0F, 1.0F, 0.3F};
 		};
 		r = Mth.lerp(mix[3], r, mix[0]);
@@ -169,7 +173,8 @@ public final class BulletHoles {
 		Vector3f[] axes = axes(n);
 		Vector3f u = axes[0];
 		Vector3f v = axes[1];
-		float size = SIZE * h.size;
+		// cracks in glass spread far wider than the hole
+		float size = SIZE * h.size * (h.kind == 4 ? 2.8F : 1.0F);
 		Vector3f ru;
 		Vector3f rv;
 		if (h.kind == 1 && Math.abs(n.y) < 0.5F) {
@@ -190,9 +195,10 @@ public final class BulletHoles {
 		int color = (int) (alpha * 255.0F) << 24 | h.tint;
 		int cell = h.kind * 2 + h.variant;
 		float u0 = (cell % 4) * 0.25F;
-		float v0 = (cell / 4) * 0.5F;
+		float v0 = (cell / 4) / 3.0F;
+		float v1 = v0 + 1.0F / 3.0F;
 		float[][] q = {
-			{-1, -1, u0, v0 + 0.5F}, {1, -1, u0 + 0.25F, v0 + 0.5F}, {1, 1, u0 + 0.25F, v0}, {-1, 1, u0, v0}
+			{-1, -1, u0, v1}, {1, -1, u0 + 0.25F, v1}, {1, 1, u0 + 0.25F, v0}, {-1, 1, u0, v0}
 		};
 		for (float[] p : q) {
 			float x = c.x + ru.x * p[0] + rv.x * p[1];

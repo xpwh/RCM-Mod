@@ -11,6 +11,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.damagesource.DamageSource;
@@ -192,12 +193,12 @@ public class BulletEntity extends Entity {
 			this.discard();
 			return true;
 		}
-		if (state.is(Blocks.GLASS) || state.is(Blocks.GLASS_PANE) || state.is(BlockTags.IMPERMEABLE) && !state.is(Blocks.TINTED_GLASS)
-			|| state.getBlock() instanceof net.minecraft.world.level.block.StainedGlassPaneBlock) {
-			level.destroyBlock(hit.getBlockPos(), false);
+		if (isGlass(state)) {
+			// straight through, leaving a star of cracks; a few rounds and the glass gives way
+			Vec3 out = this.crackGlass(level, hit, state, at, vel.normalize());
 			this.setDeltaMovement(vel.scale(0.85));
-			this.setPos(at.add(vel.normalize().scale(0.3)));
-			return false; // straight through
+			this.setPos(out);
+			return false;
 		}
 		Direction face = hit.getDirection();
 		Vec3 n = new Vec3(face.getStepX(), face.getStepY(), face.getStepZ());
@@ -321,6 +322,73 @@ public class BulletEntity extends Entity {
 			return 3;
 		}
 		return 0;
+	}
+
+	/** Hits taken by panes of glass (by dimension and position): {hits, last hit time}. */
+	private static final java.util.Map<String, long[]> GLASS = new java.util.HashMap<>();
+	/** A pane cracks this long after its last hit; then it is as good as new (the cracks fade with it). */
+	private static final int GLASS_MEMORY = 1200;
+
+	/** @return where the round comes out on the far side */
+	private Vec3 crackGlass(ServerLevel level, BlockHitResult hit, BlockState state, Vec3 at, Vec3 dir) {
+		BlockPos pos = hit.getBlockPos();
+		long now = level.getGameTime();
+		if (GLASS.size() > 512) {
+			GLASS.values().removeIf(v -> now - v[1] > GLASS_MEMORY);
+		}
+		String key = level.dimension().identifier() + "@" + pos.asLong();
+		long[] v = GLASS.computeIfAbsent(key, k -> new long[2]);
+		if (now - v[1] > GLASS_MEMORY) {
+			v[0] = 0;
+		}
+		v[0]++;
+		v[1] = now;
+		boolean pane = !state.isCollisionShapeFullBlock(level, pos);
+		int lasts = pane ? 3 : 4;
+		if (v[0] >= lasts) {
+			GLASS.remove(key);
+			level.destroyBlockProgress(glassId(pos), pos, -1);
+			level.destroyBlock(pos, false);
+			level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), at.x + dir.x * 0.3, at.y + dir.y * 0.3, at.z + dir.z * 0.3, 30, 0.25, 0.25,
+				0.25, 0.3);
+			return at.add(dir.scale(0.05));
+		}
+		// the cracks spread over the pane with every hit
+		level.destroyBlockProgress(glassId(pos), pos, (int) (v[0] * 9 / lasts));
+		level.playSound(null, at.x, at.y, at.z, SoundEvents.GLASS_HIT, SoundSource.BLOCKS, 1.0F, 1.6F + this.random.nextFloat() * 0.3F);
+		level.playSound(null, at.x, at.y, at.z, SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 0.25F, 1.9F + this.random.nextFloat() * 0.1F);
+		level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), at.x + dir.x * 0.2, at.y + dir.y * 0.2, at.z + dir.z * 0.2, 6, 0.05, 0.05,
+			0.05, 0.15);
+		// the star of cracks on both faces
+		hole(level, at, hit.getDirection(), HOLE_GLASS, dir);
+		for (int k = 1; k <= 60; k++) {
+			Vec3 p = at.add(dir.scale(k * 0.02));
+			Vec3 local = p.subtract(pos.getX(), pos.getY(), pos.getZ());
+			boolean in = BlockPos.containing(p).equals(pos);
+			if (in) {
+				in = false;
+				for (var box : state.getCollisionShape(level, pos).toAabbs()) {
+					in |= box.contains(local);
+				}
+			}
+			if (!in) {
+				hole(level, p.subtract(dir.scale(0.02)), Direction.getApproximateNearest(dir.x, dir.y, dir.z), HOLE_GLASS, dir.scale(-1.0));
+				return p.add(dir.scale(0.02));
+			}
+		}
+		return at.add(dir.scale(1.25));
+	}
+
+	private static int glassId(BlockPos pos) {
+		return 0x6C000000 | (int) (pos.asLong() * 0x9E3779B97F4A7C15L >>> 40);
+	}
+
+	public static final int HOLE_GLASS = 4;
+
+	/** Glass a round goes through (cracking it), not tinted glass. */
+	public static boolean isGlass(BlockState state) {
+		return state.is(Blocks.GLASS) || state.is(Blocks.GLASS_PANE) || state.is(BlockTags.IMPERMEABLE) && !state.is(Blocks.TINTED_GLASS)
+			|| state.getBlock() instanceof net.minecraft.world.level.block.StainedGlassPaneBlock;
 	}
 
 	/** A bullet hole on that face, for everyone near enough to see it. */
