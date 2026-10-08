@@ -86,6 +86,17 @@ public final class ModRegistry {
 			.networkSynchronized(SavedTarget.STREAM_CODEC.apply(ByteBufCodecs.list()))
 			.build()
 	);
+	public static final DataComponentType<de.rcm.ballistic.gun.GunState> GUN_STATE = Registry.register(
+		BuiltInRegistries.DATA_COMPONENT_TYPE,
+		BallisticMissiles.id("gun_state"),
+		DataComponentType.<de.rcm.ballistic.gun.GunState>builder().persistent(de.rcm.ballistic.gun.GunState.CODEC)
+			.networkSynchronized(de.rcm.ballistic.gun.GunState.STREAM_CODEC).build()
+	);
+	public static final DataComponentType<Integer> MAG_ROUNDS = Registry.register(
+		BuiltInRegistries.DATA_COMPONENT_TYPE,
+		BallisticMissiles.id("mag_rounds"),
+		DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build()
+	);
 	/** Which aircraft the airstrike radio calls (index into {@link de.rcm.ballistic.item.AirstrikeRadioItem.Mode}). */
 	public static final DataComponentType<Integer> AIRSTRIKE_MODE = Registry.register(
 		BuiltInRegistries.DATA_COMPONENT_TYPE,
@@ -185,6 +196,11 @@ public final class ModRegistry {
 		"supply_rocket",
 		EntityType.Builder.<de.rcm.ballistic.entity.SupplyRocketEntity>of(de.rcm.ballistic.entity.SupplyRocketEntity::new, MobCategory.MISC).sized(0.6F, 0.6F)
 			.clientTrackingRange(64).updateInterval(1).fireImmune().noLootTable()
+	);
+	public static final EntityType<de.rcm.ballistic.gun.BulletEntity> BULLET = registerEntity(
+		"bullet",
+		EntityType.Builder.<de.rcm.ballistic.gun.BulletEntity>of(de.rcm.ballistic.gun.BulletEntity::new, MobCategory.MISC).sized(0.1F, 0.1F)
+			.clientTrackingRange(16).updateInterval(1).noLootTable()
 	);
 	public static final EntityType<AerialBombEntity> AERIAL_BOMB = registerEntity(
 		"aerial_bomb",
@@ -479,6 +495,16 @@ public final class ModRegistry {
 	public static final Item TUNGSTEN_ROD = registerItem(
 		"tungsten_rod", props -> new de.rcm.ballistic.item.InfoItem(props, "tungsten_rod", 2), new Item.Properties().stacksTo(6).rarity(Rarity.RARE)
 	);
+	public static final Item AK47 = registerItem(
+		"ak47", de.rcm.ballistic.gun.AkItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
+			.component(net.minecraft.core.component.DataComponents.USE_EFFECTS, new net.minecraft.world.item.component.UseEffects(true, false, 0.85F))
+	);
+	public static final Item AK_MAG = registerItem(
+		"ak_magazine", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, false), new Item.Properties().stacksTo(8)
+	);
+	public static final Item AK_MAG_TRACER = registerItem(
+		"ak_magazine_tracer", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, true), new Item.Properties().stacksTo(8).rarity(Rarity.UNCOMMON)
+	);
 	public static final Item RPG_ROCKET = registerItem("rpg_rocket", Item::new, new Item.Properties().stacksTo(16));
 	public static final Item MOBILE_LAUNCHER_ITEM = registerItem(
 		"mobile_launcher", MobileLauncherItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
@@ -544,6 +570,27 @@ public final class ModRegistry {
 	public static final SoundEvent UPLINK_ALARM = sound("uplink.alarm");
 	public static final SoundEvent ROD_REENTRY = sound("rod.reentry");
 	public static final SoundEvent SUPPLY_LAUNCH = sound("supply.launch");
+	public static final SoundEvent AK_SHOT = sound("ak.shot");
+	public static final SoundEvent AK_SHOT_MID = sound("ak.shot_mid");
+	public static final SoundEvent AK_SHOT_FAR = sound("ak.shot_far");
+	public static final SoundEvent AK_MECH = sound("ak.mech");
+	public static final SoundEvent AK_TAIL_OUTDOOR = sound("ak.tail_outdoor");
+	public static final SoundEvent AK_TAIL_INDOOR = sound("ak.tail_indoor");
+	public static final SoundEvent AK_TAIL_CAVE = sound("ak.tail_cave");
+	public static final SoundEvent AK_DRY = sound("ak.dry");
+	public static final SoundEvent AK_MAG_OUT = sound("ak.mag_out");
+	public static final SoundEvent AK_MAG_IN = sound("ak.mag_in");
+	public static final SoundEvent AK_CHARGE = sound("ak.charge");
+	public static final SoundEvent AK_SELECTOR = sound("ak.selector");
+	public static final SoundEvent BULLET_CRACK = sound("bullet.crack");
+	public static final SoundEvent BULLET_WHIZ = sound("bullet.whiz");
+	public static final SoundEvent BULLET_RICOCHET = sound("bullet.ricochet");
+	public static final SoundEvent BULLET_IMPACT_DIRT = sound("bullet.impact_dirt");
+	public static final SoundEvent BULLET_IMPACT_STONE = sound("bullet.impact_stone");
+	public static final SoundEvent BULLET_IMPACT_METAL = sound("bullet.impact_metal");
+	public static final SoundEvent BULLET_IMPACT_WOOD = sound("bullet.impact_wood");
+	public static final SoundEvent BULLET_IMPACT_FLESH = sound("bullet.impact_flesh");
+	public static final SoundEvent SHELL_DROP = sound("ak.shell");
 
 	// ---------- Particles ----------
 	public static final SimpleParticleType SMOKE = particle("smoke");
@@ -567,6 +614,9 @@ public final class ModRegistry {
 		output.accept(POSEIDON_ITEM);
 		output.accept(ORBITAL_UPLINK_ITEM);
 		output.accept(TUNGSTEN_ROD);
+		output.accept(AK47);
+		output.accept(AK_MAG);
+		output.accept(AK_MAG_TRACER);
 		output.accept(ROCKET_LAUNCHER);
 		output.accept(RPG_ROCKET);
 		output.accept(TARGET_DESIGNATOR);

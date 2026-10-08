@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"III",
+		" IP",
+		"W G"
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"P": "minecraft:piston",
+		"W": "#minecraft:planks",
+		"G": "minecraft:tripwire_hook"
+	},
+	"result": {
+		"id": "ballisticmissiles:ak47",
+		"count": 1
+	}
+}

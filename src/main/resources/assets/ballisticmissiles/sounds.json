@@ -517,5 +517,193 @@
 				"attenuation_distance": 400
 			}
 		]
+	},
+	"ak.shot": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/shot"
+			}
+		]
+	},
+	"ak.shot_mid": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/shot_mid"
+			}
+		]
+	},
+	"ak.shot_far": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot_far",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/shot_far"
+			}
+		]
+	},
+	"ak.mech": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/mech"
+			}
+		]
+	},
+	"ak.tail_outdoor": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/tail_outdoor"
+			}
+		]
+	},
+	"ak.tail_indoor": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/tail_indoor"
+			}
+		]
+	},
+	"ak.tail_cave": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/tail_cave"
+			}
+		]
+	},
+	"ak.dry": {
+		"subtitle": "subtitles.ballisticmissiles.ak_click",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/dry",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.selector": {
+		"subtitle": "subtitles.ballisticmissiles.ak_click",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/selector",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.mag_out": {
+		"subtitle": "subtitles.ballisticmissiles.ak_reload",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/mag_out",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.mag_in": {
+		"subtitle": "subtitles.ballisticmissiles.ak_reload",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/mag_in",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.charge": {
+		"subtitle": "subtitles.ballisticmissiles.ak_reload",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/charge",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.shell": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shell",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/shell",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"bullet.crack": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_crack",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/crack"
+			}
+		]
+	},
+	"bullet.whiz": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_whiz",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/whiz"
+			}
+		]
+	},
+	"bullet.ricochet": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_ricochet",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/ricochet1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "ballisticmissiles:bullet/ricochet2",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "ballisticmissiles:bullet/ricochet3",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"bullet.impact_dirt": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/impact_dirt",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"bullet.impact_stone": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/impact_stone",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"bullet.impact_metal": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/impact_metal",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"bullet.impact_wood": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/impact_wood",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"bullet.impact_flesh": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/impact_flesh",
+				"attenuation_distance": 24
+			}
+		]
 	}
 }

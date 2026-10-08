@@ -20,7 +20,7 @@ public abstract class AvatarRendererMixin {
 		cancellable = true
 	)
 	private static void ballisticmissiles$shoulderRpg(Avatar avatar, ItemStack stack, InteractionHand hand, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
-		if (stack.is(ModRegistry.ROCKET_LAUNCHER)) {
+		if (stack.is(ModRegistry.ROCKET_LAUNCHER) || stack.is(ModRegistry.AK47)) {
 			cir.setReturnValue(HumanoidModel.ArmPose.CROSSBOW_HOLD);
 		}
 	}

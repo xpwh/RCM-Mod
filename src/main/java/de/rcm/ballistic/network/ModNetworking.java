@@ -350,7 +350,54 @@ public final class ModNetworking {
 		}
 	}
 
+	/** A rifle shot, for the players around the shooter: sound with distance delay and reverb, shells. */
+	public record GunshotPayload(int shooter, double x, double y, double z, float dx, float dy, float dz, boolean last) implements CustomPacketPayload {
+		public static final Type<GunshotPayload> TYPE = new Type<>(BallisticMissiles.id("gunshot"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, GunshotPayload> CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_INT, GunshotPayload::shooter,
+			ByteBufCodecs.DOUBLE, GunshotPayload::x,
+			ByteBufCodecs.DOUBLE, GunshotPayload::y,
+			ByteBufCodecs.DOUBLE, GunshotPayload::z,
+			ByteBufCodecs.FLOAT, GunshotPayload::dx,
+			ByteBufCodecs.FLOAT, GunshotPayload::dy,
+			ByteBufCodecs.FLOAT, GunshotPayload::dz,
+			ByteBufCodecs.BOOL, GunshotPayload::last,
+			GunshotPayload::new
+		);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Gun keys: {@link #RELOAD}, {@link #RELOAD_SWITCH} (other ammunition), {@link #SELECTOR}. */
+	public record GunInputPayload(int action) implements CustomPacketPayload {
+		public static final int RELOAD = 0;
+		public static final int RELOAD_SWITCH = 1;
+		public static final int SELECTOR = 2;
+		public static final Type<GunInputPayload> TYPE = new Type<>(BallisticMissiles.id("gun_input"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, GunInputPayload> CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_INT, GunInputPayload::action, GunInputPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	public static void init() {
+		PayloadTypeRegistry.playS2C().register(GunshotPayload.TYPE, GunshotPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(GunInputPayload.TYPE, GunInputPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(GunInputPayload.TYPE, (payload, context) -> {
+			switch (payload.action()) {
+				case GunInputPayload.RELOAD -> de.rcm.ballistic.gun.AkItem.requestReload(context.player(), false);
+				case GunInputPayload.RELOAD_SWITCH -> de.rcm.ballistic.gun.AkItem.requestReload(context.player(), true);
+				case GunInputPayload.SELECTOR -> de.rcm.ballistic.gun.AkItem.cycleMode(context.player());
+				default -> {
+				}
+			}
+		});
 		PayloadTypeRegistry.playS2C().register(WinterPayload.TYPE, WinterPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(FalloutPayload.TYPE, FalloutPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(DetonationPayload.TYPE, DetonationPayload.CODEC);

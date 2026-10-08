@@ -4,6 +4,7 @@
 41 TUNGSTEN   the orbital rod: dark, dense metal with fine machining lines
 42 ABLATIVE   charred carbon-composite heat shield of the rod's nose
 43 SHELTER    white corrugated equipment shelter (ground station)
+44 AK_MAG     bakelite AK magazine
 """
 import os
 import random
@@ -60,8 +61,18 @@ def shelter():
     return rgba(img)
 
 
+def ak_mag():
+    """44: the AK's bakelite magazine: orange-brown, a little mottled, with dark ribs."""
+    img = np.full((P, P, 3), (150, 62, 30), dtype=float)
+    img *= (0.85 + 0.25 * np.random.rand(P, P))[..., None]
+    for y in range(2, P, 5):
+        img[y, :] *= 0.7
+    return rgba(img)
+
+
 def main():
     atlas = Image.open(PATH).convert("RGBA")
+    put(atlas, 44, ak_mag())
     put(atlas, 40, bomb_gray())
     put(atlas, 41, tungsten())
     put(atlas, 42, ablative())

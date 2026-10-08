@@ -27,6 +27,8 @@ public abstract class ItemInHandRendererMixin {
 		ItemStack stack, float equipProgress, PoseStack poseStack, SubmitNodeCollector collector, int light, CallbackInfo ci) {
 		if (stack.is(ModRegistry.ROCKET_LAUNCHER)) {
 			RpgClient.transform(poseStack, partialTick);
+		} else if (stack.is(ModRegistry.AK47)) {
+			de.rcm.ballistic.client.gun.AkFirstPerson.transform(poseStack, partialTick, stack);
 		}
 	}
 }

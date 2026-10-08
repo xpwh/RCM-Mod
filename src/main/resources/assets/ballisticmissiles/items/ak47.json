@@ -1,0 +1,22 @@
+{
+	"model": {
+		"type": "minecraft:select",
+		"property": "minecraft:display_context",
+		"cases": [
+			{
+				"when": ["gui"],
+				"model": {
+					"type": "minecraft:model",
+					"model": "ballisticmissiles:item/ak47"
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:special",
+			"base": "ballisticmissiles:item/ak47_in_hand",
+			"model": {
+				"type": "ballisticmissiles:ak47"
+			}
+		}
+	}
+}

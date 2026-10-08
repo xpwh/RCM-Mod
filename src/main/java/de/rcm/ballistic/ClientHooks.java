@@ -28,6 +28,7 @@ public final class ClientHooks {
 		void emit(net.minecraft.world.phys.Vec3 at, net.minecraft.world.phys.Vec3 drift, int puffs, float size);
 	}
 
+	public static Consumer<de.rcm.ballistic.gun.BulletEntity> bulletClientTick = bullet -> {};
 	public static SmokeTrail smokeTrail = (key, at, width, strength) -> {};
 	public static SmokeCloud smokeCloud = (at, drift, puffs, size) -> {};
 

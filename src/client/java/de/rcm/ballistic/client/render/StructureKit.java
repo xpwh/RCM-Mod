@@ -58,6 +58,7 @@ final class StructureKit {
 	static final int TUNGSTEN = 41;
 	static final int ABLATIVE = 42;
 	static final int SHELTER = 43;
+	static final int AK_MAG = 44;
 
 	private StructureKit() {
 	}
