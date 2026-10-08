@@ -41,7 +41,9 @@ public class AirstrikeRadioItem extends Item {
 		REAPER("reaper", JetType.REAPER, 1, 100),
 		APACHE("apache", JetType.APACHE, 1, 100),
 		TOMAHAWK("tomahawk", null, 4, 120),
-		ARTILLERY("artillery", null, 20, 60);
+		ARTILLERY("artillery", null, 20, 60),
+		/** B-2 with a B61-11 nuclear earth penetrator: needs the bomb in your inventory. */
+		B61("b61", JetType.SPIRIT, 1, 300);
 
 		public final String key;
 		/** The aircraft called in, or null for a fire mission (Tomahawks, artillery). */
@@ -129,7 +131,24 @@ public class AirstrikeRadioItem extends Item {
 				.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 			return InteractionResult.SUCCESS;
 		}
+		net.minecraft.world.item.ItemStack bomb = net.minecraft.world.item.ItemStack.EMPTY;
+		if (mode == Mode.B61 && !player.getAbilities().instabuild) {
+			var inventory = player.getInventory();
+			for (int i = 0; i < inventory.getContainerSize() && bomb.isEmpty(); i++) {
+				if (inventory.getItem(i).is(ModRegistry.B61_BOMB)) {
+					bomb = inventory.getItem(i);
+				}
+			}
+			if (bomb.isEmpty()) {
+				player.displayClientMessage(Component.translatable("message.ballisticmissiles.b61_missing").withStyle(ChatFormatting.RED), true);
+				return InteractionResult.FAIL;
+			}
+		}
 		JetEntity jet = JetEntity.callIn(server, player, target, mode.jet, 0.0, 0.0);
+		if (jet != null && mode == Mode.B61) {
+			jet.setNuclear(true);
+			bomb.shrink(1);
+		}
 		if (jet != null && mode.aircraft > 1) {
 			// wingmen echelon out to both sides and a little behind, widening the carpet
 			JetEntity.callIn(server, player, target, mode.jet, 14.0, 22.0);

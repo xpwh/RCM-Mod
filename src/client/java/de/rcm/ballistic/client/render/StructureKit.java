@@ -54,6 +54,10 @@ final class StructureKit {
 	static final int GUNMETAL = 37;
 	static final int BAKELITE = 38;
 	static final int LENS = 39;
+	static final int BOMB_GRAY = 40;
+	static final int TUNGSTEN = 41;
+	static final int ABLATIVE = 42;
+	static final int SHELTER = 43;
 
 	private StructureKit() {
 	}

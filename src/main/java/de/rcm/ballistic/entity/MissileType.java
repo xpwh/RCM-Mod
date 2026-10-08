@@ -89,7 +89,13 @@ public enum MissileType {
 		/** The B-2's GBU-43 air blast bomb. */
 		MOAB,
 		/** A sea mine going off under water. */
-		SEA_MINE
+		SEA_MINE,
+		/** B61-11 earth penetrator going off underground. */
+		EARTH_PENETRATOR,
+		/** Poseidon nuclear torpedo going off under the sea off a coast. */
+		POSEIDON,
+		/** A tungsten rod from orbit striking the ground. */
+		KINETIC_ROD
 	}
 
 	public enum Model {

@@ -166,6 +166,21 @@ public final class ModRegistry {
 		EntityType.Builder.<de.rcm.ballistic.entity.RpgRocketEntity>of(de.rcm.ballistic.entity.RpgRocketEntity::new, MobCategory.MISC).sized(0.25F, 0.25F)
 			.clientTrackingRange(16).updateInterval(1).noLootTable()
 	);
+	public static final EntityType<de.rcm.ballistic.entity.EarthPenetratorEntity> EARTH_PENETRATOR = registerEntity(
+		"b61_bomb",
+		EntityType.Builder.<de.rcm.ballistic.entity.EarthPenetratorEntity>of(de.rcm.ballistic.entity.EarthPenetratorEntity::new, MobCategory.MISC).sized(0.5F, 0.5F)
+			.clientTrackingRange(32).updateInterval(1).fireImmune().noLootTable()
+	);
+	public static final EntityType<de.rcm.ballistic.entity.PoseidonEntity> POSEIDON = registerEntity(
+		"poseidon",
+		EntityType.Builder.<de.rcm.ballistic.entity.PoseidonEntity>of(de.rcm.ballistic.entity.PoseidonEntity::new, MobCategory.MISC).sized(1.5F, 1.5F)
+			.clientTrackingRange(32).updateInterval(1).fireImmune().noLootTable()
+	);
+	public static final EntityType<de.rcm.ballistic.entity.KineticRodEntity> KINETIC_ROD = registerEntity(
+		"kinetic_rod",
+		EntityType.Builder.<de.rcm.ballistic.entity.KineticRodEntity>of(de.rcm.ballistic.entity.KineticRodEntity::new, MobCategory.MISC).sized(0.4F, 0.4F)
+			.clientTrackingRange(64).updateInterval(1).fireImmune().noLootTable()
+	);
 	public static final EntityType<AerialBombEntity> AERIAL_BOMB = registerEntity(
 		"aerial_bomb",
 		EntityType.Builder.<AerialBombEntity>of(AerialBombEntity::new, MobCategory.MISC).sized(0.45F, 0.45F).clientTrackingRange(24).updateInterval(1).noLootTable()
@@ -232,6 +247,11 @@ public final class ModRegistry {
 		SoundEvents.IRON_DOOR_CLOSE, SoundEvents.IRON_DOOR_OPEN, SoundEvents.IRON_TRAPDOOR_CLOSE, SoundEvents.IRON_TRAPDOOR_OPEN,
 		SoundEvents.STONE_PRESSURE_PLATE_CLICK_OFF, SoundEvents.STONE_PRESSURE_PLATE_CLICK_ON, SoundEvents.STONE_BUTTON_CLICK_OFF,
 		SoundEvents.STONE_BUTTON_CLICK_ON
+	);
+	public static final Block ORBITAL_UPLINK = registerBlock(
+		"orbital_uplink",
+		de.rcm.ballistic.block.OrbitalUplinkBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(6.0F, 1200.0F).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
 	);
 	public static final Block REINFORCED_CONCRETE = registerBlock(
 		"reinforced_concrete",
@@ -339,6 +359,10 @@ public final class ModRegistry {
 	public static final BlockEntityType<LaserDefenseBlockEntity> LASER_DEFENSE_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("laser_defense"), FabricBlockEntityTypeBuilder.create(LaserDefenseBlockEntity::new, LASER_DEFENSE).build()
 	);
+	public static final BlockEntityType<de.rcm.ballistic.block.OrbitalUplinkBlockEntity> ORBITAL_UPLINK_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("orbital_uplink"),
+		FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.OrbitalUplinkBlockEntity::new, ORBITAL_UPLINK).build()
+	);
 	public static final BlockEntityType<JammerBlockEntity> JAMMER_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("jammer"), FabricBlockEntityTypeBuilder.create(JammerBlockEntity::new, JAMMER).build()
 	);
@@ -437,6 +461,19 @@ public final class ModRegistry {
 	public static final Item ROCKET_LAUNCHER = registerItem(
 		"rocket_launcher", de.rcm.ballistic.item.RocketLauncherItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
 	);
+	public static final Item B61_BOMB = registerItem(
+		"b61", props -> new de.rcm.ballistic.item.InfoItem(props, "b61", 3), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
+	);
+	public static final Item POSEIDON_ITEM = registerItem(
+		"poseidon", de.rcm.ballistic.item.PoseidonItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
+	);
+	public static final Item ORBITAL_UPLINK_ITEM = registerItem(
+		"orbital_uplink", props -> new de.rcm.ballistic.item.InfoBlockItem(ORBITAL_UPLINK, props, "orbital_uplink", 4),
+		new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item TUNGSTEN_ROD = registerItem(
+		"tungsten_rod", props -> new de.rcm.ballistic.item.InfoItem(props, "tungsten_rod", 2), new Item.Properties().stacksTo(6).rarity(Rarity.RARE)
+	);
 	public static final Item RPG_ROCKET = registerItem("rpg_rocket", Item::new, new Item.Properties().stacksTo(16));
 	public static final Item MOBILE_LAUNCHER_ITEM = registerItem(
 		"mobile_launcher", MobileLauncherItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
@@ -515,6 +552,10 @@ public final class ModRegistry {
 		output.accept(SUBMARINE_ITEM);
 		output.accept(MOBILE_LAUNCHER_ITEM);
 		output.accept(DESTROYER_ITEM);
+		output.accept(B61_BOMB);
+		output.accept(POSEIDON_ITEM);
+		output.accept(ORBITAL_UPLINK_ITEM);
+		output.accept(TUNGSTEN_ROD);
 		output.accept(ROCKET_LAUNCHER);
 		output.accept(RPG_ROCKET);
 		output.accept(TARGET_DESIGNATOR);

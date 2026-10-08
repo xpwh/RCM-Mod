@@ -120,6 +120,18 @@ public final class RemoteLaunch {
 				}
 				return silo.arm(null, order.target);
 			}
+			case LauncherLink.UPLINK -> {
+				if (!level.isLoaded(pos)) {
+					return null;
+				}
+				if (!(level.getBlockEntity(pos) instanceof de.rcm.ballistic.block.OrbitalUplinkBlockEntity uplink)) {
+					return Component.translatable("message.ballisticmissiles.remote_gone").withStyle(ChatFormatting.RED);
+				}
+				if (order.target == null) {
+					return nothingToAbort();
+				}
+				return uplink.strike(player, order.target);
+			}
 			case LauncherLink.TRUCK -> {
 				Entity e = level.getEntity(link.entity().orElseThrow());
 				if (!(e instanceof MobileLauncherEntity truck)) {

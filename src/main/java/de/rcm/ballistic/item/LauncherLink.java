@@ -16,6 +16,7 @@ public record LauncherLink(int kind, BlockPos pos, Optional<UUID> entity) {
 	public static final int PAD = 0;
 	public static final int SILO = 1;
 	public static final int TRUCK = 2;
+	public static final int UPLINK = 3;
 
 	public static final Codec<LauncherLink> CODEC = RecordCodecBuilder.create(
 		instance -> instance.group(
@@ -40,6 +41,10 @@ public record LauncherLink(int kind, BlockPos pos, Optional<UUID> entity) {
 		return new LauncherLink(SILO, pos.immutable(), Optional.empty());
 	}
 
+	public static LauncherLink uplink(BlockPos pos) {
+		return new LauncherLink(UPLINK, pos.immutable(), Optional.empty());
+	}
+
 	public static LauncherLink truck(UUID uuid, BlockPos pos) {
 		return new LauncherLink(TRUCK, pos.immutable(), Optional.of(uuid));
 	}
@@ -55,6 +60,7 @@ public record LauncherLink(int kind, BlockPos pos, Optional<UUID> entity) {
 		String key = switch (this.kind) {
 			case SILO -> "launcher.ballisticmissiles.silo";
 			case TRUCK -> "launcher.ballisticmissiles.truck";
+			case UPLINK -> "launcher.ballisticmissiles.uplink";
 			default -> "launcher.ballisticmissiles.pad";
 		};
 		return Component.translatable(key, this.pos.getX(), this.pos.getZ());

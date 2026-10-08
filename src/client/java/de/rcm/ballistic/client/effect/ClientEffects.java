@@ -61,7 +61,7 @@ public final class ClientEffects {
 			case MOAB -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.9, 0xFFA040);
 			case THERMOBARIC -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.8, 0xFF9030);
 			case INCENDIARY -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.6, 0xFF8020);
-			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, METEOR, SEA_MINE -> {
+			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, METEOR, SEA_MINE, EARTH_PENETRATOR, POSEIDON, KINETIC_ROD -> {
 			}
 			case BOMBLET -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.25, 0xFFB060);
 			default -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.5, 0xFFB060);
@@ -91,6 +91,9 @@ public final class ClientEffects {
 			case ANTIMATTER -> new AntimatterEffect(pos);
 			case METEOR_IMPACT -> new BlastEffect(pos, 0.75);
 			case SEA_MINE -> new WaterBlastEffect(pos);
+			case EARTH_PENETRATOR -> new GiantEffects.Underground(pos);
+			case POSEIDON -> new GiantEffects.Poseidon(pos);
+			case KINETIC_ROD -> new GiantEffects.KineticImpact(pos);
 			case METEOR -> mc -> true;
 			default -> new BlastEffect(pos, 1.0);
 		});

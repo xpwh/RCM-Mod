@@ -15,7 +15,7 @@
 				{
 					"sampler_name": "Params",
 					"location": "ballisticmissiles:blast_params",
-					"width": 4,
+					"width": 8,
 					"height": 1,
 					"bilinear": false
 				}

@@ -140,6 +140,12 @@ public class MissileSiloBlock extends Block implements EntityBlock {
 			}
 			return InteractionResult.SUCCESS;
 		}
+		if (stack.is(ModRegistry.POSEIDON_ITEM) && this instanceof SubmarineBlock) {
+			if (player instanceof ServerPlayer serverPlayer && level instanceof net.minecraft.server.level.ServerLevel server) {
+				de.rcm.ballistic.item.PoseidonItem.launchFromSubmarine(server, serverPlayer, stack, pos, state);
+			}
+			return InteractionResult.SUCCESS;
+		}
 		if (stack.is(ModRegistry.TARGET_DESIGNATOR)) {
 			if (player instanceof ServerPlayer serverPlayer) {
 				if (silo.isCounting()) {

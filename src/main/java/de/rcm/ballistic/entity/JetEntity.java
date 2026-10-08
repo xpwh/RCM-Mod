@@ -91,6 +91,8 @@ public class JetEntity extends Entity implements AirThreat {
 
 	private Vec3 target = Vec3.ZERO;
 	private int bombsLeft = BOMBS;
+	/** The B-2 carries a B61-11 nuclear earth penetrator instead of the MOAB. */
+	private boolean nuclear;
 	private int releaseTimer;
 	private boolean egress;
 	private int egressAge;
@@ -154,6 +156,10 @@ public class JetEntity extends Entity implements AirThreat {
 		level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(start)), 2);
 		level.addFreshEntity(jet);
 		return jet;
+	}
+
+	public void setNuclear(boolean nuclear) {
+		this.nuclear = nuclear;
 	}
 
 	/** Seconds until the bombs hit, roughly: flight to the release point plus the fall. */
@@ -633,6 +639,19 @@ public class JetEntity extends Entity implements AirThreat {
 			return;
 		}
 		this.releaseTimer = RELEASE_INTERVAL - 1;
+		if (this.nuclear) {
+			EarthPenetratorEntity b61 = ModRegistry.EARTH_PENETRATOR.create(level, EntitySpawnReason.TRIGGERED);
+			if (b61 != null) {
+				b61.setPos(pos.add(0, -2.5, 0));
+				b61.setDeltaMovement(flat.scale(speed));
+				level.addFreshEntity(b61);
+				this.tellCaller(level, Component.translatable("message.ballisticmissiles.b61_away").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD));
+			}
+			this.entityData.set(DATA_BOMBS, --this.bombsLeft);
+			this.egress = true;
+			this.entityData.set(DATA_BAY, false);
+			return;
+		}
 		AerialBombEntity bomb = ModRegistry.AERIAL_BOMB.create(level, EntitySpawnReason.TRIGGERED);
 		if (bomb != null) {
 			Vec3 side = new Vec3(-flat.z, 0, flat.x).scale((level.getRandom().nextDouble() - 0.5) * 3.0);

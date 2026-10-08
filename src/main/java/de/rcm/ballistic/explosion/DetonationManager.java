@@ -50,6 +50,7 @@ public final class DetonationManager {
 	private static final List<NukeDetonation> NUKES = new ArrayList<>();
 	private static final List<Scheduled> SCHEDULED = new ArrayList<>();
 	private static final List<AntimatterDetonation> ANNIHILATIONS = new ArrayList<>();
+	private static final List<Tsunami> TSUNAMIS = new ArrayList<>();
 
 	private record Scheduled(ServerLevel level, int[] delay, Runnable action) {
 	}
@@ -275,6 +276,94 @@ public final class DetonationManager {
 		level.explode(source, pos.x, pos.y, pos.z, 3.2F, false, Level.ExplosionInteraction.TNT);
 	}
 
+	/**
+	 * B61-11 earth penetrator: it has buried itself a few blocks deep at {@code deep} below the impact
+	 * point {@code surface} before the warhead goes off. The shock goes into the ground: a deep crater,
+	 * an earthquake with fissures around it, a towering column of dirt and very dirty fallout.
+	 */
+	public static void detonateEarthPenetrator(ServerLevel level, Vec3 surface, Vec3 deep, @Nullable Entity source) {
+		broadcast(level, surface, Warhead.EARTH_PENETRATOR);
+		FlyingDebris.launch(level, surface, 24.0, 300, 3.2);
+		NUKES.add(new NukeDetonation(level, surface, source, NukeDetonation.Yield.FISSION, NukeDetonation.Mode.UNDERGROUND));
+	}
+
+	/**
+	 * Poseidon: a multi-megaton warhead under the sea off the coast. The seabed and coastline are
+	 * blown out, a column of radioactive spray rises, and a tsunami runs out over the sea and floods
+	 * the land.
+	 */
+	public static void detonatePoseidon(ServerLevel level, Vec3 pos, @Nullable Entity source) {
+		broadcast(level, pos, Warhead.POSEIDON);
+		BlockPos.MutableBlockPos m = BlockPos.containing(pos).mutable();
+		for (int i = 0; i < 64 && !level.getFluidState(m).isEmpty(); i++) {
+			m.move(0, 1, 0);
+		}
+		int sea = level.getFluidState(BlockPos.containing(pos)).isEmpty() ? level.getSeaLevel() - 1 : m.getY() - 1;
+		NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.FISSION, NukeDetonation.Mode.UNDERWATER));
+		TSUNAMIS.add(new Tsunami(level, pos, sea));
+		Component msg = Component.literal("\uD83C\uDF0A ").append(Component.translatable("message.ballisticmissiles.tsunami")).withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.BOLD);
+		for (ServerPlayer player : level.players()) {
+			if (player.position().distanceToSqr(pos) < 600.0 * 600.0) {
+				player.displayClientMessage(msg, false);
+			}
+		}
+	}
+
+	/**
+	 * Kinetic bombardment: a tungsten rod falling from orbit at many times the speed of sound. No
+	 * explosive, no radiation - its own energy of motion, as much as a heavy conventional bomb many
+	 * times over, dumped into the ground in an instant: a deep crater with molten rock at the bottom,
+	 * a curtain of ejecta and a ground shock that throws everything around it.
+	 */
+	public static void detonateKineticRod(ServerLevel level, Vec3 pos, Vec3 dir, @Nullable Entity source) {
+		broadcast(level, pos, Warhead.KINETIC_ROD);
+		FlyingDebris.launch(level, pos, 16.0, 260, 3.4);
+		Vec3 d = dir.lengthSqr() < 1.0E-6 ? new Vec3(0, -1, 0) : dir.normalize();
+		Vec3 deep = pos.add(d.scale(5.0));
+		RandomSource random = level.getRandom();
+		level.explode(source, deep.x, deep.y, deep.z, 18.0F, false, Level.ExplosionInteraction.TNT);
+		for (int i = 0; i < 6; i++) {
+			double a = i * Mth.TWO_PI / 6 + random.nextDouble() * 0.5;
+			level.explode(source, pos.x + Math.cos(a) * 7, pos.y - 2, pos.z + Math.sin(a) * 7, 10.0F, false, Level.ExplosionInteraction.TNT);
+		}
+		Wasteland.crater(level, pos, 21.0, 15.0, random);
+		Wasteland.scorch(level, BlockPos.containing(pos), 20, random, 0.06F, false);
+		// the bottom of the crater is rock melted by the impact
+		schedule(level, 3, () -> {
+			BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+			for (int dx = -7; dx <= 7; dx++) {
+				for (int dz = -7; dz <= 7; dz++) {
+					if (dx * dx + dz * dz > 49 || random.nextFloat() < 0.35F) {
+						continue;
+					}
+					int x = Mth.floor(pos.x) + dx;
+					int z = Mth.floor(pos.z) + dz;
+					m.set(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z);
+					BlockState state = level.getBlockState(m);
+					if (!state.isAir() && state.getFluidState().isEmpty() && state.getDestroySpeed(level, m) >= 0.0F && state.getBlock().getExplosionResistance() < 1200) {
+						BlockState melt = random.nextFloat() < 0.45F ? ModRegistry.MOLTEN_ROCK.defaultBlockState() : ModRegistry.CRATER_GLASS.defaultBlockState();
+						level.setBlock(m, melt, Block.UPDATE_ALL);
+					}
+				}
+			}
+		});
+		// the ground shock: everything nearby is hammered and flung outwards
+		double radius = 70.0;
+		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(pos, pos).inflate(radius))) {
+			double dist = e.position().distanceTo(pos);
+			if (dist > radius) {
+				continue;
+			}
+			double f = 1.0 - dist / radius;
+			e.hurtServer(level, level.damageSources().explosion(source, null), (float) (90.0 * f * f));
+			Vec3 push = e.position().subtract(pos);
+			push = new Vec3(push.x, 0, push.z).normalize().scale(3.0 * f).add(0, 0.8 + 1.2 * f, 0);
+			e.push(push.x, push.y, push.z);
+			e.hurtMarked = true;
+			e.addEffect(new MobEffectInstance(MobEffects.NAUSEA, (int) (80 + 160 * f), 0));
+		}
+	}
+
 	/** Free-fall bomb from an airstrike jet (Mk 82-class): a solid blast with a small crater. */
 	/** Contact sea mine: a heavy underwater blast throwing up a column of spray. */
 	public static void detonateSeaMine(ServerLevel level, Vec3 pos) {
@@ -426,7 +515,7 @@ public final class DetonationManager {
 	}
 
 	private static void broadcast(ServerLevel level, Vec3 pos, Warhead warhead) {
-		double range = warhead == Warhead.HYDROGEN ? HYDROGEN_EFFECT_RANGE
+		double range = warhead == Warhead.HYDROGEN || warhead == Warhead.POSEIDON ? HYDROGEN_EFFECT_RANGE
 			: warhead == Warhead.TSAR ? HYDROGEN_EFFECT_RANGE * 1.4
 			: warhead == Warhead.BOMBLET ? 600.0
 			: EFFECT_RANGE;
@@ -567,6 +656,7 @@ public final class DetonationManager {
 			due.forEach(s -> s.action().run());
 		}
 		ANNIHILATIONS.removeIf(a -> a.level() == level && a.tick());
+		TSUNAMIS.removeIf(t -> t.level() == level && t.tick());
 		if (NUKES.isEmpty()) {
 			return;
 		}

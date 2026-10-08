@@ -25,7 +25,13 @@ public final class BlastShader {
 		FIRE,
 		NUCLEAR,
 		ANTIMATTER,
-		EMP
+		EMP,
+		/** Buried burst: brown, dusty, the picture shaken by the earthquake. */
+		UNDERGROUND,
+		/** Kinetic impact: blinding blue-white, a starburst of light from the impact point. */
+		KINETIC,
+		/** Under the sea: cold white light and mist. */
+		WATER
 	}
 
 	private static final Identifier EFFECT = BallisticMissiles.id("blast");
@@ -44,6 +50,20 @@ public final class BlastShader {
 	/** Dust and smoke haze kicked up by the shock wave (0-1), lingers a few seconds. */
 	private static float dust;
 	private static boolean active;
+	/** The visible shock front: a refracting ring expanding from {@link #shockPos}. */
+	private static Vec3 shockPos = Vec3.ZERO;
+	private static double shockSpeed;
+	private static double shockMax;
+	private static float shockStrength;
+	private static int shockAge = -1;
+	/** Earthquake: the picture bounces and rolls (0-1). */
+	private static float quake;
+	/** Water running down the lens after the spray or the wave (0-1). */
+	private static float drench;
+	/** Negative afterimage burnt into the eye by a flash, fixed on screen (0-1). */
+	private static float afterimage;
+	private static float afterX = 0.5F;
+	private static float afterY = 0.5F;
 
 	private BlastShader() {
 	}
@@ -63,6 +83,32 @@ public final class BlastShader {
 			heat = Math.max(heat, (float) Math.min(1.0, near * (0.35 + 0.45 * scale)));
 			heatDecay = (float) Mth.clamp(0.9 + 0.045 * scale, 0.9, 0.993);
 		}
+	}
+
+	/**
+	 * A shock front running out from {@code pos} at {@code speed} blocks per tick, seen as a ring of
+	 * refracting air (and condensation) until it passes the camera or has run {@code max} blocks.
+	 */
+	public static void shockwave(Vec3 pos, double speed, double max, float strength) {
+		double distance = ClientEffects.distanceToCamera(Minecraft.getInstance(), pos);
+		if (distance > 4000.0) {
+			return;
+		}
+		shockPos = pos;
+		shockSpeed = speed;
+		shockMax = max;
+		shockStrength = strength;
+		shockAge = 0;
+	}
+
+	/** Ground shock: the picture jolts and rolls. */
+	public static void quake(float amount) {
+		quake = Math.max(quake, Mth.clamp(amount, 0.0F, 1.0F));
+	}
+
+	/** Spray or the wave hitting the camera: drops run down the lens. */
+	public static void drench(float amount) {
+		drench = Math.max(drench, Mth.clamp(amount, 0.0F, 1.0F));
 	}
 
 	/** Shock arriving at the camera (from camera shake). */
@@ -86,6 +132,16 @@ public final class BlastShader {
 		exposure = Math.max(0.0F, exposure * 0.9F - 0.004F);
 		heat = Math.max(0.0F, heat * heatDecay - 0.0015F);
 		dust = Math.max(0.0F, dust * 0.985F - 0.002F);
+		quake = Math.max(0.0F, quake * 0.985F - 0.002F);
+		drench = Math.max(0.0F, drench * 0.996F - 0.0008F);
+		afterimage = Math.max(0.0F, afterimage * 0.991F - 0.0008F);
+		if (shockAge >= 0) {
+			shockAge++;
+			double r = shockAge * shockSpeed;
+			if (r > shockMax || mc.level == null || r > ClientEffects.distanceToCamera(mc, shockPos)) {
+				shockAge = -1;
+			}
+		}
 		GameRenderer renderer = mc.gameRenderer;
 		Identifier current = renderer.currentPostEffect();
 		boolean ours = EFFECT.equals(current);
@@ -94,7 +150,7 @@ public final class BlastShader {
 			return;
 		}
 		boolean wanted = mc.level != null && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
-			|| WinterClient.amount() > 0.01F);
+			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || shockAge >= 0);
 		if (!wanted) {
 			if (ours) {
 				renderer.clearPostEffect();
@@ -104,7 +160,7 @@ public final class BlastShader {
 		}
 		if (params == null) {
 			// registered before the effect first loads, so the post chain picks this texture up
-			params = new DynamicTexture(() -> "Blast shader parameters", 4, 1, false);
+			params = new DynamicTexture(() -> "Blast shader parameters", 8, 1, false);
 			mc.getTextureManager().register(PARAMS, params);
 		}
 		if (!ours) {
@@ -123,33 +179,65 @@ public final class BlastShader {
 			return;
 		}
 		int time = (int) ((System.nanoTime() / 10_000_000L) % 65536L); // centiseconds, 16 bit
-		int kindByte = Math.round(kind.ordinal() * 255.0F / 3.0F);
+		int kindByte = kind.ordinal() * 36;
 		img.setPixel(0, 0, argb(kindByte, strength, exposure, shellShock()));
 
 		Camera camera = mc.gameRenderer.getMainCamera();
-		Vec3 d = blastPos.add(0.0, 12.0, 0.0).subtract(camera.position());
-		Vector3fc fwd = camera.forwardVector();
-		Vector3fc up = camera.upVector();
-		Vector3fc left = camera.leftVector();
-		double z = d.x * fwd.x() + d.y * fwd.y() + d.z * fwd.z();
-		double x = -(d.x * left.x() + d.y * left.y() + d.z * left.z());
-		double y = d.x * up.x() + d.y * up.y() + d.z * up.z();
 		double tanHalf = Math.tan(Math.toRadians(mc.options.fov().get()) * 0.5);
 		double aspect = (double) mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
-		float sx = 0.5F;
-		float sy = 0.5F;
-		boolean onScreen = false;
-		if (z > 0.5) {
-			sx = (float) (0.5 + 0.5 * x / (z * tanHalf * aspect));
-			sy = (float) (0.5 + 0.5 * y / (z * tanHalf));
-			onScreen = sx > -0.1F && sx < 1.1F && sy > -0.1F && sy < 1.1F;
+		float[] screen = project(camera, blastPos.add(0.0, 12.0, 0.0), tanHalf, aspect);
+		float sx = screen[0];
+		float sy = screen[1];
+		boolean onScreen = screen[2] > 0.5F;
+		// a flash looked at directly leaves its mark on the eye
+		if (onScreen && exposure > 0.5F && (kind == Kind.NUCLEAR || kind == Kind.KINETIC || kind == Kind.ANTIMATTER || kind == Kind.WATER) && exposure > afterimage) {
+			afterimage = exposure;
+			afterX = Mth.clamp(sx, 0.0F, 1.0F);
+			afterY = Mth.clamp(sy, 0.0F, 1.0F);
+		}
+		float ringR = 0.0F;
+		float ringStrength = 0.0F;
+		float[] shock = {0.5F, 0.5F, 0.0F, 0.0F};
+		if (shockAge >= 0) {
+			double r = (shockAge + partialTick) * shockSpeed;
+			shock = project(camera, shockPos, tanHalf, aspect);
+			if (shock[3] > 0.5F) {
+				ringR = (float) (r / (shock[3] * tanHalf) * 0.5);
+				ringStrength = shockStrength * (float) Mth.clamp(1.0 - r / shockMax, 0.0, 1.0);
+			}
 		}
 		// light streaming out of the fireball: only while it is in view and still glowing
 		float rays = onScreen ? Mth.clamp(heat * 1.3F + exposure * 0.6F, 0.0F, 1.0F) : exposure * 0.25F;
 		img.setPixel(1, 0, argb(byteOf(rays), (time & 0xFF) / 255.0F, ((time >> 8) & 0xFF) / 255.0F, heat));
 		img.setPixel(2, 0, byteOf(WinterClient.amount()) << 24 | (tint & 0xFFFFFF)); // alpha: nuclear winter
 		img.setPixel(3, 0, argb(byteOf(dust), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
+		img.setPixel(4, 0, argb(byteOf(drench), Mth.clamp(ringR / 2.0F, 0.0F, 1.0F), ringStrength, quake));
+		// the ring's centre may be off screen (it is still visible as an arc): stored with a margin
+		img.setPixel(5, 0, argb(255, Mth.clamp((shock[0] + 1.0F) / 3.0F, 0.0F, 1.0F), Mth.clamp((shock[1] + 1.0F) / 3.0F, 0.0F, 1.0F), 0.0F));
+		img.setPixel(6, 0, argb(255, afterX, afterY, afterimage));
+		img.setPixel(7, 0, 0);
 		params.upload();
+	}
+
+	/**
+	 * Screen position (0-1, may lie outside) of a world point: {sx, sy, on screen 1/0, depth along the
+	 * view direction or 0 if behind the camera}.
+	 */
+	private static float[] project(Camera camera, Vec3 pos, double tanHalf, double aspect) {
+		Vec3 d = pos.subtract(camera.position());
+		Vector3fc fwd = camera.forwardVector();
+		Vector3fc up = camera.upVector();
+		Vector3fc left = camera.leftVector();
+		double z = d.x * fwd.x() + d.y * fwd.y() + d.z * fwd.z();
+		double x = -(d.x * left.x() + d.y * left.y() + d.z * left.z());
+		double y = d.x * up.x() + d.y * up.y() + d.z * up.z();
+		if (z <= 0.5) {
+			return new float[] {0.5F, 0.5F, 0.0F, 0.0F};
+		}
+		float sx = (float) (0.5 + 0.5 * x / (z * tanHalf * aspect));
+		float sy = (float) (0.5 + 0.5 * y / (z * tanHalf));
+		boolean onScreen = sx > -0.1F && sx < 1.1F && sy > -0.1F && sy < 1.1F;
+		return new float[] {sx, sy, onScreen ? 1.0F : 0.0F, (float) z};
 	}
 
 	private static int byteOf(float v) {

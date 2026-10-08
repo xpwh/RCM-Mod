@@ -19,6 +19,7 @@
 		"ballisticmissiles:trinitite",
 		"ballisticmissiles:bunker",
 		"ballisticmissiles:air_filter",
-		"ballisticmissiles:emergency_generator"
+		"ballisticmissiles:emergency_generator",
+		"ballisticmissiles:orbital_uplink"
 	]
 }

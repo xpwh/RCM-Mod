@@ -8,6 +8,9 @@
 //  * exposure flash in the colour of the blast, bloom on everything hot
 //  * shell shock afterwards: washed-out colours, soft focus, tunnel vision while the ears ring
 //  * per weapon: nuclear bleach, antimatter violet negative flash, EMP signal glitches
+//  * giant blasts: the shock front as a ring of refracting air, the earthquake rolling the picture,
+//    a starburst from a kinetic impact, water running down the lens after the tsunami's spray,
+//    and the negative afterimage a nuclear flash burns into the eye
 // Expensive parts only run while they are visible; idle the shader is not even active.
 
 uniform sampler2D InSampler;
@@ -50,10 +53,20 @@ void main() {
     vec4 p1 = param(1);
     vec4 p2 = param(2);
     vec4 p3 = param(3);
+    vec4 p4 = param(4);
+    vec4 p5 = param(5);
+    vec4 p6 = param(6);
     float strength = p0.r;   // shock hitting the camera
     float exposure = p0.g;   // flash
     float shock = p0.b;      // shell shock / deafness
-    int kind = int(p0.a * 3.0 + 0.5); // 0 fire, 1 nuclear, 2 antimatter, 3 emp
+    int kind = int(p0.a * 255.0 / 36.0 + 0.5); // 0 fire, 1 nuclear, 2 antimatter, 3 emp, 4 underground, 5 kinetic, 6 water
+    float ringR = p4.r * 2.0;    // shock front radius on screen (screen heights)
+    float ringStrength = p4.g;
+    float quake = p4.b;          // earthquake
+    float drench = p4.a;         // water on the lens
+    vec2 shockC = p5.rg * 3.0 - 1.0;
+    vec2 afterPos = p6.rg;
+    float afterimage = p6.b;
     float time = (p1.r + p1.g * 256.0) * 255.0 / 100.0;
     float heat = p1.b;
     float rays = p1.a;       // fireball light streaming out
@@ -75,6 +88,42 @@ void main() {
         float column = heat * exp(-dot(rel, rel) * 3.0);
         vec2 n = vec2(noise(uv * vec2(10.0, 22.0) + vec2(0.0, -time * 2.2)), noise(uv * vec2(10.0, 22.0) + vec2(4.7, -time * 2.5))) - 0.5;
         uv += n * column * 0.006;
+    }
+
+    // ---- the shock front: a thin shell of compressed air bending the light as it races outwards
+    float ringBand = 0.0;
+    if (ringStrength > 0.0 && ringR > 0.0) {
+        vec2 rel = (uv - shockC) * vec2(aspect, 1.0);
+        float d = length(rel);
+        float w = 0.008 + ringR * 0.035;
+        float k = (d - ringR) / w;
+        ringBand = exp(-k * k) * ringStrength;
+        uv -= rel / max(d, 1.0e-4) * vec2(1.0 / aspect, 1.0) * ringBand * 0.018 * sign(d - ringR + 1.0e-4);
+    }
+
+    // ---- earthquake: the ground (and the camera on it) bounces and rolls
+    if (quake > 0.0) {
+        float bounce = sin(time * 31.0) * 0.6 + sin(time * 17.0 + 1.3) * 0.4;
+        float sway = sin(time * 9.0) * 0.7 + sin(time * 4.3) * 0.3;
+        uv += vec2(sway * 0.004, bounce * 0.007) * quake;
+    }
+
+    // ---- water on the lens: drops that refract the picture, and runnels sliding down
+    float wet = 0.0;
+    if (drench > 0.0) {
+        vec2 grid = vec2(26.0 * aspect, 26.0);
+        vec2 cell = floor(uv * grid);
+        float slide = hash(vec2(cell.x, 7.0)) * 0.6 + 0.2;
+        vec2 g = uv * grid + vec2(0.0, time * slide * (1.0 - drench) * 6.0);
+        vec2 gc = floor(g);
+        vec2 f = fract(g) - 0.5;
+        float has = step(1.0 - drench * 0.85, hash(gc + 3.7));
+        vec2 off = (vec2(hash(gc), hash(gc + 1.3)) - 0.5) * 0.5;
+        float r = 0.18 + 0.2 * hash(gc + 9.1);
+        vec2 q = f - off;
+        float drop = has * smoothstep(r, r * 0.6, length(q * vec2(1.0, 0.8)));
+        uv += q / grid * drop * 2.4;
+        wet = drop;
     }
 
     // ---- camera shudder
@@ -146,11 +195,40 @@ void main() {
         col += streak * vec3(0.6, 0.72, 1.0) * 0.05 * flare;
     }
 
+    // ---- starburst: a kinetic impact's point of light throws spikes across the frame
+    if (kind == 5 && flare > 0.01) {
+        vec2 rel = toBlast;
+        float ang = atan(rel.y, rel.x);
+        float spikes = pow(abs(cos(ang * 3.0)), 60.0) + 0.6 * pow(abs(cos(ang * 3.0 + 0.5236)), 120.0);
+        float fall = exp(-dBlast * 2.2);
+        col += vec3(0.85, 0.92, 1.0) * spikes * fall * flare * 0.9;
+        col += vec3(0.8, 0.9, 1.0) * exp(-dBlast * 9.0) * flare * 0.6;
+    }
+
     // ---- dust and smoke: the shock wave kicks up a brown haze that flattens the picture
     if (dust > 0.0) {
         float drift = noise(uv * vec2(3.0, 5.0) + vec2(time * 0.15, time * 0.05)) * 0.6 + 0.4;
         vec3 dustCol = mix(vec3(0.52, 0.46, 0.38), tint * 0.6 + 0.2, 0.25);
-        col = mix(col, dustCol * (0.7 + 0.5 * luma(col)), dust * 0.45 * drift);
+        float thick = 0.45;
+        if (kind == 4) {
+            dustCol = vec3(0.44, 0.36, 0.27); // the buried burst throws up earth, not smoke
+            thick = 0.65;
+        } else if (kind == 6) {
+            dustCol = vec3(0.86, 0.9, 0.92); // radioactive mist from the column of spray
+            thick = 0.5;
+        }
+        col = mix(col, dustCol * (0.7 + 0.5 * luma(col)), dust * thick * drift);
+    }
+
+    // ---- the shock front catches the light: a faint bright edge of condensation
+    col += vec3(0.9, 0.93, 1.0) * ringBand * 0.12;
+
+    // ---- water on the lens: a cool, smeared look inside the drops
+    if (drench > 0.0) {
+        vec3 smear = (texture(InSampler, uv + vec2(0.003, 0.0)).rgb + texture(InSampler, uv - vec2(0.003, 0.0)).rgb
+            + texture(InSampler, uv + vec2(0.0, 0.004)).rgb + texture(InSampler, uv - vec2(0.0, 0.004)).rgb) * 0.25;
+        col = mix(col, smear * vec3(0.92, 1.0, 1.04), 0.35 * drench);
+        col += wet * 0.06 * drench;
     }
 
     // ---- shell shock: soft focus and washed-out colour while the ears ring
@@ -179,7 +257,15 @@ void main() {
 
     // ---- grade: warm, smoky and contrasty in the fire, cold and sick after an EMP
     float grade = max(strength, max(exposure * 0.6, rays * 0.5));
-    if (kind == 3) {
+    if (kind == 4) {
+        col = mix(col, col * vec3(1.06, 0.95, 0.8), grade * 0.7); // earth-brown
+        col = mix(col, smoothstep(0.0, 1.0, col), 0.3 * grade);
+    } else if (kind == 5) {
+        col = mix(col, col * vec3(0.9, 0.98, 1.12), grade * 0.6); // harsh, cold light
+        col = mix(col, smoothstep(0.0, 1.0, col), 0.45 * grade);
+    } else if (kind == 6) {
+        col = mix(col, col * vec3(0.88, 1.0, 1.08), grade * 0.6); // sea-cold
+    } else if (kind == 3) {
         col = mix(col, col * vec3(0.8, 1.05, 1.15), grade * 0.6);
         col += (step(0.5, fract(uv.y * OutSize.y * 0.5)) - 0.5) * 0.05 * strength; // scanlines
     } else {
@@ -195,6 +281,18 @@ void main() {
         col *= 1.0 - 0.42 * winter;
         col *= mix(vec3(1.0), vec3(0.96, 0.93, 0.88), winter);
         col = mix(col, vec3(0.36, 0.35, 0.34), 0.35 * winter * smoothstep(0.45, 0.95, l));
+    }
+
+    // ---- the flash's negative afterimage, burnt into the eye: a dark, purple-green blot that stays
+    // where the fireball was on screen, fading over many seconds
+    if (afterimage > 0.0) {
+        vec2 ar = (texCoord - afterPos) * vec2(aspect, 1.0);
+        float blot = exp(-dot(ar, ar) / (0.0025 + 0.004 * afterimage));
+        float halo = exp(-dot(ar, ar) / 0.02) - blot;
+        float pulse = 0.85 + 0.15 * sin(time * 1.7);
+        col *= 1.0 - 0.6 * afterimage * blot;
+        col += vec3(0.16, 0.02, 0.22) * afterimage * blot * pulse;
+        col += vec3(0.0, 0.08, 0.04) * afterimage * max(halo, 0.0) * 0.6;
     }
 
     // ---- tunnel vision and grain

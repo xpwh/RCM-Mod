@@ -56,6 +56,20 @@ public class NukeDetonation {
 		}
 	}
 
+	/** Where the warhead goes off. */
+	public enum Mode {
+		/** Ground or low air burst: fireball, mushroom cloud, glassy crater. */
+		SURFACE,
+		/**
+		 * Earth penetrator (B61-11): the shock is coupled into the ground. Less blast and heat in the
+		 * open, but a far deeper crater of broken rock, fissures and an earthquake around it, and very
+		 * dirty fallout from the vented crater.
+		 */
+		UNDERGROUND,
+		/** Under the sea (Poseidon): the seabed and coast are blown out and flooded, the sea takes the rest. */
+		UNDERWATER
+	}
+
 	private static final int SLICES_PER_TICK = 2;
 	private static final int MAX_WAIT_FOR_CHUNKS = 60;
 
@@ -80,24 +94,43 @@ public class NukeDetonation {
 	private int nextSlice;
 	private int falloutAge = -1;
 	private final RadiationManager.Plume plume;
+	private final Mode mode;
+	private final int seaLevel;
 
 	public NukeDetonation(ServerLevel level, Vec3 pos, @Nullable Entity source, Yield yield) {
+		this(level, pos, source, yield, Mode.SURFACE);
+	}
+
+	public NukeDetonation(ServerLevel level, Vec3 pos, @Nullable Entity source, Yield yield, Mode mode) {
+		this.mode = mode;
+		this.seaLevel = level.getSeaLevel();
 		this.craterRadius = yield.craterRadius;
-		this.blastRadius = yield.craterRadius * 2.6;
-		this.damageRadius = yield.craterRadius * 3.0;
+		this.blastRadius = yield.craterRadius * switch (mode) {
+			case SURFACE -> 2.6;
+			case UNDERGROUND -> 1.7;
+			case UNDERWATER -> 2.2;
+		};
+		this.damageRadius = yield.craterRadius * switch (mode) {
+			case SURFACE -> 3.0;
+			case UNDERGROUND -> 2.1;
+			case UNDERWATER -> 2.8;
+		};
 		this.falloutTicks = yield.falloutTicks;
 		// contamination lingers far longer than the acute fallout phase
 		RadiationManager.addZone(level, pos, yield.craterRadius * 3.2, yield.craterRadius * 400.0, yield.falloutTicks * 12L);
 		// soot from the firestorm rises into the stratosphere: it takes a real nuclear war - a dozen or
 		// so strategic warheads, or three Tsar Bombas - to bring on a nuclear winter
-		NuclearWinter.add(level, switch (yield) {
+		double soot = switch (yield) {
 			case TACTICAL -> 0.01;
 			case FISSION -> 0.025;
 			case THERMONUCLEAR -> 0.05;
 			case TSAR -> 0.1;
-		});
+		};
+		// no firestorm from a buried or underwater burst: hardly any soot reaches the stratosphere
+		NuclearWinter.add(level, mode == Mode.SURFACE ? soot : soot * 0.25);
 		// the mushroom cloud drifts off with the wind at its own height and rains out on the way
-		double cloudY = pos.y + yield.craterRadius * 3.5;
+		// (the dust column of a buried burst stays low, so its dirty fallout comes down close by)
+		double cloudY = pos.y + yield.craterRadius * (mode == Mode.UNDERGROUND ? 1.6 : 3.5);
 		this.plume = RadiationManager.addPlume(level, pos, Wind.direction(level.getGameTime(), cloudY),
 			yield.craterRadius * 14.0, yield.craterRadius * 2.2, yield.craterRadius * 110.0, yield.falloutTicks * 12L);
 		this.level = level;
@@ -135,6 +168,12 @@ public class NukeDetonation {
 			return false;
 		}
 
+		if (this.falloutAge == 0 && this.mode == Mode.UNDERGROUND) {
+			this.fissures();
+		}
+		if (this.mode == Mode.UNDERGROUND && this.falloutAge < 100) {
+			this.quake();
+		}
 		if (this.falloutAge % 20 == 0) {
 			this.fallout();
 		}
@@ -204,7 +243,9 @@ public class NukeDetonation {
 			}
 			float damage = (float) (6.0 + 90.0 * Math.pow(factor, 1.4));
 			living.hurtServer(this.level, this.level.damageSources().explosion(this.source, null), damage);
-			living.igniteForSeconds((float) (4.0 + 12.0 * factor));
+			if (this.mode == Mode.SURFACE) {
+				living.igniteForSeconds((float) (4.0 + 12.0 * factor));
+			}
 
 			Vec3 push = entity.position().subtract(this.exact);
 			push = new Vec3(push.x, 0, push.z).normalize().scale(3.5 * factor).add(0, 0.6 + 1.0 * factor, 0);
@@ -259,7 +300,12 @@ public class NukeDetonation {
 
 	private void carveCraterColumn(int x, int z, double d, double r, BlockPos.MutableBlockPos pos) {
 		double f = Math.sqrt(1.0 - (d / r) * (d / r));
-		int floorY = this.center.getY() - (int) Math.round(this.craterRadius * 0.5 * f + this.random.nextFloat());
+		double depth = switch (this.mode) {
+			case SURFACE -> 0.5;
+			case UNDERGROUND -> 0.95; // the buried charge throws out a deep, steep-sided crater
+			case UNDERWATER -> 0.4;
+		};
+		int floorY = this.center.getY() - (int) Math.round(this.craterRadius * depth * f + this.random.nextFloat());
 		int topY = Math.min(this.level.getMaxY(), this.center.getY() + this.craterRadius + 12);
 		floorY = Math.max(floorY, this.level.getMinY() + 1);
 		int surface = this.level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
@@ -272,7 +318,16 @@ public class NukeDetonation {
 			if (state.isAir() || !breakable(state, pos) || !core && isBunker(state)) {
 				continue;
 			}
-			this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
+			BlockState hole = Blocks.AIR.defaultBlockState();
+			if (this.mode == Mode.UNDERWATER) {
+				if (!state.getFluidState().isEmpty()) {
+					continue; // the sea closes over the crater
+				}
+				if (y <= this.seaLevel) {
+					hole = Blocks.WATER.defaultBlockState(); // the blown-out coast floods
+				}
+			}
+			this.level.setBlock(pos, hole, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
 		}
 
 		// Molten, glassy crater floor; sand fused into trinitite.
@@ -280,12 +335,13 @@ public class NukeDetonation {
 			pos.set(x, floorY - i, z);
 			BlockState state = this.level.getBlockState(pos);
 			if (!state.isAir() && breakable(state, pos) && !state.hasBlockEntity()) {
-				BlockState floor = state.is(BlockTags.SAND) || state.is(Blocks.SANDSTONE) ? ModRegistry.TRINITITE.defaultBlockState() : this.floorBlock(d / r, i);
+				BlockState floor = this.mode == Mode.UNDERGROUND ? this.rubble(d / r, i)
+					: state.is(BlockTags.SAND) || state.is(Blocks.SANDSTONE) ? ModRegistry.TRINITITE.defaultBlockState() : this.floorBlock(d / r, i);
 				this.level.setBlock(pos, floor, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
 			}
 		}
 		pos.set(x, floorY, z);
-		if (this.random.nextFloat() < 0.07F && this.level.getBlockState(pos).isAir()) {
+		if (this.mode == Mode.SURFACE && this.random.nextFloat() < 0.07F && this.level.getBlockState(pos).isAir()) {
 			this.level.setBlock(pos, BaseFireBlock.getState(this.level, pos), Block.UPDATE_ALL);
 		}
 	}
@@ -314,13 +370,133 @@ public class NukeDetonation {
 		return roll < 0.8F ? Blocks.BLACKSTONE.defaultBlockState() : Blocks.TUFF.defaultBlockState();
 	}
 
+	/**
+	 * Floor of a buried burst's crater: broken and crushed rock that fell back in (fallback breccia),
+	 * with a little glass from the melt that vented through it.
+	 */
+	private BlockState rubble(double relative, int layer) {
+		float roll = this.random.nextFloat();
+		if (layer == 1 && relative < 0.3 && roll < 0.12F) {
+			return ModRegistry.CRATER_GLASS.defaultBlockState();
+		}
+		return roll < 0.3F ? Blocks.GRAVEL.defaultBlockState()
+			: roll < 0.55F ? Blocks.COBBLESTONE.defaultBlockState()
+			: roll < 0.75F ? Blocks.TUFF.defaultBlockState()
+			: roll < 0.9F ? Blocks.COARSE_DIRT.defaultBlockState() : ModRegistry.SCORCHED_EARTH.defaultBlockState();
+	}
+
+	/**
+	 * Ground cracks running out from the crater of a buried burst: narrow, jagged fissures a few
+	 * blocks deep, the ground slumped into them.
+	 */
+	private void fissures() {
+		int count = 5 + this.random.nextInt(4);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		for (int i = 0; i < count; i++) {
+			double angle = this.random.nextDouble() * Math.PI * 2;
+			double length = this.craterRadius * (1.4 + this.random.nextDouble() * 1.6);
+			double wander = 0.0;
+			for (double s = this.craterRadius * 1.05; s < length; s += 0.7) {
+				wander += (this.random.nextDouble() - 0.5) * 0.12;
+				double a = angle + wander;
+				int x = Mth.floor(this.exact.x + Math.cos(a) * s);
+				int z = Mth.floor(this.exact.z + Math.sin(a) * s);
+				if (!this.level.hasChunk(x >> 4, z >> 4)) {
+					break;
+				}
+				double taper = 1.0 - (s - this.craterRadius) / (length - this.craterRadius);
+				int deep = 2 + (int) Math.round(5.0 * taper * (0.6 + 0.4 * this.random.nextDouble()));
+				int top = this.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+				for (int y = top; y > top - deep; y--) {
+					pos.set(x, y, z);
+					BlockState state = this.level.getBlockState(pos);
+					if (state.isAir() || !breakable(state, pos) || isBunker(state) || !state.getFluidState().isEmpty()) {
+						continue;
+					}
+					this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
+				}
+				if (taper > 0.5 && this.random.nextFloat() < 0.3F) {
+					// the crack is wider close to the crater
+					int sx = x + (this.random.nextBoolean() ? 1 : -1);
+					int sy = this.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, sx, z) - 1;
+					pos.set(sx, sy, z);
+					BlockState state = this.level.getBlockState(pos);
+					if (!state.isAir() && breakable(state, pos) && !isBunker(state) && state.getFluidState().isEmpty()) {
+						this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * The ground keeps shaking for a few seconds around a buried burst: windows burst, leaves are
+	 * shaken off, rock cracks, loose ground slides, and people are thrown about.
+	 */
+	private void quake() {
+		double inner = this.craterRadius * 1.2;
+		double outer = this.craterRadius * 3.4;
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		for (int i = 0; i < 70; i++) {
+			double a = this.random.nextDouble() * Math.PI * 2;
+			double s = inner + (outer - inner) * Math.sqrt(this.random.nextDouble());
+			int x = Mth.floor(this.exact.x + Math.cos(a) * s);
+			int z = Mth.floor(this.exact.z + Math.sin(a) * s);
+			if (!this.level.hasChunk(x >> 4, z >> 4)) {
+				continue;
+			}
+			float violence = (float) (1.0 - (s - inner) / (outer - inner));
+			int top = this.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+			for (int y = top; y > top - 12; y--) {
+				pos.set(x, y, z);
+				BlockState state = this.level.getBlockState(pos);
+				BlockState into = null;
+				if (state.is(BlockTags.LEAVES) && this.random.nextFloat() < 0.5F * violence) {
+					into = Blocks.AIR.defaultBlockState();
+				} else if ((state.is(Blocks.GLASS) || state.is(Blocks.GLASS_PANE) || state.is(BlockTags.IMPERMEABLE)) && this.random.nextFloat() < 0.9F) {
+					into = Blocks.AIR.defaultBlockState();
+				} else if (state.is(Blocks.STONE) && this.random.nextFloat() < 0.4F * violence) {
+					into = Blocks.COBBLESTONE.defaultBlockState();
+				} else if (state.is(Blocks.STONE_BRICKS) && this.random.nextFloat() < 0.6F * violence) {
+					into = Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
+				} else if (state.is(Blocks.DEEPSLATE_BRICKS) && this.random.nextFloat() < 0.6F * violence) {
+					into = Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState();
+				} else if (y == top - 1 && (state.is(Blocks.DIRT) || state.is(Blocks.GRASS_BLOCK)) && this.random.nextFloat() < 0.25F * violence) {
+					into = Blocks.COARSE_DIRT.defaultBlockState();
+				}
+				if (into != null) {
+					this.level.setBlock(pos, into, Block.UPDATE_ALL);
+					if (into.isAir()) {
+						this.level.levelEvent(2001, pos.immutable(), Block.getId(state));
+					}
+				}
+			}
+		}
+		if (this.falloutAge % 5 == 0) {
+			AABB box = new AABB(this.center).inflate(outer, 24, outer);
+			for (LivingEntity living : this.level.getEntitiesOfClass(LivingEntity.class, box)) {
+				double d = living.position().distanceTo(this.exact);
+				if (d > outer || !living.onGround()) {
+					continue;
+				}
+				double f = 1.0 - d / outer;
+				living.push((this.random.nextDouble() - 0.5) * 0.5 * f, 0.18 * f + 0.05, (this.random.nextDouble() - 0.5) * 0.5 * f);
+				living.hurtMarked = true;
+				if (this.random.nextFloat() < 0.3F * f) {
+					living.hurtServer(this.level, this.level.damageSources().fall(), (float) (1.0 + 3.0 * f));
+				}
+			}
+		}
+	}
+
 	private void placeRim(int x, int z, double d, double r, BlockPos.MutableBlockPos pos) {
 		double t = 1.0 - (d - r) / (r * 0.4);
-		int lip = (int) Math.round(5.0 * t * (0.6 + 0.8 * this.random.nextFloat()));
+		double lipHeight = this.mode == Mode.UNDERGROUND ? 9.0 : 5.0;
+		int lip = (int) Math.round(lipHeight * t * (0.6 + 0.8 * this.random.nextFloat()));
 		int y = this.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
 		for (int i = 0; i < lip; i++) {
 			pos.set(x, y + i, z);
-			if (!this.level.getBlockState(pos).canBeReplaced()) {
+			if (!this.level.getBlockState(pos).canBeReplaced() || !this.level.getFluidState(pos).isEmpty()) {
 				break;
 			}
 			float roll = this.random.nextFloat();
@@ -340,6 +516,11 @@ public class NukeDetonation {
 
 	private void scorchSurface(int x, int z, double d, double r, BlockPos.MutableBlockPos pos) {
 		double intensity = 1.0 - (d - r) / (this.blastRadius - r); // 1 at the rim, 0 at the edge
+		if (this.mode != Mode.SURFACE) {
+			// the fireball never saw the sky: dust, not flash burns
+			Wasteland.scorchColumn(this.level, x, z, intensity * 0.35, 0.01F, false, this.random);
+			return;
+		}
 		Wasteland.scorchColumn(this.level, x, z, intensity, 0.22F, true, this.random);
 	}
 
