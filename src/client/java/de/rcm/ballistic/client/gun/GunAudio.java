@@ -131,7 +131,7 @@ public final class GunAudio {
 				later(ModRegistry.AK_TAIL_OUTDOOR, muzzle, tail * 0.5F, jitter, delay);
 				// echoes off hills and buildings: for whoever hears the shot from far off, not for the shooter
 				// or anyone standing by them (to them the real tail already carries the space)
-				for (int i = 0; own || d < 48.0 ? room.echoes().length : 0; i++) {
+				for (int i = 0; i < (own || d < 48.0 ? 0 : room.echoes().length); i++) {
 					// the echo travels to the wall and from there to the listener
 					Vec3 wall = muzzle.add(room.echoDirs()[i].scale(room.echoes()[i]));
 					double path = room.echoes()[i] + wall.distanceTo(ear);
