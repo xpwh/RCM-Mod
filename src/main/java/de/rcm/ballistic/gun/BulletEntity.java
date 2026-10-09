@@ -53,6 +53,11 @@ public class BulletEntity extends Entity {
 	private int ricochets;
 	/** What is left of the round's punch after going through things (1 = straight from the muzzle). */
 	private float power = 1.0F;
+	/** A ball of buckshot: its own share of a shell's punch, slowing much faster than a rifle bullet. */
+	private boolean pellet;
+	private float damageScale = 1.0F;
+	private double drag = DRAG;
+	private Vec3 origin = Vec3.ZERO;
 	/** Client: the near-miss crack has been played. */
 	public boolean crackPlayed;
 	public Vec3 clientPrev = Vec3.ZERO;
@@ -63,10 +68,23 @@ public class BulletEntity extends Entity {
 	}
 
 	public static void fire(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, boolean tracer) {
+		launch(level, shooter, from, velocity, tracer, false, 1.0F);
+	}
+
+	/** One ball of a shotgun's load. */
+	public static void firePellet(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, float damageScale) {
+		launch(level, shooter, from, velocity, false, true, damageScale);
+	}
+
+	private static void launch(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, boolean tracer, boolean pellet, float damageScale) {
 		BulletEntity b = ModRegistry.BULLET.create(level, EntitySpawnReason.TRIGGERED);
 		if (b == null) {
 			return;
 		}
+		b.pellet = pellet;
+		b.damageScale = damageScale;
+		b.drag = pellet ? 0.955 : DRAG;
+		b.origin = from;
 		b.shooter = shooter;
 		b.entityData.set(DATA_TRACER, tracer);
 		b.entityData.set(DATA_SHOOTER, shooter.getId());
@@ -134,7 +152,7 @@ public class BulletEntity extends Entity {
 				return;
 			}
 		} else {
-			this.setDeltaMovement(vel.scale(DRAG).add(0, -GRAVITY, 0));
+			this.setDeltaMovement(vel.scale(this.drag).add(0, -GRAVITY, 0));
 			this.setPos(next);
 		}
 		if (this.tickCount > 80 || this.getY() < server.getMinY() - 16 || vel.lengthSqr() < 1.0) {
@@ -235,6 +253,10 @@ public class BulletEntity extends Entity {
 		Vec3 at = e.getBoundingBox().inflate(0.2).clip(from, to).orElse(e.position());
 		float speed = (float) this.getDeltaMovement().length();
 		float damage = DAMAGE * Math.min(1.0F, 0.35F + speed / (float) AkItem.MUZZLE_VELOCITY) * (0.25F + 0.75F * this.power);
+		if (this.pellet) {
+			// buckshot: full weight up close, falling off quickly as the balls slow
+			damage = DAMAGE * this.damageScale * (float) Math.min(1.0, 0.25 + speed / ShotgunItem.MUZZLE_VELOCITY * 0.85) * this.power;
+		}
 		boolean head = e instanceof LivingEntity living && at.y > living.getEyeY() - 0.22;
 		if (head) {
 			damage *= 2.0F;
@@ -253,6 +275,9 @@ public class BulletEntity extends Entity {
 			e.push(push.x, 0.02, push.z);
 			if (e instanceof net.minecraft.server.level.ServerPlayer victim) {
 				de.rcm.ballistic.injury.Injuries.shot(victim, at, line, damage, head);
+				if (this.pellet) {
+					de.rcm.ballistic.injury.Injuries.pellet(victim, at, this.origin.distanceTo(at));
+				}
 			}
 		}
 		if (e instanceof LivingEntity living) {

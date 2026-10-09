@@ -136,3 +136,14 @@ All three are works of the U.S. federal government (U.S. Air Force / U.S. Space 
 | `title/launch3` Minuteman III launches from Vandenberg AFB, 2 October 2019 | https://commons.wikimedia.org/wiki/File:Minuteman_III_Launches_From_Vandenberg_AFB_On_October_2,_2019.jpg |
 
 The title logo is set in Inter Display (SIL Open Font License).
+
+## Shotgun (`tools/import_shotgun_sounds.py`)
+
+From the Red Library sound effects collection, https://archive.org/details/Red_Library_Guns_Misc (CC0 1.0).
+
+| Sound | Source tracks |
+|---|---|
+| Shotgun shots, distant shot | R11-58, R11-57, R11-48 |
+| Pump, shells into the tube, dry click, handling | R12-26, R12-32 |
+
+The heartbeat of the dying player is synthesized by `tools/gen_sounds_v13.py`.

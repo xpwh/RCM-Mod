@@ -36,7 +36,8 @@ public abstract class GameRendererMixin {
 		target = "Lnet/minecraft/client/entity/ClientAvatarState;getInterpolatedBob(F)F"))
 	private float ballisticmissiles$steadyAim(float bob) {
 		float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-		float aim = Math.max(de.rcm.ballistic.client.gun.AkClient.aimProgress(partialTick), de.rcm.ballistic.client.item.RpgClient.aimProgress(partialTick));
+		float aim = Math.max(Math.max(de.rcm.ballistic.client.gun.AkClient.aimProgress(partialTick), de.rcm.ballistic.client.item.RpgClient.aimProgress(partialTick)),
+			de.rcm.ballistic.client.gun.ShotgunClient.aimProgress(partialTick));
 		return bob * (1.0F - 0.88F * aim);
 	}
 
@@ -49,6 +50,11 @@ public abstract class GameRendererMixin {
 		if (de.rcm.ballistic.client.fighter.FighterClient.isFlying()) {
 			// the horizon tilts with the jet's bank
 			poseStack.mulPose(Axis.ZP.rotationDegrees(de.rcm.ballistic.client.fighter.FighterClient.cameraRoll(partialTick)));
+		}
+		// bleeding out: the view rolls over onto its side
+		float dyingRoll = de.rcm.ballistic.client.gui.DyingOverlay.cameraRoll(partialTick);
+		if (dyingRoll != 0.0F) {
+			poseStack.mulPose(Axis.ZP.rotationDegrees(dyingRoll));
 		}
 		// a wounded leg: a dip and a lurch on every step onto it
 		Minecraft mc = Minecraft.getInstance();

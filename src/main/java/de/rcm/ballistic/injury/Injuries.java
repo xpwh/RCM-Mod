@@ -41,9 +41,15 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class Injuries {
 	public static final AttachmentType<Wounds> WOUNDS = AttachmentRegistry.create(BallisticMissiles.id("wounds"),
-		b -> b.persistent(Wounds.CODEC).syncWith(Wounds.STREAM_CODEC, AttachmentSyncPredicate.targetOnly()));
+		b -> b.persistent(Wounds.CODEC).syncWith(Wounds.STREAM_CODEC, AttachmentSyncPredicate.all()));
 	public static final ResourceKey<DamageType> BLEEDING = ResourceKey.create(Registries.DAMAGE_TYPE, BallisticMissiles.id("bleeding"));
 	private static final Identifier LIMP = BallisticMissiles.id("wounded_leg");
+	private static final Identifier DOWN = BallisticMissiles.id("dying");
+	/** How long you lie there before it goes black (ticks). */
+	public static final int DYING = 180;
+	/** Buckshot balls in one leg in one shot, from close enough, that take it off. */
+	private static final int AMPUTATION_PELLETS = 3;
+	private static final double AMPUTATION_RANGE = 9.0;
 	/** Ticks between drops of health lost, by how badly it bleeds. */
 	private static final int[] BLEED_EVERY = {0, 160, 70, 28};
 	/** Light bleeding clots after this long. */
@@ -56,6 +62,13 @@ public final class Injuries {
 		int clot;
 		int heal;
 		int drip;
+		/** Buckshot in a leg this tick: the tick, and the balls in the left and the right leg. */
+		long pelletTick;
+		int pelletsLeft;
+		int pelletsRight;
+		/** What brought them down (dealt again when the dying is over), and whether that death is now let through. */
+		DamageSource cause;
+		boolean finishing;
 	}
 
 	private static final Map<UUID, Clock> CLOCKS = new HashMap<>();
@@ -66,6 +79,7 @@ public final class Injuries {
 	public static void init() {
 		ServerTickEvents.END_SERVER_TICK.register(Injuries::tick);
 		ServerLivingEntityEvents.AFTER_DAMAGE.register(Injuries::afterDamage);
+		ServerLivingEntityEvents.ALLOW_DEATH.register(Injuries::allowDeath);
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity.level() instanceof ServerLevel level && Blood.bleeds(entity)) {
 				// a pool spreading under the body
@@ -110,6 +124,90 @@ public final class Injuries {
 		if (w.leg() > old.leg() || w.arm() > old.arm()) {
 			clock(p).heal = 0;
 		}
+		if (w.down() != old.down()) {
+			p.refreshDimensions();
+		}
+	}
+
+	// ------------------------------------------------------------------ losing a leg
+
+	/**
+	 * A ball of buckshot struck a player {@code range} blocks from the muzzle. Enough of one shot's balls
+	 * in the same leg, close enough, and the leg below the knee is gone.
+	 */
+	public static void pellet(ServerPlayer p, Vec3 at, double range) {
+		double h = (at.y - p.getY()) / Math.max(0.1, p.getBbHeight());
+		if (h >= 0.42 || range > AMPUTATION_RANGE || get(p).lost() > 0) {
+			return;
+		}
+		Clock c = clock(p);
+		long now = p.level().getGameTime();
+		if (c.pelletTick != now) {
+			c.pelletTick = now;
+			c.pelletsLeft = 0;
+			c.pelletsRight = 0;
+		}
+		float yaw = p.yBodyRot * Mth.DEG_TO_RAD;
+		double side = (at.x - p.getX()) * Mth.cos(yaw) + (at.z - p.getZ()) * Mth.sin(yaw);
+		int n = side > 0.0 ? ++c.pelletsLeft : ++c.pelletsRight;
+		// the closer, the fewer it takes
+		int needed = range < 4.0 ? AMPUTATION_PELLETS - 1 : AMPUTATION_PELLETS;
+		if (n >= needed) {
+			amputate(p, side > 0.0 ? Wounds.LEFT : Wounds.RIGHT);
+		}
+	}
+
+	/** The leg is shot away below the knee: you go down, it bleeds from the artery until a tourniquet goes on. */
+	public static void amputate(ServerPlayer p, int side) {
+		ServerLevel level = p.level();
+		set(p, get(p).withLost(side));
+		Vec3 knee = p.position().add(0, 0.35, 0);
+		Blood.send(level, knee, new Vec3(0, 0.5, 0), 60, Blood.BURST);
+		Blood.send(level, knee, new Vec3(0, -0.2, 0), 40, Blood.SPRAY);
+		level.playSound(null, knee.x, knee.y, knee.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 2.0F, 0.55F);
+		level.playSound(null, knee.x, knee.y, knee.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.6F, 0.8F);
+		message(p, "message.ballisticmissiles.leg_lost");
+	}
+
+	// ------------------------------------------------------------------ dying
+
+	/**
+	 * Instead of dropping dead on the spot, a player who would die goes down: lying there, unable to
+	 * move, the world fading for some seconds - then black. Only what kills outright (a blast that tears
+	 * you apart, the void, /kill) skips the dying.
+	 */
+	private static boolean allowDeath(LivingEntity entity, DamageSource source, float amount) {
+		if (!(entity instanceof ServerPlayer p) || p.isCreative() || p.isSpectator()) {
+			return true;
+		}
+		Clock c = clock(p);
+		if (c.finishing) {
+			c.finishing = false;
+			return true;
+		}
+		Wounds w = get(p);
+		if (w.dying() > 0 || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || amount >= 40.0F) {
+			return true; // hit again while down, or killed outright
+		}
+		c.cause = source;
+		p.setHealth(1.0F);
+		p.stopUsingItem();
+		set(p, w.withDying(DYING));
+		return false;
+	}
+
+	public static boolean dying(LivingEntity e) {
+		return get(e).dying() > 0;
+	}
+
+	private static void die(ServerPlayer p) {
+		Clock c = clock(p);
+		DamageSource cause = c.cause != null ? c.cause : new DamageSource(p.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(BLEEDING));
+		c.cause = null;
+		c.finishing = true;
+		p.invulnerableTime = 0;
+		p.setHealth(0.0F);
+		p.die(cause);
 	}
 
 	private static Clock clock(ServerPlayer p) {
@@ -123,8 +221,12 @@ public final class Injuries {
 			return;
 		}
 		speed.removeModifier(LIMP);
+		speed.removeModifier(DOWN);
 		if (w.leg() > 0) {
-			speed.addTransientModifier(new AttributeModifier(LIMP, w.leg() == 1 ? -0.18 : -0.4, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+			speed.addTransientModifier(new AttributeModifier(LIMP, w.lost() > 0 ? -0.3 : w.leg() == 1 ? -0.18 : -0.4, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+		}
+		if (w.dying() > 0) {
+			speed.addTransientModifier(new AttributeModifier(DOWN, -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
 		}
 	}
 
@@ -209,6 +311,20 @@ public final class Injuries {
 			if (w.leg() >= 2 && p.isSprinting()) {
 				p.setSprinting(false);
 			}
+			if (w.dying() > 0) {
+				// lying there; the end comes when it comes
+				p.setHealth(1.0F);
+				p.setSprinting(false);
+				if (w.dying() % 30 == 0 && w.bleed() > 0) {
+					Blood.send(level, p.position().add(0, 0.2, 0), Vec3.ZERO, 2, Blood.DRIP);
+				}
+				if (w.dying() <= 1) {
+					die(p);
+				} else {
+					set(p, w.withDying(w.dying() - 1));
+				}
+				continue;
+			}
 			if (w.bleed() > 0) {
 				if (++c.bleed >= BLEED_EVERY[w.bleed()]) {
 					c.bleed = 0;
@@ -236,7 +352,7 @@ public final class Injuries {
 	/** A first aid kit: dressings on the wounds - bleeding stops (all but an artery), a little health back, the wounds dressed. */
 	public static boolean dress(ServerPlayer p) {
 		Wounds w = get(p);
-		if (!w.any() && p.getHealth() >= p.getMaxHealth()) {
+		if (!w.any() && p.getHealth() >= p.getMaxHealth() || w.dying() > 0) {
 			return false;
 		}
 		if (w.bleed() == Wounds.ARTERIAL) {
@@ -244,7 +360,7 @@ public final class Injuries {
 			p.heal(1.0F);
 			return true;
 		}
-		set(p, new Wounds(Math.max(0, w.leg() - 1), Math.max(0, w.arm() - 1), 0));
+		set(p, w.withBleed(0).withLeg(w.leg() - 1).withArm(w.arm() - 1));
 		p.heal(3.0F);
 		p.level().playSound(null, p.getX(), p.getY(), p.getZ(), ModRegistry.GEAR_RUSTLE, SoundSource.PLAYERS, 1.0F, 1.2F);
 		p.displayClientMessage(Component.translatable("message.ballisticmissiles.dressed").withStyle(ChatFormatting.GREEN), true);
@@ -254,7 +370,7 @@ public final class Injuries {
 	/** A tourniquet: the bleeding stops at once, artery or not. */
 	public static boolean tourniquet(ServerPlayer p) {
 		Wounds w = get(p);
-		if (w.bleed() == 0) {
+		if (w.bleed() == 0 || w.dying() > 0) {
 			return false;
 		}
 		set(p, w.withBleed(0));

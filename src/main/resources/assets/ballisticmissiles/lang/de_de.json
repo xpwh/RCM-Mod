@@ -671,5 +671,19 @@
 	"hud.ballisticmissiles.arm_1": "Arm verletzt",
 	"hud.ballisticmissiles.arm_2": "Arm schwer verletzt",
 	"options.ballisticmissiles.blood": "Blut",
-	"options.ballisticmissiles.blood.tooltip": "Blutspritzer, Blutflecken und Blutlachen bei Treffern und Verletzungen"
+	"options.ballisticmissiles.blood.tooltip": "Blutspritzer, Blutflecken und Blutlachen bei Treffern und Verletzungen",
+	"item.ballisticmissiles.shotgun": "Schrotflinte (Pump-Action)",
+	"item.ballisticmissiles.shotgun_shell": "Schrotpatrone 12/70 (00-Buck)",
+	"tooltip.ballisticmissiles.shotgun_rounds": "Patronen: %s/%s",
+	"tooltip.ballisticmissiles.shotgun": "12/70, 9 Kugeln 00-Buckshot pro Schuss – verheerend auf kurze Distanz",
+	"tooltip.ballisticmissiles.shotgun_controls": "Linksklick schießen · Rechtsklick zielen · R Patronen einzeln nachladen",
+	"message.ballisticmissiles.shotgun_empty": "Leer – R zum Nachladen",
+	"message.ballisticmissiles.shotgun_no_shells": "Keine Schrotpatronen",
+	"message.ballisticmissiles.leg_lost": "Dein Bein wurde weggeschossen! Aderpresse anlegen!",
+	"subtitles.ballisticmissiles.shotgun_shot": "Schrotflinte feuert",
+	"subtitles.ballisticmissiles.shotgun_pump": "Schrotflinte wird repetiert",
+	"subtitles.ballisticmissiles.shotgun_shell": "Patrone wird geladen",
+	"subtitles.ballisticmissiles.shotgun_dry": "Schrotflinte klickt leer",
+	"hud.ballisticmissiles.lost_leg": "BEIN VERLOREN",
+	"hud.ballisticmissiles.dying": "Du verlierst das Bewusstsein ..."
 }

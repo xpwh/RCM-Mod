@@ -27,6 +27,40 @@ public abstract class MinecraftMixin {
 	}
 
 	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$shotgunTrigger(CallbackInfoReturnable<Boolean> cir) {
+		if (this.player != null && this.player.getMainHandItem().getItem() instanceof de.rcm.ballistic.gun.ShotgunItem) {
+			de.rcm.ballistic.client.gun.ShotgunClient.trigger(this.player);
+			cir.setReturnValue(false);
+		}
+	}
+
+	/** Bleeding out on the ground: too weak to fight, to use anything. */
+	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$downNoAttack(CallbackInfoReturnable<Boolean> cir) {
+		if (this.player != null && de.rcm.ballistic.injury.Injuries.get(this.player).dying() > 0) {
+			cir.setReturnValue(false);
+		}
+	}
+
+	@Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$downNoUse(CallbackInfo ci) {
+		if (this.player != null && de.rcm.ballistic.injury.Injuries.get(this.player).dying() > 0) {
+			ci.cancel();
+		}
+	}
+
+	/** Dead: no death screen - you are carried straight back to your spawn, as after a blackout. */
+	@Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$noDeathScreen(net.minecraft.client.gui.screens.Screen screen, CallbackInfo ci) {
+		if (screen instanceof net.minecraft.client.gui.screens.DeathScreen && this.player != null && this.player.level() != null
+			&& !this.player.level().getLevelData().isHardcore()) {
+			de.rcm.ballistic.client.gui.DyingOverlay.died();
+			this.player.respawn();
+			ci.cancel();
+		}
+	}
+
+	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$akTrigger(CallbackInfoReturnable<Boolean> cir) {
 		if (this.player != null && this.player.getMainHandItem().getItem() instanceof AkItem) {
 			cir.setReturnValue(false); // the trigger is worked from AkClient
@@ -69,7 +103,8 @@ public abstract class MinecraftMixin {
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$rpgNoMining(boolean attacking, CallbackInfo ci) {
 		if (this.player != null && (this.player.getMainHandItem().getItem() instanceof RocketLauncherItem
-			|| this.player.getMainHandItem().getItem() instanceof AkItem)) {
+			|| this.player.getMainHandItem().getItem() instanceof AkItem
+			|| this.player.getMainHandItem().getItem() instanceof de.rcm.ballistic.gun.ShotgunItem)) {
 			ci.cancel();
 		}
 	}

@@ -89,7 +89,8 @@ public final class AkClient {
 		// looking through the sights (AK or RPG) there is no crosshair: the sights are the aim
 		HudElementRegistry.replaceElement(net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.CROSSHAIR, crosshair -> (graphics, tickCounter) -> {
 			Minecraft mc = Minecraft.getInstance();
-			if (mc.player != null && (AkItem.isAiming(mc.player) || de.rcm.ballistic.item.RocketLauncherItem.isAiming(mc.player))) {
+			if (mc.player != null && (AkItem.isAiming(mc.player) || de.rcm.ballistic.item.RocketLauncherItem.isAiming(mc.player)
+				|| ShotgunClient.aimProgress(1.0F) > 0.5F || de.rcm.ballistic.injury.Injuries.get(mc.player).dying() > 0)) {
 				return;
 			}
 			crosshair.render(graphics, tickCounter);
@@ -178,6 +179,8 @@ public final class AkClient {
 		while (reload.consumeClick()) {
 			if (holdingAk(player)) {
 				ClientPlayNetworking.send(new GunInputPayload(player.isShiftKeyDown() ? GunInputPayload.RELOAD_SWITCH : GunInputPayload.RELOAD));
+			} else if (ShotgunClient.holding(player)) {
+				ShotgunClient.reload(player);
 			}
 		}
 		while (selector.consumeClick()) {

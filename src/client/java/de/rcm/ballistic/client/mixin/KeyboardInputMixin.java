@@ -27,7 +27,21 @@ public abstract class KeyboardInputMixin extends ClientInput {
 			Input k = this.keyPresses;
 			this.keyPresses = new Input(k.forward(), k.backward(), k.left(), k.right(), k.jump(), k.shift(), false);
 		}
-		if (player != null && (de.rcm.ballistic.gun.AkItem.isAiming(player) || de.rcm.ballistic.item.RocketLauncherItem.isAiming(player))) {
+		if (player != null && !player.isCreative()) {
+			var w = de.rcm.ballistic.injury.Injuries.get(player);
+			if (w.dying() > 0) {
+				// bleeding out on the ground: not moving any more
+				this.moveVector = Vec2.ZERO;
+				Input k = this.keyPresses;
+				this.keyPresses = new Input(k.forward(), k.backward(), k.left(), k.right(), false, false, false);
+			} else if (w.lost() > 0) {
+				// half a leg: crawling, no jumping, no running
+				Input k = this.keyPresses;
+				this.keyPresses = new Input(k.forward(), k.backward(), k.left(), k.right(), false, k.shift(), false);
+			}
+		}
+		if (player != null && (de.rcm.ballistic.gun.AkItem.isAiming(player) || de.rcm.ballistic.item.RocketLauncherItem.isAiming(player)
+			|| de.rcm.ballistic.gun.ShotgunItem.isAiming(player))) {
 			this.moveVector = this.moveVector.scale(0.42F);
 			Input k = this.keyPresses;
 			this.keyPresses = new Input(k.forward(), k.backward(), k.left(), k.right(), k.jump(), k.shift(), false);

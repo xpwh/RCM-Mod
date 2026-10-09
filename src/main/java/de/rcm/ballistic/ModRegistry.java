@@ -567,6 +567,11 @@ public final class ModRegistry {
 		"ak47", de.rcm.ballistic.gun.AkItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
 			.component(net.minecraft.core.component.DataComponents.USE_EFFECTS, new net.minecraft.world.item.component.UseEffects(true, false, 0.85F))
 	);
+	public static final Item SHOTGUN = registerItem(
+		"shotgun", de.rcm.ballistic.gun.ShotgunItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
+			.component(net.minecraft.core.component.DataComponents.USE_EFFECTS, new net.minecraft.world.item.component.UseEffects(true, false, 0.85F))
+	);
+	public static final Item SHOTGUN_SHELL = registerItem("shotgun_shell", Item::new, new Item.Properties().stacksTo(25));
 	public static final Item AK_MAG = registerItem(
 		"ak_magazine", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, false), new Item.Properties().stacksTo(8)
 	);
@@ -705,6 +710,13 @@ public final class ModRegistry {
 	public static final SoundEvent AK_TAIL_INDOOR = sound("ak.tail_indoor");
 	public static final SoundEvent AK_TAIL_CAVE = sound("ak.tail_cave");
 	public static final SoundEvent AK_DRY = sound("ak.dry");
+	public static final SoundEvent SHOTGUN_SHOT = sound("shotgun.shot");
+	public static final SoundEvent SHOTGUN_SHOT_FAR = sound("shotgun.shot_far");
+	public static final SoundEvent SHOTGUN_PUMP = sound("shotgun.pump");
+	public static final SoundEvent SHOTGUN_SHELL_IN = sound("shotgun.shell_in");
+	public static final SoundEvent SHOTGUN_DRY = sound("shotgun.dry");
+	public static final SoundEvent SHOTGUN_HANDLE = sound("shotgun.handle");
+	public static final SoundEvent HEARTBEAT = sound("player.heartbeat");
 	public static final SoundEvent AK_MAG_OUT = sound("ak.mag_out");
 	public static final SoundEvent AK_MAG_IN = sound("ak.mag_in");
 	public static final SoundEvent AK_CHARGE = sound("ak.charge");
@@ -754,6 +766,10 @@ public final class ModRegistry {
 		output.accept(ORBITAL_UPLINK_ITEM);
 		output.accept(TUNGSTEN_ROD);
 		output.accept(AK47);
+		ItemStack loadedShotgun = new ItemStack(SHOTGUN);
+		loadedShotgun.set(GUN_STATE, de.rcm.ballistic.gun.GunState.DEFAULT.withRounds(de.rcm.ballistic.gun.ShotgunItem.CAPACITY));
+		output.accept(loadedShotgun);
+		output.accept(new ItemStack(SHOTGUN_SHELL, 25));
 		output.accept(AK_MAG);
 		output.accept(AK_MAG_TRACER);
 		output.accept(GRENADE);

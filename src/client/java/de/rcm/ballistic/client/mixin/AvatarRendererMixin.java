@@ -14,13 +14,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /** Players hold the RPG-7 shouldered in both hands, aimed where they look (seen from F5 and by others). */
 @Mixin(AvatarRenderer.class)
 public abstract class AvatarRendererMixin {
+	/** Which leg is gone, for the model. */
+	@Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V",
+		at = @At("TAIL"))
+	private void ballisticmissiles$lostLeg(Avatar avatar, net.minecraft.client.renderer.entity.state.AvatarRenderState state, float partialTick,
+		org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+		((de.rcm.ballistic.client.render.LostLeg) state).ballisticmissiles$setLostLeg(de.rcm.ballistic.injury.Injuries.get(avatar).lost());
+	}
+
 	@Inject(
 		method = "getArmPose(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/client/model/HumanoidModel$ArmPose;",
 		at = @At("RETURN"),
 		cancellable = true
 	)
 	private static void ballisticmissiles$shoulderRpg(Avatar avatar, ItemStack stack, InteractionHand hand, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
-		if (stack.is(ModRegistry.ROCKET_LAUNCHER) || stack.is(ModRegistry.AK47)) {
+		if (stack.is(ModRegistry.ROCKET_LAUNCHER) || stack.is(ModRegistry.AK47) || stack.is(ModRegistry.SHOTGUN)) {
 			cir.setReturnValue(HumanoidModel.ArmPose.CROSSBOW_HOLD);
 		} else if (stack.is(ModRegistry.GRENADE) && avatar.isUsingItem() && avatar.getUsedItemHand() == hand) {
 			// arm drawn back to throw - or, crouching, kept low for the underhand lob

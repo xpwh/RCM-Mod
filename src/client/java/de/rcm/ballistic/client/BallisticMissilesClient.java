@@ -83,8 +83,11 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.drone.DroneClient.init();
 		de.rcm.ballistic.client.item.RpgClient.init();
 		de.rcm.ballistic.client.gun.AkClient.init();
+		de.rcm.ballistic.client.gun.ShotgunClient.init();
+		de.rcm.ballistic.client.gui.DyingOverlay.init();
 		de.rcm.ballistic.client.render.Rpg7ItemRenderer.register();
 		de.rcm.ballistic.client.render.AkItemRenderer.register();
+		de.rcm.ballistic.client.render.ShotgunItemRenderer.register();
 		de.rcm.ballistic.client.render.GrenadeRenderers.register();
 		de.rcm.ballistic.client.render.FpvDroneItemRenderer.register();
 		de.rcm.ballistic.client.render.SmokeDebug.init();

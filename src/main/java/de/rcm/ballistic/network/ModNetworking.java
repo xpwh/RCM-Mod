@@ -561,6 +561,8 @@ public final class ModNetworking {
 		public static final int AK_INSPECT = 7;
 		public static final int AK_CHECK = 8;
 		public static final int RPG_CHECK = 9;
+		public static final int SHOTGUN_FIRE = 10;
+		public static final int SHOTGUN_LOAD = 11;
 		public static final Type<GunInputPayload> TYPE = new Type<>(BallisticMissiles.id("gun_input"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunInputPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunInputPayload::action, GunInputPayload::new);
@@ -726,6 +728,12 @@ public final class ModNetworking {
 				case GunInputPayload.TRIGGER_UP -> de.rcm.ballistic.gun.AkItem.trigger(context.player(), false);
 				case GunInputPayload.GRENADE_COOK -> de.rcm.ballistic.gun.GrenadeItem.cook(context.player());
 				case GunInputPayload.RPG_FIRE -> de.rcm.ballistic.item.RocketLauncherItem.serverTrigger(context.player());
+				case GunInputPayload.SHOTGUN_FIRE -> {
+					if (!de.rcm.ballistic.injury.Injuries.dying(context.player())) {
+						de.rcm.ballistic.gun.ShotgunItem.fire(context.player());
+					}
+				}
+				case GunInputPayload.SHOTGUN_LOAD -> de.rcm.ballistic.gun.ShotgunItem.load(context.player());
 				case GunInputPayload.AK_INSPECT, GunInputPayload.AK_CHECK, GunInputPayload.RPG_CHECK -> shareGunAction(context.player(), payload.action());
 				default -> {
 				}

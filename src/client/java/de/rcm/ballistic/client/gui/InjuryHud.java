@@ -112,7 +112,10 @@ public final class InjuryHud {
 			boolean blink = wounds.bleed() < Wounds.ARTERIAL || ((int) (now / 6.0F)) % 2 == 0;
 			colors.add(blink ? 0xFFFF4040 : 0xFF902020);
 		}
-		if (wounds.leg() > 0) {
+		if (wounds.lost() > 0) {
+			lines.add(Component.translatable("hud.ballisticmissiles.lost_leg"));
+			colors.add(0xFFFF3030);
+		} else if (wounds.leg() > 0) {
 			lines.add(Component.translatable("hud.ballisticmissiles.leg_" + wounds.leg()));
 			colors.add(wounds.leg() == 2 ? 0xFFFF8040 : 0xFFFFC060);
 		}

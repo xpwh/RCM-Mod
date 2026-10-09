@@ -1472,5 +1472,97 @@
 				"attenuation_distance": 64
 			}
 		]
+	},
+	"shotgun.shot": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/shot1",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot2",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot3",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot4",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot5",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"shotgun.shot_far": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/shot_far",
+				"attenuation_distance": 128
+			}
+		]
+	},
+	"shotgun.pump": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_pump",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/pump1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump2",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"shotgun.shell_in": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_shell",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/shell_in1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shell_in2",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shell_in3",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"shotgun.dry": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_dry",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/dry",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"shotgun.handle": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/handle1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:shotgun/handle2",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"player.heartbeat": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:player/heartbeat"
+			}
+		]
 	}
 }

@@ -5,6 +5,7 @@
 	"client": [
 		"AbstractClientPlayerMixin",
 		"AvatarRendererMixin",
+		"AvatarRenderStateMixin",
 		"CameraMixin",
 		"CloudRendererMixin",
 		"EntityTurnMixin",
@@ -15,6 +16,7 @@
 		"KeyboardInputMixin",
 		"LevelRendererMixin",
 		"MinecraftMixin",
+		"PlayerModelMixin",
 		"SoundEngineMixin",
 		"TitleScreenMixin"
 	],

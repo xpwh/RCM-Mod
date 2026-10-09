@@ -671,5 +671,19 @@
 	"hud.ballisticmissiles.arm_1": "Arm wounded",
 	"hud.ballisticmissiles.arm_2": "Arm badly wounded",
 	"options.ballisticmissiles.blood": "Blood",
-	"options.ballisticmissiles.blood.tooltip": "Blood spray, splatter and pools on hits and wounds"
+	"options.ballisticmissiles.blood.tooltip": "Blood spray, splatter and pools on hits and wounds",
+	"item.ballisticmissiles.shotgun": "Pump-Action Shotgun",
+	"item.ballisticmissiles.shotgun_shell": "12 Gauge Shell (00 Buck)",
+	"tooltip.ballisticmissiles.shotgun_rounds": "Shells: %s/%s",
+	"tooltip.ballisticmissiles.shotgun": "12 gauge, nine 00 buckshot balls per shot – devastating up close",
+	"tooltip.ballisticmissiles.shotgun_controls": "Left click fire · right click aim · R load shells one by one",
+	"message.ballisticmissiles.shotgun_empty": "Empty – R to load",
+	"message.ballisticmissiles.shotgun_no_shells": "No shotgun shells",
+	"message.ballisticmissiles.leg_lost": "Your leg was shot away! Apply a tourniquet!",
+	"subtitles.ballisticmissiles.shotgun_shot": "Shotgun fires",
+	"subtitles.ballisticmissiles.shotgun_pump": "Shotgun racked",
+	"subtitles.ballisticmissiles.shotgun_shell": "Shell loaded",
+	"subtitles.ballisticmissiles.shotgun_dry": "Shotgun clicks empty",
+	"hud.ballisticmissiles.lost_leg": "LEG LOST",
+	"hud.ballisticmissiles.dying": "You are losing consciousness ..."
 }
