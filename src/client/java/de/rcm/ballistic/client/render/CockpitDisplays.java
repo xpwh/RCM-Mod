@@ -109,9 +109,9 @@ public final class CockpitDisplays {
 		} else {
 			// the panoramic display, split into its usual portals
 			rect(pose, c, y, -0.32F, 0.43F, 0.32F, 0.77F, 0xFF05080C);
-			adi(pose, c, y - 0.001F, -0.22F, 0.6F, 0.095F, d);
-			tsd(pose, c, y - 0.001F, 0.0F, 0.6F, 0.1F, d);
-			stores(pose, c, y - 0.001F, 0.22F, 0.6F, 0.095F, d);
+			adi(pose, c, y - 0.003F, -0.22F, 0.6F, 0.095F, d);
+			tsd(pose, c, y - 0.003F, 0.0F, 0.6F, 0.1F, d);
+			stores(pose, c, y - 0.003F, 0.22F, 0.6F, 0.095F, d);
 		}
 		// master warning (red) and caution (amber) on the glare shield edge
 		float lz = (f22 ? 0.72F : 0.8F) - 0.015F;
@@ -148,7 +148,7 @@ public final class CockpitDisplays {
 			}
 		}
 		// the fixed aircraft symbol: wings and a dot, in yellow
-		float yy = y - 0.002F;
+		float yy = y - 0.006F;
 		rect(pose, c, yy, cx - h * 0.6F, cz - h * 0.03F, cx - h * 0.15F, cz + h * 0.03F, 0xFFFFD020);
 		rect(pose, c, yy, cx + h * 0.15F, cz - h * 0.03F, cx + h * 0.6F, cz + h * 0.03F, 0xFFFFD020);
 		rect(pose, c, yy, cx - h * 0.04F, cz - h * 0.04F, cx + h * 0.04F, cz + h * 0.04F, 0xFFFFD020);
@@ -157,32 +157,32 @@ public final class CockpitDisplays {
 	/** Tactical situation display: heading-up, ownship in the middle. */
 	private static void tsd(PoseStack.Pose pose, VertexConsumer c, float y, float cx, float cz, float h, Data d) {
 		rect(pose, c, y, cx - h, cz - h, cx + h, cz + h, 0xFF06121C);
-		float yy = y - 0.002F;
+		float yy = y - 0.006F;
 		for (float ring : new float[] {0.5F, 1.0F}) {
 			for (int k = 0; k < 32; k++) {
 				double a = k * Math.PI * 2.0 / 32.0;
 				float x = cx + (float) Math.sin(a) * h * ring * 0.95F;
 				float z = cz + (float) Math.cos(a) * h * ring * 0.95F;
-				rect(pose, c, yy, x - 0.002F, z - 0.002F, x + 0.002F, z + 0.002F, 0xFF3A6A80);
+				rect(pose, c, yy, x - 0.006F, z - 0.006F, x + 0.002F, z + 0.002F, 0xFF3A6A80);
 			}
 		}
 		// ownship
 		rect(pose, c, yy, cx - 0.006F, cz - 0.008F, cx + 0.006F, cz + 0.004F, 0xFFFFFFFF);
-		rect(pose, c, yy, cx - 0.002F, cz + 0.004F, cx + 0.002F, cz + 0.014F, 0xFFFFFFFF);
+		rect(pose, c, yy, cx - 0.006F, cz + 0.004F, cx + 0.002F, cz + 0.014F, 0xFFFFFFFF);
 		for (int i = 0; i < d.contactCount; i++) {
 			float x = cx + d.contacts[i * 3] * h * 0.95F;
 			float z = cz + d.contacts[i * 3 + 1] * h * 0.95F;
 			int kind = (int) d.contacts[i * 3 + 2];
 			int col = kind == 2 ? (d.blink ? 0xFFFF3030 : 0xFF801818) : kind == 1 ? 0xFF40E0FF : 0xFF40FF60;
 			float r = kind == 2 ? 0.004F : 0.006F;
-			rect(pose, c, yy - 0.001F, x - r, z - r, x + r, z + r, col);
+			rect(pose, c, yy - 0.003F, x - r, z - r, x + r, z + r, col);
 		}
 	}
 
 	/** Engine and weapons. */
 	private static void stores(PoseStack.Pose pose, VertexConsumer c, float y, float cx, float cz, float h, Data d) {
 		rect(pose, c, y, cx - h, cz - h, cx + h, cz + h, 0xFF050A08);
-		float yy = y - 0.002F;
+		float yy = y - 0.006F;
 		float bottom = cz - h * 0.85F;
 		float top = cz + h * 0.85F;
 		// thrust and spool: vertical bars on the left
@@ -209,9 +209,9 @@ public final class CockpitDisplays {
 		rect(pose, c, y, x0, z0, x1, z1, 0xFF203020);
 		fill = Mth.clamp(fill, 0.0F, 1.0F);
 		if (horizontal) {
-			rect(pose, c, y - 0.001F, x0, z0, x0 + (x1 - x0) * fill, z1, col);
+			rect(pose, c, y - 0.003F, x0, z0, x0 + (x1 - x0) * fill, z1, col);
 		} else {
-			rect(pose, c, y - 0.001F, x0, z0, x1, z0 + (z1 - z0) * fill, col);
+			rect(pose, c, y - 0.003F, x0, z0, x1, z0 + (z1 - z0) * fill, col);
 		}
 	}
 

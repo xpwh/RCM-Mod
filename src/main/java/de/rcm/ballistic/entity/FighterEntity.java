@@ -269,7 +269,11 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 	/** The jet's own "up", tilted by bank. */
 	public Vec3 up(float roll) {
-		Vec3 f = this.forward();
+		return up(this.forward(), roll);
+	}
+
+	/** The "up" of a jet flying along {@code f} banked by {@code roll} degrees (positive: right wing down). */
+	public static Vec3 up(Vec3 f, float roll) {
 		Vec3 right = f.cross(new Vec3(0, 1, 0));
 		right = right.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : right.normalize();
 		Vec3 u = right.cross(f).normalize();
@@ -499,7 +503,6 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		up = up.subtract(fwd.scale(up.dot(fwd)));
 		up = up.lengthSqr() < 1.0E-6 ? this.up(this.rollL) : up.normalize();
 		float oldYaw = this.getYRot();
-		float oldPitch = this.getXRot();
 		this.pitchStick = Mth.approach(this.pitchStick, flown ? this.pitchAxis : 0.0F, 0.15F);
 		this.rollStick = Mth.approach(this.rollStick, flown ? this.rollAxis : 0.0F, 0.2F);
 		Vec3 newFwd;
@@ -548,21 +551,14 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		}
 		this.bodyUp = up;
 		double turned = Math.acos(Mth.clamp(fwd.dot(newFwd), -1.0, 1.0));
-		this.setRot((float) (Mth.atan2(-newFwd.x, newFwd.z) * Mth.RAD_TO_DEG), (float) (-Math.asin(Mth.clamp(newFwd.y, -1.0, 1.0)) * Mth.RAD_TO_DEG));
+		float yaw = (float) (Mth.atan2(-newFwd.x, newFwd.z) * Mth.RAD_TO_DEG);
+		// keep the yaw continuous: interpolated across +-180 degrees it would spin the jet round for a frame
+		this.setRot(oldYaw + Mth.wrapDegrees(yaw - oldYaw), (float) (-Math.asin(Mth.clamp(newFwd.y, -1.0, 1.0)) * Mth.RAD_TO_DEG));
 		// the roll the renderer and everyone else see: the angle of our up from the unbanked up
 		Vec3 r0 = newFwd.cross(new Vec3(0, 1, 0));
 		r0 = r0.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : r0.normalize();
 		Vec3 u0 = r0.cross(newFwd).normalize();
 		this.rollL = (float) Math.toDegrees(Math.atan2(up.dot(r0), up.dot(u0)));
-		// the pilot's head turns with the jet: what he looks at stays where it is in the cockpit
-		if (flown && this.level().isClientSide() && this.getControllingPassenger() instanceof Player pilot) {
-			float dy = Mth.wrapDegrees(this.getYRot() - oldYaw);
-			float dp = this.getXRot() - oldPitch;
-			pilot.setYRot(pilot.getYRot() + dy);
-			pilot.setYHeadRot(pilot.getYHeadRot() + dy);
-			pilot.setXRot(Mth.clamp(pilot.getXRot() + dp, -90.0F, 90.0F));
-		}
-
 		// speed: thrust, drag rising with the square of speed, gravity along the climb or dive
 		// even at idle a jet engine pushes: the jet creeps forward with the brakes off
 		// a jet engine gives most thrust standing still and loses some as the air rams in: off the brakes it

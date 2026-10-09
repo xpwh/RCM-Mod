@@ -5,7 +5,9 @@
 	"client": [
 		"AbstractClientPlayerMixin",
 		"AvatarRendererMixin",
+		"CameraMixin",
 		"CloudRendererMixin",
+		"EntityTurnMixin",
 		"GameRendererAccessor",
 		"GameRendererMixin",
 		"ItemInHandRendererMixin",

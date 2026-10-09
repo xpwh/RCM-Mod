@@ -30,6 +30,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix3f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
@@ -67,16 +69,81 @@ public final class FighterClient {
 		return flying != null;
 	}
 
-	/** How far the picture tilts with the bank (a part of it - full roll in a mouse-flown jet only confuses). */
+	/** The camera is set up in full from the jet's attitude (see {@link #cockpitCamera}); no extra roll. */
 	public static float cameraRoll(float partialTick) {
-		return flying == null ? 0.0F : flying.getRoll(partialTick) * 0.4F;
+		return 0.0F;
+	}
+
+	// ------------------------------------------------------------------ the pilot's head
+
+	/** Where the pilot looks relative to the cockpit: degrees right of the nose, and down. */
+	private static float lookYaw;
+	private static float lookPitch;
+
+	/** The mouse turns the pilot's head inside the cockpit (not the jet, not the world). */
+	public static void look(float dYaw, float dPitch) {
+		lookYaw = Mth.clamp(lookYaw + dYaw, -165.0F, 165.0F);
+		lookPitch = Mth.clamp(lookPitch + dPitch, -85.0F, 70.0F);
+	}
+
+	/**
+	 * The pilot's view: the jet's attitude (nose, wings, roll) turned by where his head looks. Camera space
+	 * has -Z forward, +Y up, +X right, like vanilla's camera.
+	 */
+	public static Quaternionf cockpitRotation(FighterEntity jet, float partialTick, Quaternionf out) {
+		Vec3 f = jet.forward(partialTick);
+		Vec3 u = FighterEntity.up(f, jet.getRoll(partialTick));
+		Vec3 r = f.cross(u).normalize();
+		Matrix3f m = new Matrix3f(
+			(float) r.x, (float) r.y, (float) r.z,
+			(float) u.x, (float) u.y, (float) u.z,
+			(float) -f.x, (float) -f.y, (float) -f.z);
+		out.setFromNormalized(m);
+		return out.rotateY(-lookYaw * Mth.DEG_TO_RAD).rotateX(-lookPitch * Mth.DEG_TO_RAD);
+	}
+
+	/** The pilot's eye, in the seat under the canopy. */
+	public static Vec3 cockpitEye(FighterEntity jet, float partialTick) {
+		Vec3 f = jet.forward(partialTick);
+		Vec3 u = FighterEntity.up(f, jet.getRoll(partialTick));
+		float seat = jet.type() == FighterType.F22 ? FighterRenderer.F22_EYE : FighterRenderer.F35_EYE;
+		return jet.getPosition(partialTick).add(0.0, FighterEntity.CENTRE, 0.0).add(f.scale(seat)).add(u.scale(0.95));
+	}
+
+	/**
+	 * Per frame: points the player where his head looks (so the seeker, missiles and the third-person
+	 * camera follow it), and hands the first-person camera its full orientation. Null when not flying.
+	 */
+	public static @Nullable Quaternionf cockpitCamera(Minecraft mc, float partialTick) {
+		FighterEntity jet = flying;
+		if (jet == null || mc.player == null || jet.isRemoved() || mc.player.getVehicle() != jet) {
+			return null;
+		}
+		Quaternionf q = cockpitRotation(jet, partialTick, new Quaternionf());
+		Vector3f dir = q.transform(new Vector3f(0.0F, 0.0F, -1.0F));
+		LocalPlayer p = mc.player;
+		float yaw = (float) (Mth.atan2(-dir.x, dir.z) * Mth.RAD_TO_DEG);
+		float pitch = (float) (-Math.asin(Mth.clamp(dir.y, -1.0F, 1.0F)) * Mth.RAD_TO_DEG);
+		yaw = p.getYRot() + Mth.wrapDegrees(yaw - p.getYRot());
+		p.setYRot(yaw);
+		p.yRotO = yaw;
+		p.setYHeadRot(yaw);
+		p.yHeadRotO = yaw;
+		p.setXRot(pitch);
+		p.xRotO = pitch;
+		return mc.options.getCameraType().isFirstPerson() ? q : null;
 	}
 
 	// ------------------------------------------------------------------ controls
 
 	private static void startTick(Minecraft mc) {
 		LocalPlayer player = mc.player;
+		FighterEntity before = flying;
 		flying = player != null && player.getVehicle() instanceof FighterEntity jet ? jet : null;
+		if (flying != null && flying != before) {
+			lookYaw = 0.0F; // boarding: eyes front
+			lookPitch = 0.0F;
+		}
 		if (flying == null) {
 			return;
 		}

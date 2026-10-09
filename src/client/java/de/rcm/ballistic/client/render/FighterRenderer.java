@@ -486,7 +486,7 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 	 */
 	private static BoxMesh buildCockpit(float eye, float sill, float panelTop, boolean f22) {
 		BoxMesh.Builder b = new BoxMesh.Builder();
-		float w = 0.4F; // tub half width
+		float w = 0.37F; // tub half width (inside the fuselage skin)
 		float floor = -0.15F;
 		float back = eye - 0.62F;
 		float panel = eye + 0.72F;
@@ -494,9 +494,9 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 		b.box(-w, back, floor - 0.06F, w, panel + 0.5F, floor, PIT_GREY);
 		b.box(-w, back - 0.06F, floor, w, back, sill + 0.1F, PIT_GREY);
 		for (float s : new float[] {-1.0F, 1.0F}) {
-			b.box(s < 0 ? -w - 0.06F : w, back, floor, s < 0 ? -w : w + 0.06F, panel + 0.5F, sill, PIT_GREY);
+			b.box(s < 0 ? -w - 0.04F : w, back, floor, s < 0 ? -w : w + 0.04F, panel + 0.5F, sill, PIT_GREY);
 			// canopy sill rail
-			b.box(s < 0 ? -w - 0.05F : w - 0.03F, back - 0.4F, sill - 0.02F, s < 0 ? -w + 0.03F : w + 0.05F, panel + 0.4F, sill + 0.04F, FRAME);
+			b.box(s < 0 ? -w - 0.04F : w - 0.03F, back - 0.4F, sill - 0.02F, s < 0 ? -w + 0.03F : w + 0.04F, panel + 0.4F, sill + 0.03F, FRAME);
 			// side console: a sloped shelf of switch panels
 			b.hexa(CONSOLE,
 				v(s * w, back + 0.15F, 0.36F), v(s * (w - 0.17F), back + 0.15F, 0.36F), v(s * (w - 0.17F), back + 0.15F, 0.44F), v(s * w, back + 0.15F, 0.48F),
@@ -515,7 +515,7 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 		// ejection seat: pan, back, headrest with its parachute pack, the firing handle between the knees
 		b.box(-0.24F, eye - 0.48F, floor + 0.12F, 0.24F, eye + 0.08F, floor + 0.3F, SEAT);
 		b.box(-0.24F, eye - 0.56F, floor + 0.3F, 0.24F, eye - 0.42F, 0.8F, SEAT);
-		b.box(-0.2F, eye - 0.6F, 0.8F, 0.2F, eye - 0.38F, 1.22F, PIT_GREY);
+		b.box(-0.2F, eye - 0.6F, 0.8F, 0.2F, eye - 0.38F, 1.06F, PIT_GREY);
 		b.box(-0.26F, eye - 0.58F, floor + 0.3F, -0.22F, eye - 0.36F, 1.0F, FRAME);
 		b.box(0.22F, eye - 0.58F, floor + 0.3F, 0.26F, eye - 0.36F, 1.0F, FRAME);
 		b.box(-0.07F, eye + 0.06F, floor + 0.2F, 0.07F, eye + 0.1F, floor + 0.34F, HANDLE);
