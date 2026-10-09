@@ -124,3 +124,15 @@ Bullet impacts on earth, stone, wood and flesh use Minecraft's own sounds. Other
 | Drone in the goggles (loop) | https://freesound.org/s/854466/ "FPV Drone Flight 3" | qubodup | CC0 1.0 |
 | Drone heard from outside (loop) | https://freesound.org/s/854353/ "Quadcopter Drone Stalking Hovering 1" | qubodup | CC0 1.0 |
 | Arming beeps | https://freesound.org/s/680584/ "DJI FPV power on" | 4l3xoid | CC0 1.0 |
+
+## Title screen photographs
+
+All three are works of the U.S. federal government (U.S. Air Force / U.S. Space Force) and in the public domain; taken from Wikimedia Commons, cropped to 16:9 and scaled.
+
+| Picture | Source |
+|---|---|
+| `title/launch1` Minuteman III ICBM operational test launch | https://commons.wikimedia.org/wiki/File:Minuteman_III_ICBM_operational_test_launch_(6530663).jpg |
+| `title/launch2` Unarmed Minuteman III test launch from Vandenberg | https://commons.wikimedia.org/wiki/File:Unarmed_Minuteman_III_test_launch_from_Vandenberg_(6406505).jpg |
+| `title/launch3` Minuteman III launches from Vandenberg AFB, 2 October 2019 | https://commons.wikimedia.org/wiki/File:Minuteman_III_Launches_From_Vandenberg_AFB_On_October_2,_2019.jpg |
+
+The title logo is set in Inter Display (SIL Open Font License).

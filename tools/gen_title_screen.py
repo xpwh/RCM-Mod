@@ -1,157 +1,150 @@
-"""9.4 title screen art.
+"""9.5 title screen: real photographs, a proper logo, glass buttons.
 
-  textures/gui/title_background.png   640x360 pixel-art dusk over a missile base: stars, a sunset glow
-                                       behind blue mountains, two fighters drawing contrails, a distant
-                                       mushroom cloud, a launch gantry with its missile, a radar dish,
-                                       a fence line (drawn up crisp, Minecraft style, by the title screen)
-  minecraft:gui/sprites/widget/button*.png   dark gunmetal buttons with a thin border; amber when hovered
-python3 gen_title_screen.py
+  textures/gui/title/launch1..3.png   Minuteman III ICBM test launches from Vandenberg at night, cropped to
+                                      16:9 (public domain, U.S. Air Force / U.S. Space Force photos, see
+                                      CREDITS.md). Pass the folder with the downloaded originals (mm1..3.jpg).
+  textures/gui/title/logo.png         "BALLISTIC" in brushed steel over "MISSILES" in glowing amber
+  minecraft:gui/sprites/widget/button*.png   dark glass buttons at twice the resolution; amber when hovered
+python3 gen_title_screen.py <photo folder>
 """
 import os
+import sys
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "src", "main", "resources", "assets")
-rng = np.random.default_rng(1983)
-W, H = 640, 360
-HORIZON = 250
+TITLE = os.path.join(ROOT, "ballisticmissiles", "textures", "gui", "title")
+FONT = "/usr/share/fonts/opentype/inter/InterDisplay-Black.otf"
+FONT_WIDE = "/usr/share/fonts/opentype/inter/InterDisplay-Bold.otf"
+os.makedirs(TITLE, exist_ok=True)
+rng = np.random.default_rng(7)
+
+# ---------------------------------------------------------------------------- photographs
+# (crop focus: where the interesting part of each picture sits, 0 top .. 1 bottom)
+if len(sys.argv) > 1:
+    for i, focus in ((1, 0.35), (2, 0.4), (3, 0.45)):
+        im = Image.open(os.path.join(sys.argv[1], f"mm{i}.jpg")).convert("RGB")
+        w, h = im.size
+        ch = int(w * 9 / 16)
+        top = int((h - ch) * focus)
+        im = im.crop((0, top, w, top + ch)).resize((1600, 900), Image.LANCZOS)
+        im.save(os.path.join(TITLE, f"launch{i}.png"), optimize=True)
+        with open(os.path.join(TITLE, f"launch{i}.png.mcmeta"), "w") as f:
+            f.write('{\n\t"texture": {\n\t\t"blur": true\n\t}\n}\n')
+
+# ---------------------------------------------------------------------------- logo
+S = 2  # supersampling
+LW, LH = 1024, 300
 
 
-def lerp(a, b, t):
-    return np.array(a, float) * (1 - t) + np.array(b, float) * t
+def text_layer(text, font, size, tracking):
+    f = ImageFont.truetype(font, size * S)
+    widths = [f.getbbox(c)[2] - f.getbbox(c)[0] if c != " " else size * S // 3 for c in text]
+    total = sum(widths) + tracking * S * (len(text) - 1)
+    layer = Image.new("L", (LW * S, LH * S), 0)
+    d = ImageDraw.Draw(layer)
+    return f, widths, total, layer, d
 
 
-# ---------------------------------------------------------------------------- sky
-img = np.zeros((H, W, 3))
-stops = [(0, (6, 9, 24)), (120, (24, 32, 64)), (200, (88, 62, 86)), (235, (196, 106, 70)), (HORIZON, (246, 150, 72))]
-for y in range(H):
-    for (y0, c0), (y1, c1) in zip(stops, stops[1:]):
-        if y0 <= y <= y1:
-            img[y, :] = lerp(c0, c1, (y - y0) / max(1, y1 - y0))
-            break
-    else:
-        img[y, :] = stops[-1][1]
-yy, xx = np.mgrid[0:H, 0:W]
-glow = np.exp(-(((xx - 430) / 150.0) ** 2 + ((yy - HORIZON) / 60.0) ** 2))
-img += glow[..., None] * np.array([90, 45, 10])
-# stars, fading towards the glow
-for _ in range(260):
-    x, y = rng.integers(0, W), rng.integers(0, 170)
-    b = rng.uniform(120, 255) * (1 - y / 190.0)
-    img[y, x] = np.maximum(img[y, x], b)
-# ---------------------------------------------------------------------------- contrails and fighters
-pil = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
-d = ImageDraw.Draw(pil, "RGBA")
-for (x0, y0, x1, y1) in [(40, 110, 330, 46), (60, 122, 345, 58)]:
-    for k in range(40):
-        t0, t1 = k / 40, (k + 1) / 40
-        a = int(20 + 120 * t1)
-        d.line([(x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0), (x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1)], fill=(225, 225, 235, a), width=2)
-    # the jet at the head of the trail: a small dark arrow
-    d.polygon([(x1 + 8, y1 - 2), (x1 - 3, y1 - 6), (x1 - 1, y1 - 1), (x1 - 3, y1 + 3)], fill=(20, 22, 30, 255))
-# distant mushroom cloud on the horizon, lit from below
-cx = 118
-d.rectangle([cx - 5, 196, cx + 5, HORIZON - 8], fill=(150, 92, 76, 150))
-d.ellipse([cx - 34, 168, cx + 34, 204], fill=(170, 104, 84, 170))
-d.ellipse([cx - 24, 162, cx + 24, 188], fill=(196, 122, 92, 170))
-d.ellipse([cx - 44, 236, cx + 44, HORIZON + 4], fill=(150, 90, 70, 120))
-img = np.array(pil).astype(float)
-# ---------------------------------------------------------------------------- mountains
+def draw_text(text, font, size, tracking, y):
+    f, widths, total, layer, d = text_layer(text, font, size, tracking)
+    x = (LW * S - total) / 2
+    for c, cw in zip(text, widths):
+        bx = f.getbbox(c)[0]
+        d.text((x - bx, y * S), c, font=f, fill=255)
+        x += cw + tracking * S
+    return layer
 
 
-def ridge(base, amp, freq, seed):
-    r = np.random.default_rng(seed)
-    x = np.arange(W)
-    y = np.zeros(W)
-    for f, a in zip(freq, amp):
-        y += a * np.sin(x * f + r.uniform(0, 6.28))
-    return base + y
+def gradient(top, bottom, y0, y1):
+    g = np.zeros((LH * S, LW * S, 3))
+    t = np.clip((np.arange(LH * S)[:, None] - y0 * S) / ((y1 - y0) * S), 0, 1)
+    for k in range(3):
+        g[..., k] = top[k] * (1 - t) + bottom[k] * t
+    return g
 
 
-far = ridge(226, (10, 5, 2), (0.012, 0.031, 0.09), 1)
-mid = ridge(246, (8, 4, 2), (0.017, 0.043, 0.11), 2)
-for x in range(W):
-    img[int(far[x]):, x] = lerp(img[int(far[x]), x], (70, 60, 92), 0.75)
-    img[int(mid[x]):, x] = (34, 30, 50)
-ground = ridge(266, (3, 1.5), (0.02, 0.07), 3)
-for x in range(W):
-    g = int(ground[x])
-    img[g:, x] = (12, 12, 18)
-    img[g, x] = (70, 42, 30)  # rim light from the sunset
-pil = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
-d = ImageDraw.Draw(pil)
-dark = (9, 9, 13)
-# ---------------------------------------------------------------------------- the launch gantry with its missile
-gx = 470
-d.rectangle([gx - 14, 300, gx + 70, 312], fill=dark)  # pad
-for px in (gx, gx + 26):
-    d.rectangle([px, 150, px + 3, 302], fill=dark)
-for y in range(156, 300, 12):
-    d.line([(gx, y), (gx + 28, y + 12)], fill=dark)
-    d.line([(gx + 28, y), (gx, y + 12)], fill=dark)
-    d.line([(gx, y), (gx + 28, y)], fill=dark)
-d.rectangle([gx - 2, 148, gx + 31, 152], fill=dark)
-for y in (190, 240):  # swing arms to the missile
-    d.rectangle([gx + 28, y, gx + 40, y + 2], fill=dark)
-mx = gx + 42
-d.rectangle([mx, 176, mx + 9, 300], fill=(18, 18, 24))
-d.polygon([(mx, 176), (mx + 9, 176), (mx + 4.5, 156)], fill=(18, 18, 24))
-d.polygon([(mx, 300), (mx - 5, 300), (mx, 286)], fill=(18, 18, 24))
-d.polygon([(mx + 9, 300), (mx + 14, 300), (mx + 9, 286)], fill=(18, 18, 24))
-d.line([(mx + 9, 178), (mx + 9, 298)], fill=(64, 40, 32))  # sunset catching its flank
-# ---------------------------------------------------------------------------- radar dish
-rx = 150
-d.rectangle([rx - 2, 262, rx + 2, 300], fill=dark)
-d.rectangle([rx - 14, 296, rx + 14, 304], fill=dark)
-# a parabolic dish tilted up to the sky, with its feed horn on a tripod
-import math
-pts = []
-for k in range(0, 21):
-    u = -1 + k / 10.0
-    x, y = u * 24, 8 * u * u  # bowl profile, opening upwards
-    c, sn = math.cos(-0.6), math.sin(-0.6)
-    pts.append((rx + x * c - y * sn, 262 - (x * sn + y * c) - 6))
-d.polygon(pts, fill=dark)
-d.line([(rx, 258), (rx + 14, 236)], fill=dark, width=2)
-d.line([(rx - 12, 266), (rx + 14, 236)], fill=dark, width=1)
-d.rectangle([rx + 12, 233, rx + 16, 237], fill=dark)
-# ---------------------------------------------------------------------------- bunker, silo hatch, fence
-d.polygon([(250, 312), (262, 296), (330, 296), (342, 312)], fill=dark)
-d.rectangle([286, 302, 306, 312], fill=(30, 30, 36))
-d.rectangle([552, 309, 580, 313], fill=(30, 30, 36))  # open silo door (the launch comes from here)
-for x in range(0, W, 14):
-    d.rectangle([x, 318, x + 1, 334], fill=dark)
-d.line([(0, 321), (W, 321)], fill=dark)
-d.line([(0, 327), (W, 327)], fill=dark)
-out = os.path.join(ROOT, "ballisticmissiles", "textures", "gui")
-os.makedirs(out, exist_ok=True)
-pil.save(os.path.join(out, "title_background.png"))
-
-# ---------------------------------------------------------------------------- buttons
+logo = np.zeros((LH * S, LW * S, 4))
 
 
-def button(fill, edge, top, path):
-    b = np.zeros((20, 200, 4))
-    b[..., :3] = fill
-    b[..., 3] = 235
-    noise = rng.normal(0, 2.0, (20, 200, 1))
-    b[..., :3] += noise
-    b[1, 1:-1, :3] = top  # bevel highlight
-    b[0, :, :3] = edge
-    b[-1, :, :3] = edge
-    b[:, 0, :3] = edge
-    b[:, -1, :3] = edge
-    b[-2, 1:-1, :3] = np.array(fill) * 0.6
-    b[0, :, 3] = b[-1, :, 3] = b[:, 0, 3] = b[:, -1, 3] = 255
+def composite(rgb, alpha):
+    a = alpha[..., None]
+    logo[..., :3] = rgb * a + logo[..., :3] * (1 - a)
+    logo[..., 3:] = a + logo[..., 3:] * (1 - a)
+
+
+big = draw_text("BALLISTIC", FONT, 150, 10, 18)
+small = draw_text("MISSILES", FONT_WIDE, 64, 46, 200)
+bigA = np.array(big) / 255.0
+smallA = np.array(small) / 255.0
+# drop shadow
+shadow = np.array(Image.fromarray((np.maximum(bigA, smallA) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(10 * S))) / 255.0
+shadow = np.roll(shadow, (6 * S, 4 * S), (0, 1))
+composite(np.zeros((LH * S, LW * S, 3)), shadow * 0.85)
+# amber glow behind "MISSILES"
+glow = np.array(small.filter(ImageFilter.GaussianBlur(14 * S))) / 255.0
+composite(np.ones((LH * S, LW * S, 3)) * np.array([255, 120, 30]), np.clip(glow * 1.6, 0, 1) * 0.7)
+# dark outline round "BALLISTIC"
+outline = np.array(big.filter(ImageFilter.MaxFilter(7))) / 255.0
+composite(np.ones((LH * S, LW * S, 3)) * np.array([14, 16, 20]), outline)
+# brushed steel face: light at the top, a horizon line, darker below, fine horizontal brushing
+steel = gradient((250, 252, 255), (150, 158, 170), 30, 105)
+lower = gradient((112, 120, 132), (205, 212, 222), 105, 185)
+yy = np.arange(LH * S)[:, None]
+face = np.where((yy >= 105 * S)[..., None], lower, steel)
+face += rng.normal(0, 5, (LH * S, 1, 1)) + rng.normal(0, 2, (LH * S, LW * S, 1))
+composite(np.clip(face, 0, 255), bigA)
+# a hairline highlight along the top edge of each letter
+edge = np.clip(bigA - np.roll(bigA, 3 * S, 0), 0, 1)
+composite(np.ones((LH * S, LW * S, 3)) * 255, edge * 0.6)
+# "MISSILES": amber, hot at the top
+composite(gradient((255, 214, 120), (255, 110, 20), 200, 270), smallA)
+# rules either side of "MISSILES"
+d = ImageDraw.Draw(rules := Image.new("L", (LW * S, LH * S), 0))
+f, widths, total, _, _ = text_layer("MISSILES", FONT_WIDE, 64, 46)
+cx = LW * S / 2
+for sgn in (-1, 1):
+    x0 = cx + sgn * (total / 2 + 30 * S)
+    x1 = cx + sgn * (total / 2 + 210 * S)
+    d.rectangle([min(x0, x1), 236 * S, max(x0, x1), 241 * S], fill=255)
+rulesA = np.array(rules) / 255.0
+composite(np.ones((LH * S, LW * S, 3)) * np.array([255, 150, 50]), rulesA * 0.9)
+out = Image.fromarray(np.clip(logo * [1, 1, 1, 255], 0, 255).astype(np.uint8), "RGBA").resize((LW, LH), Image.LANCZOS)
+out.save(os.path.join(TITLE, "logo.png"))
+with open(os.path.join(TITLE, "logo.png.mcmeta"), "w") as f:
+    f.write('{\n\t"texture": {\n\t\t"blur": true\n\t}\n}\n')
+
+# ---------------------------------------------------------------------------- buttons (2x resolution)
+BW, BH = 400, 40
+
+
+def button(top, bottom, alpha, border, border_alpha, inner, path, glow=None):
+    b = np.zeros((BH, BW, 4))
+    t = np.linspace(0, 1, BH)[:, None]
+    for k in range(3):
+        b[..., k] = top[k] * (1 - t) + bottom[k] * t
+    b[..., 3] = alpha
+    if glow is not None:
+        # light from the edges inwards
+        yy, xx = np.mgrid[0:BH, 0:BW]
+        dist = np.minimum.reduce([yy, BH - 1 - yy, xx, BW - 1 - xx]).astype(float)
+        g = np.exp(-dist / 5.0)[..., None]
+        b[..., :3] = b[..., :3] * (1 - g * 0.6) + np.array(glow) * g * 0.6
+        b[..., 3] = np.maximum(b[..., 3], 255 * g[..., 0] * 0.6)
+    b[2:4, 2:-2, :3] = inner  # top bevel
+    b[2:4, 2:-2, 3] = np.maximum(b[2:4, 2:-2, 3], 200)
+    for sl in (np.s_[0:2, :], np.s_[-2:, :], np.s_[:, 0:2], np.s_[:, -2:]):
+        b[sl][..., :3] = border
+        b[sl][..., 3] = border_alpha
     Image.fromarray(np.clip(b, 0, 255).astype(np.uint8), "RGBA").save(path)
 
 
 wid = os.path.join(ROOT, "minecraft", "textures", "gui", "sprites", "widget")
 os.makedirs(wid, exist_ok=True)
-button((38, 42, 46), (12, 13, 15), (70, 76, 82), os.path.join(wid, "button.png"))
-button((62, 58, 40), (240, 168, 48), (110, 100, 64), os.path.join(wid, "button_highlighted.png"))
-button((26, 27, 29), (10, 10, 12), (36, 37, 40), os.path.join(wid, "button_disabled.png"))
+button((40, 44, 50), (18, 20, 24), 215, (90, 96, 104), 255, (78, 84, 92), os.path.join(wid, "button.png"))
+button((70, 56, 34), (36, 28, 18), 230, (255, 170, 60), 255, (150, 120, 70), os.path.join(wid, "button_highlighted.png"), glow=(255, 150, 40))
+button((24, 25, 28), (14, 15, 17), 170, (44, 46, 50), 200, (34, 36, 40), os.path.join(wid, "button_disabled.png"))
 meta = '{\n\t"gui": {\n\t\t"scaling": {\n\t\t\t"type": "nine_slice",\n\t\t\t"width": 200,\n\t\t\t"height": 20,\n\t\t\t"border": 3\n\t\t}\n\t}\n}\n'
 for n in ("button", "button_highlighted", "button_disabled"):
     with open(os.path.join(wid, n + ".png.mcmeta"), "w") as f:
