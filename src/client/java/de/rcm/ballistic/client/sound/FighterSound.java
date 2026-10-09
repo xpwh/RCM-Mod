@@ -80,13 +80,17 @@ public class FighterSound extends AbstractTickableSoundInstance {
 	public void tick() {
 		this.age++;
 		Minecraft mc = Minecraft.getInstance();
-		boolean inside = mc.player != null && this.jet.pilot() == mc.player;
+		boolean pilot = mc.player != null && this.jet.pilot() == mc.player;
+		// in the cockpit (first person) the engines are a muffled hum behind the canopy; flying in third
+		// person (F5) the camera hangs outside, right by the jet, and gets the full roar
+		boolean inside = pilot && mc.options.getCameraType().isFirstPerson();
+		boolean chase = pilot && !inside;
 		float enginePitch = this.jet.type().enginePitch;
 		// starting up, the roar fades in under the start-up sound as the engine reaches idle
 		float spool = this.jet.spool();
 		float running = smoothstep(0.7F, 1.0F, spool);
 		if (this.layer == Layer.WIND || this.layer == Layer.GROWL || this.layer == Layer.LOCK) {
-			if (this.jet.isRemoved() || !inside) {
+			if (this.jet.isRemoved() || !pilot) {
 				this.stop();
 				return;
 			}
@@ -97,7 +101,7 @@ public class FighterSound extends AbstractTickableSoundInstance {
 			switch (this.layer) {
 				case WIND -> {
 					float v = Mth.clamp(this.jet.speed() / 30.0F, 0.0F, 1.0F);
-					this.volume = 0.6F * v * v;
+					this.volume = inside ? 0.6F * v * v : 0.0F;
 					this.pitch = 0.7F + 0.6F * v;
 				}
 				case GROWL -> {
@@ -113,7 +117,7 @@ public class FighterSound extends AbstractTickableSoundInstance {
 			return;
 		}
 		if (this.layer == Layer.COCKPIT) {
-			if (this.jet.isRemoved() || !inside) {
+			if (this.jet.isRemoved() || !pilot) {
 				this.stop();
 				return;
 			}
@@ -121,8 +125,27 @@ public class FighterSound extends AbstractTickableSoundInstance {
 			this.y = mc.player.getEyeY();
 			this.z = mc.player.getZ();
 			float t = this.jet.throttle();
-			this.volume = running * (this.jet.isCrashing() ? 0.15F : 0.35F + 0.4F * t + (this.jet.isAfterburner() ? 0.2F : 0.0F));
+			this.volume = !inside ? 0.0F : running * (this.jet.isCrashing() ? 0.08F : 0.16F + 0.18F * t + (this.jet.isAfterburner() ? 0.1F : 0.0F));
 			this.pitch = Mth.clamp(enginePitch * (0.75F + 0.35F * t) * (0.7F + 0.3F * running), 0.5F, 2.0F);
+			return;
+		}
+		if (chase && !this.jet.isRemoved()) {
+			// the camera rides along: hear the jet as it is now, from close by, no delay and no Doppler
+			Vec3 p = this.jet.position();
+			this.x = p.x;
+			this.y = p.y + FighterEntity.CENTRE;
+			this.z = p.z;
+			float t = this.jet.isCrashing() ? 0.0F : this.jet.throttle();
+			float weight = switch (this.layer) {
+				case NEAR, SUB -> 1.0F;
+				case FAR -> 0.35F;
+				case AFTERBURNER -> this.jet.isAfterburner() ? 1.0F : 0.0F;
+				default -> 0.0F;
+			};
+			float power = this.layer == Layer.AFTERBURNER ? 1.0F : 0.3F + 0.7F * t;
+			this.volume = Mth.clamp(weight * power * running, 0.0F, 1.0F);
+			this.pitch = Mth.clamp((this.layer == Layer.FAR ? 0.9F : 1.0F) * enginePitch * (0.85F + 0.2F * t) * (0.7F + 0.3F * running), 0.5F, 2.0F);
+			this.history.clear();
 			return;
 		}
 		if (!this.jet.isRemoved()) {
@@ -174,7 +197,7 @@ public class FighterSound extends AbstractTickableSoundInstance {
 		// idling on the ground it is a whine; at full power a roar
 		float power = this.layer == Layer.AFTERBURNER ? 1.0F : 0.3F + 0.7F * s.throttle();
 		float ramp = Mth.clamp(this.age / 15.0F, 0.0F, 1.0F) * running;
-		this.volume = Mth.clamp(falloff * weight * ramp * power * (inside ? 0.12F : 1.0F), 0.0F, 1.0F);
+		this.volume = Mth.clamp(falloff * weight * ramp * power * (inside ? 0.07F : 1.0F), 0.0F, 1.0F);
 		float base = (this.layer == Layer.FAR ? 0.9F : 1.0F) * enginePitch * (0.85F + 0.2F * s.throttle());
 		this.pitch = Mth.clamp(base * (inside ? 1.0F : doppler), 0.5F, 2.0F);
 	}

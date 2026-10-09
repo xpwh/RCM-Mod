@@ -64,6 +64,14 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 	static final int F22_EDGE = 16;
 	static final int SOOT = 18;
 	static final int EOTS = 19;
+	static final int PIT_GREY = 20;
+	static final int CONSOLE = 21;
+	static final int BEZEL = 22;
+	static final int SEAT = 23;
+	static final int HANDLE = 24;
+	static final int WHITE = 25;
+	static final int FRAME = 26;
+	static final int GRIP = 27;
 
 	/** Height of the jet's centreline above the ground when it stands on its gear. */
 	public static final float GEAR_HEIGHT = 2.3F;
@@ -76,6 +84,12 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 	private static final BoxMesh F35_CANOPY = buildF35Canopy();
 	private static final BoxMesh F35_GEAR = buildF35Gear();
 	private static final BoxMesh F35_BAY = buildF35Bay();
+	/** Pilot's eye in model space (x right, y forward, z up from the centreline), see FighterEntity's seat. */
+	public static final float F22_EYE = 5.3F;
+	public static final float F35_EYE = 4.3F;
+	private static final BoxMesh F22_PIT = buildCockpit(F22_EYE, 0.66F, 0.72F, true);
+	private static final BoxMesh F35_PIT = buildCockpit(F35_EYE, 0.76F, 0.8F, false);
+	private static final BoxMesh F22_HUD = buildF22Hud();
 
 	public FighterRenderer(EntityRendererProvider.Context context) {
 		super(context);
@@ -94,6 +108,9 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 		public boolean firing;
 		public boolean crashing;
 		public boolean ownCockpit;
+		/** Close enough (or inside) to draw the live cockpit displays. */
+		public boolean displays;
+		public final CockpitDisplays.Data cockpit = new CockpitDisplays.Data();
 	}
 
 	@Override
@@ -122,6 +139,10 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 		state.crashing = jet.isCrashing();
 		Minecraft mc = Minecraft.getInstance();
 		state.ownCockpit = mc.player != null && jet.pilot() == mc.player && mc.options.getCameraType().isFirstPerson();
+		state.displays = state.ownCockpit || state.distanceToCameraSq < 24.0 * 24.0;
+		if (state.displays) {
+			CockpitDisplays.extract(jet, state.cockpit, partialTick, state.ownCockpit);
+		}
 	}
 
 	@Override
@@ -140,6 +161,18 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 		if (state.bay) {
 			BoxMesh bay = f22 ? F22_BAY : F35_BAY;
 			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> bay.emit(pose, consumer, light));
+		}
+		// the cockpit: tub, consoles, seat, stick and throttle, the panel and its live displays
+		BoxMesh pit = f22 ? F22_PIT : F35_PIT;
+		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> pit.emit(pose, consumer, light));
+		if (state.displays) {
+			CockpitDisplays.Data data = state.cockpit;
+			float eye = f22 ? F22_EYE : F35_EYE;
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> CockpitDisplays.draw(pose, consumer, data, f22, eye));
+		}
+		if (f22) {
+			// the HUD combiner glass above the glare shield
+			collector.submitCustomGeometry(poseStack, GLASS_TYPE, (pose, consumer) -> F22_HUD.emit(pose, consumer, light, 0x3080FFB0));
 		}
 		// the canopy: tinted glass you can see through (more so from inside)
 		BoxMesh canopy = f22 ? F22_CANOPY : F35_CANOPY;
@@ -438,6 +471,94 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 			b.box(s < 0 ? -0.18F : 0.12F, 1.6F, -1.85F, s < 0 ? -0.12F : 0.18F, -2.6F, -1.1F, F35_DARK);
 			missile(b, s * 0.65F, 1.2F, -1.3F);
 		}
+		return b.build();
+	}
+
+	// ================================================================== cockpit
+
+	/**
+	 * The cockpit around a pilot whose eye is at (0, eye, 0.95): the tub walls and floor, the side
+	 * consoles (throttle on the left, side stick on the right - both jets are fly-by-wire with a side
+	 * stick), the ACES II / Martin-Baker seat with its yellow-and-black firing handle, the instrument panel
+	 * under the glare shield, rudder pedals, the canopy sills. Every part is a solid box, so its faces
+	 * turned towards the pilot are the ones he sees. {@code sill}: height of the canopy rails;
+	 * {@code panelTop}: top of the instrument panel.
+	 */
+	private static BoxMesh buildCockpit(float eye, float sill, float panelTop, boolean f22) {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		float w = 0.4F; // tub half width
+		float floor = -0.15F;
+		float back = eye - 0.62F;
+		float panel = eye + 0.72F;
+		// floor, rear bulkhead, side walls up to the sills
+		b.box(-w, back, floor - 0.06F, w, panel + 0.5F, floor, PIT_GREY);
+		b.box(-w, back - 0.06F, floor, w, back, sill + 0.1F, PIT_GREY);
+		for (float s : new float[] {-1.0F, 1.0F}) {
+			b.box(s < 0 ? -w - 0.06F : w, back, floor, s < 0 ? -w : w + 0.06F, panel + 0.5F, sill, PIT_GREY);
+			// canopy sill rail
+			b.box(s < 0 ? -w - 0.05F : w - 0.03F, back - 0.4F, sill - 0.02F, s < 0 ? -w + 0.03F : w + 0.05F, panel + 0.4F, sill + 0.04F, FRAME);
+			// side console: a sloped shelf of switch panels
+			b.hexa(CONSOLE,
+				v(s * w, back + 0.15F, 0.36F), v(s * (w - 0.17F), back + 0.15F, 0.36F), v(s * (w - 0.17F), back + 0.15F, 0.44F), v(s * w, back + 0.15F, 0.48F),
+				v(s * w, panel - 0.05F, 0.36F), v(s * (w - 0.17F), panel - 0.05F, 0.36F), v(s * (w - 0.17F), panel - 0.05F, 0.44F), v(s * w, panel - 0.05F, 0.48F));
+			// rudder pedals
+			b.box(s * 0.13F - 0.05F, panel + 0.32F, floor + 0.05F, s * 0.13F + 0.05F, panel + 0.36F, floor + 0.25F, STEEL);
+		}
+		// throttle (left console): quadrant and the grip with its hat switches
+		b.box(-w + 0.04F, eye - 0.05F, 0.44F, -w + 0.12F, eye + 0.25F, 0.47F, BLACK);
+		b.beam(v(-w + 0.08F, eye + 0.08F, 0.46F), v(-w + 0.08F, eye + 0.14F, 0.6F), 0.03F, 0.03F, STEEL);
+		b.box(-w + 0.04F, eye + 0.1F, 0.58F, -w + 0.13F, eye + 0.2F, 0.66F, GRIP);
+		// side stick (right console): short, angled grip on a boot
+		b.box(w - 0.13F, eye + 0.08F, 0.44F, w - 0.05F, eye + 0.18F, 0.49F, GRIP);
+		b.beam(v(w - 0.09F, eye + 0.13F, 0.48F), v(w - 0.09F, eye + 0.16F, 0.6F), 0.035F, 0.035F, GRIP);
+		b.box(w - 0.115F, eye + 0.13F, 0.6F, w - 0.065F, eye + 0.2F, 0.66F, GRIP);
+		// ejection seat: pan, back, headrest with its parachute pack, the firing handle between the knees
+		b.box(-0.24F, eye - 0.48F, floor + 0.12F, 0.24F, eye + 0.08F, floor + 0.3F, SEAT);
+		b.box(-0.24F, eye - 0.56F, floor + 0.3F, 0.24F, eye - 0.42F, 0.8F, SEAT);
+		b.box(-0.2F, eye - 0.6F, 0.8F, 0.2F, eye - 0.38F, 1.22F, PIT_GREY);
+		b.box(-0.26F, eye - 0.58F, floor + 0.3F, -0.22F, eye - 0.36F, 1.0F, FRAME);
+		b.box(0.22F, eye - 0.58F, floor + 0.3F, 0.26F, eye - 0.36F, 1.0F, FRAME);
+		b.box(-0.07F, eye + 0.06F, floor + 0.2F, 0.07F, eye + 0.1F, floor + 0.34F, HANDLE);
+		// instrument panel: a block in front of the knees up to the glare shield
+		b.box(-w, panel, floor + 0.15F, w, panel + 0.12F, panelTop, PIT_GREY);
+		// centre pedestal between the knees
+		b.box(-0.09F, panel - 0.25F, floor + 0.15F, 0.09F, panel, 0.38F, CONSOLE);
+		// glare shield: over the panel and forward to the windscreen, keeping the sun off the displays
+		b.hexa(FRAME,
+			v(-w, panel - 0.06F, panelTop - 0.02F), v(w, panel - 0.06F, panelTop - 0.02F), v(w, panel - 0.06F, panelTop + 0.04F), v(-w, panel - 0.06F, panelTop + 0.04F),
+			v(-w + 0.08F, panel + 0.45F, panelTop - 0.02F), v(w - 0.08F, panel + 0.45F, panelTop - 0.02F), v(w - 0.08F, panel + 0.45F, panelTop + 0.07F),
+			v(-w + 0.08F, panel + 0.45F, panelTop + 0.07F));
+		// display bezels on the panel face
+		float face = panel - 0.005F;
+		if (f22) {
+			// three 6.25 x 6.25 in. colour MFDs, the primary one in the middle, and the up-front display above
+			b.box(-0.115F, face - 0.01F, 0.3F, 0.115F, face, 0.53F, BEZEL);
+			b.box(-0.37F, face - 0.01F, 0.38F, -0.15F, face, 0.6F, BEZEL);
+			b.box(0.15F, face - 0.01F, 0.38F, 0.37F, face, 0.6F, BEZEL);
+			b.box(-0.11F, face - 0.01F, 0.56F, 0.11F, face, panelTop - 0.02F, BEZEL);
+		} else {
+			// the panoramic cockpit display: one 20 x 8 in. touch screen across the whole panel
+			b.box(-0.33F, face - 0.01F, 0.42F, 0.33F, face, panelTop - 0.03F, BEZEL);
+			b.box(-0.2F, face - 0.01F, 0.3F, 0.2F, face, 0.4F, CONSOLE);
+		}
+		if (!f22) {
+			// the F-35's canopy has a frame bow behind the pilot's head
+			float y = 3.18F;
+			b.beam(v(-0.42F, y, 0.86F), v(-0.3F, y, 1.08F), 0.06F, 0.06F, FRAME);
+			b.beam(v(-0.3F, y, 1.08F), v(0.3F, y, 1.08F), 0.06F, 0.06F, FRAME);
+			b.beam(v(0.3F, y, 1.08F), v(0.42F, y, 0.86F), 0.06F, 0.06F, FRAME);
+		}
+		return b.build();
+	}
+
+	/** The F-22's HUD: the combiner glass standing on the glare shield, in the pilot's line of sight. */
+	private static BoxMesh buildF22Hud() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		float y = F22_EYE + 0.68F;
+		b.hexa(F22_GLASS,
+			v(-0.1F, y, 0.76F), v(0.1F, y, 0.76F), v(0.1F, y + 0.008F, 0.76F), v(-0.1F, y + 0.008F, 0.76F),
+			v(-0.1F, y + 0.06F, 0.96F), v(0.1F, y + 0.06F, 0.96F), v(0.1F, y + 0.068F, 0.96F), v(-0.1F, y + 0.068F, 0.96F));
+		b.box(-0.11F, y - 0.08F, 0.72F, 0.11F, y + 0.06F, 0.77F, FRAME);
 		return b.build();
 	}
 
