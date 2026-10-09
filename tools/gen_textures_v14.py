@@ -10,6 +10,8 @@
 58 GORE_BONE   bone: off-white cortex, a little yellow, with a pinkish blush
 59 GORE_CLOTH  torn cloth soaked dark with blood
 60 GORE_BLOOD  fresh blood: dark glossy red with a highlight
+61 GORE_BRAIN  brain: pinkish grey, folded, streaked with blood
+62 GORE_SKIN   torn scalp edge: raw pink-red skin with a pale rim
 """
 import os
 
@@ -135,6 +137,27 @@ def blood():
     return rgba(img)
 
 
+def brain():
+    img = np.full((P, P, 3), (196, 150, 150), dtype=float)
+    for y in range(P):
+        for x in range(P):
+            # the folds: winding darker grooves
+            v = np.sin(x * 0.9 + np.sin(y * 0.7) * 2.2) * np.cos(y * 0.8 + np.sin(x * 0.5) * 1.8)
+            if abs(v) < 0.18:
+                img[y, x] *= 0.62
+    img *= (0.9 + 0.15 * rng.random((P, P)))[..., None]
+    for _ in range(7):  # blood in it
+        y, x = rng.integers(0, P, 2)
+        img[y, x] = (120, 12, 16)
+    return rgba(img)
+
+
+def skin_edge():
+    img = np.full((P, P, 3), (178, 74, 70), dtype=float)
+    img *= (0.85 + 0.25 * rng.random((P, P)))[..., None]
+    return rgba(rim(img, (226, 182, 160), 0.6))
+
+
 def main():
     atlas = Image.open(PATH).convert("RGBA")
     put(atlas, 51, walnut())
@@ -147,6 +170,8 @@ def main():
     put(atlas, 58, bone())
     put(atlas, 59, cloth())
     put(atlas, 60, blood())
+    put(atlas, 61, brain())
+    put(atlas, 62, skin_edge())
     atlas.save(PATH)
 
 

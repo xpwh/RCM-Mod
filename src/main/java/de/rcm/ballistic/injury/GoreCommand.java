@@ -14,6 +14,8 @@ import net.minecraft.server.level.ServerPlayer;
  * {@code /bmgore} - trying out the wounds (operators only), on yourself or on others:
  * <ul>
  *   <li>{@code bein <spieler> links|rechts|beide} - the leg shot off below the knee</li>
+ *   <li>{@code arm <spieler> links|rechts|beide} - the arm shot off below the elbow</li>
+ *   <li>{@code kopf <spieler> streifschuss|toedlich} - a round across the scalp, or the skull blown open (dead)</li>
  *   <li>{@code sterben <spieler>} - down and bleeding out</li>
  *   <li>{@code heilen <spieler>} - every wound gone</li>
  * </ul>
@@ -29,6 +31,15 @@ public final class GoreCommand {
 					.then(Commands.literal("links").executes(ctx -> leg(ctx, Wounds.LEFT)))
 					.then(Commands.literal("rechts").executes(ctx -> leg(ctx, Wounds.RIGHT)))
 					.then(Commands.literal("beide").executes(ctx -> leg(ctx, Wounds.BOTH)))))
+			.then(Commands.literal("arm")
+				.then(Commands.argument("spieler", EntityArgument.players())
+					.then(Commands.literal("links").executes(ctx -> arm(ctx, Wounds.LEFT)))
+					.then(Commands.literal("rechts").executes(ctx -> arm(ctx, Wounds.RIGHT)))
+					.then(Commands.literal("beide").executes(ctx -> arm(ctx, Wounds.BOTH)))))
+			.then(Commands.literal("kopf")
+				.then(Commands.argument("spieler", EntityArgument.players())
+					.then(Commands.literal("streifschuss").executes(ctx -> head(ctx, false)))
+					.then(Commands.literal("toedlich").executes(ctx -> head(ctx, true)))))
 			.then(Commands.literal("sterben")
 				.then(Commands.argument("spieler", EntityArgument.players()).executes(ctx -> {
 					Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "spieler");
@@ -43,6 +54,25 @@ public final class GoreCommand {
 					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.gore.healed", players.size()), true);
 					return players.size();
 				}))));
+	}
+
+	private static int arm(CommandContext<CommandSourceStack> ctx, int side) throws CommandSyntaxException {
+		Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "spieler");
+		for (ServerPlayer p : players) {
+			Injuries.amputateArm(p, side);
+		}
+		ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.gore.arm", players.size()), true);
+		return players.size();
+	}
+
+	private static int head(CommandContext<CommandSourceStack> ctx, boolean lethal) throws CommandSyntaxException {
+		Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "spieler");
+		for (ServerPlayer p : players) {
+			Injuries.headTest(p, lethal);
+		}
+		ctx.getSource().sendSuccess(() -> Component.translatable(lethal ? "commands.ballisticmissiles.gore.head_lethal" : "commands.ballisticmissiles.gore.head",
+			players.size()), true);
+		return players.size();
 	}
 
 	private static int leg(CommandContext<CommandSourceStack> ctx, int side) throws CommandSyntaxException {

@@ -693,7 +693,7 @@
 	"commands.ballisticmissiles.gore.dying": "%s player(s) now bleeding out",
 	"commands.ballisticmissiles.gore.healed": "%s player(s) fully healed",
 	"options.ballisticmissiles.gore": "Gore (dismemberment)",
-	"options.ballisticmissiles.gore.tooltip": "Show legs shot off with the stump, bone and blood. Off: legs look whole.",
+	"options.ballisticmissiles.gore.tooltip": "Show arms and legs shot off with the stump, bone and blood, and head wounds (graze, skull blown open). Off: the body looks whole.",
 	"options.ballisticmissiles.gore_warning": "18+ warning at start",
 	"gore_warning.ballisticmissiles.title": "Content warning – 18+",
 	"gore_warning.ballisticmissiles.text": "Ballistic Missiles contains realistic, graphic violence: blood, gunshot wounds, severed limbs with exposed bone and bleeding to death. This mod is meant for adults only.\n\nYou can turn gore off here or later in the mod settings.",
@@ -701,5 +701,17 @@
 	"gore_warning.ballisticmissiles.continue": "I am 18+ – continue",
 	"gore_warning.ballisticmissiles.disable": "Turn gore off",
 	"subtitles.ballisticmissiles.shotgun_hull": "Empty hull drops",
-	"subtitles.ballisticmissiles.shotgun_handle": "Shotgun shouldered"
+	"subtitles.ballisticmissiles.shotgun_handle": "Shotgun shouldered",
+	"message.ballisticmissiles.arm_lost": "Your arm was shot off! Apply a tourniquet!",
+	"message.ballisticmissiles.arms_lost": "Both arms shot off!",
+	"message.ballisticmissiles.one_hand": "You can't hold this weapon with one arm",
+	"message.ballisticmissiles.wound_head": "Grazed across the head – bleeding badly",
+	"commands.ballisticmissiles.gore.arm": "Arm taken off %s player(s)",
+	"commands.ballisticmissiles.gore.head": "Head graze on %s player(s)",
+	"commands.ballisticmissiles.gore.head_lethal": "Fatal head shot on %s player(s)",
+	"hud.ballisticmissiles.lost_arm_1": "LEFT ARM GONE",
+	"hud.ballisticmissiles.lost_arm_2": "RIGHT ARM GONE",
+	"hud.ballisticmissiles.lost_arm_3": "BOTH ARMS GONE",
+	"hud.ballisticmissiles.head_1": "HEAD GRAZE",
+	"hud.ballisticmissiles.head_2": "HEAD SHOT"
 }

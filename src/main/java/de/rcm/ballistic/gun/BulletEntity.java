@@ -270,15 +270,21 @@ public class BulletEntity extends Entity {
 				shooterPlayer.getX(), shooterPlayer.getEyeY(), shooterPlayer.getZ(), head ? 0.5F : 0.3F, head ? 1.6F : 1.25F, this.random.nextLong()));
 		}
 		Vec3 line = this.getDeltaMovement().normalize();
+		if (head && e instanceof net.minecraft.server.level.ServerPlayer victim) {
+			de.rcm.ballistic.injury.Injuries.headHit(victim, at, line, damage, this.pellet, this.origin == null ? 0.0 : this.origin.distanceTo(at));
+		}
 		if (e.hurtServer(level, source, damage)) {
 			Vec3 push = line.scale(0.12);
 			e.push(push.x, 0.02, push.z);
 			if (e instanceof net.minecraft.server.level.ServerPlayer victim) {
 				de.rcm.ballistic.injury.Injuries.shot(victim, at, line, damage, head);
-				if (this.pellet) {
+				if (this.pellet && !head) {
 					de.rcm.ballistic.injury.Injuries.pellet(victim, at, this.origin.distanceTo(at));
 				}
 			}
+		}
+		if (head && e instanceof net.minecraft.server.level.ServerPlayer victim) {
+			de.rcm.ballistic.injury.Injuries.afterHeadHit(victim, source);
 		}
 		if (e instanceof LivingEntity living) {
 			if (de.rcm.ballistic.injury.Blood.bleeds(living)) {

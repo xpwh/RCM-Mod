@@ -31,6 +31,17 @@ public abstract class ItemInHandRendererMixin {
 		}
 	}
 
+	/** An arm shot off below the elbow: no hand on that side to see. */
+	@Inject(method = "renderPlayerArm", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$noLostHand(PoseStack poseStack, SubmitNodeCollector collector, int light, float equip, float swing, HumanoidArm arm,
+		CallbackInfo ci) {
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		if (player != null && de.rcm.ballistic.client.ModConfig.gore
+			&& de.rcm.ballistic.injury.Injuries.get(player).lostArm(arm == HumanoidArm.RIGHT ? de.rcm.ballistic.injury.Wounds.RIGHT : de.rcm.ballistic.injury.Wounds.LEFT)) {
+			ci.cancel();
+		}
+	}
+
 	@Inject(
 		method = "renderArmWithItem",
 		at = @At(

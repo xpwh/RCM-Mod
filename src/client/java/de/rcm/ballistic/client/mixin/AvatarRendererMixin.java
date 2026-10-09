@@ -19,7 +19,11 @@ public abstract class AvatarRendererMixin {
 		at = @At("TAIL"))
 	private void ballisticmissiles$lostLeg(Avatar avatar, net.minecraft.client.renderer.entity.state.AvatarRenderState state, float partialTick,
 		org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
-		((de.rcm.ballistic.client.render.LostLeg) state).ballisticmissiles$setLostLeg(de.rcm.ballistic.injury.Injuries.get(avatar).lost());
+		var wounds = de.rcm.ballistic.injury.Injuries.get(avatar);
+		var gore = (de.rcm.ballistic.client.render.LostLeg) state;
+		gore.ballisticmissiles$setLostLeg(wounds.lost());
+		gore.ballisticmissiles$setLostArm(wounds.armsLost());
+		gore.ballisticmissiles$setHead(wounds.head());
 	}
 
 	@Inject(

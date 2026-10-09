@@ -66,6 +66,9 @@ public final class Injuries {
 		long pelletTick;
 		int pelletsLeft;
 		int pelletsRight;
+		int pelletsArmLeft;
+		int pelletsArmRight;
+		int pelletsHead;
 		/** What brought them down (dealt again when the dying is over), and whether that death is now let through. */
 		DamageSource cause;
 		boolean finishing;
@@ -86,7 +89,7 @@ public final class Injuries {
 				Blood.send(level, entity.position().add(0, 0.2, 0), Vec3.ZERO, Math.round(entity.getBbWidth() * entity.getBbHeight() * 10.0F), Blood.POOL);
 			}
 			if (entity instanceof ServerPlayer p) {
-				set(p, Wounds.NONE);
+				// the body keeps its wounds for as long as it lies there (the respawned player starts whole)
 				CLOCKS.remove(p.getUUID());
 			}
 		});
@@ -131,33 +134,145 @@ public final class Injuries {
 
 	// ------------------------------------------------------------------ losing a leg
 
-	/**
-	 * A ball of buckshot struck a player {@code range} blocks from the muzzle. Enough of one shot's balls
-	 * in the same leg, close enough, and the leg below the knee is gone.
-	 */
-	public static void pellet(ServerPlayer p, Vec3 at, double range) {
-		double h = (at.y - p.getY()) / Math.max(0.1, p.getBbHeight());
-		if (h >= 0.42 || range > AMPUTATION_RANGE || get(p).lost() == Wounds.BOTH) {
-			return;
-		}
-		Clock c = clock(p);
-		long now = p.level().getGameTime();
+	private static void tally(Clock c, long now) {
 		if (c.pelletTick != now) {
 			c.pelletTick = now;
 			c.pelletsLeft = 0;
 			c.pelletsRight = 0;
+			c.pelletsArmLeft = 0;
+			c.pelletsArmRight = 0;
+			c.pelletsHead = 0;
 		}
+	}
+
+	/** Which side of the body {@code at} is on: positive to the player's left. */
+	private static double side(ServerPlayer p, Vec3 at) {
 		float yaw = p.yBodyRot * Mth.DEG_TO_RAD;
-		double side = (at.x - p.getX()) * Mth.cos(yaw) + (at.z - p.getZ()) * Mth.sin(yaw);
-		int leg = side > 0.0 ? Wounds.LEFT : Wounds.RIGHT;
-		if (get(p).lostLeg(leg)) {
-			return; // nothing left there to take
+		return (at.x - p.getX()) * Mth.cos(yaw) + (at.z - p.getZ()) * Mth.sin(yaw);
+	}
+
+	/**
+	 * A ball of buckshot struck a player {@code range} blocks from the muzzle. Enough of one shot's balls
+	 * in the same leg or arm, close enough, and the limb is gone (a leg below the knee, an arm below the elbow).
+	 */
+	public static void pellet(ServerPlayer p, Vec3 at, double range) {
+		double h = (at.y - p.getY()) / Math.max(0.1, p.getBbHeight());
+		if (range > AMPUTATION_RANGE || h >= 0.86) {
+			return;
 		}
-		int n = side > 0.0 ? ++c.pelletsLeft : ++c.pelletsRight;
+		Clock c = clock(p);
+		tally(c, p.level().getGameTime());
+		double side = side(p, at);
+		int limb = side > 0.0 ? Wounds.LEFT : Wounds.RIGHT;
 		// the closer, the fewer it takes
 		int needed = range < 4.0 ? AMPUTATION_PELLETS - 1 : AMPUTATION_PELLETS;
-		if (n >= needed) {
-			amputate(p, leg);
+		if (h < 0.42) {
+			if (get(p).lostLeg(limb)) {
+				return; // nothing left there to take
+			}
+			int n = side > 0.0 ? ++c.pelletsLeft : ++c.pelletsRight;
+			if (n >= needed) {
+				amputate(p, limb);
+			}
+		} else if (Math.abs(side) > 0.18 && !get(p).lostArm(limb)) {
+			int n = side > 0.0 ? ++c.pelletsArmLeft : ++c.pelletsArmRight;
+			if (n >= needed) {
+				amputateArm(p, limb);
+			}
+		}
+	}
+
+	/**
+	 * A round about to strike a player's head: if it kills - a full-power round, or buckshot in the face
+	 * from close up - the skull is blown open and there is no lying there dying.
+	 */
+	public static void headHit(ServerPlayer p, Vec3 at, Vec3 line, float damage, boolean pellet, double range) {
+		if (p.isCreative() || p.isSpectator() || get(p).head() == Wounds.SHATTERED) {
+			return;
+		}
+		boolean lethal = damage >= p.getHealth() + p.getAbsorptionAmount() || dying(p);
+		if (pellet) {
+			Clock c = clock(p);
+			tally(c, p.level().getGameTime());
+			if (++c.pelletsHead >= 2 && range < 7.0) {
+				lethal = true;
+			}
+		}
+		if (!lethal) {
+			return;
+		}
+		set(p, get(p).withHead(Wounds.SHATTERED));
+		ServerLevel level = p.level();
+		Vec3 head = p.getEyePosition();
+		// blown out the far side, in a spray of blood and bone
+		Blood.send(level, head, line, 90, Blood.BURST);
+		Blood.send(level, head.add(line.scale(0.3)), line, 50, Blood.SPRAY);
+		level.playSound(null, head.x, head.y, head.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 2.2F, 0.5F);
+		level.playSound(null, head.x, head.y, head.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.8F, 0.75F);
+	}
+
+	/** The operators' test: a graze across the scalp, or the skull blown open from in front. */
+	public static void headTest(ServerPlayer p, boolean lethal) {
+		if (!lethal) {
+			set(p, get(p).withHead(Wounds.GRAZED));
+			message(p, "message.ballisticmissiles.wound_head");
+			Blood.send(p.level(), p.getEyePosition(), p.getLookAngle().scale(-1.0), 20, Blood.SPRAY);
+			return;
+		}
+		Vec3 line = p.getLookAngle().scale(-1.0);
+		headHit(p, p.getEyePosition(), line, 1000.0F, false, 1.0);
+		DamageSource source = p.level().damageSources().genericKill();
+		p.invulnerableTime = 0;
+		p.hurtServer(p.level(), source, 1000.0F);
+	}
+
+	/** After the hit: a blown-open skull is death, there and then, whatever the round's damage. */
+	public static void afterHeadHit(ServerPlayer p, DamageSource source) {
+		if (p.isAlive() && get(p).head() == Wounds.SHATTERED && !p.isCreative()) {
+			p.invulnerableTime = 0;
+			p.hurtServer(p.level(), source, 1000.0F);
+		}
+	}
+
+	/** The arm is shot away below the elbow: whatever that hand held falls, the artery pumps. */
+	public static void amputateArm(ServerPlayer p, int side) {
+		ServerLevel level = p.level();
+		Wounds before = get(p);
+		if ((before.armsLost() | side) == before.armsLost()) {
+			return;
+		}
+		set(p, before.withArmLost(side));
+		float yaw = p.yBodyRot * Mth.DEG_TO_RAD;
+		double s = (side == Wounds.LEFT ? 1.0 : -1.0) * 0.4;
+		Vec3 elbow = p.position().add(Mth.cos(yaw) * s, p.getBbHeight() * 0.55, Mth.sin(yaw) * s);
+		Blood.send(level, elbow, new Vec3(Mth.cos(yaw) * s, 0.3, Mth.sin(yaw) * s), 60, Blood.BURST);
+		Blood.send(level, elbow, new Vec3(0, -0.3, 0), 40, Blood.SPRAY);
+		level.playSound(null, elbow.x, elbow.y, elbow.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 2.0F, 0.6F);
+		level.playSound(null, elbow.x, elbow.y, elbow.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.6F, 0.85F);
+		message(p, get(p).armsLost() == Wounds.BOTH ? "message.ballisticmissiles.arms_lost" : "message.ballisticmissiles.arm_lost");
+		handsGone(p, get(p));
+	}
+
+	/** What hands that are gone (or one hand, for a two-handed gun) cannot hold falls to the ground. */
+	private static void handsGone(ServerPlayer p, Wounds w) {
+		if (w.armsLost() == 0) {
+			return;
+		}
+		var main = p.getMainHandItem();
+		boolean twoHanded = main.is(ModRegistry.AK47) || main.is(ModRegistry.SHOTGUN) || main.is(ModRegistry.ROCKET_LAUNCHER);
+		boolean rightGone = w.lostArm(p.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? Wounds.RIGHT : Wounds.LEFT);
+		boolean leftGone = w.lostArm(p.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? Wounds.LEFT : Wounds.RIGHT);
+		if (!main.isEmpty() && (rightGone || twoHanded)) {
+			p.drop(main.copy(), true, false);
+			p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+			if (twoHanded && !rightGone) {
+				message(p, "message.ballisticmissiles.one_hand");
+			}
+		}
+		var off = p.getOffhandItem();
+		if (!off.isEmpty() && leftGone) {
+			p.drop(off.copy(), true, false);
+			p.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
 		}
 	}
 
@@ -213,7 +328,7 @@ public final class Injuries {
 			return true;
 		}
 		Wounds w = get(p);
-		if (w.dying() > 0 || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || amount >= 40.0F) {
+		if (w.dying() > 0 || w.head() == Wounds.SHATTERED || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || amount >= 40.0F) {
 			return true; // hit again while down, or killed outright
 		}
 		c.cause = source;
@@ -268,7 +383,11 @@ public final class Injuries {
 		var r = p.getRandom();
 		double h = (at.y - p.getY()) / Math.max(0.1, p.getBbHeight());
 		if (head) {
-			w = w.withBleed(Math.max(w.bleed(), 1));
+			// torn open to the skull, bleeding as scalp wounds do
+			if (w.head() < Wounds.GRAZED) {
+				message(p, "message.ballisticmissiles.wound_head");
+			}
+			w = w.withHead(Wounds.GRAZED);
 		} else if (h < 0.42) {
 			w = w.withLeg(w.leg() + 1).withBleed(Math.max(w.bleed(), r.nextFloat() < 0.22F ? Wounds.ARTERIAL : damage > 5.0F ? 2 : 1));
 			message(p, "message.ballisticmissiles.wound_leg");
@@ -335,6 +454,7 @@ public final class Injuries {
 			if (p.isCreative()) {
 				continue;
 			}
+			handsGone(p, w);
 			if (w.leg() >= 2 && p.isSprinting()) {
 				p.setSprinting(false);
 			}
@@ -387,7 +507,7 @@ public final class Injuries {
 			p.heal(1.0F);
 			return true;
 		}
-		set(p, w.withBleed(0).withLeg(w.leg() - 1).withArm(w.arm() - 1));
+		set(p, w.withBleed(0).withLeg(w.leg() - 1).withArm(w.arm() - 1).headDressed());
 		p.heal(3.0F);
 		p.level().playSound(null, p.getX(), p.getY(), p.getZ(), ModRegistry.GEAR_RUSTLE, SoundSource.PLAYERS, 1.0F, 1.2F);
 		p.displayClientMessage(Component.translatable("message.ballisticmissiles.dressed").withStyle(ChatFormatting.GREEN), true);

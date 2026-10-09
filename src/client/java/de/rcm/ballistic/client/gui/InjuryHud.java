@@ -112,6 +112,14 @@ public final class InjuryHud {
 			boolean blink = wounds.bleed() < Wounds.ARTERIAL || ((int) (now / 6.0F)) % 2 == 0;
 			colors.add(blink ? 0xFFFF4040 : 0xFF902020);
 		}
+		if (wounds.head() > 0) {
+			lines.add(Component.translatable("hud.ballisticmissiles.head_" + wounds.head()));
+			colors.add(0xFFFF3030);
+		}
+		if (wounds.armsLost() > 0) {
+			lines.add(Component.translatable("hud.ballisticmissiles.lost_arm_" + wounds.armsLost()));
+			colors.add(0xFFFF3030);
+		}
 		if (wounds.lost() > 0) {
 			lines.add(Component.translatable("hud.ballisticmissiles.lost_leg_" + wounds.lost()));
 			colors.add(0xFFFF3030);
@@ -119,7 +127,7 @@ public final class InjuryHud {
 			lines.add(Component.translatable("hud.ballisticmissiles.leg_" + wounds.leg()));
 			colors.add(wounds.leg() == 2 ? 0xFFFF8040 : 0xFFFFC060);
 		}
-		if (wounds.arm() > 0) {
+		if (wounds.arm() > 0 && wounds.armsLost() == 0) {
 			lines.add(Component.translatable("hud.ballisticmissiles.arm_" + wounds.arm()));
 			colors.add(wounds.arm() == 2 ? 0xFFFF8040 : 0xFFFFC060);
 		}

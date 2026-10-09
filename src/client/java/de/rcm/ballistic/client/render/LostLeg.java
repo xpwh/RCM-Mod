@@ -1,8 +1,19 @@
 package de.rcm.ballistic.client.render;
 
-/** Carried on a player's render state: which leg is shot away below the knee (0 none, else {@code Wounds.LEFT/RIGHT}). */
+/**
+ * Carried on a player's render state: the legs and arms gone (bit sets of {@code Wounds.LEFT/RIGHT}) and
+ * the head wound ({@code Wounds.GRAZED}, {@code Wounds.SHATTERED}).
+ */
 public interface LostLeg {
 	int ballisticmissiles$lostLeg();
 
 	void ballisticmissiles$setLostLeg(int side);
+
+	int ballisticmissiles$lostArm();
+
+	void ballisticmissiles$setLostArm(int side);
+
+	int ballisticmissiles$head();
+
+	void ballisticmissiles$setHead(int head);
 }

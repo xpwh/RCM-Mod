@@ -693,7 +693,7 @@
 	"commands.ballisticmissiles.gore.dying": "%s Spieler verblutet jetzt",
 	"commands.ballisticmissiles.gore.healed": "%s Spieler vollständig geheilt",
 	"options.ballisticmissiles.gore": "Gore (Verstümmelung)",
-	"options.ballisticmissiles.gore.tooltip": "Abgeschossene Beine mit Stumpf, Knochen und Blut zeigen. Aus: Beine bleiben optisch ganz.",
+	"options.ballisticmissiles.gore.tooltip": "Abgeschossene Arme und Beine mit Stumpf, Knochen und Blut sowie Kopfwunden (Streifschuss, offener Schädel) zeigen. Aus: Körper bleibt optisch ganz.",
 	"options.ballisticmissiles.gore_warning": "18+-Warnung beim Start",
 	"gore_warning.ballisticmissiles.title": "Inhaltswarnung – ab 18",
 	"gore_warning.ballisticmissiles.text": "Ballistic Missiles enthält realistische, drastische Gewaltdarstellung: Blut, Schusswunden, abgetrennte Gliedmaßen mit sichtbaren Knochen und Verbluten. Dieser Mod ist nur für Erwachsene gedacht.\n\nDu kannst Gore hier oder später in den Mod-Einstellungen ausschalten.",
@@ -701,5 +701,17 @@
 	"gore_warning.ballisticmissiles.continue": "Ich bin 18+ – weiter",
 	"gore_warning.ballisticmissiles.disable": "Gore ausschalten",
 	"subtitles.ballisticmissiles.shotgun_hull": "Leere Hülse fällt",
-	"subtitles.ballisticmissiles.shotgun_handle": "Schrotflinte wird geschultert"
+	"subtitles.ballisticmissiles.shotgun_handle": "Schrotflinte wird geschultert",
+	"message.ballisticmissiles.arm_lost": "Dein Arm wurde weggeschossen! Aderpresse anlegen!",
+	"message.ballisticmissiles.arms_lost": "Beide Arme weggeschossen!",
+	"message.ballisticmissiles.one_hand": "Mit einem Arm kannst du diese Waffe nicht halten",
+	"message.ballisticmissiles.wound_head": "Streifschuss am Kopf – du blutest stark",
+	"commands.ballisticmissiles.gore.arm": "Arm abgetrennt bei %s Spieler(n)",
+	"commands.ballisticmissiles.gore.head": "Kopf-Streifschuss bei %s Spieler(n)",
+	"commands.ballisticmissiles.gore.head_lethal": "Tödlicher Kopfschuss bei %s Spieler(n)",
+	"hud.ballisticmissiles.lost_arm_1": "LINKER ARM AB",
+	"hud.ballisticmissiles.lost_arm_2": "RECHTER ARM AB",
+	"hud.ballisticmissiles.lost_arm_3": "BEIDE ARME AB",
+	"hud.ballisticmissiles.head_1": "KOPF-STREIFSCHUSS",
+	"hud.ballisticmissiles.head_2": "KOPFSCHUSS"
 }
