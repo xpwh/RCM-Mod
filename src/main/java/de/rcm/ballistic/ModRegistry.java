@@ -769,7 +769,7 @@ public final class ModRegistry {
 		ItemStack loadedShotgun = new ItemStack(SHOTGUN);
 		loadedShotgun.set(GUN_STATE, de.rcm.ballistic.gun.GunState.DEFAULT.withRounds(de.rcm.ballistic.gun.ShotgunItem.CAPACITY));
 		output.accept(loadedShotgun);
-		output.accept(new ItemStack(SHOTGUN_SHELL, 25));
+		output.accept(SHOTGUN_SHELL);
 		output.accept(AK_MAG);
 		output.accept(AK_MAG_TRACER);
 		output.accept(GRENADE);
