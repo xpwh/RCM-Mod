@@ -14,7 +14,8 @@
 		"KeyboardInputMixin",
 		"LevelRendererMixin",
 		"MinecraftMixin",
-		"SoundEngineMixin"
+		"SoundEngineMixin",
+		"TitleScreenMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
