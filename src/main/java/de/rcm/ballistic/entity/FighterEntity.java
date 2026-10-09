@@ -99,10 +99,16 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 	// controls (from the pilot's packets)
 	private float throttleAxis;
-	private boolean afterburnerWanted;
+	/** Afterburner lit: hold "throttle up" at full power to light it, "throttle down" puts it out. */
+	private boolean afterburnerOn;
+	private int afterburnerHold;
+	private float pitchAxis;
+	/** Stick position, eased towards the keys (a key is all or nothing, a stick is not). */
+	private float pitchStick;
+	private float rollStick;
+	/** The jet's own "up" (the authoritative side keeps the attitude as vectors: no gimbal flips in a loop). */
+	private @Nullable Vec3 bodyUp;
 	private float rollAxis;
-	private float aimYaw;
-	private float aimPitch;
 	private boolean trigger;
 	private int lastInput = -100;
 	// flight, worked out by whichever side flies the jet (see fly())
@@ -117,7 +123,6 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	private boolean crashReported;
 	private boolean crashSent;
 	private double sink;
-	private float aileron;
 	private float gunCarry;
 	private int missileCooldown;
 	private int flareCooldown;
@@ -283,14 +288,20 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 	// ------------------------------------------------------------------ the pilot's controls
 
-	/** Pilot's client, before the jet ticks: the stick, throttle and where he is looking. */
-	public void setControls(float throttleAxis, boolean afterburner, float roll, float yaw, float pitch, boolean trigger) {
+	/**
+	 * Pilot's client, before the jet ticks: throttle (+1 up, -1 down), stick pitch (+1 pull = nose up) and
+	 * roll (+1 right). Where the pilot looks does not steer: he can look around freely.
+	 */
+	public void setControls(float throttleAxis, float pitch, float roll, boolean trigger) {
 		this.throttleAxis = Mth.clamp(throttleAxis, -1.0F, 1.0F);
-		this.afterburnerWanted = afterburner;
+		this.pitchAxis = Mth.clamp(pitch, -1.0F, 1.0F);
 		this.rollAxis = Mth.clamp(roll, -1.0F, 1.0F);
-		this.aimYaw = Mth.wrapDegrees(yaw);
-		this.aimPitch = Mth.clamp(pitch, -90.0F, 90.0F);
 		this.trigger = trigger;
+	}
+
+	/** Speed at which the nose can be lifted off the runway (b/t). */
+	public double rotateSpeed() {
+		return this.type().stallSpeed * 0.85;
 	}
 
 	/** Pilot's client: true once, after the jet hit something it could not survive (the server then wrecks it). */
@@ -370,8 +381,8 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 			this.throttleL = this.entityData.get(DATA_THROTTLE);
 			this.abL = this.entityData.get(DATA_AB);
 			this.rollL = this.entityData.get(DATA_ROLL);
-			this.bankSmoothed = this.rollL;
-			this.aileron = 0.0F;
+			this.bodyUp = null;
+			this.afterburnerOn = this.abL;
 			this.gL = this.entityData.get(DATA_G);
 			this.gearL = this.entityData.get(DATA_GEAR);
 			this.speed = this.entityData.get(DATA_SPEED);
@@ -467,39 +478,90 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		if (!running) {
 			throttle = 0.0F; // still starting up (or off): the throttle stays at idle
 		} else if (flown) {
-			throttle = Mth.clamp(throttle + this.throttleAxis * 0.012F, 0.0F, 1.0F);
+			throttle = Mth.clamp(throttle + this.throttleAxis * 0.015F, 0.0F, 1.0F);
+			// full power, keep pushing: through the gate into afterburner
+			this.afterburnerHold = this.throttleAxis > 0.0F && throttle >= 1.0F ? this.afterburnerHold + 1 : 0;
+			if (this.afterburnerHold > 6) {
+				this.afterburnerOn = true;
+			}
+			if (this.throttleAxis < 0.0F) {
+				this.afterburnerOn = false;
+			}
 		} else if (grounded) {
 			throttle = Math.max(0.0F, throttle - 0.02F);
 		}
 		this.throttleL = throttle;
-		this.abL = flown && running && this.afterburnerWanted && throttle > 0.95F;
+		this.abL = flown && running && this.afterburnerOn && throttle > 0.95F;
 
-		// steering: the nose swings towards where the pilot looks, as fast as the airframe allows
+		// attitude: the nose (fwd) and the jet's own up, kept as vectors
 		Vec3 fwd = this.forward();
-		double turnLimit = Math.toRadians(this.turnRate(type));
-		Vec3 newFwd = fwd;
-		if (flown) {
-			Vec3 want = Vec3.directionFromRotation(this.aimPitch, this.aimYaw);
-			if (grounded) {
-				// on the wheels: steer with the nosewheel; the nose only comes up once fast enough to fly
-				Vec3 flat = new Vec3(want.x, 0.0, want.z);
-				flat = flat.lengthSqr() < 1.0E-4 ? new Vec3(fwd.x, 0.0, fwd.z).normalize() : flat.normalize();
-				boolean rotate = this.speed > type.stallSpeed * 0.95;
-				double climb = rotate ? Mth.clamp(want.y, 0.0, 0.45) : 0.0;
-				want = flat.scale(Math.sqrt(1.0 - climb * climb)).add(0.0, climb, 0.0);
-				turnLimit = Math.toRadians(rotate ? 1.5 : 1.2);
+		Vec3 up = this.bodyUp != null ? this.bodyUp : this.up(this.rollL);
+		up = up.subtract(fwd.scale(up.dot(fwd)));
+		up = up.lengthSqr() < 1.0E-6 ? this.up(this.rollL) : up.normalize();
+		float oldYaw = this.getYRot();
+		float oldPitch = this.getXRot();
+		this.pitchStick = Mth.approach(this.pitchStick, flown ? this.pitchAxis : 0.0F, 0.15F);
+		this.rollStick = Mth.approach(this.rollStick, flown ? this.rollAxis : 0.0F, 0.2F);
+		Vec3 newFwd;
+		if (grounded) {
+			// on the wheels: A/D steer the nosewheel, S lifts the nose once fast enough to fly
+			Vec3 flat = new Vec3(fwd.x, 0.0, fwd.z);
+			flat = flat.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : flat.normalize();
+			double steer = Math.toRadians(1.6) * this.rollStick * Mth.clamp(this.speed / 0.4, 0.35, 1.0) / (1.0 + this.speed * 0.4);
+			Vec3 dir = rotY(flat, -steer);
+			double pitch = Math.asin(Mth.clamp(fwd.y, -1.0, 1.0));
+			if (this.speed > this.rotateSpeed() && this.pitchStick > 0.0F) {
+				pitch = Math.min(Math.toRadians(16.0), pitch + Math.toRadians(1.2) * this.pitchStick);
+			} else {
+				pitch = Math.max(0.0, pitch - Math.toRadians(1.0));
 			}
-			newFwd = rotateTowards(fwd, want.normalize(), turnLimit);
-		} else if (!grounded) {
-			// nobody at the stick (or shot to pieces): the nose sags, it goes down
-			newFwd = rotateTowards(fwd, fwd.add(0, -0.3, 0).normalize(), Math.toRadians(this.isCrashing() ? 1.2 : 0.35));
+			newFwd = dir.scale(Math.cos(pitch)).add(0.0, Math.sin(pitch), 0.0);
+			Vec3 right = newFwd.cross(new Vec3(0, 1, 0)).normalize();
+			up = right.cross(newFwd).normalize();
+		} else {
+			Vec3[] frame = {fwd, up};
+			double v = Math.max(this.speed, 1.0);
+			if (flown) {
+				// roll about the nose: the F-22 and F-35 roll at some 180 degrees a second
+				roll(frame, Math.toRadians(type == FighterType.F22 ? 9.0 : 8.0) * this.rollStick);
+				// pitch: the stick pulls the nose towards the jet's own up, as hard as the g limit allows
+				pitch(frame, Math.toRadians(this.turnRate(type)) * this.pitchStick);
+			} else {
+				// nobody at the stick (or shot to pieces): it rolls off and the nose sags
+				roll(frame, Math.toRadians(this.isCrashing() ? 2.0 : 0.5));
+			}
+			// the wings' lift tilts with the bank and turns the jet; what it no longer holds up, gravity pulls down
+			Vec3 rightH = frame[0].cross(new Vec3(0, 1, 0));
+			if (rightH.lengthSqr() > 1.0E-6) {
+				rightH = rightH.normalize();
+				double bank = frame[1].dot(rightH);
+				turnY(frame, -GRAVITY * bank / v);
+				double lost = GRAVITY * (1.0 - frame[1].y) / v;
+				// below flying speed the wings stop holding it up at all and the nose drops
+				if (this.speed < type.stallSpeed) {
+					lost += Math.toRadians(1.5) * (1.0 - this.speed / type.stallSpeed);
+				}
+				pitchDown(frame, lost);
+			}
+			newFwd = frame[0];
+			up = frame[1];
 		}
-		// below flying speed the nose drops
-		if (!grounded && this.speed < type.stallSpeed) {
-			newFwd = rotateTowards(newFwd, newFwd.add(0, -0.6, 0).normalize(), Math.toRadians(1.5 * (1.0 - this.speed / type.stallSpeed)));
-		}
+		this.bodyUp = up;
 		double turned = Math.acos(Mth.clamp(fwd.dot(newFwd), -1.0, 1.0));
 		this.setRot((float) (Mth.atan2(-newFwd.x, newFwd.z) * Mth.RAD_TO_DEG), (float) (-Math.asin(Mth.clamp(newFwd.y, -1.0, 1.0)) * Mth.RAD_TO_DEG));
+		// the roll the renderer and everyone else see: the angle of our up from the unbanked up
+		Vec3 r0 = newFwd.cross(new Vec3(0, 1, 0));
+		r0 = r0.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : r0.normalize();
+		Vec3 u0 = r0.cross(newFwd).normalize();
+		this.rollL = (float) Math.toDegrees(Math.atan2(up.dot(r0), up.dot(u0)));
+		// the pilot's head turns with the jet: what he looks at stays where it is in the cockpit
+		if (flown && this.level().isClientSide() && this.getControllingPassenger() instanceof Player pilot) {
+			float dy = Mth.wrapDegrees(this.getYRot() - oldYaw);
+			float dp = this.getXRot() - oldPitch;
+			pilot.setYRot(pilot.getYRot() + dy);
+			pilot.setYHeadRot(pilot.getYHeadRot() + dy);
+			pilot.setXRot(Mth.clamp(pilot.getXRot() + dp, -90.0F, 90.0F));
+		}
 
 		// speed: thrust, drag rising with the square of speed, gravity along the climb or dive
 		// even at idle a jet engine pushes: the jet creeps forward with the brakes off
@@ -514,7 +576,7 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 			// brakes on with the throttle closed; otherwise rolling resistance - small on a runway, on grass and
 			// dirt the wheels sink in and the jet barely gets to flying speed
 			boolean runway = de.rcm.ballistic.runway.RunwayBuilder.isRunway(level.getBlockState(this.getOnPos()));
-			drag += throttle < 0.05F ? 0.06 : runway ? 0.0008 : 0.0016 + 0.012 * Math.min(1.0, this.speed / type.stallSpeed);
+			drag += throttle < 0.05F ? 0.06 : runway ? 0.0008 : 0.0016 + 0.004 * Math.min(1.0, this.speed / type.stallSpeed);
 		}
 		this.speed = Math.max(0.0, this.speed + thrust - drag - GRAVITY * newFwd.y);
 
@@ -550,29 +612,52 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		double agl = this.getY() - level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(this.getX()), Mth.floor(this.getZ()));
 		this.gearL = this.onGround() || this.speed < 7.0 && agl < 40.0;
 
-		// bank into the turn (coordinated: tan(bank) = v * omega / g), plus aileron rolls on A/D
+		// g: how hard the flight path is being bent
 		double omegaMs = turned * 20.0;
 		double vMs = this.speed * 20.0;
 		this.gL = (float) Math.sqrt(1.0 + Math.pow(vMs * omegaMs / 9.81, 2));
-		float bank = 0.0F;
-		if (!this.onGround() && turned > 1.0E-4) {
-			double side = fwd.cross(newFwd).y;
-			bank = (float) (Math.toDegrees(Math.atan(vMs * omegaMs / 9.81)) * -Math.signum(side));
-			bank = Mth.clamp(bank, -85.0F, 85.0F);
-		}
-		if (flown && !this.onGround()) {
-			this.aileron += this.rollAxis * 14.0F;
-		}
-		if (!flown || Math.abs(this.rollAxis) < 0.1F) {
-			float rest = Mth.wrapDegrees(this.aileron);
-			this.aileron = Math.abs(rest) < 9.0F ? 0.0F : this.aileron - Math.signum(rest) * 9.0F;
-		}
-		this.bankSmoothed = Mth.approach(this.bankSmoothed, bank, 6.0F);
-		this.rollL = Mth.wrapDegrees(this.bankSmoothed + this.aileron);
 		return false;
 	}
 
-	private float bankSmoothed;
+	private static Vec3 rot(Vec3 v, Vec3 axis, double angle) {
+		double c = Math.cos(angle);
+		double sn = Math.sin(angle);
+		return v.scale(c).add(axis.cross(v).scale(sn)).add(axis.scale(axis.dot(v) * (1.0 - c)));
+	}
+
+	private static Vec3 rotY(Vec3 v, double angle) {
+		return rot(v, new Vec3(0, 1, 0), angle);
+	}
+
+	/** Roll the frame {fwd, up} about the nose; positive banks right. */
+	private static void roll(Vec3[] frame, double angle) {
+		frame[1] = rot(frame[1], frame[0], angle).normalize();
+	}
+
+	/** Pitch the frame: positive lifts the nose towards the jet's up. */
+	private static void pitch(Vec3[] frame, double angle) {
+		Vec3 f = frame[0].scale(Math.cos(angle)).add(frame[1].scale(Math.sin(angle))).normalize();
+		Vec3 u = frame[1].scale(Math.cos(angle)).subtract(frame[0].scale(Math.sin(angle))).normalize();
+		frame[0] = f;
+		frame[1] = u;
+	}
+
+	/** Turn the whole frame about the vertical. */
+	private static void turnY(Vec3[] frame, double angle) {
+		frame[0] = rotY(frame[0], angle).normalize();
+		frame[1] = rotY(frame[1], angle).normalize();
+	}
+
+	/** Bend the flight path down towards the ground (the frame turns with it). */
+	private static void pitchDown(Vec3[] frame, double angle) {
+		Vec3 axis = frame[0].cross(new Vec3(0, -1, 0));
+		if (axis.lengthSqr() < 1.0E-6 || angle <= 0.0) {
+			return;
+		}
+		axis = axis.normalize();
+		frame[0] = rot(frame[0], axis, angle).normalize();
+		frame[1] = rot(frame[1], axis, angle).normalize();
+	}
 
 	/** How fast the nose can turn now, degrees per tick: the g limit at speed, control authority when slow. */
 	private double turnRate(FighterType type) {

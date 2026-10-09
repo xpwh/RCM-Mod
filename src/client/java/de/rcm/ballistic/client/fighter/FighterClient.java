@@ -93,9 +93,12 @@ public final class FighterClient {
 		// this client flies the jet: hand it the stick before it ticks
 		var o = mc.options;
 		boolean free = mc.screen == null;
-		float throttle = free ? (o.keyUp.isDown() ? 1.0F : 0.0F) - (o.keyDown.isDown() ? 1.0F : 0.0F) : 0.0F;
+		// Space/Ctrl throttle (keep Space held at full power for afterburner), S pulls, W pushes, A/D roll;
+		// the mouse only looks around
+		float throttle = free ? (o.keyJump.isDown() ? 1.0F : 0.0F) - (o.keySprint.isDown() ? 1.0F : 0.0F) : 0.0F;
+		float pitch = free ? (o.keyDown.isDown() ? 1.0F : 0.0F) - (o.keyUp.isDown() ? 1.0F : 0.0F) : 0.0F;
 		float roll = free ? (o.keyRight.isDown() ? 1.0F : 0.0F) - (o.keyLeft.isDown() ? 1.0F : 0.0F) : 0.0F;
-		flying.setControls(throttle, free && o.keySprint.isDown(), roll, player.getYRot(), player.getXRot(), free && o.keyAttack.isDown());
+		flying.setControls(throttle, pitch, roll, free && o.keyAttack.isDown());
 	}
 
 	private static void endTick(Minecraft mc) {
@@ -387,6 +390,17 @@ public final class FighterClient {
 		double agl = jet.getY() - ground;
 		if (!jet.onGround() && f.y < -0.2 && agl / Math.max(0.1, -f.y * speed) < 60.0 && blink) {
 			g.drawString(font, "PULL UP", cx - font.width("PULL UP") / 2, cy + 52, WARN, true);
+		}
+		// on the ground: the controls, and the call to rotate once fast enough
+		if (jet.onGround()) {
+			String keys = "SPACE thr+   CTRL thr-   S pull   W push   A/D roll/steer";
+			g.drawString(font, keys, cx - font.width(keys) / 2, h - 46, HUD_DIM, true);
+			if (jet.engineRunning() && speed >= jet.rotateSpeed() && blink) {
+				g.drawString(font, "ROTATE - S", cx - font.width("ROTATE - S") / 2, cy + 40, HUD, true);
+			} else if (jet.engineRunning()) {
+				String vr = "VR " + Math.round(jet.rotateSpeed() * 72.0) + " km/h";
+				g.drawString(font, vr, cx - 160, cy + 42, HUD_DIM, true);
+			}
 		}
 		if (jet.health() < type.maxHealth * 0.35F) {
 			g.drawString(font, "DAMAGE", cx + 60, h - 82, WARN, true);
