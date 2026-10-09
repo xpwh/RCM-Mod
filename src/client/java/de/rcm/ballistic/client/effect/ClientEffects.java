@@ -70,6 +70,23 @@ public final class ClientEffects {
 			case GRENADE -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.3, 0xFFC070);
 			default -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.5, 0xFFB060);
 		}
+		// the fireball lights up everything round it
+		switch (warhead) {
+			case NUCLEAR, MIRV -> DynamicLights.explosion(pos, 4.0, 0xFFE0B0);
+			case HYDROGEN -> DynamicLights.explosion(pos, 5.0, 0xFFE0B0);
+			case TSAR -> DynamicLights.explosion(pos, 6.0, 0xFFE8C0);
+			case MIRV_WARHEAD, TACTICAL_NUKE -> DynamicLights.explosion(pos, 3.0, 0xFFE0B0);
+			case ANTIMATTER -> DynamicLights.explosion(pos, 5.0, 0xD0A0FF);
+			case EMP -> DynamicLights.explosion(pos, 1.5, 0xA0E0FF);
+			case MOAB, THERMOBARIC -> DynamicLights.explosion(pos, 2.0, 0xFFA040);
+			case INCENDIARY -> DynamicLights.explosion(pos, 1.2, 0xFF8020);
+			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, POSEIDON, EARTH_PENETRATOR -> {
+			}
+			case BOMBLET, GRENADE -> DynamicLights.explosion(pos, 0.15, 0xFFC070);
+			case INTERCEPT -> DynamicLights.explosion(pos, 0.5, 0xFFB060);
+			case SEA_MINE -> DynamicLights.explosion(pos, 0.4, 0xFFD0A0);
+			default -> DynamicLights.explosion(pos, 0.7, 0xFFB060);
+		}
 		EFFECTS.add(switch (warhead) {
 			case NUCLEAR -> new NukeEffect(pos, 1.0);
 			case HYDROGEN -> new NukeEffect(pos, 1.6);

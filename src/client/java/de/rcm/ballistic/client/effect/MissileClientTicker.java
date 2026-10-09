@@ -41,6 +41,11 @@ public final class MissileClientTicker {
 			mc.getSoundManager().play(new MissileFollowSound(missile, ModRegistry.IGNITION_SUB, pitch, 1400.0, 1.0F));
 		}
 
+		if (missile.isBoosterBurning()) {
+			// the exhaust flame lights the pad, the ground below and the smoke round it
+			Vec3 nozzle = missile.position().subtract(missile.getNoseDirection(1.0F).scale(1.5 * scale));
+			DynamicLights.steady(nozzle, 0xFFB868, 1.0F, (float) (22.0 + 14.0 * scale));
+		}
 		if (missile.isBoosterBurning() && !missile.engineSoundStarted) {
 			missile.engineSoundStarted = true;
 			double range = missile.getMissileType().isCruise() ? 700.0 : 1400.0;

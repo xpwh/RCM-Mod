@@ -53,6 +53,10 @@ public class SettingsScreen extends Screen {
 		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.lightShafts)
 			.withTooltip(v -> net.minecraft.client.gui.components.Tooltip.create(Component.translatable("options.ballisticmissiles.light_shafts.tooltip")))
 			.create(left, y, W, H, Component.translatable("options.ballisticmissiles.light_shafts"), (b, v) -> ModConfig.lightShafts = v));
+		y += GAP;
+		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.dynamicLights)
+			.withTooltip(v -> net.minecraft.client.gui.components.Tooltip.create(Component.translatable("options.ballisticmissiles.dynamic_lights.tooltip")))
+			.create(left, y, W, H, Component.translatable("options.ballisticmissiles.dynamic_lights"), (b, v) -> ModConfig.dynamicLights = v));
 
 		// ---- effects
 		y = top;
@@ -88,7 +92,7 @@ public class SettingsScreen extends Screen {
 		this.addRenderableWidget(misfires);
 
 		this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> this.onClose())
-			.bounds(this.width / 2 - 100, top + GAP * 5 + 12, 200, H).build());
+			.bounds(this.width / 2 - 100, top + GAP * 6 + 12, 200, H).build());
 	}
 
 	@Override

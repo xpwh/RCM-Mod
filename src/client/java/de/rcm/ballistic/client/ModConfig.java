@@ -56,6 +56,8 @@ public final class ModConfig {
 	/** Loudness of explosions and other big bangs, percent. */
 	public static int explosionVolume = 100;
 	public static boolean bulletHoles = true;
+	/** Muzzle flashes, rocket motors and explosions light up the world round them. */
+	public static boolean dynamicLights = true;
 
 	private ModConfig() {
 	}
@@ -84,6 +86,7 @@ public final class ModConfig {
 			smokeAmount = percent(p, "smokeAmount", smokeAmount);
 			explosionVolume = percent(p, "explosionVolume", explosionVolume);
 			bulletHoles = bool(p, "bulletHoles", bulletHoles);
+			dynamicLights = bool(p, "dynamicLights", dynamicLights);
 		} catch (Exception e) {
 			BallisticMissiles.LOGGER.warn("Could not read {}: {}", FILE, e.toString());
 		}
@@ -101,6 +104,7 @@ public final class ModConfig {
 			p.setProperty("smokeAmount", Integer.toString(smokeAmount));
 			p.setProperty("explosionVolume", Integer.toString(explosionVolume));
 			p.setProperty("bulletHoles", Boolean.toString(bulletHoles));
+			p.setProperty("dynamicLights", Boolean.toString(dynamicLights));
 			Files.createDirectories(FILE.getParent());
 			try (var out = Files.newOutputStream(FILE)) {
 				p.store(out, "Ballistic Missiles - client settings (settings screen, /bmconfig, /volcloud)");

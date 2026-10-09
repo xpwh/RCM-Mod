@@ -578,5 +578,7 @@
 	"screen.ballisticmissiles.jammer_explain_spoof": "False GPS signals: missiles aimed into the zone fly to the redirect point.",
 	"message.ballisticmissiles.jammer_spoofing": "⚡ GPS spoofing ON - missiles aimed within %s blocks are sent to %s / %s",
 	"message.ballisticmissiles.jammer_spoofed": "%s spoofed - redirected to %s / %s!",
-	"message.ballisticmissiles.jammer_not_yours": "This jammer is not yours."
+	"message.ballisticmissiles.jammer_not_yours": "This jammer is not yours.",
+	"options.ballisticmissiles.dynamic_lights": "Dynamic Light",
+	"options.ballisticmissiles.dynamic_lights.tooltip": "Muzzle flashes, rocket motors and explosions light up their surroundings for a moment - most of all at night."
 }

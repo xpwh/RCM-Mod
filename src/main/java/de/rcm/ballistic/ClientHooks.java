@@ -24,6 +24,13 @@ public final class ClientHooks {
 	}
 
 	public static DroneView droneView = (drone, partialTick, pitch) -> null;
+
+	/** A flash of dynamic light (muzzle flash, motor), client side. */
+	public interface LightFlash {
+		void flash(net.minecraft.world.phys.Vec3 at, int rgb, float strength, float radius, float decayMs);
+	}
+
+	public static LightFlash lightFlash = (at, rgb, strength, radius, decayMs) -> {};
 	public static Consumer<de.rcm.ballistic.entity.AerialBombEntity> bombClientTick = bomb -> {};
 
 	/** A long-lived smoke trail continued to {@code at} (key: usually the entity id). */

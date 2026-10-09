@@ -153,6 +153,8 @@ public class RpgRocketEntity extends Entity {
 		if (this.tickCount == 1) {
 			// the launch: a cloud from the muzzle, and the back-blast roaring out behind the shooter
 			Vec3 launcher = pos.subtract(dir.scale(1.1));
+			de.rcm.ballistic.ClientHooks.lightFlash.flash(launcher, 0xFFB060, 1.0F, 16.0F, 160.0F);
+			de.rcm.ballistic.ClientHooks.lightFlash.flash(launcher.subtract(dir.scale(3.0)), 0xFFA050, 0.8F, 12.0F, 220.0F);
 			de.rcm.ballistic.ClientHooks.smokeCloud.emit(launcher, dir.scale(0.15), 4, 0.9F);
 			de.rcm.ballistic.ClientHooks.smokeCloud.emit(launcher.subtract(dir.scale(2.4)), dir.scale(-0.6), 10, 1.4F);
 		}
@@ -162,6 +164,9 @@ public class RpgRocketEntity extends Entity {
 			return;
 		}
 		de.rcm.ballistic.ClientHooks.smokeTrail.emit(this.getId(), tail, 0.32F, this.sustainerBurning() ? 1.0F : 0.0F);
+		if (this.sustainerBurning()) {
+			de.rcm.ballistic.ClientHooks.lightFlash.flash(tail, 0xFF9A40, 0.85F, 11.0F, 80.0F);
+		}
 		if (this.sustainerBurning()) {
 			int steps = 4;
 			for (int i = 0; i < steps; i++) {

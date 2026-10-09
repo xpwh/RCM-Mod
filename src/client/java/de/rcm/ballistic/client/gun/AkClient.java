@@ -257,6 +257,9 @@ public final class AkClient {
 		ClientEffects.addShake(0.12F);
 		Vec3 muzzle = muzzle(player, 1.0F);
 		GunAudio.shot(muzzle, true);
+		// the muzzle flash lights up the surroundings for an instant
+		de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(player.getLookAngle().scale(0.4)), 0xFFC878, 1.0F, 10.0F,
+			40.0F + ClientEffects.rand() * 20.0F);
 		// smoke and brass from the rifle we see in our hands
 		Vec3 seen = mc.options.getCameraType().isFirstPerson() ? viewMuzzleInWorld(mc) : muzzle;
 		// the hole where the crosshair is, at once (the server's own replaces it a moment later)
@@ -295,6 +298,7 @@ public final class AkClient {
 			return; // our own shot: heard and seen already
 		}
 		GunAudio.shot(muzzle, false);
+		de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(dir.scale(0.4)), 0xFFC878, 1.0F, 10.0F, 40.0F + ClientEffects.rand() * 20.0F);
 		Entity shooter = mc.level.getEntity(p.shooter());
 		if (shooter instanceof Player other && muzzle.distanceTo(mc.gameRenderer.getMainCamera().position()) < 96.0) {
 			effects(other, muzzle, new Vec3(p.dx(), p.dy(), p.dz()), false);

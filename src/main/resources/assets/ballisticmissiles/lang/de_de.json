@@ -578,5 +578,7 @@
 	"screen.ballisticmissiles.jammer_explain_spoof": "Falsche GPS-Signale: Raketen mit Ziel in der Zone fliegen zum Umleitungsziel.",
 	"message.ballisticmissiles.jammer_spoofing": "⚡ GPS-Spoofing AN – Raketen mit Ziel im Umkreis von %s Blöcken werden nach %s / %s umgeleitet",
 	"message.ballisticmissiles.jammer_spoofed": "%s durch GPS-Spoofing umgeleitet nach %s / %s!",
-	"message.ballisticmissiles.jammer_not_yours": "Dieser Störsender gehört dir nicht."
+	"message.ballisticmissiles.jammer_not_yours": "Dieser Störsender gehört dir nicht.",
+	"options.ballisticmissiles.dynamic_lights": "Dynamisches Licht",
+	"options.ballisticmissiles.dynamic_lights.tooltip": "Mündungsfeuer, Raketenmotoren und Explosionen erhellen kurz die Umgebung – besonders nachts."
 }
