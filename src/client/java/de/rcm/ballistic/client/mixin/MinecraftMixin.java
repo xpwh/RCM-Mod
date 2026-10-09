@@ -34,6 +34,30 @@ public abstract class MinecraftMixin {
 		}
 	}
 
+	/** The arm gone: nothing to hit with, nothing to dig with. */
+	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$noHandNoAttack(CallbackInfoReturnable<Boolean> cir) {
+		if (this.player != null && de.rcm.ballistic.injury.Injuries.handGone(this.player)) {
+			cir.setReturnValue(false);
+		}
+	}
+
+	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$noHandNoMining(boolean attacking, CallbackInfo ci) {
+		if (this.player != null && de.rcm.ballistic.injury.Injuries.handGone(this.player)) {
+			ci.cancel();
+		}
+	}
+
+	/** Both arms gone: nothing can be used at all. */
+	@Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$noArmsNoUse(CallbackInfo ci) {
+		if (this.player != null && !this.player.isCreative()
+			&& de.rcm.ballistic.injury.Injuries.get(this.player).armsLost() == de.rcm.ballistic.injury.Wounds.BOTH) {
+			ci.cancel();
+		}
+	}
+
 	/** Bleeding out on the ground: too weak to fight, to use anything. */
 	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$downNoAttack(CallbackInfoReturnable<Boolean> cir) {

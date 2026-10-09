@@ -8,6 +8,7 @@
 		"GrowthMixin",
 		"TrackedEntityMixin",
 		"PlayerPoseMixin",
+		"MannequinAccessor",
 		"VehicleMoveMixin"
 	],
 	"injectors": {

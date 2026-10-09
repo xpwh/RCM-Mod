@@ -85,13 +85,20 @@ public final class Injuries {
 		ServerTickEvents.END_SERVER_TICK.register(Injuries::tick);
 		ServerLivingEntityEvents.AFTER_DAMAGE.register(Injuries::afterDamage);
 		ServerLivingEntityEvents.ALLOW_DEATH.register(Injuries::allowDeath);
+		Corpses.init();
+		// no hand on that arm: nothing to hit with, nothing to dig with
+		net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) ->
+			handGone(player) ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS);
+		net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) ->
+			handGone(player) ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS);
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity.level() instanceof ServerLevel level && Blood.bleeds(entity)) {
 				// a pool spreading under the body
 				Blood.send(level, entity.position().add(0, 0.2, 0), Vec3.ZERO, Math.round(entity.getBbWidth() * entity.getBbHeight() * 10.0F), Blood.POOL);
 			}
 			if (entity instanceof ServerPlayer p) {
-				// the body keeps its wounds for as long as it lies there (the respawned player starts whole)
+				// the body stays behind a while, with its wounds (the respawned player starts whole)
+				Corpses.leave(p);
 				CLOCKS.remove(p.getUUID());
 			}
 		});
@@ -104,6 +111,11 @@ public final class Injuries {
 	/** Back in the game with the wounds they left with: the limp again. */
 	public static void rejoin(ServerPlayer p) {
 		limp(p, get(p));
+	}
+
+	/** The arm of the player's main hand is gone below the elbow. */
+	public static boolean handGone(net.minecraft.world.entity.player.Player p) {
+		return !p.isCreative() && get(p).lostArm(p.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? Wounds.RIGHT : Wounds.LEFT);
 	}
 
 	public static Wounds get(LivingEntity e) {

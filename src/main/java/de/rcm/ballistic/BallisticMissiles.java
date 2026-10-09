@@ -85,6 +85,7 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.ai.SoldierDebug.clear();
 			de.rcm.ballistic.runway.RunwayBuilder.clear();
 			de.rcm.ballistic.injury.Injuries.clear();
+			de.rcm.ballistic.injury.Corpses.clear();
 			de.rcm.ballistic.ai.SoldierEntity.clearStatic();
 		});
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
