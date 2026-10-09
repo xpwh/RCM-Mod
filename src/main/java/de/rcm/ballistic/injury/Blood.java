@@ -47,6 +47,21 @@ public final class Blood {
 	public static final int EXIT = 1;
 	public static final int GAPING = 2;
 	public static final int ENTRAILS = 3;
+	/** A body torn open by what killed it: the flank open, ribs broken, the organs out on the ground. */
+	public static final int OPEN = 4;
+
+	/** A creature killed by a round or a blast: its body lies there torn open. */
+	public static void open(LivingEntity e) {
+		if (!(e.level() instanceof ServerLevel level) || !bleeds(e)) {
+			return;
+		}
+		var payload = new de.rcm.ballistic.network.ModNetworking.WoundPayload(e.getId(), 0, 0, 0, 1, 0, 0, e.getBbWidth(),
+			level.getRandom().nextInt(3) | OPEN << 4);
+		for (ServerPlayer player : net.fabricmc.fabric.api.networking.v1.PlayerLookup.tracking(e)) {
+			ServerPlayNetworking.send(player, payload);
+		}
+		send(level, e.position().add(0, e.getBbHeight() * 0.4, 0), new Vec3(0, 0.4, 0), 40, BURST);
+	}
 
 	public static void wound(LivingEntity e, Vec3 at, double grown, boolean pellet, boolean head) {
 		wound(e, at, grown, pellet, head, HOLE);

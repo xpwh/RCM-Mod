@@ -106,6 +106,12 @@ public final class Injuries {
 				}
 				return;
 			}
+			if (!(entity instanceof net.minecraft.world.entity.player.Player) && Blood.bleeds(entity)
+				&& (source.getDirectEntity() instanceof de.rcm.ballistic.gun.BulletEntity || source.is(DamageTypeTags.IS_EXPLOSION))) {
+				// shot or blown down: the body torn open
+				Blood.open(entity);
+				bleedCreature(entity, 700);
+			}
 			if (entity.level() instanceof ServerLevel level && Blood.bleeds(entity)) {
 				// a pool spreading under the body
 				Blood.send(level, entity.position().add(0, 0.2, 0), Vec3.ZERO, Math.round(entity.getBbWidth() * entity.getBbHeight() * 10.0F), Blood.POOL);

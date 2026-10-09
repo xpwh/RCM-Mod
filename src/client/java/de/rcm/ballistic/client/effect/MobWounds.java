@@ -38,6 +38,8 @@ public final class MobWounds {
 	/** What hangs out of a torn-open wound (meat, strings of blood) and out of an opened belly (a loop of gut), in the decal's space. */
 	private static final GoreMesh[] GAPING = new GoreMesh[3];
 	private static final GoreMesh[] ENTRAILS = new GoreMesh[3];
+	/** A dead body torn wide open along the flank that lies up: ribs broken out, the organs in it, the guts spilled to the ground. */
+	private static final GoreMesh[] OPEN = new GoreMesh[3];
 
 	static {
 		for (int v = 0; v < 3; v++) {
@@ -74,6 +76,9 @@ public final class MobWounds {
 			e.blob(new Vector3f(0, 0, -1.2F), 3.6F, 3.0F, 2.0F, 0.3F, 930L + v, GoreMesh.T_MEAT);
 			ENTRAILS[v] = e.build();
 		}
+		for (int v = 0; v < 3; v++) {
+			OPEN[v] = openBody(v);
+		}
 		for (int v = 0; v < 4; v++) {
 			// one unit square, centred, facing -Z, the tile's run going down (+v towards -Y)
 			DECALS[v] = new GoreMesh.Builder().decal(new Vector3f(-8, 8, 0), new Vector3f(16, 0, 0), new Vector3f(0, -16, 0), GoreMesh.T_MOB + v).build();
@@ -81,6 +86,111 @@ public final class MobWounds {
 	}
 
 	private MobWounds() {
+	}
+
+	/**
+	 * In the decal's space, 16 units the body's width: x along the body, -y towards the belly, -z out of the
+	 * flank (up, once it lies on its side), +z into it and on down to the ground, some 16 below.
+	 */
+	private static GoreMesh openBody(int v) {
+		net.minecraft.util.RandomSource r = net.minecraft.util.RandomSource.create(1300L + v * 17L);
+		GoreMesh.Builder b = new GoreMesh.Builder();
+		float len = 9.0F + v;
+		// the hide soaked round the tear, and the raw red inside of it
+		b.decal(new Vector3f(-len - 3, 8.5F, -0.03F), new Vector3f(2 * len + 6, 0, 0), new Vector3f(0, -17, 0), GoreMesh.T_MOB + 2 + (v & 1));
+		b.decal(new Vector3f(-len, 5.5F, -0.08F), new Vector3f(2 * len, 0, 0), new Vector3f(0, -11, 0), GoreMesh.T_SECTION);
+		b.decal(new Vector3f(-len * 0.7F, 4.0F, -0.12F), new Vector3f(len * 1.4F, 0, 0), new Vector3f(0, -8, 0), GoreMesh.T_MEAT);
+		// the torn edges of the hide, peeled back and hanging open
+		for (int i = 0; i < 7; i++) {
+			float x = -len + (i + 0.5F) * (2 * len / 7) + (r.nextFloat() - 0.5F) * 1.5F;
+			boolean top = (i & 1) == 0;
+			Vector3f base = new Vector3f(x, top ? 5.3F : -5.3F, -0.2F);
+			Vector3f dir = new Vector3f((r.nextFloat() - 0.5F) * 0.4F, top ? 0.8F : -0.8F, -0.55F).normalize();
+			b.shard(base, dir, new Vector3f(1, 0, 0), 2.5F + r.nextFloat() * 2.5F, 2.4F + r.nextFloat() * 1.4F, i % 3 == 0 ? GoreMesh.T_MEAT : GoreMesh.T_FLAP, 0.25F);
+		}
+		// the ribs: arching up out of the back, snapped, the broken ends sticking out of the hole
+		int ribs = 5 + v;
+		for (int i = 0; i < ribs; i++) {
+			float x = -len * 0.75F + i * (1.5F * len / (ribs - 1)) + (r.nextFloat() - 0.5F) * 0.8F;
+			float reach = 1.5F + r.nextFloat() * 4.0F;
+			Vector3f[] pts = new Vector3f[5];
+			float[] rad = new float[5];
+			for (int k = 0; k < 5; k++) {
+				float t = k / 4.0F;
+				float y = 5.6F - t * reach;
+				pts[k] = new Vector3f(x + t * 0.6F, y, -0.2F - Mth.sin(t * Mth.HALF_PI) * (1.8F + r.nextFloat() * 0.6F));
+				rad[k] = 0.55F - t * 0.1F;
+			}
+			b.path(pts, rad, GoreMesh.T_BONE);
+			// the splintered end
+			Vector3f end = pts[4];
+			b.shard(end, new Vector3f(0.2F, -1, -0.5F).normalize(), new Vector3f(1, 0, 0), 1.2F + r.nextFloat(), 0.8F, GoreMesh.T_BONE_THIN, 0.1F);
+			if (r.nextFloat() < 0.6F) {
+				// the other half, from the belly side
+				Vector3f lo = new Vector3f(x + 0.4F, -5.6F, -0.2F);
+				Vector3f tip = new Vector3f(x + 0.8F, -5.6F + 1.0F + r.nextFloat() * 2.0F, -1.6F - r.nextFloat());
+				b.tube(lo, tip, 0.5F, 0.4F, GoreMesh.T_BONE);
+				b.shard(tip, new Vector3f(0.1F, 1, -0.4F).normalize(), new Vector3f(1, 0, 0), 1.0F, 0.7F, GoreMesh.T_BONE_THIN, 0.1F);
+			}
+		}
+		// the organs, heaped in the hole: the lung under the ribs, the heart, the liver, coils of gut over the rest
+		float side = v == 1 ? -1.0F : 1.0F;
+		b.blob(new Vector3f(side * len * 0.45F, 2.5F, -1.2F), 3.4F, 2.0F, 1.5F, 0.25F, 1310L + v, GoreMesh.T_LUNG);
+		b.blob(new Vector3f(side * len * 0.35F, -0.2F, -2.0F), 1.7F, 2.1F, 1.6F, 0.2F, 1320L + v, GoreMesh.T_HEART);
+		b.blob(new Vector3f(-side * len * 0.1F, 1.2F, -1.7F), 3.2F, 2.2F, 1.4F, 0.3F, 1330L + v, GoreMesh.T_LIVER);
+		for (int c = 0; c < 3 + v; c++) {
+			int n = 14;
+			Vector3f[] pts = new Vector3f[n];
+			float[] rad = new float[n];
+			float cx = -side * len * (0.15F + 0.25F * (c % 2)) + (r.nextFloat() - 0.5F) * 3.0F;
+			float cy = -1.5F - r.nextFloat() * 2.0F;
+			float ph = r.nextFloat() * Mth.TWO_PI;
+			for (int k = 0; k < n; k++) {
+				float t = k / (float) (n - 1);
+				float a = ph + t * 7.0F + Mth.sin(t * 11.0F + c) * 0.6F;
+				float rr = 2.4F - t * 0.9F + Mth.sin(t * 13.0F + ph) * 0.6F;
+				pts[k] = new Vector3f(cx + Mth.cos(a) * rr + t * 3.5F * (c % 2 == 0 ? 1 : -1), cy + Mth.sin(a) * rr * 0.8F, -1.6F - (k & 1) * 0.4F - Mth.sin(t * Mth.PI) * 1.4F);
+				rad[k] = 0.9F + r.nextFloat() * 0.2F;
+			}
+			b.path(pts, rad, GoreMesh.T_GUT);
+		}
+		// the guts out over the belly and down to the ground, lying there in a heap
+		for (int s = 0; s < 2; s++) {
+			int n = 16;
+			Vector3f[] pts = new Vector3f[n];
+			float[] rad = new float[n];
+			float x0 = (s == 0 ? -side : side) * len * 0.3F + (r.nextFloat() - 0.5F) * 2.0F;
+			for (int k = 0; k < n; k++) {
+				float t = k / (float) (n - 1);
+				Vector3f p;
+				if (t < 0.35F) {
+					float q = t / 0.35F;
+					// out of the hole and over the edge of the belly
+					p = new Vector3f(x0 + q * 1.5F, -2.5F - q * 7.5F, -2.2F - Mth.sin(q * Mth.PI) * 1.5F + q * q * 2.0F);
+				} else if (t < 0.6F) {
+					float q = (t - 0.35F) / 0.25F;
+					// down the side to the ground
+					p = new Vector3f(x0 + 1.5F + Mth.sin(q * 3.0F) * 1.2F, -10.0F - q * 1.5F, -0.2F + q * 15.0F);
+				} else {
+					float q = (t - 0.6F) / 0.4F;
+					// a slack heap on the ground
+					float a = q * 7.0F + s * 2.0F;
+					p = new Vector3f(x0 + 1.5F + Mth.cos(a) * (2.0F + q * 2.0F), -12.5F - Mth.sin(a) * 1.8F - q * 2.5F, 14.8F - (k & 1) * 0.3F);
+				}
+				pts[k] = p;
+				rad[k] = 0.95F + (k & 1) * 0.1F;
+			}
+			b.path(pts, rad, GoreMesh.T_GUT);
+		}
+		// strings of blood and torn tissue across the hole
+		for (int i = 0; i < 4; i++) {
+			float x = (r.nextFloat() - 0.5F) * len * 1.6F;
+			b.tube(new Vector3f(x, 5.2F, -0.4F), new Vector3f(x + (r.nextFloat() - 0.5F) * 3.0F, -1.0F - r.nextFloat() * 3.0F, -2.6F), 0.18F, 0.1F, GoreMesh.T_STRAND);
+		}
+		for (int i = 0; i < 3; i++) {
+			b.blob(new Vector3f((r.nextFloat() - 0.5F) * len * 1.6F, (r.nextFloat() - 0.5F) * 7.0F, -1.0F), 1.4F, 1.1F, 0.9F, 0.4F, 1340L + v * 5 + i, GoreMesh.T_MEAT);
+		}
+		return b.build();
 	}
 
 	public static void init() {
@@ -103,6 +213,15 @@ public final class MobWounds {
 			list.remove(0);
 		}
 		int kind = p.variant() >> 4;
+		if (kind == de.rcm.ballistic.injury.Blood.OPEN) {
+			// the flank that lies up once it has fallen, torn open along the body
+			list.removeIf(w -> w.kind() == de.rcm.ballistic.injury.Blood.OPEN);
+			float h = e.getBbHeight();
+			list.add(new Wound(new Vector3f(e.getBbWidth() * 0.5F + 0.01F, h * 0.55F, 0), new Vector3f(1, 0, 0), p.size(), p.variant() & 3, kind, 0.0F));
+			Vec3 world = e.position().add(0, h * 0.5, 0);
+			GibClient.spray(world, new Vec3(0, 1, 0), 7 + (int) (Math.random() * 4), 0.35F + p.size());
+			return;
+		}
 		list.add(new Wound(at, n, p.size(), p.variant() & 3, kind, (float) (Math.random() * 30.0 - 15.0)));
 		if (kind != de.rcm.ballistic.injury.Blood.HOLE) {
 			// bits torn out of it, thrown out of the hole
@@ -151,6 +270,10 @@ public final class MobWounds {
 				poseStack.mulPose(Axis.ZP.rotationDegrees(f * 90.0F));
 			}
 			for (Wound w : en.getValue()) {
+				boolean open = w.kind() == de.rcm.ballistic.injury.Blood.OPEN;
+				if (open && (e.deathTime <= 0 || !ModConfig.gore)) {
+					continue;
+				}
 				poseStack.pushPose();
 				poseStack.translate(w.at().x + w.normal().x * 0.004F, w.at().y + w.normal().y * 0.004F, w.at().z + w.normal().z * 0.004F);
 				// turn the decal (facing -Z, its run down -Y) to face out along the normal, the run down the creature's side
@@ -162,6 +285,11 @@ public final class MobWounds {
 				poseStack.mulPose(Axis.ZP.rotationDegrees(w.spin()));
 				float s = w.size() / (16.0F * GoreMesh.P);
 				poseStack.scale(s, s, s);
+				if (open) {
+					OPEN[w.variant() % 3].submit(poseStack, context.commandQueue(), light);
+					poseStack.popPose();
+					continue;
+				}
 				DECALS[w.variant() & 3].submit(poseStack, context.commandQueue(), light);
 				if (ModConfig.gore) {
 					if (w.kind() == de.rcm.ballistic.injury.Blood.GAPING) {
