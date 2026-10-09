@@ -552,5 +552,10 @@
 	"screen.ballisticmissiles.site_state.active": "active",
 	"screen.ballisticmissiles.site_state.ready": "ready",
 	"message.ballisticmissiles.air_raid": "AIR RAID: %s inbound - impact in %s s!",
-	"subtitles.ballisticmissiles.air_raid": "Air-raid siren wails"
+	"subtitles.ballisticmissiles.air_raid": "Air-raid siren wails",
+	"item.ballisticmissiles.fpv_racer": "FPV Racer Drone",
+	"tooltip.ballisticmissiles.fpv_racer": "Extremely fast: up to ~360 km/h flat out · 60 s battery",
+	"tooltip.ballisticmissiles.fpv_racer.3": "Left-click: detonate · right-click: cut the link · VOG fragmentation grenade",
+	"tooltip.ballisticmissiles.fpv_drone.4": "Sneak + right-click the ground: set down · right-click it: launch · sneak + right-click it: pick up",
+	"message.ballisticmissiles.drone_landed": "Drone landed - right-click it to launch, sneak + right-click to pick it up"
 }

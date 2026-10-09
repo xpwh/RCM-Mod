@@ -3,7 +3,10 @@
 	"package": "de.rcm.ballistic.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"GrowthMixin"
+		"ChunkMapAccessor",
+		"ChunkMapMixin",
+		"GrowthMixin",
+		"TrackedEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

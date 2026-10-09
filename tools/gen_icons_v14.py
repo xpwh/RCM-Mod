@@ -53,7 +53,25 @@ def pod():
     return base.outline(img)
 
 
+def racer():
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.line([(8, 10), (24, 20)], fill=CARBON + (255,), width=2)
+    d.line([(24, 10), (8, 20)], fill=CARBON + (255,), width=2)
+    for (x, y) in [(8, 10), (24, 10), (8, 20), (24, 20)]:
+        d.ellipse([x - 4, y - 2, x + 4, y + 2], outline=(200, 40, 32, 200))
+        d.point((x, y), fill=CARBON_EDGE + (255,))
+    poly(d, [(13, 12), (20, 12), (21, 17), (12, 17)], (210, 44, 36))            # red canopy
+    d.line([(13, 12), (20, 12)], fill=(250, 120, 100, 255))
+    d.rectangle([14, 10, 18, 11], fill=YELLOW + (255,))
+    poly(d, [(14, 18), (19, 18), (20, 20), (14, 20)], OLIVE)                    # VOG grenade
+    for i in range(3):                                                          # speed streaks
+        d.line([(2, 24 + i * 2), (8 - i * 2, 24 + i * 2)], fill=(230, 230, 230, 160))
+    return base.outline(img)
+
+
 def main():
+    racer().save(os.path.join(OUT, "fpv_racer.png"))
     drone().save(os.path.join(OUT, "fpv_drone.png"))
     pod().save(os.path.join(OUT, "tamir_pod.png"))
 

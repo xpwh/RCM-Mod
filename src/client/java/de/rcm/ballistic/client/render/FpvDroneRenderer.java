@@ -28,9 +28,14 @@ import org.joml.Vector3f;
 public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRenderer.State> {
 	private static final float SCALE = 1.6F;
 	private static final float ARM = 0.16F;
+	private static final float RACER_ARM = 0.12F;
 	private static final BoxMesh BODY = body();
+	private static final BoxMesh RACER = racer();
 	private static final BoxMesh PROP = new BoxMesh.Builder()
 		.box(-0.085F, 0.0F, -0.008F, 0.085F, 0.004F, 0.008F, BLACK)
+		.build();
+	private static final BoxMesh RACER_PROP = new BoxMesh.Builder()
+		.box(-0.062F, 0.0F, -0.007F, 0.062F, 0.004F, 0.007F, RED)
 		.build();
 
 	public FpvDroneRenderer(EntityRendererProvider.Context context) {
@@ -44,6 +49,7 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 		public float roll;
 		public float time;
 		public float throttle;
+		public boolean racer;
 	}
 
 	@Override
@@ -59,6 +65,7 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 		state.roll = drone.getRoll();
 		state.time = drone.tickCount + partialTick;
 		state.throttle = drone.getThrottle();
+		state.racer = drone.isRacer();
 	}
 
 	@Override
@@ -71,16 +78,19 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 		poseStack.mulPose(Axis.XP.rotationDegrees(Mth.clamp(state.pitch, -60.0F, 60.0F) * 0.6F + 18.0F * state.throttle));
 		poseStack.mulPose(Axis.ZP.rotationDegrees(state.roll));
 		poseStack.scale(SCALE, SCALE, SCALE);
-		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> BODY.emit(pose, consumer, light));
-		float spin = state.time * (state.throttle > 0.0F ? 140.0F : 0.0F);
+		BoxMesh body = state.racer ? RACER : BODY;
+		BoxMesh prop = state.racer ? RACER_PROP : PROP;
+		float arm = state.racer ? RACER_ARM : ARM;
+		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> body.emit(pose, consumer, light));
+		float spin = state.time * (state.throttle > 0.0F ? (state.racer ? 170.0F : 140.0F) : 0.0F);
 		for (int i = 0; i < 4; i++) {
-			float sx = (i % 2 == 0 ? -1.0F : 1.0F) * ARM;
-			float sz = (i < 2 ? -1.0F : 1.0F) * ARM;
+			float sx = (i % 2 == 0 ? -1.0F : 1.0F) * arm;
+			float sz = (i < 2 ? -1.0F : 1.0F) * arm;
 			for (int blade = 0; blade < 2; blade++) {
 				poseStack.pushPose();
 				poseStack.translate(sx, 0.05F, sz);
 				poseStack.mulPose(Axis.YP.rotationDegrees((i % 3 == 0 ? spin : -spin) + blade * 90.0F + i * 30.0F));
-				collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> PROP.emit(pose, consumer, light));
+				collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> prop.emit(pose, consumer, light));
 				poseStack.popPose();
 			}
 		}
@@ -90,6 +100,36 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 
 	private static Vector3f v(float x, float y, float z) {
 		return new Vector3f(x, y, z);
+	}
+
+	/**
+	 * The 5-inch racer: a slim stretched-X frame, hot motors, a red printed canopy over the stack,
+	 * a small lithium pack, and a VOG fragmentation grenade taped under the nose.
+	 */
+	private static BoxMesh racer() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		float a = RACER_ARM;
+		b.beam(v(-a, 0.0F, -a), v(a, 0.0F, a), 0.022F, 0.01F, BLACK);
+		b.beam(v(a, 0.0F, -a), v(-a, 0.0F, a), 0.022F, 0.01F, BLACK);
+		b.box(-0.025F, -0.005F, -0.06F, 0.025F, 0.005F, 0.07F, BLACK);
+		// canopy: a red shell over the stack, sloping down to the camera at the nose
+		b.hexa(RED, v(-0.024F, 0.005F, -0.05F), v(0.024F, 0.005F, -0.05F), v(0.024F, 0.005F, 0.06F), v(-0.024F, 0.005F, 0.06F),
+			v(-0.018F, 0.032F, -0.04F), v(0.018F, 0.032F, -0.04F), v(0.018F, 0.022F, 0.05F), v(-0.018F, 0.022F, 0.05F));
+		for (int i = 0; i < 4; i++) {
+			float sx = (i % 2 == 0 ? -1.0F : 1.0F) * a;
+			float sz = (i < 2 ? -1.0F : 1.0F) * a;
+			b.revolve(GUNMETAL, v(sx, 0.005F, sz), v(0, 1, 0), new float[][] {{0.0F, 0.0F}, {0.0F, 0.016F}, {0.03F, 0.016F}, {0.034F, 0.0F}}, 10);
+			b.box(sx - 0.003F, 0.034F, sz - 0.003F, sx + 0.003F, 0.042F, sz + 0.003F, STEEL);
+		}
+		b.box(-0.018F, 0.032F, -0.05F, 0.018F, 0.055F, 0.02F, YELLOW); // battery strapped on top
+		b.box(-0.014F, 0.012F, 0.06F, 0.014F, 0.034F, 0.075F, BLACK); // camera
+		b.box(-0.008F, 0.018F, 0.075F, 0.008F, 0.03F, 0.079F, LENS);
+		b.beam(v(0.0F, 0.02F, -0.06F), v(0.0F, 0.07F, -0.1F), 0.006F, 0.006F, CABLE); // antenna
+		// the VOG-17 grenade under the nose
+		Vector3f o = v(0.0F, -0.03F, -0.02F);
+		b.revolve(OLIVE, o, v(0, 0, 1), new float[][] {{0.0F, 0.0F}, {0.0F, 0.02F}, {0.07F, 0.02F}, {0.09F, 0.012F}, {0.1F, 0.0F}}, 10);
+		b.box(-0.022F, -0.012F, 0.0F, 0.022F, -0.005F, 0.01F, BLACK);
+		return b.build();
 	}
 
 	/** In drone space: +Z forward (nose), +Y up, origin in the middle of the frame. */

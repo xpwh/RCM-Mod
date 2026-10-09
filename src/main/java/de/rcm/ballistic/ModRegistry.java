@@ -175,7 +175,7 @@ public final class ModRegistry {
 	public static final EntityType<de.rcm.ballistic.entity.FpvDroneEntity> FPV_DRONE = registerEntity(
 		"fpv_drone",
 		EntityType.Builder.<de.rcm.ballistic.entity.FpvDroneEntity>of(de.rcm.ballistic.entity.FpvDroneEntity::new, MobCategory.MISC).sized(0.6F, 0.25F)
-			.eyeHeight(0.1F).clientTrackingRange(20).updateInterval(1).noLootTable()
+			.eyeHeight(0.1F).clientTrackingRange(64).updateInterval(1).noLootTable()
 	);
 	public static final EntityType<de.rcm.ballistic.entity.RpgRocketEntity> RPG_GRENADE = registerEntity(
 		"rpg_grenade",
@@ -520,7 +520,13 @@ public final class ModRegistry {
 	);
 	public static final Item RPG_ROCKET = registerItem("rpg_rocket", Item::new, new Item.Properties().stacksTo(16));
 	public static final Item FPV_DRONE_ITEM = registerItem(
-		"fpv_drone", de.rcm.ballistic.item.FpvDroneItem::new, new Item.Properties().stacksTo(4).rarity(Rarity.RARE)
+		"fpv_drone", props -> new de.rcm.ballistic.item.FpvDroneItem(props, de.rcm.ballistic.entity.FpvDroneEntity.KIND_STANDARD),
+		new Item.Properties().stacksTo(4).rarity(Rarity.RARE)
+	);
+	/** The light 5-inch racer: much faster, a small charge. */
+	public static final Item FPV_RACER_ITEM = registerItem(
+		"fpv_racer", props -> new de.rcm.ballistic.item.FpvDroneItem(props, de.rcm.ballistic.entity.FpvDroneEntity.KIND_RACER),
+		new Item.Properties().stacksTo(4).rarity(Rarity.EPIC)
 	);
 	/** A full 20-round Tamir launcher pod for the Iron Dome (brought up by its reload truck). */
 	public static final Item TAMIR_POD = registerItem(
@@ -651,6 +657,7 @@ public final class ModRegistry {
 		output.accept(ROCKET_LAUNCHER);
 		output.accept(RPG_ROCKET);
 		output.accept(FPV_DRONE_ITEM);
+		output.accept(FPV_RACER_ITEM);
 		output.accept(TARGET_DESIGNATOR);
 		output.accept(COMMAND_CENTER_ITEM);
 		output.accept(AIRSTRIKE_RADIO);

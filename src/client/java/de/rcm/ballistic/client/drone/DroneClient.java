@@ -52,7 +52,8 @@ public final class DroneClient {
 		ClientHooks.droneView = (drone, partialTick, pitch) -> {
 			Minecraft mc = Minecraft.getInstance();
 			if (drone == flying && mc.player != null) {
-				return pitch ? mc.player.getViewXRot(partialTick) : mc.player.getViewYRot(partialTick);
+				// straight from the mouse: far from home the pilot's own body is not ticked, so its interpolated look would lag
+				return pitch ? mc.player.getXRot() : mc.player.getYRot();
 			}
 			return null;
 		};
@@ -210,7 +211,7 @@ public final class DroneClient {
 		int white = 0xFFF0F0F0;
 		var font = mc.font;
 		int battery = drone.getBattery();
-		float charge = battery / (float) FpvDroneEntity.BATTERY;
+		float charge = battery / (float) drone.getMaxBattery();
 		float volts = 13.2F + 3.6F * charge - 0.4F * drone.getThrottle();
 		boolean blink = (mc.level.getGameTime() / 6) % 2 == 0;
 		int batColor = charge < 0.2F ? (blink ? 0xFFFF4040 : 0x00000000) : white;
@@ -234,6 +235,9 @@ public final class DroneClient {
 		long t = (mc.level.getGameTime() - started) / 20;
 		g.drawString(font, String.format("%02d:%02d", t / 60, t % 60), w - 10 - font.width("00:00"), h - 20, white, true);
 		g.drawString(font, "ARMED", w - 10 - font.width("ARMED"), h - 30, 0xFFFF5050, true);
+		if (drone.isRacer()) {
+			g.drawString(font, "RACE", w - 10 - font.width("RACE"), h - 40, 0xFFFFC040, true);
+		}
 		// warnings
 		String warn = signal < 0.25F ? "screen.ballisticmissiles.drone_weak_signal" : charge < 0.15F ? "screen.ballisticmissiles.drone_low_battery" : null;
 		if (warn != null && blink) {
@@ -246,7 +250,7 @@ public final class DroneClient {
 		g.fill(cx + 2, cy, cx + 5, cy + 1, white);
 		g.fill(cx, cy - 4, cx + 1, cy - 1, white);
 		float roll = -drone.getRoll() * Mth.DEG_TO_RAD;
-		float pitch = mc.player == null ? 0.0F : mc.player.getViewXRot(partialTick);
+		float pitch = mc.player == null ? 0.0F : mc.player.getXRot();
 		int offset = (int) (pitch * 1.6F);
 		for (int i = -60; i <= 60; i += 2) {
 			if (Math.abs(i) < 14) {

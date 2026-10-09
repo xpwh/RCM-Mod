@@ -42,7 +42,7 @@ public class DroneSound extends AbstractTickableSoundInstance {
 		boolean own = DroneClient.isLocalPilot(this.drone);
 		float level = 0.45F + 0.55F * this.throttle;
 		this.volume = this.goggles ? 0.55F * level : own ? 0.0F : level;
-		this.pitch = 0.85F + 0.45F * this.throttle;
+		this.pitch = (0.85F + 0.45F * this.throttle) * (this.drone.isRacer() ? 1.3F : 1.0F);
 	}
 
 	public void release() {

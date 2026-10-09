@@ -519,7 +519,7 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playC2S().register(DroneInputPayload.TYPE, DroneInputPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(DroneInputPayload.TYPE, (payload, context) -> {
 			var player = context.player();
-			if (player.level().getEntity(payload.drone()) instanceof de.rcm.ballistic.entity.FpvDroneEntity drone && drone.distanceToSqr(player) < 600 * 600) {
+			if (player.level().getEntity(payload.drone()) instanceof de.rcm.ballistic.entity.FpvDroneEntity drone && drone.distanceToSqr(player) < 3000 * 3000) {
 				drone.input(player, payload.forward(), payload.strafe(), payload.lift(), payload.boost(), payload.yaw(), payload.pitch(), payload.action());
 			}
 		});

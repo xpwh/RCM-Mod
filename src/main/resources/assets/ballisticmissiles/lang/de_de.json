@@ -552,5 +552,10 @@
 	"screen.ballisticmissiles.site_state.active": "aktiv",
 	"screen.ballisticmissiles.site_state.ready": "bereit",
 	"message.ballisticmissiles.air_raid": "LUFTALARM: %s im Anflug – Einschlag in %s s!",
-	"subtitles.ballisticmissiles.air_raid": "Luftalarm-Sirene heult"
+	"subtitles.ballisticmissiles.air_raid": "Luftalarm-Sirene heult",
+	"item.ballisticmissiles.fpv_racer": "Renn-FPV-Drohne",
+	"tooltip.ballisticmissiles.fpv_racer": "Extrem schnell: bis ~360 km/h mit Vollgas · 60 s Akku",
+	"tooltip.ballisticmissiles.fpv_racer.3": "Linksklick: zünden · Rechtsklick: Verbindung trennen · VOG-Splittergranate",
+	"tooltip.ballisticmissiles.fpv_drone.4": "Schleichen + Rechtsklick auf Boden: ablegen · Rechtsklick drauf: starten · Schleichen + Rechtsklick drauf: aufheben",
+	"message.ballisticmissiles.drone_landed": "Drohne gelandet – Rechtsklick drauf zum Starten, Schleichen + Rechtsklick zum Aufheben"
 }
