@@ -137,7 +137,7 @@ public final class Injuries {
 	 */
 	public static void pellet(ServerPlayer p, Vec3 at, double range) {
 		double h = (at.y - p.getY()) / Math.max(0.1, p.getBbHeight());
-		if (h >= 0.42 || range > AMPUTATION_RANGE || get(p).lost() > 0) {
+		if (h >= 0.42 || range > AMPUTATION_RANGE || get(p).lost() == Wounds.BOTH) {
 			return;
 		}
 		Clock c = clock(p);
@@ -149,24 +149,51 @@ public final class Injuries {
 		}
 		float yaw = p.yBodyRot * Mth.DEG_TO_RAD;
 		double side = (at.x - p.getX()) * Mth.cos(yaw) + (at.z - p.getZ()) * Mth.sin(yaw);
+		int leg = side > 0.0 ? Wounds.LEFT : Wounds.RIGHT;
+		if (get(p).lostLeg(leg)) {
+			return; // nothing left there to take
+		}
 		int n = side > 0.0 ? ++c.pelletsLeft : ++c.pelletsRight;
 		// the closer, the fewer it takes
 		int needed = range < 4.0 ? AMPUTATION_PELLETS - 1 : AMPUTATION_PELLETS;
 		if (n >= needed) {
-			amputate(p, side > 0.0 ? Wounds.LEFT : Wounds.RIGHT);
+			amputate(p, leg);
 		}
 	}
 
 	/** The leg is shot away below the knee: you go down, it bleeds from the artery until a tourniquet goes on. */
 	public static void amputate(ServerPlayer p, int side) {
 		ServerLevel level = p.level();
-		set(p, get(p).withLost(side));
+		Wounds before = get(p);
+		if ((before.lost() | side) == before.lost()) {
+			return;
+		}
+		set(p, before.withLost(side));
 		Vec3 knee = p.position().add(0, 0.35, 0);
 		Blood.send(level, knee, new Vec3(0, 0.5, 0), 60, Blood.BURST);
 		Blood.send(level, knee, new Vec3(0, -0.2, 0), 40, Blood.SPRAY);
 		level.playSound(null, knee.x, knee.y, knee.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 2.0F, 0.55F);
 		level.playSound(null, knee.x, knee.y, knee.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.6F, 0.8F);
-		message(p, "message.ballisticmissiles.leg_lost");
+		message(p, get(p).lost() == Wounds.BOTH ? "message.ballisticmissiles.legs_lost" : "message.ballisticmissiles.leg_lost");
+	}
+
+	/** Brings a player down to bleed out (the operators' test): as if they had just taken a mortal hit. */
+	public static void startDying(ServerPlayer p) {
+		if (dying(p)) {
+			return;
+		}
+		Clock c = clock(p);
+		c.cause = null;
+		p.setHealth(1.0F);
+		p.stopUsingItem();
+		set(p, get(p).withBleed(Wounds.ARTERIAL).withDying(DYING));
+	}
+
+	/** Every wound gone (the operators' heal). */
+	public static void heal(ServerPlayer p) {
+		set(p, Wounds.NONE);
+		CLOCKS.remove(p.getUUID());
+		p.setHealth(p.getMaxHealth());
 	}
 
 	// ------------------------------------------------------------------ dying
@@ -223,7 +250,7 @@ public final class Injuries {
 		speed.removeModifier(LIMP);
 		speed.removeModifier(DOWN);
 		if (w.leg() > 0) {
-			speed.addTransientModifier(new AttributeModifier(LIMP, w.lost() > 0 ? -0.3 : w.leg() == 1 ? -0.18 : -0.4, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+			speed.addTransientModifier(new AttributeModifier(LIMP, w.lost() == Wounds.BOTH ? -0.6 : w.lost() > 0 ? -0.3 : w.leg() == 1 ? -0.18 : -0.4, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
 		}
 		if (w.dying() > 0) {
 			speed.addTransientModifier(new AttributeModifier(DOWN, -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));

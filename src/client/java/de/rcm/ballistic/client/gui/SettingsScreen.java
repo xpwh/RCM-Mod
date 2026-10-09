@@ -32,7 +32,7 @@ public class SettingsScreen extends Screen {
 	protected void init() {
 		int left = this.width / 2 - W - 5;
 		int right = this.width / 2 + 5;
-		int top = Math.max(42, this.height / 2 - 104);
+		int top = Math.max(42, this.height / 2 - 112);
 
 		// ---- clouds
 		int y = top;
@@ -78,6 +78,13 @@ public class SettingsScreen extends Screen {
 			.withTooltip(v -> net.minecraft.client.gui.components.Tooltip.create(Component.translatable("options.ballisticmissiles.blood.tooltip")))
 			.create(right, y, W, H, Component.translatable("options.ballisticmissiles.blood"), (b, v) -> ModConfig.blood = v));
 		y += GAP;
+		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.gore)
+			.withTooltip(v -> net.minecraft.client.gui.components.Tooltip.create(Component.translatable("options.ballisticmissiles.gore.tooltip")))
+			.create(right, y, W, H, Component.translatable("options.ballisticmissiles.gore"), (b, v) -> ModConfig.gore = v));
+		y += GAP;
+		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.goreWarning)
+			.create(right, y, W, H, Component.translatable("options.ballisticmissiles.gore_warning"), (b, v) -> ModConfig.goreWarning = v));
+		y += GAP;
 		// a world setting: changed on the server (operators only), shown as the server has it
 		Integer[] steps = java.util.Arrays.stream(de.rcm.ballistic.config.ServerConfig.MISFIRE_STEPS).boxed().toArray(Integer[]::new);
 		int current = ModConfig.serverMisfireChance;
@@ -100,13 +107,13 @@ public class SettingsScreen extends Screen {
 		this.addRenderableWidget(misfires);
 
 		this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> this.onClose())
-			.bounds(this.width / 2 - 100, top + GAP * 7 + 12, 200, H).build());
+			.bounds(this.width / 2 - 100, top + GAP * 8 + 8, 200, H).build());
 	}
 
 	@Override
 	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
 		super.render(graphics, mouseX, mouseY, partialTick);
-		int top = Math.max(42, this.height / 2 - 104);
+		int top = Math.max(42, this.height / 2 - 112);
 		graphics.drawCenteredString(this.font, this.title, this.width / 2, top - 30, 0xFFFFFFFF);
 		graphics.drawCenteredString(this.font, Component.translatable("options.ballisticmissiles.section.clouds"), this.width / 2 - W / 2 - 5, top - 13,
 			0xFFA0D0FF);

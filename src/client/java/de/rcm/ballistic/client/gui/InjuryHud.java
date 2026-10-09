@@ -113,7 +113,7 @@ public final class InjuryHud {
 			colors.add(blink ? 0xFFFF4040 : 0xFF902020);
 		}
 		if (wounds.lost() > 0) {
-			lines.add(Component.translatable("hud.ballisticmissiles.lost_leg"));
+			lines.add(Component.translatable("hud.ballisticmissiles.lost_leg_" + wounds.lost()));
 			colors.add(0xFFFF3030);
 		} else if (wounds.leg() > 0) {
 			lines.add(Component.translatable("hud.ballisticmissiles.leg_" + wounds.leg()));

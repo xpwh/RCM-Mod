@@ -15,11 +15,15 @@ public abstract class PlayerModelMixin {
 	@Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At("TAIL"))
 	private void ballisticmissiles$halfLeg(AvatarRenderState state, CallbackInfo ci) {
 		int lost = ((LostLeg) state).ballisticmissiles$lostLeg();
-		if (lost == 0) {
+		if (lost == 0 || !de.rcm.ballistic.client.ModConfig.gore) {
 			return;
 		}
 		PlayerModel self = (PlayerModel) (Object) this;
-		var leg = lost == Wounds.LEFT ? self.leftLeg : self.rightLeg;
-		leg.yScale = 0.5F;
+		if ((lost & Wounds.LEFT) != 0) {
+			self.leftLeg.yScale = 0.5F;
+		}
+		if ((lost & Wounds.RIGHT) != 0) {
+			self.rightLeg.yScale = 0.5F;
+		}
 	}
 }

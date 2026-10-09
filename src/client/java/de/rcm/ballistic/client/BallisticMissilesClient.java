@@ -85,6 +85,12 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.gun.AkClient.init();
 		de.rcm.ballistic.client.gun.ShotgunClient.init();
 		de.rcm.ballistic.client.gui.DyingOverlay.init();
+		de.rcm.ballistic.client.gui.GoreWarningScreen.register();
+		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
+			if (renderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> avatar) {
+				helper.register(new de.rcm.ballistic.client.render.StumpLayer(avatar));
+			}
+		});
 		de.rcm.ballistic.client.render.Rpg7ItemRenderer.register();
 		de.rcm.ballistic.client.render.AkItemRenderer.register();
 		de.rcm.ballistic.client.render.ShotgunItemRenderer.register();

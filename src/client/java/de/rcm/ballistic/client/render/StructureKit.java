@@ -71,6 +71,10 @@ final class StructureKit {
 	static final int SG_HULL = 54;
 	static final int SG_CHECKER = 55;
 	static final int SG_BORE = 56;
+	static final int GORE_FLESH = 57;
+	static final int GORE_BONE = 58;
+	static final int GORE_CLOTH = 59;
+	static final int GORE_BLOOD = 60;
 
 	private StructureKit() {
 	}

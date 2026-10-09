@@ -16,6 +16,7 @@ public record Wounds(int leg, int arm, int bleed, int lost, int dying) {
 	public static final int ARTERIAL = 3;
 	public static final int LEFT = 1;
 	public static final int RIGHT = 2;
+	public static final int BOTH = LEFT | RIGHT;
 
 	public static final Codec<Wounds> CODEC = RecordCodecBuilder.create(i -> i.group(
 		Codec.INT.fieldOf("leg").forGetter(Wounds::leg),
@@ -55,8 +56,13 @@ public record Wounds(int leg, int arm, int bleed, int lost, int dying) {
 		return new Wounds(this.leg, this.arm, Math.max(0, Math.min(ARTERIAL, bleed)), this.lost, this.dying);
 	}
 
-	public Wounds withLost(int lost) {
-		return new Wounds(2, this.arm, ARTERIAL, lost, this.dying);
+	/** A leg ({@link #LEFT} or {@link #RIGHT}) gone as well as any already lost: {@code lost} is a bit set, {@link #BOTH} with both gone. */
+	public Wounds withLost(int side) {
+		return new Wounds(2, this.arm, ARTERIAL, this.lost | side, this.dying);
+	}
+
+	public boolean lostLeg(int side) {
+		return (this.lost & side) != 0;
 	}
 
 	public Wounds withDying(int dying) {

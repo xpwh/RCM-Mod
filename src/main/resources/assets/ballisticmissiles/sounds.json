@@ -1473,28 +1473,44 @@
 			}
 		]
 	},
+	"player.heartbeat": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:player/heartbeat"
+			}
+		]
+	},
 	"shotgun.shot": {
 		"subtitle": "subtitles.ballisticmissiles.shotgun_shot",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:shotgun/shot1",
-				"attenuation_distance": 96
+				"name": "ballisticmissiles:shotgun/shot1"
 			},
 			{
-				"name": "ballisticmissiles:shotgun/shot2",
-				"attenuation_distance": 96
+				"name": "ballisticmissiles:shotgun/shot2"
 			},
 			{
-				"name": "ballisticmissiles:shotgun/shot3",
-				"attenuation_distance": 96
+				"name": "ballisticmissiles:shotgun/shot3"
 			},
 			{
-				"name": "ballisticmissiles:shotgun/shot4",
-				"attenuation_distance": 96
+				"name": "ballisticmissiles:shotgun/shot4"
 			},
 			{
-				"name": "ballisticmissiles:shotgun/shot5",
-				"attenuation_distance": 96
+				"name": "ballisticmissiles:shotgun/shot5"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot6"
+			}
+		]
+	},
+	"shotgun.shot_mid": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/shot_mid1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot_mid2"
 			}
 		]
 	},
@@ -1502,21 +1518,53 @@
 		"subtitle": "subtitles.ballisticmissiles.shotgun_shot",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:shotgun/shot_far",
-				"attenuation_distance": 128
+				"name": "ballisticmissiles:shotgun/shot_far1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot_far2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot_far3"
 			}
 		]
 	},
-	"shotgun.pump": {
+	"shotgun.pump_back": {
 		"subtitle": "subtitles.ballisticmissiles.shotgun_pump",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:shotgun/pump1",
-				"attenuation_distance": 24
+				"name": "ballisticmissiles:shotgun/pump_back1"
 			},
 			{
-				"name": "ballisticmissiles:shotgun/pump2",
-				"attenuation_distance": 24
+				"name": "ballisticmissiles:shotgun/pump_back2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_back3"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_back4"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_back5"
+			}
+		]
+	},
+	"shotgun.pump_forward": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_pump",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward3"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward4"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward5"
 			}
 		]
 	},
@@ -1524,16 +1572,19 @@
 		"subtitle": "subtitles.ballisticmissiles.shotgun_shell",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:shotgun/shell_in1",
-				"attenuation_distance": 16
+				"name": "ballisticmissiles:shotgun/shell_in1"
 			},
 			{
-				"name": "ballisticmissiles:shotgun/shell_in2",
-				"attenuation_distance": 16
+				"name": "ballisticmissiles:shotgun/shell_in2"
 			},
 			{
-				"name": "ballisticmissiles:shotgun/shell_in3",
-				"attenuation_distance": 16
+				"name": "ballisticmissiles:shotgun/shell_in3"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shell_in4"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shell_in5"
 			}
 		]
 	},
@@ -1541,27 +1592,44 @@
 		"subtitle": "subtitles.ballisticmissiles.shotgun_dry",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:shotgun/dry",
-				"attenuation_distance": 16
+				"name": "ballisticmissiles:shotgun/dry1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/dry2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/dry3"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/dry4"
+			}
+		]
+	},
+	"shotgun.hull": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_hull",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/hull1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/hull2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/hull3"
 			}
 		]
 	},
 	"shotgun.handle": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_handle",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:shotgun/handle1",
-				"attenuation_distance": 12
+				"name": "ballisticmissiles:shotgun/handle1"
 			},
 			{
-				"name": "ballisticmissiles:shotgun/handle2",
-				"attenuation_distance": 12
-			}
-		]
-	},
-	"player.heartbeat": {
-		"sounds": [
+				"name": "ballisticmissiles:shotgun/handle2"
+			},
 			{
-				"name": "ballisticmissiles:player/heartbeat"
+				"name": "ballisticmissiles:shotgun/handle3"
 			}
 		]
 	}

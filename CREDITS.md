@@ -139,11 +139,21 @@ The title logo is set in Inter Display (SIL Open Font License).
 
 ## Shotgun (`tools/import_shotgun_sounds.py`)
 
-From the Red Library sound effects collection, https://archive.org/details/Red_Library_Guns_Misc (CC0 1.0).
+Real pump-action shotgun recordings from freesound.org.
 
-| Sound | Source tracks |
-|---|---|
-| Shotgun shots, distant shot | R11-58, R11-57, R11-48 |
-| Pump, shells into the tube, dry click, handling | R12-26, R12-32 |
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Close shots | https://freesound.org/s/677396/ "Shotgun range" | AugustSandberg | CC0 1.0 |
+| Shots from some way off | https://freesound.org/s/410551/ "Shotgun kaliber 20" | straget | CC0 1.0 |
+| Shots from some way off | https://freesound.org/s/191449/ "shotgun in field 130518_01.wav" | klankbeeld | CC BY 4.0 |
+| Distant shots | https://freesound.org/s/842326/ "Distant Gunfire" | iainmccurdy | CC0 1.0 |
+| Distant shots | https://freesound.org/s/431822/ "Distant shotgun 1.wav" | moosegravy | CC0 1.0 |
+| Pump back / forward | https://freesound.org/s/790980/ "GUNShotg_Winchester 1300 Pump Action 01_KVV AUDIO_FREE" | KVV_Audio | CC BY 4.0 |
+| Shells into the tube | https://freesound.org/s/790978/ "GUNShotg_Winchester 1300 Load Insert 01_KVV AUDIO_FREE" | KVV_Audio | CC BY 4.0 |
+| Dry fire | https://freesound.org/s/790976/ "GUNShotg_Winchester 1300 Dryfire 01_KVV AUDIO_FREE" | KVV_Audio | CC BY 4.0 |
+| Handling | https://freesound.org/s/790977/ "GUNShotg_Winchester 1300 Handling 01_KVV AUDIO_FREE" | KVV_Audio | CC BY 4.0 |
+| Empty hull dropping | https://freesound.org/s/436070/ "12 Gauge Shell drop" | rammbostein | CC0 1.0 |
+| Empty hull dropping | https://freesound.org/s/654490/ "Shotgun shell falling onto concrete.wav" | bigal13 | CC BY 4.0 |
+| Empty hull dropping | https://freesound.org/s/654489/ "Shotgun shell falling onto wood.wav" | bigal13 | CC BY 4.0 |
 
 The heartbeat of the dying player is synthesized by `tools/gen_sounds_v13.py`.

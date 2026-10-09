@@ -1,4 +1,4 @@
-"""9.10 shotgun patches for textures/entity/structures.png (see gen_textures_v11.py for the layout).
+"""9.10 shotgun and gore patches for textures/entity/structures.png (see gen_textures_v11.py for the layout).
 
 51 SG_WALNUT   oiled American walnut: dark brown, long straight grain with darker streaks, satin sheen
 52 SG_PARK     matte black-grey parkerized steel of the receiver and barrel, fine speckle, edges worn grey
@@ -6,6 +6,10 @@
 54 SG_HULL     red ribbed plastic shotshell hull
 55 SG_CHECKER  checkered walnut (diamond pattern) on the grip and the forend
 56 SG_BORE     the dark, slightly glossy bore and recesses
+57 GORE_FLESH  torn muscle: deep red with darker fibres and lighter fat and fascia flecks
+58 GORE_BONE   bone: off-white cortex, a little yellow, with a pinkish blush
+59 GORE_CLOTH  torn cloth soaked dark with blood
+60 GORE_BLOOD  fresh blood: dark glossy red with a highlight
 """
 import os
 
@@ -93,6 +97,44 @@ def bore():
     return rgba(img)
 
 
+def flesh():
+    img = np.full((P, P, 3), (128, 18, 20), dtype=float)
+    for y in range(P):
+        img[y] *= 0.8 + 0.3 * np.sin(y * 1.3 + np.arange(P) * 0.25)[..., None] ** 2
+    img *= (0.75 + 0.4 * rng.random((P, P)))[..., None]
+    for _ in range(5):  # fat and fascia
+        y, x = rng.integers(0, P, 2)
+        img[y, x] = (214, 178, 140)
+    for _ in range(6):  # clotted, darker
+        y, x = rng.integers(0, P, 2)
+        img[y, x] = (62, 6, 8)
+    return rgba(img)
+
+
+def bone():
+    img = np.full((P, P, 3), (226, 214, 186), dtype=float)
+    img *= (0.88 + 0.14 * rng.random((P, P)))[..., None]
+    img[:, :3] = img[:, :3] * 0.7 + np.array((190, 110, 100)) * 0.3
+    return rgba(rim(img, (150, 40, 36), 0.5))
+
+
+def cloth():
+    img = np.full((P, P, 3), (60, 18, 16), dtype=float)
+    for y in range(P):
+        for x in range(P):
+            if (x + y) % 2 == 0:
+                img[y, x] *= 0.82  # the weave
+    img *= (0.8 + 0.35 * rng.random((P, P)))[..., None]
+    return rgba(rim(img, (96, 10, 10), 0.4))
+
+
+def blood():
+    img = np.full((P, P, 3), (104, 4, 8), dtype=float)
+    img *= (0.85 + 0.2 * rng.random((P, P)))[..., None]
+    img[4:6, 4:9] = (190, 60, 64)  # wet highlight
+    return rgba(img)
+
+
 def main():
     atlas = Image.open(PATH).convert("RGBA")
     put(atlas, 51, walnut())
@@ -101,6 +143,10 @@ def main():
     put(atlas, 54, hull())
     put(atlas, 55, checker())
     put(atlas, 56, bore())
+    put(atlas, 57, flesh())
+    put(atlas, 58, bone())
+    put(atlas, 59, cloth())
+    put(atlas, 60, blood())
     atlas.save(PATH)
 
 

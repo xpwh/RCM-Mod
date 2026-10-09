@@ -50,6 +50,10 @@ public final class ModConfig {
 	public static boolean lightShafts = true;
 	public static boolean realSky = true;
 	public static boolean blood = true;
+	/** Limbs shot off shown as they are (the stump, the shortened leg); off: they stay whole to look at. */
+	public static boolean gore = true;
+	/** The 18+ warning on the title screen at every start. */
+	public static boolean goreWarning = true;
 	// ---- effects
 	/** The screen effects of blasts (flash, haze, god rays, shell shock...), percent. */
 	public static int screenEffects = 100;
@@ -88,6 +92,8 @@ public final class ModConfig {
 			lightShafts = bool(p, "lightShafts", lightShafts);
 			realSky = bool(p, "realSky", realSky);
 			blood = bool(p, "blood", blood);
+			gore = bool(p, "gore", gore);
+			goreWarning = bool(p, "goreWarning", goreWarning);
 			screenEffects = percent(p, "screenEffects", screenEffects);
 			smokeAmount = percent(p, "smokeAmount", smokeAmount);
 			explosionVolume = percent(p, "explosionVolume", explosionVolume);
@@ -108,6 +114,8 @@ public final class ModConfig {
 			p.setProperty("lightShafts", Boolean.toString(lightShafts));
 			p.setProperty("realSky", Boolean.toString(realSky));
 			p.setProperty("blood", Boolean.toString(blood));
+			p.setProperty("gore", Boolean.toString(gore));
+			p.setProperty("goreWarning", Boolean.toString(goreWarning));
 			p.setProperty("screenEffects", Integer.toString(screenEffects));
 			p.setProperty("smokeAmount", Integer.toString(smokeAmount));
 			p.setProperty("explosionVolume", Integer.toString(explosionVolume));
