@@ -101,6 +101,16 @@ public final class GunAudio {
 
 	/** A shot fired at {@code muzzle}; {@code own} when the local player fired it. */
 	public static void shot(Vec3 muzzle, boolean own) {
+		report(muzzle, own, ModRegistry.AK_SHOT, ModRegistry.AK_SHOT_MID, ModRegistry.AK_SHOT_FAR, 1.0F);
+	}
+
+	/** A 12-gauge going off at {@code muzzle}: a deeper, heavier boom than a rifle's crack, the same spaces and echoes. */
+	public static void shotgun(Vec3 muzzle, boolean own) {
+		report(muzzle, own, ModRegistry.SHOTGUN_SHOT, ModRegistry.SHOTGUN_SHOT_MID, ModRegistry.SHOTGUN_SHOT_FAR, 1.1F);
+	}
+
+	private static void report(Vec3 muzzle, boolean own, net.minecraft.sounds.SoundEvent close, net.minecraft.sounds.SoundEvent mid,
+		net.minecraft.sounds.SoundEvent far, float tailGain) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null) {
 			return;
@@ -115,15 +125,15 @@ public final class GunAudio {
 		Acoustics room = survey(mc.level, muzzle);
 		if (d < 48.0) {
 			// the report itself: a real AK, recorded beside the shooter
-			later(ModRegistry.AK_SHOT, muzzle, 1.0F, jitter, delay);
+			later(close, muzzle, 1.0F, jitter, delay);
 		} else if (d < 260.0) {
 			float v = (float) (1.15 - d / 330.0);
-			later(ModRegistry.AK_SHOT_MID, muzzle, v, jitter, delay);
+			later(mid, muzzle, v, jitter, delay);
 		} else {
-			later(ModRegistry.AK_SHOT_FAR, muzzle, (float) (1.2 - d / 1000.0), jitter, delay);
+			later(far, muzzle, (float) (1.2 - d / 1000.0), jitter, delay);
 		}
 		// what the surroundings make of it
-		float tail = (float) Mth.clamp(1.0 - d / 700.0, 0.15, 1.0);
+		float tail = (float) Mth.clamp(1.0 - d / 700.0, 0.15, 1.0) * tailGain;
 		switch (room.space()) {
 			case ROOM -> later(ModRegistry.AK_TAIL_INDOOR, muzzle, tail, jitter, delay);
 			case CAVE -> later(ModRegistry.AK_TAIL_CAVE, muzzle, tail, jitter, delay);
@@ -136,7 +146,7 @@ public final class GunAudio {
 					Vec3 wall = muzzle.add(room.echoDirs()[i].scale(room.echoes()[i]));
 					double path = room.echoes()[i] + wall.distanceTo(ear);
 					float v = (float) Mth.clamp(0.55 - path / 500.0, 0.05, 0.5);
-					later(ModRegistry.AK_SHOT_FAR, wall, v, jitter * 0.95F, (int) Math.round(path / SPEED_OF_SOUND));
+					later(far, wall, v, jitter * 0.95F, (int) Math.round(path / SPEED_OF_SOUND));
 				}
 			}
 		}

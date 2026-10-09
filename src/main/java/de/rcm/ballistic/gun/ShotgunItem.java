@@ -39,13 +39,15 @@ public class ShotgunItem extends Item {
 	public static final int PELLETS = 9;
 	/** Ticks from the shot to the slide back (and its sound), to it forward again, to ready to fire. */
 	public static final int PUMP_BACK = 4;
-	public static final int PUMP_FORWARD = 15;
-	public static final int READY = 18;
+	public static final int PUMP_FORWARD = 8;
+	public static final int READY = 11;
 	/** One shell into the tube: hand to the pouch and back, thumbed in at {@link #SHELL_IN}. */
 	public static final int SHELL_CYCLE = 13;
 	public static final int SHELL_IN = 10;
-	/** Racking the first shell into the chamber after loading an empty gun. */
-	public static final int RACK = 16;
+	/** Racking the first shell into the chamber after loading an empty gun: back, forward, done. */
+	public static final int RACK_BACK = 3;
+	public static final int RACK_FORWARD = 8;
+	public static final int RACK = 12;
 	public static final double MUZZLE_VELOCITY = 20.0;
 	/** Half-angle of the shot pattern (radians, one standard deviation). */
 	private static final double SPREAD = 0.032;
@@ -116,7 +118,7 @@ public class ShotgunItem extends Item {
 		if (state.rounds() <= 0) {
 			sound(level, player, ModRegistry.SHOTGUN_DRY, 0.8F, 1.0F);
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.shotgun_empty").withStyle(ChatFormatting.RED), true);
-			setState(stack, state.fired(0, now - PUMP_FORWARD - 1)); // a short pause between clicks, no pump
+			setState(stack, state.fired(0, now - 30)); // no shot, no pump
 			return;
 		}
 		setState(stack, state.fired(state.rounds() - 1, now));
@@ -131,16 +133,12 @@ public class ShotgunItem extends Item {
 			Vec3 dir = look.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
 			BulletEntity.firePellet(level, player, eye, dir.scale(MUZZLE_VELOCITY * (0.95 + random.nextDouble() * 0.1)), PELLET_DAMAGE);
 		}
-		// the blast, heard by everyone near, the far rumble by those further off
+		// the blast: each client works out how it sounds where they are (close, far, echoes, rooms)
+		var shot = new de.rcm.ballistic.network.ModNetworking.GunshotPayload(player.getId(), muzzle.x, muzzle.y, muzzle.z, (float) look.x, (float) look.y,
+			(float) look.z, de.rcm.ballistic.network.ModNetworking.GunshotPayload.SHOTGUN);
 		for (ServerPlayer p : level.players()) {
-			double d = p.distanceTo(player);
-			if (d < 64.0) {
-				p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(net.minecraft.core.Holder.direct(ModRegistry.SHOTGUN_SHOT),
-					SoundSource.PLAYERS, muzzle.x, muzzle.y, muzzle.z, 3.5F, 0.95F + random.nextFloat() * 0.1F, random.nextLong()));
-			} else if (d < 400.0) {
-				p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(net.minecraft.core.Holder.direct(ModRegistry.SHOTGUN_SHOT_FAR),
-					SoundSource.PLAYERS, p.getX() + (muzzle.x - p.getX()) * 40.0 / d, p.getEyeY(), p.getZ() + (muzzle.z - p.getZ()) * 40.0 / d,
-					(float) (2.5 * (1.0 - d / 400.0)) + 0.3F, 1.0F, random.nextLong()));
+			if (p.position().distanceToSqr(muzzle) < 900.0 * 900.0) {
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, shot);
 			}
 		}
 		// flash and smoke at the muzzle
@@ -188,7 +186,12 @@ public class ShotgunItem extends Item {
 		boolean inHand = player.getMainHandItem() == stack;
 		// the slide racked after a shot
 		if (inHand && now - state.lastShot() == PUMP_BACK) {
-			sound(level, player, ModRegistry.SHOTGUN_PUMP, 1.0F, 1.0F);
+			sound(level, player, ModRegistry.SHOTGUN_PUMP_BACK, 1.0F, 0.97F + level.getRandom().nextFloat() * 0.06F);
+		} else if (inHand && now - state.lastShot() == PUMP_FORWARD) {
+			sound(level, player, ModRegistry.SHOTGUN_PUMP_FORWARD, 1.0F, 0.97F + level.getRandom().nextFloat() * 0.06F);
+		} else if (inHand && now - state.lastShot() == PUMP_BACK + 6) {
+			// the empty hull lands at your feet
+			sound(level, player, ModRegistry.SHOTGUN_HULL, 0.5F, 0.9F + level.getRandom().nextFloat() * 0.2F);
 		}
 		if (!state.reloading()) {
 			return;
@@ -199,8 +202,10 @@ public class ShotgunItem extends Item {
 		}
 		long t = now - state.reloadStart();
 		if (state.reloadKind() == 2) {
-			if (t == 2) {
-				sound(level, player, ModRegistry.SHOTGUN_PUMP, 1.0F, 1.0F);
+			if (t == RACK_BACK) {
+				sound(level, player, ModRegistry.SHOTGUN_PUMP_BACK, 1.0F, 1.0F);
+			} else if (t == RACK_FORWARD) {
+				sound(level, player, ModRegistry.SHOTGUN_PUMP_FORWARD, 1.0F, 1.0F);
 			} else if (t >= RACK) {
 				setState(stack, state.cancelReload());
 			}

@@ -300,6 +300,10 @@ public final class AkClient {
 		if (mc.level == null) {
 			return;
 		}
+		if ((p.flags() & GunshotPayload.SHOTGUN) != 0) {
+			ShotgunClient.remoteShot(p);
+			return;
+		}
 		Vec3 muzzle = new Vec3(p.x(), p.y(), p.z());
 		Vec3 dir = new Vec3(p.dx(), p.dy(), p.dz());
 		if ((p.flags() & GunshotPayload.TRACER) != 0) {

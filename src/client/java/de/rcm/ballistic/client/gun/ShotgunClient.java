@@ -37,8 +37,8 @@ import org.joml.Vector3f;
 public final class ShotgunClient {
 	/** Line of sight (item space): the groove on top of the receiver to the brass bead at the muzzle. */
 	private static final Vector3f NOTCH = new Vector3f(0.0F, ShotgunItemRenderer.SIGHT_REAR_Y, 0.05F);
-	private static final Vector3f SIGHT_LINE = new Vector3f(0.0F, ShotgunItemRenderer.BEAD_Y + 0.0045F - ShotgunItemRenderer.SIGHT_REAR_Y,
-		ShotgunItemRenderer.MUZZLE_Z + 0.016F - 0.05F).normalize();
+	private static final Vector3f SIGHT_LINE = new Vector3f(0.0F, ShotgunItemRenderer.BEAD_Y - ShotgunItemRenderer.SIGHT_REAR_Y,
+		ShotgunItemRenderer.MUZZLE_Z + 0.014F - 0.05F).normalize();
 	/** Cheek down on the comb, the eye a hand's width behind the receiver. */
 	private static final Vector3f EYE = new Vector3f(NOTCH).sub(new Vector3f(SIGHT_LINE).mul(0.2F));
 	private static final Vector3f CAMERA = new Vector3f(-0.56F, 0.52F, 0.72F);
@@ -123,18 +123,22 @@ public final class ShotgunClient {
 		return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
 	}
 
-	/** One stroke of the slide: back at {@code back}, held, forward again at {@code forward}. */
+	/** One stroke of the slide: snapped back to hit the stop at {@code back}, driven home at {@code forward} (when the clacks sound). */
 	private static float stroke(float t, float back, float forward) {
-		if (t < back || t > forward + 1.5F) {
+		float s = 1.6F;
+		if (t < back - s || t > forward) {
 			return 0.0F;
 		}
-		if (t < back + 1.5F) {
-			return smooth((t - back) / 1.5F);
+		if (t < back) {
+			float f = (t - back + s) / s;
+			return f * f * (2.0F - f) * 1.0F; // fast at the start, braking into the stop
 		}
-		if (t < forward) {
-			return 1.0F;
+		if (t < forward - s) {
+			// a little bounce off the rear stop
+			return 1.0F - 0.04F * Mth.sin(Math.min(1.0F, (t - back) / 2.0F) * Mth.PI);
 		}
-		return 1.0F - smooth((t - forward) / 1.5F);
+		float f = (t - forward + s) / s;
+		return 1.0F - f * f * (2.0F - f);
 	}
 
 	/** How far back the forend is on this gun right now (0 forward, 1 fully back). */
@@ -146,9 +150,22 @@ public final class ShotgunClient {
 		GunState s = ShotgunItem.state(stack);
 		float now = mc.level.getGameTime() + partial();
 		if (s.reloading() && s.reloadKind() == 2) {
-			return stroke(now - s.reloadStart(), 2.0F, 13.0F);
+			return stroke(now - s.reloadStart(), ShotgunItem.RACK_BACK, ShotgunItem.RACK_FORWARD);
 		}
 		return stroke(now - s.lastShot(), ShotgunItem.PUMP_BACK, ShotgunItem.PUMP_FORWARD);
+	}
+
+	/** Everything that moves on this gun right now, for its model. */
+	public static ShotgunItemRenderer.Pose poseFor(ItemStack stack) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level == null) {
+			return ShotgunItemRenderer.Pose.REST;
+		}
+		GunState s = ShotgunItem.state(stack);
+		float since = mc.level.getGameTime() + partial() - s.lastShot();
+		// the hull leaves the port as the bolt comes back off the shell
+		float eject = since - (ShotgunItem.PUMP_BACK - 0.4F);
+		return new ShotgunItemRenderer.Pose(pumpFor(stack), s.rounds() > 0, eject >= 0.0F && eject < 7.0F ? eject : -1.0F);
 	}
 
 	// ------------------------------------------------------------------ input
@@ -171,6 +188,7 @@ public final class ShotgunClient {
 			return;
 		}
 		lastFire = now;
+		GunAudio.shotgun(AkClient.muzzle(player, 1.0F), true);
 		kickRoll = ClientEffects.rand() * 2.0F - 0.7F;
 		pendingKicks++;
 		// the muzzle flips up and the view with it
@@ -184,6 +202,23 @@ public final class ShotgunClient {
 		Vec3 m = muzzle.add(look.scale(0.3));
 		SmokeField.puff(m.x, m.y, m.z, look.x * 0.18, look.y * 0.18 + 0.01, look.z * 0.18, 200 + (int) (ClientEffects.rand() * 80), 0.12F, 1.1F,
 			0xDAD6D0, 0.3F, 0.6F, 0.0008F);
+	}
+
+	/** Someone's shotgun went off (our own is heard and seen already). */
+	static void remoteShot(de.rcm.ballistic.network.ModNetworking.GunshotPayload p) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level == null || (mc.player != null && p.shooter() == mc.player.getId())) {
+			return;
+		}
+		Vec3 muzzle = new Vec3(p.x(), p.y(), p.z());
+		Vec3 look = new Vec3(p.dx(), p.dy(), p.dz());
+		GunAudio.shotgun(muzzle, false);
+		de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(look.scale(0.4)), 0xFFC070, 1.2F, 12.0F, 60.0F + ClientEffects.rand() * 20.0F);
+		if (muzzle.distanceTo(mc.gameRenderer.getMainCamera().position()) < 96.0) {
+			Vec3 m = muzzle.add(look.scale(0.3));
+			SmokeField.puff(m.x, m.y, m.z, look.x * 0.18, look.y * 0.18 + 0.01, look.z * 0.18, 200 + (int) (ClientEffects.rand() * 80), 0.12F, 1.1F,
+				0xDAD6D0, 0.3F, 0.6F, 0.0008F);
+		}
 	}
 
 	/** R with the shotgun in hand. */
@@ -214,13 +249,9 @@ public final class ShotgunClient {
 		boolean busy = s != null && (s.reloading() || now - s.lastShot() < ShotgunItem.READY);
 		float target = has && player.isSprinting() && !busy && !aiming ? 1.0F : 0.0F;
 		sprint += (target - sprint) * 0.25F;
-		// the spent hull flicks out of the port as the slide comes back
-		if (s != null && now - s.lastShot() == ShotgunItem.PUMP_BACK + 1) {
-			Vec3 look = player.getLookAngle();
-			Vec3 right = look.cross(new Vec3(0, 1, 0));
-			right = right.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : right.normalize();
-			Vec3 port = AkClient.muzzle(player, 1.0F).subtract(look.scale(0.6)).add(right.scale(0.04));
-			de.rcm.ballistic.client.render.ShellCasings.eject(port, right.scale(0.18).add(0, 0.16, 0).add(player.getDeltaMovement()));
+		// shouldering it: the sling and the gun against your jacket
+		if (has && now == equipTick) {
+			GunAudio.play(ModRegistry.SHOTGUN_HANDLE, player.getEyePosition(), 0.45F, 0.95F + ClientEffects.rand() * 0.1F);
 		}
 	}
 
@@ -300,18 +331,24 @@ public final class ShotgunClient {
 		poseStack.mulPose(Axis.XP.rotationDegrees((Mth.sin(now * 0.045F) * 0.4F + Mth.sin(breath) * 1.7F * tired) * steady));
 		poseStack.mulPose(Axis.YP.rotationDegrees((Mth.cos(now * 0.031F) * 0.35F + Mth.cos(breath * 0.5F) * 1.0F * tired) * steady));
 
-		// working the slide: the gun rocks forward on its hands as the forend is snapped back and driven home
+		// working the slide: the left arm snaps the forend back and drives it home. The pull drags the muzzle
+		// down and rolls the gun a little towards the pulling hand, the bolt slamming into the rear stop jars
+		// it, and driving it home throws the muzzle forward and back up onto the target
 		float pump = pumpFor(stack);
-		float sinceShot = now - state.lastShot();
-		float rack = state.reloading() && state.reloadKind() == 2 ? now - state.reloadStart() : sinceShot;
-		float rackLength = state.reloading() && state.reloadKind() == 2 ? ShotgunItem.RACK : ShotgunItem.READY;
-		if (rack >= 0.0F && rack < rackLength + 2.0F) {
-			float lift = smooth(rack / 3.0F) * (1.0F - smooth((rack - rackLength + 3.0F) / 5.0F));
-			float snapBack = jolt(rack - (rackLength == ShotgunItem.RACK ? 2.0F : ShotgunItem.PUMP_BACK), 4.0F);
-			float snapHome = jolt(rack - (rackLength == ShotgunItem.RACK ? 13.0F : ShotgunItem.PUMP_FORWARD), 4.0F);
-			poseStack.translate(-0.01F * lift, 0.012F * lift * (1.0F - a), 0.006F * snapBack - 0.01F * snapHome);
-			poseStack.mulPose(Axis.XP.rotationDegrees(-2.0F * pump * (1.0F - 0.6F * a) + 1.8F * snapBack - 2.2F * snapHome));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-5.0F * lift * (1.0F - a)));
+		boolean racking = state.reloading() && state.reloadKind() == 2;
+		float since = racking ? now - state.reloadStart() : now - state.lastShot();
+		float backAt = racking ? ShotgunItem.RACK_BACK : ShotgunItem.PUMP_BACK;
+		float homeAt = racking ? ShotgunItem.RACK_FORWARD : ShotgunItem.PUMP_FORWARD;
+		float span = racking ? ShotgunItem.RACK : ShotgunItem.READY;
+		if (since >= 0.0F && since < span + 4.0F) {
+			float work = smooth((since - backAt + 3.0F) / 2.5F) * (1.0F - smooth((since - homeAt) / 4.0F));
+			float stop = jolt(since - backAt, 3.5F);
+			float home = jolt(since - homeAt, 4.0F);
+			float hip = 1.0F - 0.65F * a;
+			poseStack.translate(-0.008F * work * hip, -0.006F * work * hip + 0.004F * stop, 0.012F * pump * hip + 0.006F * stop - 0.012F * home);
+			poseStack.mulPose(Axis.XP.rotationDegrees((-3.2F * pump - 1.5F * stop + 2.4F * home) * hip));
+			poseStack.mulPose(Axis.ZP.rotationDegrees((4.5F * work + 2.0F * stop) * hip));
+			poseStack.mulPose(Axis.YP.rotationDegrees(-1.5F * pump * hip));
 		}
 
 		// a click instead of a bang: a twitch, then a look at the gun

@@ -65,6 +65,12 @@ final class StructureKit {
 	static final int BRASS = 48;
 	static final int AK_BRIGHT = 49;
 	static final int AK_WORN = 50;
+	static final int SG_WALNUT = 51;
+	static final int SG_PARK = 52;
+	static final int SG_PAD = 53;
+	static final int SG_HULL = 54;
+	static final int SG_CHECKER = 55;
+	static final int SG_BORE = 56;
 
 	private StructureKit() {
 	}

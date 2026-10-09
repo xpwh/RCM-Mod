@@ -399,6 +399,7 @@ public final class ModNetworking {
 	public record GunshotPayload(int shooter, double x, double y, double z, float dx, float dy, float dz, int flags) implements CustomPacketPayload {
 		public static final int LAST = 1;
 		public static final int TRACER = 2;
+		public static final int SHOTGUN = 4;
 		public static final Type<GunshotPayload> TYPE = new Type<>(BallisticMissiles.id("gunshot"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunshotPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunshotPayload::shooter,

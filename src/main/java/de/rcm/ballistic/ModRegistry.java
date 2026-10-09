@@ -711,8 +711,11 @@ public final class ModRegistry {
 	public static final SoundEvent AK_TAIL_CAVE = sound("ak.tail_cave");
 	public static final SoundEvent AK_DRY = sound("ak.dry");
 	public static final SoundEvent SHOTGUN_SHOT = sound("shotgun.shot");
+	public static final SoundEvent SHOTGUN_SHOT_MID = sound("shotgun.shot_mid");
 	public static final SoundEvent SHOTGUN_SHOT_FAR = sound("shotgun.shot_far");
-	public static final SoundEvent SHOTGUN_PUMP = sound("shotgun.pump");
+	public static final SoundEvent SHOTGUN_PUMP_BACK = sound("shotgun.pump_back");
+	public static final SoundEvent SHOTGUN_PUMP_FORWARD = sound("shotgun.pump_forward");
+	public static final SoundEvent SHOTGUN_HULL = sound("shotgun.hull");
 	public static final SoundEvent SHOTGUN_SHELL_IN = sound("shotgun.shell_in");
 	public static final SoundEvent SHOTGUN_DRY = sound("shotgun.dry");
 	public static final SoundEvent SHOTGUN_HANDLE = sound("shotgun.handle");
