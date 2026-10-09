@@ -9,6 +9,7 @@
 		"GameRendererAccessor",
 		"GameRendererMixin",
 		"ItemInHandRendererMixin",
+		"KeyboardInputMixin",
 		"MinecraftMixin",
 		"SoundEngineMixin"
 	],

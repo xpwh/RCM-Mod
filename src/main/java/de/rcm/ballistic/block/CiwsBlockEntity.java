@@ -249,6 +249,10 @@ public class CiwsBlockEntity extends BlockEntity {
 		this.setChanged();
 	}
 
+	public int getAmmo() {
+		return this.ammo;
+	}
+
 	public boolean isFiring() {
 		return this.firing;
 	}

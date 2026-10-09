@@ -1062,5 +1062,41 @@
 				"attenuation_distance": 12
 			}
 		]
+	},
+	"command.air_raid": {
+		"subtitle": "subtitles.ballisticmissiles.air_raid",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/siren",
+				"attenuation_distance": 200,
+				"stream": true
+			}
+		]
+	},
+	"drone.buzz": {
+		"subtitle": "subtitles.ballisticmissiles.drone",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:drone/buzz",
+				"attenuation_distance": 64
+			}
+		]
+	},
+	"drone.fpv": {
+		"subtitle": "subtitles.ballisticmissiles.drone",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:drone/fpv"
+			}
+		]
+	},
+	"drone.arm": {
+		"subtitle": "subtitles.ballisticmissiles.drone_arm",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:drone/arm",
+				"attenuation_distance": 24
+			}
+		]
 	}
 }

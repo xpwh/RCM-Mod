@@ -29,16 +29,31 @@ import org.jspecify.annotations.Nullable;
  * area than the Patriot-style battery, but fires every few ticks and engages many threats at once -
  * rockets, drones, cruise missiles, Hellfires - each with one Tamir interceptor (two for nukes).
  * Threats that will land outside its protected zone are ignored to save rounds.
+ * <p>
+ * Reloading is done as in the real thing, by swapping the whole 20-round pod: Tamir pods are
+ * handed to the battery (right-click with one) or stocked in a chest or barrel near it. When the
+ * launcher is empty - or half empty and nothing has come in for a while - its reload truck drives
+ * up, the launcher is lowered, the truck's crane lifts the spent pod off and sets a fresh one in,
+ * and the truck drives away again. Without pods it stays empty.
  */
 public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock.Site {
 	public static final double RANGE = 170.0;
 	public static final double CEILING = 260.0;
 	public static final int MAGAZINE = 20;
-	private static final int RELOAD_TICKS = 40;
 	private static final int FIRE_GAP = 4;
+	/** The pod swap, start to finish, and the moment the fresh pod is seated. */
+	public static final int RELOAD_TIME = 320;
+	public static final int RELOAD_SEATED = 215;
+	/** Spare pods the battery itself can hold. */
+	public static final int POD_STORE = 4;
+	/** A half-empty launcher is topped up once nothing has been engaged for this long. */
+	private static final int IDLE_TOP_UP = 600;
 
 	private int ammo = MAGAZINE;
-	private int reload;
+	private int pods;
+	/** Game time the current pod swap began, or -1. */
+	private long reloadStart = -1L;
+	private long lastEngagement;
 	private int cooldown;
 	private int launches;
 	private @Nullable UUID owner;
@@ -50,10 +65,8 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 	@Override
 	public void serverTick(ServerLevel level) {
 		DefenseNetwork.register(level, this.worldPosition, DefenseNetwork.Kind.AIR_DEFENSE);
-		if (this.ammo < MAGAZINE && ++this.reload >= RELOAD_TICKS) {
-			this.reload = 0;
-			this.ammo++;
-			this.sync();
+		if (this.reloadTick(level)) {
+			return; // no launches while the pod is being changed
 		}
 		if (this.cooldown > 0) {
 			this.cooldown--;
@@ -100,12 +113,140 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 			best.setEngagements(best.getEngagements() + 1);
 			this.ammo--;
 			this.launches++;
+			this.lastEngagement = level.getGameTime();
 			this.cooldown = FIRE_GAP;
 			this.sync();
 			level.playSound(null, mouth.x, mouth.y, mouth.z, ModRegistry.SAM_LAUNCH, SoundSource.BLOCKS, 9.0F, 1.15F + level.getRandom().nextFloat() * 0.15F);
 			level.sendParticles(ParticleTypes.CLOUD, mouth.x, mouth.y, mouth.z, 20, 0.4, 0.3, 0.4, 0.06);
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, here.x, here.y + 0.5, here.z, 10, 0.8, 0.2, 0.8, 0.04);
 		}
+	}
+
+	// ------------------------------------------------------------------ pod swap
+
+	/** @return true while a reload is under way */
+	private boolean reloadTick(ServerLevel level) {
+		long now = level.getGameTime();
+		if (this.reloadStart < 0L) {
+			boolean want = this.ammo == 0 || this.ammo <= MAGAZINE / 2 && now - this.lastEngagement > IDLE_TOP_UP;
+			if (!want || now % 20 != 0) {
+				return false;
+			}
+			if (this.pods <= 0 && !this.takePodFromStorage(level)) {
+				return false;
+			}
+			this.pods--;
+			this.reloadStart = now;
+			this.sync();
+			return true;
+		}
+		int t = (int) (now - this.reloadStart);
+		Vec3 here = Vec3.atCenterOf(this.worldPosition);
+		var random = level.getRandom();
+		// the sounds of it: the truck's diesel and reversing beeper, the rams, the crane, the pod clanking home
+		if (t == 20 || t == 245) {
+			level.playSound(null, here.x - 3, here.y, here.z, net.minecraft.sounds.SoundEvents.RAVAGER_STEP, SoundSource.BLOCKS, 2.0F, 0.5F);
+		}
+		if (t >= 30 && t < 80 && t % 10 == 0) {
+			level.playSound(null, here.x - 3, here.y, here.z, ModRegistry.COUNTDOWN_BEEP, SoundSource.BLOCKS, 0.8F, 1.6F);
+		}
+		if (t == 2 || t == 285) {
+			level.playSound(null, here.x, here.y + 1, here.z, net.minecraft.sounds.SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 1.5F, 0.5F);
+		}
+		if (t == 95 || t == 160) {
+			level.playSound(null, here.x - 1.5, here.y + 2, here.z, net.minecraft.sounds.SoundEvents.CHAIN_PLACE, SoundSource.BLOCKS, 1.5F, 0.6F);
+		}
+		if (t == 150 || t == RELOAD_SEATED) {
+			level.playSound(null, here.x, here.y + 1.5, here.z, net.minecraft.sounds.SoundEvents.ANVIL_PLACE, SoundSource.BLOCKS, 0.7F, 0.6F + random.nextFloat() * 0.1F);
+		}
+		if (t == RELOAD_SEATED) {
+			this.ammo = MAGAZINE;
+			this.sync();
+		}
+		if (t >= RELOAD_TIME) {
+			this.reloadStart = -1L;
+			this.lastEngagement = now;
+			this.sync();
+			return false;
+		}
+		return true;
+	}
+
+	/** A Tamir pod out of a chest or barrel within a few blocks of the battery. */
+	private boolean takePodFromStorage(ServerLevel level) {
+		BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+		for (int dy = -1; dy <= 2; dy++) {
+			for (int dx = -4; dx <= 4; dx++) {
+				for (int dz = -4; dz <= 4; dz++) {
+					m.setWithOffset(this.worldPosition, dx, dy, dz);
+					if (level.getBlockEntity(m) instanceof net.minecraft.world.Container box) {
+						for (int i = 0; i < box.getContainerSize(); i++) {
+							if (box.getItem(i).is(ModRegistry.TAMIR_POD)) {
+								box.removeItem(i, 1);
+								box.setChanged();
+								this.pods++;
+								return true;
+							}
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/** Right-click with Tamir pods: they go into the battery's store. */
+	public boolean deliver(net.minecraft.world.entity.player.Player player, net.minecraft.world.item.ItemStack stack) {
+		int room = POD_STORE - this.pods;
+		if (room <= 0) {
+			player.displayClientMessage(Component.translatable("message.ballisticmissiles.iron_dome_store_full", POD_STORE).withStyle(ChatFormatting.YELLOW), true);
+			return false;
+		}
+		int n = Math.min(room, stack.getCount());
+		this.pods += n;
+		if (!player.getAbilities().instabuild) {
+			stack.shrink(n);
+		}
+		this.sync();
+		player.displayClientMessage(Component.translatable("message.ballisticmissiles.iron_dome_pods", this.pods, POD_STORE).withStyle(ChatFormatting.AQUA), true);
+		return true;
+	}
+
+	public boolean isReloading() {
+		return this.reloadStart >= 0L;
+	}
+
+	/** Client: ticks into the pod swap, or -1. */
+	public float reloadAge(float partialTick) {
+		if (this.reloadStart < 0L || this.level == null) {
+			return -1.0F;
+		}
+		float t = this.level.getGameTime() - this.reloadStart + partialTick;
+		return t >= 0.0F && t < RELOAD_TIME ? t : -1.0F;
+	}
+
+	public int getPods() {
+		return this.pods;
+	}
+
+	@Override
+	public int siteAmmo() {
+		return this.ammo;
+	}
+
+	@Override
+	public int siteMagazine() {
+		return MAGAZINE;
+	}
+
+	@Override
+	public boolean siteReloading() {
+		return this.isReloading();
+	}
+
+	@Override
+	public int siteSpares() {
+		return this.pods;
 	}
 
 	// ------------------------------------------------------------------ launcher geometry (shared with the renderer)
@@ -175,7 +316,13 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 				return Component.translatable("message.ballisticmissiles.jammed", jammed / 20).withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.BOLD);
 			}
 		}
-		return Component.translatable("message.ballisticmissiles.iron_dome_status", this.ammo, MAGAZINE, (int) RANGE, this.launches).withStyle(ChatFormatting.AQUA);
+		if (this.isReloading()) {
+			return Component.translatable("message.ballisticmissiles.iron_dome_reloading", this.pods).withStyle(ChatFormatting.YELLOW);
+		}
+		if (this.ammo == 0 && this.pods == 0) {
+			return Component.translatable("message.ballisticmissiles.iron_dome_empty").withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
+		}
+		return Component.translatable("message.ballisticmissiles.iron_dome_status2", this.ammo, MAGAZINE, this.pods, (int) RANGE, this.launches).withStyle(ChatFormatting.AQUA);
 	}
 
 	@Override
@@ -217,7 +364,9 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 	protected void saveAdditional(ValueOutput output) {
 		super.saveAdditional(output);
 		output.putInt("Ammo", this.ammo);
-		output.putInt("Reload", this.reload);
+		output.putInt("Pods", this.pods);
+		output.putLong("ReloadStart", this.reloadStart);
+		output.putLong("LastEngagement", this.lastEngagement);
 		output.putInt("Launches", this.launches);
 		if (this.owner != null) {
 			output.store("Owner", UUIDUtil.CODEC, this.owner);
@@ -228,7 +377,9 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 	protected void loadAdditional(ValueInput input) {
 		super.loadAdditional(input);
 		this.ammo = input.getIntOr("Ammo", MAGAZINE);
-		this.reload = input.getIntOr("Reload", 0);
+		this.pods = input.getIntOr("Pods", 0);
+		this.reloadStart = input.getLongOr("ReloadStart", -1L);
+		this.lastEngagement = input.getLongOr("LastEngagement", 0L);
 		this.launches = input.getIntOr("Launches", 0);
 		this.owner = input.read("Owner", UUIDUtil.CODEC).orElse(null);
 	}

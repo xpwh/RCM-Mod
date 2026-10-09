@@ -16,6 +16,14 @@ public final class ClientHooks {
 	public static Consumer<MissileEntity> missileClientTick = missile -> {};
 	public static Consumer<Entity> projectileClientTick = entity -> {};
 	public static Consumer<JetEntity> jetClientTick = jet -> {};
+	public static Consumer<de.rcm.ballistic.entity.FpvDroneEntity> droneClientTick = drone -> {};
+
+	/** The camera's view while flying a drone: the pilot's look (null = the drone's own rotation). */
+	public interface DroneView {
+		@org.jspecify.annotations.Nullable Float view(de.rcm.ballistic.entity.FpvDroneEntity drone, float partialTick, boolean pitch);
+	}
+
+	public static DroneView droneView = (drone, partialTick, pitch) -> null;
 	public static Consumer<de.rcm.ballistic.entity.AerialBombEntity> bombClientTick = bomb -> {};
 
 	/** A long-lived smoke trail continued to {@code at} (key: usually the entity id). */

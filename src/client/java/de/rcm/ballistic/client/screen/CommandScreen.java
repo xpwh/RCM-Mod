@@ -50,11 +50,16 @@ public class CommandScreen extends Screen {
 	private Integer targetZ;
 	private int mode;
 	private long confirmFireUntil;
+	/** The list in the panel: tracks in the air, or the state of the sites. */
+	private boolean showSites;
+	/** Where each track has been (entity id -> x, z points, oldest first): its flight path so far. */
+	private final java.util.Map<Integer, java.util.ArrayDeque<float[]>> trails = new java.util.HashMap<>();
 
 	public CommandScreen(CommandDataPayload data) {
 		super(Component.translatable("screen.ballisticmissiles.command"));
 		this.center = data.center();
 		this.data = data;
+		this.recordTrails();
 	}
 
 	public BlockPos centerPos() {
@@ -64,9 +69,29 @@ public class CommandScreen extends Screen {
 	public void update(CommandDataPayload data) {
 		boolean relabel = data.links() != this.data.links() || data.cooldown() != this.data.cooldown();
 		this.data = data;
+		this.recordTrails();
 		if (relabel) {
 			this.rebuildWidgets();
 		}
+	}
+
+	private void recordTrails() {
+		java.util.Set<Integer> live = new java.util.HashSet<>();
+		for (TrackInfo t : this.data.tracks()) {
+			if (t.entityId() < 0) {
+				continue;
+			}
+			live.add(t.entityId());
+			var trail = this.trails.computeIfAbsent(t.entityId(), k -> new java.util.ArrayDeque<>());
+			float[] last = trail.peekLast();
+			if (last == null || Math.abs(last[0] - t.x()) + Math.abs(last[1] - t.z()) > 1.0F) {
+				trail.addLast(new float[] {t.x(), t.z()});
+				while (trail.size() > 120) {
+					trail.removeFirst();
+				}
+			}
+		}
+		this.trails.keySet().retainAll(live);
 	}
 
 	private int range() {
@@ -126,6 +151,12 @@ public class CommandScreen extends Screen {
 			.bounds(px, y, PANEL - 10, 20).build();
 		strike.active = hasTarget && this.data.cooldown() <= 0;
 		this.addRenderableWidget(strike);
+		y += 28;
+		this.addRenderableWidget(Button.builder(Component.translatable(this.showSites ? "screen.ballisticmissiles.command_list_sites"
+			: "screen.ballisticmissiles.command_list_tracks"), b -> {
+			this.showSites = !this.showSites;
+			this.rebuildWidgets();
+		}).bounds(px, y, PANEL - 10, 16).build());
 		this.addRenderableWidget(Button.builder(Component.literal("+"), b -> this.setZoom(this.zoom + 1)).bounds(this.mapLeft + 4, this.mapTop + 4, 16, 16).build());
 		this.addRenderableWidget(Button.builder(Component.literal("−"), b -> this.setZoom(this.zoom - 1)).bounds(this.mapLeft + 4, this.mapTop + 22, 16, 16).build());
 	}
@@ -289,17 +320,51 @@ public class CommandScreen extends Screen {
 	}
 
 	private void drawOverlay(GuiGraphics g) {
+		boolean blink = (System.currentTimeMillis() / 400L) % 2 == 0;
 		for (SiteInfo site : this.data.sites()) {
 			int x = (int) this.screenX(site.pos().getX() + 0.5);
 			int y = (int) this.screenY(site.pos().getZ() + 0.5);
+			if ((site.flags() & SiteInfo.DESTROYED) != 0) {
+				// a red cross where it was
+				this.line(g, x - 3, y - 3, x + 3, y + 3, 0xFFFF2020);
+				this.line(g, x - 3, y + 3, x + 3, y - 3, 0xFFFF2020);
+				continue;
+			}
 			int color = switch (site.kind()) {
 				case 0 -> 0xFFFFFFFF; // radar
 				case 1 -> 0xFF50E0FF; // air defense / Iron Dome
 				case 2 -> 0xFFFFE040; // silo
 				default -> 0xFFC060FF; // jammer
 			};
-			g.fill(x - 3, y - 3, x + 3, y + 3, 0xFF000000);
-			g.fill(x - 2, y - 2, x + 2, y + 2, color);
+			int state = this.stateColor(site);
+			g.fill(x - 3, y - 3, x + 3, y + 3, state != 0 && (blink || (site.flags() & SiteInfo.RELOADING) != 0) ? state : 0xFF000000);
+			g.fill(x - 2, y - 2, x + 2, y + 2, (site.flags() & SiteInfo.OFFLINE) != 0 ? 0xFF606060 : color);
+		}
+		// where everything has flown: the path so far, fading towards its start
+		for (var e : this.trails.entrySet()) {
+			TrackInfo t = null;
+			for (TrackInfo c : this.data.tracks()) {
+				if (c.entityId() == e.getKey()) {
+					t = c;
+					break;
+				}
+			}
+			if (t == null) {
+				continue;
+			}
+			boolean aircraft = t.threatClass() == AirThreat.ThreatClass.AIRCRAFT.ordinal();
+			int rgb = (!t.threat() ? 0x4090FF : aircraft ? 0xFFB030 : 0xFF4040);
+			float[] prev = null;
+			int i = 0;
+			int n = e.getValue().size();
+			for (float[] p : e.getValue()) {
+				if (prev != null) {
+					int alpha = 0x30 + 0x70 * i / Math.max(1, n);
+					this.line(g, (int) this.screenX(prev[0]), (int) this.screenY(prev[1]), (int) this.screenX(p[0]), (int) this.screenY(p[1]), alpha << 24 | rgb);
+				}
+				prev = p;
+				i++;
+			}
 		}
 		// the center itself
 		int ccx = (int) this.screenX(this.center.getX() + 0.5);
@@ -325,7 +390,13 @@ public class CommandScreen extends Screen {
 				int iy = (int) this.screenY(t.impactZ());
 				this.line(g, ix - 3, iy - 3, ix + 3, iy + 3, 0xFFFF4040);
 				this.line(g, ix - 3, iy + 3, ix + 3, iy - 3, 0xFFFF4040);
-				this.line(g, x, y, ix, iy, 0x40FF4040);
+				this.dashed(g, x, y, ix, iy, 0x90FF4040);
+				// the danger zone round the impact point, pulsing, and the time to impact
+				float pulse = (System.currentTimeMillis() % 1000L) / 1000.0F;
+				int zone = Math.max(4, (int) (40.0 * this.mapSize / (2.0 * this.range())));
+				this.circle(g, ix, iy, zone, 0x80FF4040);
+				this.circle(g, ix, iy, (int) (zone * (0.4F + 0.6F * pulse)), ((int) (0xA0 * (1.0F - pulse)) << 24) | 0xFF4040);
+				g.drawString(this.font, Math.max(0, t.eta() / 20) + "s", ix + 5, iy + 2, 0xFFFF6060, false);
 			}
 		}
 		if (this.minecraft.player != null) {
@@ -333,6 +404,13 @@ public class CommandScreen extends Screen {
 			int y = (int) this.screenY(this.minecraft.player.getZ());
 			g.fill(x - 2, y - 2, x + 3, y + 3, 0xFF000000);
 			g.fill(x - 1, y - 1, x + 2, y + 2, 0xFFFFFFFF);
+		}
+		if (this.data.alarm() && (System.currentTimeMillis() / 500L) % 2 == 0) {
+			Component alarm = Component.translatable("screen.ballisticmissiles.command_alarm");
+			int w = this.font.width(alarm) + 12;
+			int ax = this.mapLeft + (this.mapSize - w) / 2;
+			g.fill(ax, this.mapTop + 16, ax + w, this.mapTop + 30, 0xE0A00000);
+			g.drawString(this.font, alarm, ax + 6, this.mapTop + 19, 0xFFFFFFFF, false);
 		}
 		if (this.targetX != null) {
 			int tx = (int) this.screenX(this.targetX + 0.5);
@@ -358,7 +436,19 @@ public class CommandScreen extends Screen {
 			int wz = Mth.floor(this.center.getZ() + 0.5 - this.range() + (mouseY - this.mapTop) * k);
 			g.drawString(this.font, String.format("%d / %d", wx, wz), this.mapLeft + 4, this.mapTop + this.mapSize - 12, 0xFFB0C8B0, false);
 		}
-		int line = this.mapTop + 40 + 22 + 30 + 22 + 28;
+		int line = this.mapTop + 40 + 22 + 30 + 22 + 28 + 20;
+		// batteries out of rounds with nothing to reload from
+		for (SiteInfo site : this.data.sites()) {
+			if (site.ammo() == 0 && site.spares() == 0 && (site.flags() & (SiteInfo.RELOADING | SiteInfo.DESTROYED)) == 0) {
+				g.drawString(this.font, Component.translatable("screen.ballisticmissiles.command_battery_empty", this.siteName(site), site.pos().getX(),
+					site.pos().getZ()), px, line, (System.currentTimeMillis() / 500L) % 2 == 0 ? 0xFFFF3030 : 0xFFB02020, false);
+				line += 10;
+			}
+		}
+		if (this.showSites) {
+			this.drawSites(g, px, line);
+			return;
+		}
 		List<TrackInfo> sorted = new ArrayList<>(this.data.tracks());
 		sorted.sort(Comparator.comparing((TrackInfo t) -> !t.threat()).thenComparingInt(TrackInfo::eta));
 		g.drawString(this.font, Component.translatable("screen.ballisticmissiles.command_tracks", sorted.size()), px, line, 0xFF40FF70, false);
@@ -373,6 +463,76 @@ public class CommandScreen extends Screen {
 			String eta = aircraft ? "" : "  " + Math.max(0, t.eta() / 20) + "s";
 			g.drawString(this.font, Component.literal(String.format("T%02d ", t.number())).append(name).append(eta), px, line, color, false);
 			line += 10;
+		}
+	}
+
+	private Component siteName(SiteInfo site) {
+		return Component.translatable("screen.ballisticmissiles.site_type." + site.type());
+	}
+
+	/** Colour of a site's state (0 = all well): red empty, yellow reloading, purple jammed, grey without power. */
+	private int stateColor(SiteInfo site) {
+		int f = site.flags();
+		if ((f & SiteInfo.JAMMED) != 0) {
+			return 0xFFC060FF;
+		}
+		if (site.ammo() == 0 || (f & SiteInfo.UNPOWERED) != 0) {
+			return 0xFFFF3030;
+		}
+		if ((f & SiteInfo.RELOADING) != 0) {
+			return 0xFFFFD040;
+		}
+		return 0;
+	}
+
+	/** The state of every site: what it is, where, rounds, and what is wrong with it. */
+	private void drawSites(GuiGraphics g, int px, int line) {
+		List<SiteInfo> sites = new ArrayList<>(this.data.sites());
+		sites.sort(Comparator.comparingInt((SiteInfo s) -> (s.flags() & SiteInfo.DESTROYED) != 0 ? 0 : s.ammo() == 0 ? 1 : 2)
+			.thenComparingDouble(s -> s.pos().distSqr(this.center)));
+		g.drawString(this.font, Component.translatable("screen.ballisticmissiles.command_sites", sites.size()), px, line, 0xFF40FF70, false);
+		line += 12;
+		for (SiteInfo site : sites) {
+			if (line > this.mapTop + this.mapSize - 10) {
+				break;
+			}
+			int f = site.flags();
+			String key = (f & SiteInfo.DESTROYED) != 0 ? "destroyed" : (f & SiteInfo.OFFLINE) != 0 ? "offline" : (f & SiteInfo.JAMMED) != 0 ? "jammed"
+				: (f & SiteInfo.UNPOWERED) != 0 ? "unpowered" : site.ammo() == 0 && (f & SiteInfo.RELOADING) == 0 ? "empty"
+				: (f & SiteInfo.RELOADING) != 0 ? "reloading" : (f & SiteInfo.ACTIVE) != 0 ? "active" : "ready";
+			int color = switch (key) {
+				case "destroyed", "empty", "unpowered" -> 0xFFFF4040;
+				case "offline" -> 0xFF808080;
+				case "jammed" -> 0xFFC060FF;
+				case "reloading" -> 0xFFFFD040;
+				case "active" -> 0xFFFFA040;
+				default -> 0xFF60E070;
+			};
+			Component text = this.siteName(site).copy();
+			if (site.ammo() >= 0 && (f & SiteInfo.DESTROYED) == 0) {
+				text = text.copy().append(" " + site.ammo() + "/" + site.magazine());
+				if (site.spares() >= 0) {
+					text = text.copy().append(" +" + site.spares());
+				}
+			}
+			g.drawString(this.font, text, px, line, color, false);
+			line += 9;
+			g.drawString(this.font, Component.literal("  ").append(Component.translatable("screen.ballisticmissiles.site_state." + key))
+				.append(String.format("  %d/%d", site.pos().getX(), site.pos().getZ())), px, line, (color & 0x00FFFFFF) | 0xA0000000, false);
+			line += 11;
+		}
+	}
+
+	private void dashed(GuiGraphics g, int x0, int y0, int x1, int y1, int color) {
+		int steps = Math.min(600, Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)));
+		for (int i = 0; i <= steps; i++) {
+			if (i / 3 % 2 == 1) {
+				continue;
+			}
+			float f = steps == 0 ? 0 : (float) i / steps;
+			int x = Math.round(Mth.lerp(f, x0, x1));
+			int y = Math.round(Mth.lerp(f, y0, y1));
+			g.fill(x, y, x + 1, y + 1, color);
 		}
 	}
 

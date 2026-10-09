@@ -203,7 +203,8 @@ public final class AkClient {
 				inspectTick(player, state, now);
 			}
 			// the trigger: held down with the rifle in hand and nothing else on screen
-			boolean want = state != null && mc.screen == null && mc.options.keyAttack.isDown() && !checking;
+			boolean want = state != null && mc.screen == null && mc.options.keyAttack.isDown() && !checking
+				&& !de.rcm.ballistic.client.drone.DroneClient.isFlying();
 			if (want != triggerDown) {
 				if (want && !state.reloading() && state.mode() != GunState.SAFE && state.rounds() <= 0) {
 					AkFirstPerson.dryFire(now); // the hammer falls on nothing

@@ -41,6 +41,24 @@ public class DefenseSiteBlock extends Block implements EntityBlock {
 		/** Client-side animation, every tick. */
 		default void clientTick() {
 		}
+
+		/** Rounds ready to fire, or -1 if the site has no magazine (radar, jammer...). */
+		default int siteAmmo() {
+			return -1;
+		}
+
+		default int siteMagazine() {
+			return -1;
+		}
+
+		default boolean siteReloading() {
+			return false;
+		}
+
+		/** Spare reloads in store, or -1 if it reloads by itself. */
+		default int siteSpares() {
+			return -1;
+		}
 	}
 
 	public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
@@ -62,6 +80,18 @@ public class DefenseSiteBlock extends Block implements EntityBlock {
 	@Override
 	public BlockState getStateForPlacement(BlockPlaceContext context) {
 		return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+	}
+
+	@Override
+	protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, net.minecraft.world.InteractionHand hand,
+		BlockHitResult hit) {
+		if (stack.is(de.rcm.ballistic.ModRegistry.TAMIR_POD) && level.getBlockEntity(pos) instanceof IronDomeBlockEntity dome) {
+			if (!level.isClientSide()) {
+				dome.deliver(player, stack);
+			}
+			return InteractionResult.SUCCESS;
+		}
+		return super.useItemOn(stack, state, level, pos, player, hand, hit);
 	}
 
 	@Override

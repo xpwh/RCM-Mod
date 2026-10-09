@@ -345,7 +345,30 @@ public final class MissileClientTicker {
 		}
 	}
 
+	/** A launch gone wrong: tumbling with the motor still roaring (thick exhaust), or dead and trailing black smoke. */
+	private static void failedFlight(MissileEntity missile, float scale) {
+		Vec3 nozzle = missile.position();
+		Vec3 dir = missile.getNoseDirection(1.0F);
+		boolean burning = missile.isBoosterBurning();
+		if (burning) {
+			SmokeField.trail(missile.getId() * 4 + 2, nozzle.subtract(dir.scale(1.0)), SmokeField.Style.exhaust(scale), 1.0F);
+			nozzleFire(nozzle.x, nozzle.y, nozzle.z, dir, scale, 3);
+		} else {
+			SmokeField.trail(missile.getId() * 4 + 2, nozzle.add(dir.scale(missile.getMissileType().length * 0.4)),
+				new SmokeField.Style(0.9F * scale, 3.0F * scale, 1600, 0x2C2A28, 0.75F, 0.3F, 0.002F, 1.0F), 1.0F);
+			Vec3 fire = nozzle.add(dir.scale(missile.getMissileType().length * 0.4));
+			CloudParticle glow = ClientEffects.cloud(true, fire.x, fire.y, fire.z, 0, 0.02, 0);
+			if (glow != null) {
+				glow.configure(8, 0.6F * scale, 0.3F, 0xFFB060, 0xFF5020, 0.7F);
+			}
+		}
+	}
+
 	private static void flight(Minecraft mc, MissileEntity missile, float scale) {
+		if (missile.getFailure() != MissileEntity.FAIL_NONE) {
+			failedFlight(missile, scale);
+			return;
+		}
 		if (missile.getMissileType().isCruise()) {
 			cruiseFlight(mc, missile, scale);
 			return;

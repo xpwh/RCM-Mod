@@ -65,6 +65,25 @@ public class MissileEntity extends Entity implements AirThreat {
 	private static final EntityDataAccessor<Vector3fc> DATA_DIR = SynchedEntityData.defineId(MissileEntity.class, EntityDataSerializers.VECTOR3);
 	/** MIRV bus: warheads still on board, or -1 before the bus has started releasing them. */
 	private static final EntityDataAccessor<Integer> DATA_BUS = SynchedEntityData.defineId(MissileEntity.class, EntityDataSerializers.INT);
+	/** A launch gone wrong: 0 all well, 1 out of control with the motor still burning, 2 tumbling with the motor dead. */
+	private static final EntityDataAccessor<Integer> DATA_FAIL = SynchedEntityData.defineId(MissileEntity.class, EntityDataSerializers.INT);
+	public static final int FAIL_NONE = 0;
+	public static final int FAIL_BURNING = 1;
+	public static final int FAIL_DEAD = 2;
+	/** What is planned to go wrong with this launch (decided when it lifts off). */
+	private static final int PLAN_NONE = 0;
+	private static final int PLAN_PAD_EXPLOSION = 1;
+	private static final int PLAN_TUMBLE = 2;
+	private static final int PLAN_NO_IGNITION = 3;
+	private int misfirePlan;
+	/** Tick (of the state) the planned failure happens. */
+	private int misfireAt;
+	private Vec3 failVelocity = Vec3.ZERO;
+	private Vec3 failAxis = new Vec3(1, 0, 0);
+	private int failAge;
+	private int failBurn;
+	/** Range safety: the flight termination system blows it up at this failure tick (-1 = it comes down whole). */
+	private int failTerminate = -1;
 
 	private static final int CRUISE_BOOST_TICKS = 32;
 	private static final double CRUISE_ALTITUDE = 22.0;
@@ -127,6 +146,7 @@ public class MissileEntity extends Entity implements AirThreat {
 		builder.define(DATA_LAUNCH, new Vector3f());
 		builder.define(DATA_DIR, new Vector3f(0, 1, 0));
 		builder.define(DATA_BUS, -1);
+		builder.define(DATA_FAIL, FAIL_NONE);
 	}
 
 	// ------------------------------------------------------------------ state accessors
@@ -180,11 +200,14 @@ public class MissileEntity extends Entity implements AirThreat {
 		if (state != FLIGHT) {
 			return false;
 		}
+		if (this.getFailure() != FAIL_NONE) {
+			return this.getFailure() == FAIL_BURNING;
+		}
 		return this.missileType.isCruise() ? this.clientOrServerAge() < CRUISE_BOOST_TICKS : this.getTrajectory().boosting(this.clientOrServerAge());
 	}
 
 	public boolean isJetRunning() {
-		return this.missileType.isCruise() && this.getState() == FLIGHT;
+		return this.missileType.isCruise() && this.getState() == FLIGHT && this.getFailure() == FAIL_NONE;
 	}
 
 	private int clientOrServerAge() {
@@ -218,12 +241,17 @@ public class MissileEntity extends Entity implements AirThreat {
 		}
 	}
 
+	/** A launch gone wrong (see {@link #FAIL_BURNING}, {@link #FAIL_DEAD}). */
+	public int getFailure() {
+		return this.entityData.get(DATA_FAIL);
+	}
+
 	/** Nose direction, interpolated for rendering. */
 	public Vec3 getNoseDirection(float partialTick) {
 		if (this.getState() != FLIGHT) {
 			return new Vec3(0, 1, 0);
 		}
-		if (this.missileType.isCruise()) {
+		if (this.missileType.isCruise() || this.getFailure() != FAIL_NONE) {
 			Vec3 d = this.clientPrevDir.lerp(this.clientDir, partialTick);
 			return d.lengthSqr() < 1.0E-6 ? new Vec3(0, 1, 0) : d.normalize();
 		}
@@ -240,7 +268,7 @@ public class MissileEntity extends Entity implements AirThreat {
 		} else {
 			this.clientStateAge++;
 			if (this.getState() == FLIGHT) {
-				if (this.missileType.isCruise()) {
+				if (this.missileType.isCruise() || this.getFailure() != FAIL_NONE) {
 					this.clientPrevDir = this.clientDir;
 					this.clientDir = this.getFlightDir();
 				} else {
@@ -343,7 +371,13 @@ public class MissileEntity extends Entity implements AirThreat {
 			this.entityData.set(DATA_LAUNCH, new Vector3f((float) next.x, (float) next.y, (float) next.z));
 			this.applyJamming(level);
 			this.trajectory = null;
+			this.planMisfire(level, true);
 			this.setState(FLIGHT);
+			if (this.misfirePlan == PLAN_NO_IGNITION) {
+				// ...or it doesn't: the motor never lights and the missile drops back down
+				this.startFailure(level, new Vec3(0, vy * 0.5, 0), false);
+				return;
+			}
 			// the ignition roar is played client-side, riding along with the missile
 		}
 	}
@@ -380,6 +414,7 @@ public class MissileEntity extends Entity implements AirThreat {
 			this.entityData.set(DATA_LAUNCH, new Vector3f((float) pos.x, (float) pos.y, (float) pos.z));
 			this.applyJamming(level);
 			this.trajectory = null;
+			this.planMisfire(level, false);
 			this.setState(IGNITION);
 			// the ignition roar is played client-side, riding along with the missile
 		}
@@ -387,6 +422,10 @@ public class MissileEntity extends Entity implements AirThreat {
 
 	private void ignitionTick(ServerLevel level) {
 		this.keepLoaded(level);
+		if (this.misfirePlan == PLAN_PAD_EXPLOSION && this.stateAge >= this.misfireAt) {
+			this.padExplosion(level);
+			return;
+		}
 		if (this.stateAge % 10 == 0) {
 			// Scorch & push away anything standing in the exhaust.
 			AABB blast = this.getBoundingBox().inflate(3.0, 0.0, 3.0).expandTowards(0, -2, 0);
@@ -401,6 +440,14 @@ public class MissileEntity extends Entity implements AirThreat {
 	}
 
 	private void flightTick(ServerLevel level) {
+		if (this.getFailure() != FAIL_NONE) {
+			this.failureTick(level);
+			return;
+		}
+		if (this.misfirePlan == PLAN_TUMBLE && this.stateAge >= this.misfireAt) {
+			this.startFailure(level, this.currentVelocity(), true);
+			return;
+		}
 		if (this.missileType.isCruise()) {
 			this.cruiseTick(level);
 			return;
@@ -672,8 +719,148 @@ public class MissileEntity extends Entity implements AirThreat {
 		return blockHit.getType() == HitResult.Type.MISS ? null : blockHit.getLocation();
 	}
 
+	// ------------------------------------------------------------------ launches gone wrong
+
+	/**
+	 * Decides when the missile lifts off whether this launch goes wrong (the chance is a world
+	 * setting): from the pad it can blow up before it clears the stand, or lose control a few
+	 * seconds up and tumble; a cold launch can fail to light at all.
+	 */
+	private void planMisfire(ServerLevel level, boolean coldLaunch) {
+		this.misfirePlan = PLAN_NONE;
+		int chance = de.rcm.ballistic.config.ServerConfig.misfireChance;
+		var random = level.getRandom();
+		if (chance <= 0 || random.nextInt(100) >= chance) {
+			return;
+		}
+		float roll = random.nextFloat();
+		if (coldLaunch) {
+			this.misfirePlan = roll < 0.4F ? PLAN_NO_IGNITION : PLAN_TUMBLE;
+		} else {
+			this.misfirePlan = roll < 0.4F ? PLAN_PAD_EXPLOSION : PLAN_TUMBLE;
+		}
+		this.misfireAt = this.misfirePlan == PLAN_PAD_EXPLOSION
+			? (int) (this.missileType.ignitionTicks * (0.25F + 0.6F * random.nextFloat()))
+			: 12 + random.nextInt(60);
+	}
+
+	/** The players who see it happen (and the one who launched it, wherever they are). */
+	private void announce(ServerLevel level, String key, ChatFormatting color) {
+		Component msg = Component.literal("⚠ ").append(Component.translatable(key, Component.translatable(this.nameKey())))
+			.withStyle(color, ChatFormatting.BOLD);
+		for (ServerPlayer player : level.players()) {
+			if (player.distanceToSqr(this) < 400 * 400 || player.distanceToSqr(this.getLaunchPos()) < 400 * 400) {
+				player.displayClientMessage(msg, true);
+			}
+		}
+	}
+
+	/** Blown up on the stand: the propellant goes up, the warhead (with its safety still on) does not. */
+	private void padExplosion(ServerLevel level) {
+		Vec3 base = this.position().add(0, this.missileType.length * 0.25, 0);
+		this.announce(level, "message.ballisticmissiles.misfire_pad", ChatFormatting.RED);
+		DetonationManager.fuelExplosion(level, base, this, 3.0F + this.missileType.length * 0.35F);
+		this.discard();
+	}
+
+	/** Control lost: from here on it flies (and falls) by its own physics, not the planned arc. */
+	private void startFailure(ServerLevel level, Vec3 velocity, boolean burning) {
+		var random = level.getRandom();
+		this.failVelocity = velocity;
+		this.failAge = 0;
+		this.failBurn = burning ? 30 + random.nextInt(70) : 0;
+		Vec3 dir = this.currentDirection();
+		// it starts to cartwheel about an axis across its line of flight
+		Vec3 across = dir.cross(new Vec3(random.nextGaussian(), random.nextGaussian(), random.nextGaussian()));
+		this.failAxis = across.lengthSqr() < 1.0E-6 ? new Vec3(1, 0, 0) : across.normalize();
+		// range safety blows most of them up in the air before they come down somewhere they shouldn't
+		this.failTerminate = burning && random.nextFloat() < 0.5F ? 40 + random.nextInt(50) : -1;
+		this.setFlightDir(dir);
+		this.entityData.set(DATA_FAIL, burning ? FAIL_BURNING : FAIL_DEAD);
+		this.entityData.set(DATA_AGE, this.stateAge);
+		this.announce(level, burning ? "message.ballisticmissiles.misfire_tumble" : "message.ballisticmissiles.misfire_no_ignition", ChatFormatting.GOLD);
+	}
+
+	private void failureTick(ServerLevel level) {
+		this.keepLoaded(level);
+		this.stateAge++;
+		this.failAge++;
+		Vec3 dir = this.getFlightDir();
+		boolean burning = this.getFailure() == FAIL_BURNING;
+		// the cartwheel speeds up as the aerodynamic forces take hold
+		double spin = burning ? Math.min(0.16, 0.012 + this.failAge * 0.0025) : Math.min(0.08, 0.01 + this.failAge * 0.001);
+		dir = rotate(dir, this.failAxis, spin);
+		Vec3 v = this.failVelocity;
+		if (burning) {
+			v = v.add(dir.scale(0.05 + 0.04 * this.missileType.scale));
+			if (--this.failBurn <= 0) {
+				this.entityData.set(DATA_FAIL, FAIL_DEAD);
+			}
+		}
+		v = v.scale(0.985).add(0, -0.045, 0);
+		this.failVelocity = v;
+		this.setFlightDir(dir);
+		if (this.failTerminate > 0 && this.failAge >= this.failTerminate) {
+			// flight termination: the range safety officer pushes the button
+			this.announce(level, "message.ballisticmissiles.misfire_terminated", ChatFormatting.YELLOW);
+			DetonationManager.intercepted(level, this.position().add(dir.scale(this.missileType.length * 0.5)), this);
+			level.playSound(null, this.getX(), this.getY(), this.getZ(), net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 12.0F, 0.6F);
+			this.discard();
+			return;
+		}
+		Vec3 pos = this.position();
+		Vec3 next = pos.add(v);
+		Vec3 nose = next.add(dir.scale(this.missileType.length));
+		var hit = level.clip(new net.minecraft.world.level.ClipContext(pos, next, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+			net.minecraft.world.level.ClipContext.Fluid.ANY, this));
+		if (hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS) {
+			var noseHit = level.clip(new net.minecraft.world.level.ClipContext(pos.add(dir.scale(this.missileType.length)), nose,
+				net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.ANY, this));
+			if (noseHit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+				hit = noseHit;
+			}
+		}
+		if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS || next.y < level.getMinY() || this.failAge > 1200) {
+			Vec3 at = hit.getLocation();
+			this.crashFailed(level, at);
+			return;
+		}
+		if (!level.isPositionEntityTicking(BlockPos.containing(next))) {
+			this.discard();
+			return;
+		}
+		this.setPos(next);
+	}
+
+	/**
+	 * The failed missile coming down: the remaining propellant burns and blows; a plain high-explosive
+	 * warhead may go off too, anything nuclear or exotic stays safe.
+	 */
+	private void crashFailed(ServerLevel level, Vec3 at) {
+		boolean water = !level.getFluidState(BlockPos.containing(at)).isEmpty();
+		MissileType.Warhead w = this.missileType.warhead;
+		boolean plainWarhead = w == MissileType.Warhead.HIGH_EXPLOSIVE || w == MissileType.Warhead.THERMOBARIC || w == MissileType.Warhead.BUNKER_BUSTER
+			|| w == MissileType.Warhead.INCENDIARY || w == MissileType.Warhead.CRUISE || w == MissileType.Warhead.DRONE;
+		if (plainWarhead && !water && level.getRandom().nextFloat() < 0.4F) {
+			this.detonate(level, at);
+			return;
+		}
+		if (water) {
+			DetonationManager.aircraftCrash(level, at, this, true, true);
+		} else {
+			DetonationManager.fuelExplosion(level, at, this, 2.5F + this.missileType.length * 0.25F);
+		}
+		this.discard();
+	}
+
+	private static Vec3 rotate(Vec3 v, Vec3 axis, double angle) {
+		double cos = Math.cos(angle);
+		double sin = Math.sin(angle);
+		return v.scale(cos).add(axis.cross(v).scale(sin)).add(axis.scale(axis.dot(v) * (1.0 - cos))).normalize();
+	}
+
 	private void detonate(ServerLevel level, Vec3 pos) {
-		Vec3 dir = this.missileType.isCruise() ? this.getFlightDir() : this.getTrajectory().direction(this.stateAge);
+		Vec3 dir = this.missileType.isCruise() || this.getFailure() != FAIL_NONE ? this.getFlightDir() : this.getTrajectory().direction(this.stateAge);
 		DetonationManager.detonate(level, pos, dir, this.missileType.warhead, this);
 		this.discard();
 	}
@@ -697,11 +884,14 @@ public class MissileEntity extends Entity implements AirThreat {
 		if (this.getState() != FLIGHT) {
 			return new Vec3(0, 1, 0);
 		}
-		return this.missileType.isCruise() ? this.getFlightDir() : this.getTrajectory().direction(this.stateAge);
+		return this.missileType.isCruise() || this.getFailure() != FAIL_NONE ? this.getFlightDir() : this.getTrajectory().direction(this.stateAge);
 	}
 
 	/** Server side: current velocity in blocks per tick. */
 	public Vec3 currentVelocity() {
+		if (this.getFailure() != FAIL_NONE) {
+			return this.failVelocity;
+		}
 		if (this.getState() == FLIGHT && !this.missileType.isCruise()) {
 			return this.getTrajectory().velocity(this.stateAge);
 		}
@@ -734,7 +924,7 @@ public class MissileEntity extends Entity implements AirThreat {
 
 	@Override
 	public boolean isActiveThreat() {
-		return this.getState() == FLIGHT && this.isAlive();
+		return this.getState() == FLIGHT && this.isAlive() && this.getFailure() == FAIL_NONE;
 	}
 
 	@Override

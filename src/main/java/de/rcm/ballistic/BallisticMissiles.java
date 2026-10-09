@@ -10,6 +10,7 @@ import de.rcm.ballistic.network.ModNetworking;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,11 +41,16 @@ public class BallisticMissiles implements ModInitializer {
 				de.rcm.ballistic.explosion.NuclearWinter.save(server);
 			}
 		});
+		de.rcm.ballistic.config.ServerConfig.load();
+		net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) ->
+			de.rcm.ballistic.config.ServerConfigCommand.register(dispatcher));
 		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.NuclearWinter::save);
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
 			(handler, sender, server) -> {
+				ServerPlayNetworking.send(handler.player, new de.rcm.ballistic.network.ModNetworking.ServerConfigPayload(
+					de.rcm.ballistic.config.ServerConfig.misfireChance));
 				RadiationManager.sync(handler.player.level(), handler.player);
 				de.rcm.ballistic.explosion.NuclearWinter.sync(handler.player);
 			});

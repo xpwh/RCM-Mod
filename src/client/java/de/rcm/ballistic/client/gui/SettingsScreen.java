@@ -65,6 +65,27 @@ public class SettingsScreen extends Screen {
 		y += GAP;
 		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.bulletHoles)
 			.create(right, y, W, H, Component.translatable("options.ballisticmissiles.bullet_holes"), (b, v) -> ModConfig.bulletHoles = v));
+		y += GAP;
+		// a world setting: changed on the server (operators only), shown as the server has it
+		Integer[] steps = java.util.Arrays.stream(de.rcm.ballistic.config.ServerConfig.MISFIRE_STEPS).boxed().toArray(Integer[]::new);
+		int current = de.rcm.ballistic.config.ServerConfig.misfireChance;
+		int nearest = steps[0];
+		for (int st : steps) {
+			if (Math.abs(st - current) < Math.abs(nearest - current)) {
+				nearest = st;
+			}
+		}
+		var misfires = CycleButton.builder((Integer c) -> c == 0 ? CommonComponents.OPTION_OFF : Component.translatable("options.ballisticmissiles.misfires.value", c),
+				nearest)
+			.withValues(steps)
+			.withTooltip(c -> net.minecraft.client.gui.components.Tooltip.create(Component.translatable("options.ballisticmissiles.misfires.tooltip")))
+			.create(right, y, W, H, Component.translatable("options.ballisticmissiles.misfires"), (b, v) -> {
+				if (this.minecraft.getConnection() != null) {
+					net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new de.rcm.ballistic.network.ModNetworking.ServerConfigPayload(v));
+				}
+			});
+		misfires.active = this.minecraft.getConnection() != null;
+		this.addRenderableWidget(misfires);
 
 		this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> this.onClose())
 			.bounds(this.width / 2 - 100, top + GAP * 5 + 12, 200, H).build());

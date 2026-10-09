@@ -108,7 +108,7 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 	public void extractRenderState(MissileEntity entity, State state, float partialTick) {
 		super.extractRenderState(entity, state, partialTick);
 		state.missileType = entity.getMissileType();
-		boolean ballisticFlight = entity.getState() == MissileEntity.FLIGHT && !state.missileType.isCruise();
+		boolean ballisticFlight = entity.getState() == MissileEntity.FLIGHT && !state.missileType.isCruise() && entity.getFailure() == MissileEntity.FAIL_NONE;
 		state.dropped = ballisticFlight ? MissileStages.dropped(state.missileType, entity.getTrajectory(), entity.clientStateAge + partialTick) : 0;
 		state.bus = entity.getBusWarheads();
 		Vec3 dir = entity.getNoseDirection(partialTick);
@@ -126,7 +126,8 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			state.shakeX = 0;
 			state.shakeZ = 0;
 		}
-		state.plasma = entity.getState() == MissileEntity.FLIGHT && !entity.getMissileType().isCruise() ? plasmaIntensity(entity, partialTick) : 0.0F;
+		state.plasma = entity.getState() == MissileEntity.FLIGHT && !entity.getMissileType().isCruise() && entity.getFailure() == MissileEntity.FAIL_NONE
+			? plasmaIntensity(entity, partialTick) : 0.0F;
 		// at night a burning motor (or the re-entry glow) is seen from far away as an orange point
 		state.distance = (float) Math.sqrt(state.distanceToCameraSq);
 		float burning = state.engineOn ? 1.0F : state.plasma > 0.05F ? state.plasma * 0.9F : 0.0F;

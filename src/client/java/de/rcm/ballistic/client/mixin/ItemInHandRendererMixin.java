@@ -20,6 +20,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /** First-person recoil and reload animation of the RPG-7 and the AK, and the arms holding the AK. */
 @Mixin(ItemInHandRenderer.class)
 public abstract class ItemInHandRendererMixin {
+	/** Flying a drone: the goggles show the drone's camera, not your hands. */
+	@Inject(method = "renderArmWithItem", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$noHandsInGoggles(AbstractClientPlayer player, float partialTick, float pitch, InteractionHand hand, float swingProgress,
+		ItemStack stack, float equipProgress, PoseStack poseStack, SubmitNodeCollector collector, int light, CallbackInfo ci) {
+		if (de.rcm.ballistic.client.drone.DroneClient.isFlying()) {
+			ci.cancel();
+		}
+	}
+
 	@Inject(
 		method = "renderArmWithItem",
 		at = @At(

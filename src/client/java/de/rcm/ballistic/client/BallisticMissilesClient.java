@@ -71,6 +71,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModRegistry.BULLET, de.rcm.ballistic.client.render.BulletRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.GRENADE_ENTITY, de.rcm.ballistic.client.render.GrenadeRenderers.EntityRendererImpl::new);
 		EntityRendererRegistry.register(ModRegistry.RPG_GRENADE, de.rcm.ballistic.client.render.RpgGrenadeRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.FPV_DRONE, de.rcm.ballistic.client.render.FpvDroneRenderer::new);
+		de.rcm.ballistic.client.drone.DroneClient.init();
 		de.rcm.ballistic.client.item.RpgClient.init();
 		de.rcm.ballistic.client.gun.AkClient.init();
 		de.rcm.ballistic.client.render.Rpg7ItemRenderer.register();
@@ -99,6 +101,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(DetonationPayload.TYPE, (payload, context) ->
 			ClientEffects.detonation(payload.warhead(), new Vec3(payload.x(), payload.y(), payload.z()))
 		);
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.ServerConfigPayload.TYPE, (payload, context) ->
+			de.rcm.ballistic.config.ServerConfig.misfireChance = payload.misfireChance());
 		ClientPlayNetworking.registerGlobalReceiver(RadarDataPayload.TYPE, (payload, context) -> {
 			Minecraft mc = context.client();
 			if (mc.screen instanceof RadarScreen scope && scope.radarPos().equals(payload.radar())) {

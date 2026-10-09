@@ -77,3 +77,11 @@ Bullet impacts on earth, stone, wood and flesh use Minecraft's own sounds. Other
 | Cruise missile engine (loop) | https://freesound.org/s/824805/ "cruise-missiles-interception-and-fly-by" (Kh-101 over Kyiv) | Invadium | CC0 1.0 |
 | Radar alarm | https://freesound.org/s/156672/ "dive.wav" (USS Woodrow Wilson diving alarm) | mkjunker | CC0 1.0 |
 | Countdown beep | https://freesound.org/s/536422/ "Setting Electronic Timer 1 Beep" | Rudmer_Rotteveel | CC0 1.0 |
+
+## FPV drone (`tools/import_drone_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Drone in the goggles (loop) | https://freesound.org/s/854466/ "FPV Drone Flight 3" | qubodup | CC0 1.0 |
+| Drone heard from outside (loop) | https://freesound.org/s/854353/ "Quadcopter Drone Stalking Hovering 1" | qubodup | CC0 1.0 |
+| Arming beeps | https://freesound.org/s/680584/ "DJI FPV power on" | 4l3xoid | CC0 1.0 |

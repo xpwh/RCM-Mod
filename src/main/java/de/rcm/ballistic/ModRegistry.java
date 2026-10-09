@@ -172,6 +172,11 @@ public final class ModRegistry {
 		EntityType.Builder.<de.rcm.ballistic.entity.DestroyerEntity>of(de.rcm.ballistic.entity.DestroyerEntity::new, MobCategory.MISC).sized(5.0F, 6.0F)
 			.clientTrackingRange(32).updateInterval(1).fireImmune()
 	);
+	public static final EntityType<de.rcm.ballistic.entity.FpvDroneEntity> FPV_DRONE = registerEntity(
+		"fpv_drone",
+		EntityType.Builder.<de.rcm.ballistic.entity.FpvDroneEntity>of(de.rcm.ballistic.entity.FpvDroneEntity::new, MobCategory.MISC).sized(0.6F, 0.25F)
+			.eyeHeight(0.1F).clientTrackingRange(20).updateInterval(1).noLootTable()
+	);
 	public static final EntityType<de.rcm.ballistic.entity.RpgRocketEntity> RPG_GRENADE = registerEntity(
 		"rpg_grenade",
 		EntityType.Builder.<de.rcm.ballistic.entity.RpgRocketEntity>of(de.rcm.ballistic.entity.RpgRocketEntity::new, MobCategory.MISC).sized(0.25F, 0.25F)
@@ -514,12 +519,24 @@ public final class ModRegistry {
 		"grenade", de.rcm.ballistic.gun.GrenadeItem::new, new Item.Properties().stacksTo(8)
 	);
 	public static final Item RPG_ROCKET = registerItem("rpg_rocket", Item::new, new Item.Properties().stacksTo(16));
+	public static final Item FPV_DRONE_ITEM = registerItem(
+		"fpv_drone", de.rcm.ballistic.item.FpvDroneItem::new, new Item.Properties().stacksTo(4).rarity(Rarity.RARE)
+	);
+	/** A full 20-round Tamir launcher pod for the Iron Dome (brought up by its reload truck). */
+	public static final Item TAMIR_POD = registerItem(
+		"tamir_pod", props -> new de.rcm.ballistic.item.InfoItem(props, "tamir_pod", 2), new Item.Properties().stacksTo(4).rarity(Rarity.UNCOMMON)
+	);
 	public static final Item MOBILE_LAUNCHER_ITEM = registerItem(
 		"mobile_launcher", MobileLauncherItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
 	);
 
 	// ---------- Sounds ----------
 	public static final SoundEvent SIREN = sound("missile.siren");
+	/** The same air-raid siren, carried far: the command center's alarm. */
+	public static final SoundEvent AIR_RAID = sound("command.air_raid");
+	public static final SoundEvent DRONE_BUZZ = sound("drone.buzz");
+	public static final SoundEvent DRONE_FPV = sound("drone.fpv");
+	public static final SoundEvent DRONE_ARM = sound("drone.arm");
 	public static final SoundEvent COUNTDOWN_BEEP = sound("missile.beep");
 	public static final SoundEvent IGNITION = sound("missile.ignition");
 	public static final SoundEvent IGNITION_SUB = sound("missile.ignition_sub");
@@ -633,6 +650,7 @@ public final class ModRegistry {
 		output.accept(GRENADE);
 		output.accept(ROCKET_LAUNCHER);
 		output.accept(RPG_ROCKET);
+		output.accept(FPV_DRONE_ITEM);
 		output.accept(TARGET_DESIGNATOR);
 		output.accept(COMMAND_CENTER_ITEM);
 		output.accept(AIRSTRIKE_RADIO);
@@ -643,6 +661,7 @@ public final class ModRegistry {
 		output.accept(AIR_DEFENSE_ITEM);
 		output.accept(CIWS_ITEM);
 		output.accept(IRON_DOME_ITEM);
+		output.accept(TAMIR_POD);
 		output.accept(DECOY_LAUNCHER_ITEM);
 		output.accept(LASER_DEFENSE_ITEM);
 		output.accept(JAMMER_ITEM);

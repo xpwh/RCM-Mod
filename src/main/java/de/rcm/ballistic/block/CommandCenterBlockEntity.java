@@ -49,7 +49,19 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 	private static final double USE_DISTANCE = 12.0;
 	private static final int STRIKE_COOLDOWN = 200;
 
+	/** Hostile missiles predicted to come down this close raise the alarm. */
+	public static final double ALARM_RADIUS = 300.0;
+	/** Length of the siren recording, ticks: it is sounded again when it has wound down. */
+	private static final int SIREN_TICKS = 280;
+	/** How long a destroyed site stays on the map as destroyed. */
+	private static final long DESTROYED_SHOWN = 6000L;
+
 	private final Set<UUID> viewers = new HashSet<>();
+	/** Sites seen in range, and when the ones that vanished were found destroyed. */
+	private final java.util.Map<BlockPos, DefenseNetwork.Kind> known = new java.util.HashMap<>();
+	private final java.util.Map<BlockPos, Long> destroyed = new java.util.HashMap<>();
+	private boolean alarm;
+	private long lastSiren = -100000L;
 	private int cooldown;
 	private @Nullable UUID owner;
 
@@ -61,6 +73,9 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 	public void serverTick(ServerLevel level) {
 		if (this.cooldown > 0) {
 			this.cooldown--;
+		}
+		if (level.getGameTime() % 20 == 0) {
+			this.alarmTick(level);
 		}
 		if (this.viewers.isEmpty() || level.getGameTime() % 10 != 0) {
 			return;
@@ -75,6 +90,45 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 			}
 			ServerPlayNetworking.send(player, this.snapshot(level, player, false));
 		}
+	}
+
+	/**
+	 * Air-raid warning: a hostile missile, rocket or drone predicted to come down within
+	 * {@value #ALARM_RADIUS} blocks sounds the siren (again and again until the sky is clear) and
+	 * warns everyone around.
+	 */
+	private void alarmTick(ServerLevel level) {
+		Vec3 here = Vec3.atCenterOf(this.worldPosition);
+		AirThreat worst = null;
+		for (AirThreat t : ThreatTracker.threats(level)) {
+			if (DefenseOwner.isFriendly(this.owner, t) || t.threatClass() == AirThreat.ThreatClass.AIRCRAFT) {
+				continue;
+			}
+			Vec3 impact = t.predictedImpact();
+			if (Math.hypot(impact.x - here.x, impact.z - here.z) < ALARM_RADIUS && (worst == null || t.etaTicks() < worst.etaTicks())) {
+				worst = t;
+			}
+		}
+		boolean was = this.alarm;
+		this.alarm = worst != null;
+		long now = level.getGameTime();
+		if (this.alarm && now - this.lastSiren >= SIREN_TICKS) {
+			this.lastSiren = now;
+			level.playSound(null, here.x, here.y + 3, here.z, ModRegistry.AIR_RAID, SoundSource.BLOCKS, 12.0F, 1.0F);
+		}
+		if (this.alarm && (!was || now % 100 == 0)) {
+			Component msg = Component.literal("⚠ ").append(Component.translatable("message.ballisticmissiles.air_raid",
+				Component.translatable(worst.nameKey()), Math.max(0, worst.etaTicks() / 20))).withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
+			for (ServerPlayer player : level.players()) {
+				if (player.position().distanceTo(here) < ALARM_RADIUS + 100) {
+					player.displayClientMessage(msg, true);
+				}
+			}
+		}
+	}
+
+	public boolean isAlarm() {
+		return this.alarm;
 	}
 
 	public void open(ServerPlayer player) {
@@ -94,18 +148,101 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 			Vec3 impact = t.predictedImpact();
 			boolean hostile = !DefenseOwner.isFriendly(viewer.getUUID(), t);
 			tracks.add(new TrackInfo(t.asEntity().getId() % 100, t.threatClass().ordinal(), t.nameKey(), (float) p.x, (float) p.y, (float) p.z,
-				(float) v.x, (float) v.z, (float) impact.x, (float) impact.z, 0.0F, t.etaTicks(), hostile, 0));
+				(float) v.x, (float) v.z, (float) impact.x, (float) impact.z, 0.0F, t.etaTicks(), hostile, 0, t.asEntity().getId()));
 			if (tracks.size() >= 200) {
 				break;
 			}
 		}
 		List<SiteInfo> sites = new ArrayList<>();
+		Set<BlockPos> seen = new HashSet<>();
+		long now = level.getGameTime();
 		for (DefenseNetwork.Kind kind : DefenseNetwork.Kind.values()) {
 			for (BlockPos p : DefenseNetwork.find(level, kind, here, RANGE)) {
-				sites.add(new SiteInfo(p, kind.ordinal()));
+				sites.add(siteState(level, p, kind));
+				seen.add(p);
+				this.known.put(p, kind);
+				this.destroyed.remove(p);
 			}
 		}
-		return new CommandDataPayload(this.worldPosition, open, RANGE, tracks, sites, links(viewer).size(), Mth.ceil(this.cooldown / 20.0F));
+		// sites that have dropped off the network: destroyed, or just out of reach (unloaded)
+		for (Iterator<java.util.Map.Entry<BlockPos, DefenseNetwork.Kind>> it = this.known.entrySet().iterator(); it.hasNext(); ) {
+			var e = it.next();
+			BlockPos p = e.getKey();
+			if (seen.contains(p)) {
+				continue;
+			}
+			if (level.isLoaded(p) && !(level.getBlockEntity(p) instanceof DefenseSiteBlock.Site) && !isDefenseEntity(level.getBlockEntity(p))) {
+				Long when = this.destroyed.computeIfAbsent(p, k -> now);
+				if (now - when > DESTROYED_SHOWN) {
+					it.remove();
+					this.destroyed.remove(p);
+					continue;
+				}
+				sites.add(new SiteInfo(p, e.getValue().ordinal(), typeOf(e.getValue(), null), -1, -1, -1, SiteInfo.DESTROYED));
+			} else if (!level.isLoaded(p)) {
+				sites.add(new SiteInfo(p, e.getValue().ordinal(), typeOf(e.getValue(), null), -1, -1, -1, SiteInfo.OFFLINE));
+			}
+		}
+		return new CommandDataPayload(this.worldPosition, open, RANGE, tracks, sites, links(viewer).size(), Mth.ceil(this.cooldown / 20.0F), this.alarm);
+	}
+
+	private static boolean isDefenseEntity(@Nullable BlockEntity be) {
+		return be instanceof AirDefenseBlockEntity || be instanceof CiwsBlockEntity || be instanceof LaserDefenseBlockEntity
+			|| be instanceof MissileSiloBlockEntity || be instanceof RadarBlockEntity || be instanceof JammerBlockEntity;
+	}
+
+	private static int typeOf(DefenseNetwork.Kind kind, @Nullable BlockEntity be) {
+		if (be instanceof AirDefenseBlockEntity) {
+			return SiteInfo.TYPE_PATRIOT;
+		} else if (be instanceof CiwsBlockEntity) {
+			return SiteInfo.TYPE_CIWS;
+		} else if (be instanceof LaserDefenseBlockEntity) {
+			return SiteInfo.TYPE_LASER;
+		} else if (be instanceof IronDomeBlockEntity) {
+			return SiteInfo.TYPE_IRON_DOME;
+		} else if (be instanceof DecoyLauncherBlockEntity) {
+			return SiteInfo.TYPE_DECOY;
+		}
+		return switch (kind) {
+			case RADAR -> SiteInfo.TYPE_RADAR;
+			case SILO -> SiteInfo.TYPE_SILO;
+			case JAMMER -> SiteInfo.TYPE_JAMMER;
+			default -> SiteInfo.TYPE_OTHER;
+		};
+	}
+
+	/** What the command center knows of a site: its rounds, whether it is reloading, jammed, without power... */
+	private static SiteInfo siteState(ServerLevel level, BlockPos pos, DefenseNetwork.Kind kind) {
+		BlockEntity be = level.isLoaded(pos) ? level.getBlockEntity(pos) : null;
+		int flags = de.rcm.ballistic.defense.EmpManager.jammedTicks(level, pos) > 0 ? SiteInfo.JAMMED : 0;
+		int ammo = -1;
+		int magazine = -1;
+		int spares = -1;
+		if (be instanceof IronDomeBlockEntity dome) {
+			ammo = dome.siteAmmo();
+			magazine = dome.siteMagazine();
+			spares = dome.siteSpares();
+			flags |= dome.siteReloading() ? SiteInfo.RELOADING : 0;
+		} else if (be instanceof AirDefenseBlockEntity patriot) {
+			ammo = patriot.getAmmo();
+			magazine = AirDefenseBlockEntity.MAGAZINE;
+			flags |= ammo < magazine ? SiteInfo.RELOADING : 0;
+		} else if (be instanceof CiwsBlockEntity ciws) {
+			ammo = ciws.getAmmo();
+			magazine = CiwsBlockEntity.MAGAZINE;
+			flags |= ciws.isFiring() ? SiteInfo.ACTIVE : 0;
+		} else if (be instanceof DecoyLauncherBlockEntity decoy) {
+			ammo = decoy.getAmmo();
+			magazine = DecoyLauncherBlockEntity.MAGAZINE;
+			flags |= ammo < magazine ? SiteInfo.RELOADING : 0;
+		} else if (be instanceof LaserDefenseBlockEntity laser) {
+			flags |= laser.isPowered() ? 0 : SiteInfo.UNPOWERED;
+		} else if (be instanceof JammerBlockEntity jammer) {
+			flags |= jammer.isJamming() ? SiteInfo.ACTIVE : 0;
+		} else if (be instanceof MissileSiloBlockEntity silo) {
+			flags |= silo.isCounting() ? SiteInfo.ACTIVE : 0;
+		}
+		return new SiteInfo(pos, kind.ordinal(), typeOf(kind, be), ammo, magazine, spares, flags);
 	}
 
 	/** The launcher links of the first target designator the player carries. */

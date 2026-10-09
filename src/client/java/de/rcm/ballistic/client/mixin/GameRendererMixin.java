@@ -33,6 +33,10 @@ public abstract class GameRendererMixin {
 
 	@Inject(method = "bobHurt", at = @At("HEAD"))
 	private void ballisticmissiles$shake(PoseStack poseStack, float partialTick, CallbackInfo ci) {
+		if (de.rcm.ballistic.client.drone.DroneClient.isFlying()) {
+			// the drone banks into its turns, and the picture with it
+			poseStack.mulPose(Axis.ZP.rotationDegrees(de.rcm.ballistic.client.drone.DroneClient.cameraRoll(partialTick)));
+		}
 		float shake = ClientEffects.shake(partialTick);
 		if (shake <= 0.001F) {
 			return;

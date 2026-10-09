@@ -82,8 +82,13 @@ public final class ModNetworking {
 	/** One radar track as shown on the scope. */
 	public record TrackInfo(
 		int number, int threatClass, String nameKey, float x, float y, float z, float vx, float vz, float impactX, float impactZ, float impactError,
-		int eta, boolean threat, int age
+		int eta, boolean threat, int age, int entityId
 	) {
+		public TrackInfo(int number, int threatClass, String nameKey, float x, float y, float z, float vx, float vz, float impactX, float impactZ,
+			float impactError, int eta, boolean threat, int age) {
+			this(number, threatClass, nameKey, x, y, z, vx, vz, impactX, impactZ, impactError, eta, threat, age, -1);
+		}
+
 		static void write(FriendlyByteBuf buf, TrackInfo t) {
 			buf.writeVarInt(t.number);
 			buf.writeVarInt(t.threatClass);
@@ -99,18 +104,57 @@ public final class ModNetworking {
 			buf.writeVarInt(t.eta);
 			buf.writeBoolean(t.threat);
 			buf.writeVarInt(t.age);
+			buf.writeInt(t.entityId);
 		}
 
 		static TrackInfo read(FriendlyByteBuf buf) {
 			return new TrackInfo(
 				buf.readVarInt(), buf.readVarInt(), buf.readUtf(96), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
-				buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readVarInt(), buf.readBoolean(), buf.readVarInt()
+				buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readVarInt(), buf.readBoolean(), buf.readVarInt(), buf.readInt()
 			);
 		}
 	}
 
-	/** Friendly site shown on the scope: 0 radar, 1 air defense, 2 silo. */
-	public record SiteInfo(BlockPos pos, int kind) {
+	/**
+	 * Friendly site shown on the scope: kind 0 radar, 1 air defense, 2 silo, 3 jammer; and for the
+	 * command center its state: {@code type} (see {@link #TYPE_RADAR}...), rounds ready, magazine,
+	 * spare reloads (-1 = none needed) and {@code flags} ({@link #JAMMED}...).
+	 */
+	public record SiteInfo(BlockPos pos, int kind, int type, int ammo, int magazine, int spares, int flags) {
+		public static final int TYPE_RADAR = 0;
+		public static final int TYPE_PATRIOT = 1;
+		public static final int TYPE_CIWS = 2;
+		public static final int TYPE_LASER = 3;
+		public static final int TYPE_IRON_DOME = 4;
+		public static final int TYPE_DECOY = 5;
+		public static final int TYPE_SILO = 6;
+		public static final int TYPE_JAMMER = 7;
+		public static final int TYPE_OTHER = 8;
+		public static final int JAMMED = 1;
+		public static final int RELOADING = 2;
+		public static final int DESTROYED = 4;
+		public static final int OFFLINE = 8;
+		public static final int UNPOWERED = 16;
+		public static final int ACTIVE = 32;
+
+		public SiteInfo(BlockPos pos, int kind) {
+			this(pos, kind, TYPE_OTHER, -1, -1, -1, 0);
+		}
+
+		static void write(FriendlyByteBuf buf, SiteInfo s) {
+			buf.writeBlockPos(s.pos);
+			buf.writeVarInt(s.kind);
+			buf.writeVarInt(s.type);
+			buf.writeVarInt(s.ammo + 1);
+			buf.writeVarInt(s.magazine + 1);
+			buf.writeVarInt(s.spares + 1);
+			buf.writeVarInt(s.flags);
+		}
+
+		static SiteInfo read(FriendlyByteBuf buf) {
+			return new SiteInfo(buf.readBlockPos(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt() - 1, buf.readVarInt() - 1, buf.readVarInt() - 1,
+				buf.readVarInt());
+		}
 	}
 
 	/** Server -> client: radar scope picture. {@code open} asks the client to open the scope screen. */
@@ -134,8 +178,7 @@ public final class ModNetworking {
 			}
 			buf.writeVarInt(p.sites.size());
 			for (SiteInfo s : p.sites) {
-				buf.writeBlockPos(s.pos());
-				buf.writeVarInt(s.kind());
+				SiteInfo.write(buf, s);
 			}
 			buf.writeVarInt(p.interceptors.size());
 			for (BlockPos i : p.interceptors) {
@@ -158,7 +201,7 @@ public final class ModNetworking {
 			int m = Math.min(256, buf.readVarInt());
 			List<SiteInfo> sites = new ArrayList<>(m);
 			for (int i = 0; i < m; i++) {
-				sites.add(new SiteInfo(buf.readBlockPos(), buf.readVarInt()));
+				sites.add(SiteInfo.read(buf));
 			}
 			int k = Math.min(256, buf.readVarInt());
 			List<BlockPos> interceptors = new ArrayList<>(k);
@@ -188,8 +231,8 @@ public final class ModNetworking {
 	}
 
 	/** Server -> client: the command center's situation map. {@code open} asks the client to open it. */
-	public record CommandDataPayload(BlockPos center, boolean open, int range, List<TrackInfo> tracks, List<SiteInfo> sites, int links, int cooldown)
-		implements CustomPacketPayload {
+	public record CommandDataPayload(BlockPos center, boolean open, int range, List<TrackInfo> tracks, List<SiteInfo> sites, int links, int cooldown,
+		boolean alarm) implements CustomPacketPayload {
 		public static final Type<CommandDataPayload> TYPE = new Type<>(BallisticMissiles.id("command_data"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, CommandDataPayload> CODEC = StreamCodec.of(CommandDataPayload::write, CommandDataPayload::read);
 
@@ -203,11 +246,11 @@ public final class ModNetworking {
 			}
 			buf.writeVarInt(p.sites.size());
 			for (SiteInfo s : p.sites) {
-				buf.writeBlockPos(s.pos());
-				buf.writeVarInt(s.kind());
+				SiteInfo.write(buf, s);
 			}
 			buf.writeVarInt(p.links);
 			buf.writeVarInt(p.cooldown);
+			buf.writeBoolean(p.alarm);
 		}
 
 		private static CommandDataPayload read(RegistryFriendlyByteBuf buf) {
@@ -222,9 +265,9 @@ public final class ModNetworking {
 			int m = Math.min(512, buf.readVarInt());
 			List<SiteInfo> sites = new ArrayList<>(m);
 			for (int i = 0; i < m; i++) {
-				sites.add(new SiteInfo(buf.readBlockPos(), buf.readVarInt()));
+				sites.add(SiteInfo.read(buf));
 			}
-			return new CommandDataPayload(center, open, range, tracks, sites, buf.readVarInt(), buf.readVarInt());
+			return new CommandDataPayload(center, open, range, tracks, sites, buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
 		}
 
 		@Override
@@ -415,7 +458,85 @@ public final class ModNetworking {
 		}
 	}
 
+	/** Client -> server, every tick while flying an FPV drone: the sticks, where the pilot looks, and a button pressed. */
+	public record DroneInputPayload(int drone, float forward, float strafe, float lift, boolean boost, float yaw, float pitch, int action)
+		implements CustomPacketPayload {
+		public static final Type<DroneInputPayload> TYPE = new Type<>(BallisticMissiles.id("drone_input"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DroneInputPayload> CODEC = StreamCodec.of(DroneInputPayload::write, DroneInputPayload::read);
+
+		private static void write(RegistryFriendlyByteBuf buf, DroneInputPayload p) {
+			buf.writeVarInt(p.drone);
+			buf.writeFloat(p.forward);
+			buf.writeFloat(p.strafe);
+			buf.writeFloat(p.lift);
+			buf.writeBoolean(p.boost);
+			buf.writeFloat(p.yaw);
+			buf.writeFloat(p.pitch);
+			buf.writeVarInt(p.action);
+		}
+
+		private static DroneInputPayload read(RegistryFriendlyByteBuf buf) {
+			return new DroneInputPayload(buf.readVarInt(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readBoolean(), buf.readFloat(), buf.readFloat(),
+				buf.readVarInt());
+		}
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/**
+	 * World settings: server -> client to show them (on join and on every change), client -> server
+	 * when an operator changes them on the settings screen.
+	 */
+	public record ServerConfigPayload(int misfireChance) implements CustomPacketPayload {
+		public static final Type<ServerConfigPayload> TYPE = new Type<>(BallisticMissiles.id("server_config"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ServerConfigPayload> CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_INT, ServerConfigPayload::misfireChance, ServerConfigPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Whether {@code player} may change the world settings: an operator, or the owner of a singleplayer world. */
+	public static boolean mayConfigure(net.minecraft.server.level.ServerPlayer player) {
+		return player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)
+			|| player.level().getServer().isSingleplayerOwner(player.nameAndId());
+	}
+
+	/** Sends the current world settings to everyone. */
+	public static void broadcastServerConfig(net.minecraft.server.MinecraftServer server) {
+		ServerConfigPayload payload = new ServerConfigPayload(de.rcm.ballistic.config.ServerConfig.misfireChance);
+		for (var player : server.getPlayerList().getPlayers()) {
+			ServerPlayNetworking.send(player, payload);
+		}
+	}
+
 	public static void init() {
+		PayloadTypeRegistry.playC2S().register(DroneInputPayload.TYPE, DroneInputPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(DroneInputPayload.TYPE, (payload, context) -> {
+			var player = context.player();
+			if (player.level().getEntity(payload.drone()) instanceof de.rcm.ballistic.entity.FpvDroneEntity drone && drone.distanceToSqr(player) < 600 * 600) {
+				drone.input(player, payload.forward(), payload.strafe(), payload.lift(), payload.boost(), payload.yaw(), payload.pitch(), payload.action());
+			}
+		});
+		PayloadTypeRegistry.playS2C().register(ServerConfigPayload.TYPE, ServerConfigPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(ServerConfigPayload.TYPE, ServerConfigPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ServerConfigPayload.TYPE, (payload, context) -> {
+			var player = context.player();
+			if (!mayConfigure(player)) {
+				player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.server_config_denied")
+					.withStyle(net.minecraft.ChatFormatting.RED), false);
+				ServerPlayNetworking.send(player, new ServerConfigPayload(de.rcm.ballistic.config.ServerConfig.misfireChance));
+				return;
+			}
+			de.rcm.ballistic.config.ServerConfig.misfireChance = net.minecraft.util.Mth.clamp(payload.misfireChance(), 0, 100);
+			de.rcm.ballistic.config.ServerConfig.save();
+			broadcastServerConfig(player.level().getServer());
+		});
 		PayloadTypeRegistry.playS2C().register(GunshotPayload.TYPE, GunshotPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(BulletHolePayload.TYPE, BulletHolePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(GunInputPayload.TYPE, GunInputPayload.CODEC);

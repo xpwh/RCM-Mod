@@ -400,6 +400,18 @@ public final class DetonationManager {
 	}
 
 	/**
+	 * Rocket propellant going up (a missile blowing up on its stand or crashing after a failed
+	 * launch): a huge, fiery, sooty fireball rather than the sharp blast of a warhead.
+	 */
+	public static void fuelExplosion(ServerLevel level, Vec3 pos, @Nullable Entity source, float power) {
+		broadcast(level, pos, power > 5.0F ? Warhead.AERIAL_BOMB : Warhead.DRONE);
+		FlyingDebris.launch(level, pos, Math.min(4.0, power * 0.5), (int) Math.min(18, 6 + power), 1.1);
+		level.explode(source, pos.x, pos.y, pos.z, Math.min(power, 9.0F), true, Level.ExplosionInteraction.TNT);
+		BlastPhysics.shatter(level, pos, 0.0, power * 3.0, 50, 0.9F);
+		Wasteland.scorch(level, BlockPos.containing(pos), (int) Mth.clamp(power * 0.6F, 2, 6), level.getRandom(), 0.4F, false);
+	}
+
+	/**
 	 * A shot-down aircraft hitting the ground: the fuel goes up in a fireball, wreckage is flung about
 	 * and the crash site burns. In water just a great splash and steam.
 	 */
