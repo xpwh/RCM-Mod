@@ -54,8 +54,6 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 	private static final BoxMesh RADAR_ARRAY = buildRadarArray();
 	private static final BoxMesh LAMP = new BoxMesh.Builder().box(-0.06F, 0.0F, -0.06F, 0.06F, 0.12F, 0.06F, RED_LAMP).build();
 	/** The reload truck (HEMTT-style with a loading crane), in truck space: +Z forward, origin at the middle of the bed, on the ground. */
-	private static final BoxMesh TRUCK = buildTruck();
-	private static final BoxMesh HOOK = new BoxMesh.Builder().box(-0.12F, -0.25F, -0.12F, 0.12F, 0.0F, 0.12F, STEEL).build();
 
 	// the pod swap: where the truck parks (trailer space), its bed, the two pod places on it
 	private static final float TRUCK_X = -3.6F;
@@ -66,6 +64,9 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 	private static final float LOWERED_ELEVATION = 6.0F * Mth.DEG_TO_RAD;
 	/** Crane post on the truck (truck space). */
 	private static final Vector3f CRANE_POST = new Vector3f(0.95F, 3.3F, 3.6F);
+	// built after the constants above (the truck needs the crane post)
+	private static final BoxMesh TRUCK = buildTruck();
+	private static final BoxMesh HOOK = new BoxMesh.Builder().box(-0.12F, -0.25F, -0.12F, 0.12F, 0.0F, 0.12F, STEEL).build();
 
 	public IronDomeRenderer(BlockEntityRendererProvider.Context context) {
 	}
