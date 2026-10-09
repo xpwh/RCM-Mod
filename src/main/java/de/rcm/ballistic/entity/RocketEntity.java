@@ -125,6 +125,11 @@ public class RocketEntity extends Entity implements de.rcm.ballistic.defense.Air
 
 	// ------------------------------------------------------------------ as a target for air defense
 
+	/** What fired this rocket. */
+	public @Nullable Entity shooter() {
+		return this.shooter;
+	}
+
 	/** The player whose aircraft fired this rocket. */
 	public java.util.@Nullable UUID getOwnerUuid() {
 		return this.shooter instanceof JetEntity jet ? jet.getCaller() : null;

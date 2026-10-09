@@ -79,7 +79,8 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		Minecraft mc = Minecraft.getInstance();
 		float now = mc.level == null ? 0.0F : mc.level.getGameTime() + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		long lastShot = context.firstPerson() ? Math.max(state.lastShot(), AkClient.lastShotTick()) : state.lastShot();
-		AkAnim anim = ANIM.compute(state, now, lastShot, context.firstPerson() ? AkClient.checkTime(now) : -1.0F);
+		AkAnim anim = ANIM.compute(state, now, lastShot, context.firstPerson() ? AkClient.checkTime(now) : -1.0F,
+			context.firstPerson() ? AkClient.inspectTime(now) : -1.0F);
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.5F, 0.5F); // undo the item transform's corner offset
 		if (context.firstPerson()) {

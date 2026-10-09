@@ -119,6 +119,28 @@ public final class AkFirstPerson {
 		new float[] {66.0F, -0.02F, 0.07F, -0.035F, 2.0F, 1.0F, 10.0F},
 		new float[] {AkItem.RELOAD_EMPTY, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F});
 
+	/**
+	 * Looking the rifle over (G): {tick, x, y, z, roll, pitch, yaw}. Turned in to show its right side
+	 * (selector, ejection port) for the press check, then rolled over to the left to look at the
+	 * magazine and slap it home, and back on target.
+	 */
+	private static final Keys INSPECT = new Keys(
+		new float[] {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F},
+		new float[] {10.0F, -0.11F, 0.1F, -0.09F, 12.0F, 6.0F, 52.0F},
+		new float[] {20.0F, -0.115F, 0.11F, -0.095F, 16.0F, 9.0F, 56.0F},
+		new float[] {28.0F, -0.11F, 0.115F, -0.1F, 18.0F, 7.0F, 54.0F},
+		new float[] {36.0F, -0.105F, 0.11F, -0.095F, 14.0F, 7.0F, 50.0F},
+		new float[] {45.0F, -0.06F, 0.13F, -0.08F, -48.0F, 10.0F, -18.0F},
+		new float[] {53.0F, -0.055F, 0.13F, -0.08F, -44.0F, 8.0F, -16.0F},
+		new float[] {58.0F, -0.03F, 0.07F, -0.04F, -20.0F, 4.0F, -8.0F},
+		new float[] {AkClient.INSPECT_TICKS, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F});
+	/** The last pull of the trigger on an empty gun. */
+	private static long dryTick = -100L;
+
+	static void dryFire(long now) {
+		dryTick = now;
+	}
+
 	/** A shot of our own: the springs take it in on the next frame. */
 	static void kick() {
 		pendingKicks++;
@@ -262,6 +284,28 @@ public final class AkFirstPerson {
 			poseStack.mulPose(Axis.ZP.rotationDegrees(-24.0F * c));
 			poseStack.mulPose(Axis.XP.rotationDegrees(5.0F * c));
 			poseStack.mulPose(Axis.YP.rotationDegrees(28.0F * c));
+		}
+
+		// looking it over
+		float insp = AkClient.inspectTime(now);
+		if (insp >= 0.0F) {
+			float slap = insp > 49.0F && insp < 54.0F ? Mth.sin((insp - 49.0F) / 5.0F * Mth.PI) : 0.0F;
+			float snap = insp > 35.0F && insp < 39.0F ? Mth.sin((insp - 35.0F) / 4.0F * Mth.PI) : 0.0F;
+			poseStack.translate(INSPECT.at(insp, 0), INSPECT.at(insp, 1) + 0.01F * slap, INSPECT.at(insp, 2) - 0.006F * snap);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(INSPECT.at(insp, 3)));
+			poseStack.mulPose(Axis.XP.rotationDegrees(INSPECT.at(insp, 4) - 3.0F * slap + 1.5F * snap));
+			poseStack.mulPose(Axis.YP.rotationDegrees(INSPECT.at(insp, 5)));
+		}
+
+		// a click instead of a bang: the trigger finger's twitch, then a quick cant to look at the empty rifle
+		float dry = now - dryTick;
+		if (dry >= 0.0F && dry < 22.0F) {
+			float twitch = dry < 4.0F ? Mth.sin(dry / 4.0F * Mth.PI) : 0.0F;
+			float look = dry < 4.0F ? 0.0F : smooth((dry - 4.0F) / 5.0F) * (1.0F - smooth((dry - 13.0F) / 9.0F));
+			poseStack.translate(-0.03F * look, 0.035F * look - 0.004F * twitch, -0.006F * twitch);
+			poseStack.mulPose(Axis.XP.rotationDegrees(-1.2F * twitch + 4.0F * look));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-16.0F * look));
+			poseStack.mulPose(Axis.YP.rotationDegrees(10.0F * look));
 		}
 
 		// brought up into the shoulder when drawn: from low and canted to on target

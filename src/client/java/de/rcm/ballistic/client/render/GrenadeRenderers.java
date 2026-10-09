@@ -98,7 +98,7 @@ public final class GrenadeRenderers {
 		return b.build();
 	}
 
-	/** In the hand: 0 = pin in, 1 = pin pulled (the local player winding up to throw this very stack). */
+	/** In the hand: 0 = pin in, 1 = pin pulled (the local player winding up to throw this very stack), 2 = lever gone too (cooking). */
 	public static final class ItemRenderer implements SpecialModelRenderer<Integer> {
 		@Override
 		public void submit(Integer state, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil,
@@ -126,7 +126,7 @@ public final class GrenadeRenderers {
 		public Integer extractArgument(ItemStack stack) {
 			var player = Minecraft.getInstance().player;
 			if (player != null && player.isUsingItem() && player.getUseItem() == stack && player.getTicksUsingItem() >= 5) {
-				return 1;
+				return de.rcm.ballistic.client.gun.GrenadeClient.isCooking() ? 2 : 1;
 			}
 			return 0;
 		}

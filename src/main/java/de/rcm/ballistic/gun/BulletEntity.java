@@ -177,8 +177,14 @@ public class BulletEntity extends Entity {
 			Vec3 push = this.getDeltaMovement().normalize().scale(0.12);
 			e.push(push.x, 0.02, push.z);
 		}
-		level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.REDSTONE_BLOCK.defaultBlockState()), at.x, at.y, at.z, 6, 0.08, 0.08, 0.08, 0.15);
-		level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.0F, 0.9F + this.random.nextFloat() * 0.2F);
+		if (e instanceof LivingEntity) {
+			level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.REDSTONE_BLOCK.defaultBlockState()), at.x, at.y, at.z, 6, 0.08, 0.08, 0.08, 0.15);
+			level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.0F, 0.9F + this.random.nextFloat() * 0.2F);
+		} else {
+			// an airframe or a vehicle: sparks off the metal
+			level.sendParticles(ParticleTypes.ELECTRIC_SPARK, at.x, at.y, at.z, 8, 0.05, 0.05, 0.05, 0.25);
+			level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_METAL, SoundSource.PLAYERS, 1.2F, 0.9F + this.random.nextFloat() * 0.2F);
+		}
 		this.discard();
 	}
 

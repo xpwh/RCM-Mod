@@ -21,7 +21,25 @@ public final class GrenadeClient {
 	private static final Vector3f REST = new Vector3f(-0.42F, -0.42F, 0.12F);
 	private static final Vector3f PULLED = new Vector3f(-0.22F, 0.0F, 0.06F);
 
+	/** Client game time the lever was let go in the hand (cooking), or -1. */
+	private static long cookedAt = -1L;
+
 	private GrenadeClient() {
+	}
+
+	/** The lever was let go during the current wind-up (not some earlier one). */
+	public static boolean isCooking() {
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		return cookedAt >= 0L && player != null && player.isUsingItem() && player.getUseItem().getItem() instanceof GrenadeItem
+			&& player.level().getGameTime() - cookedAt <= player.getTicksUsingItem();
+	}
+
+	/** Left-click with the pin out: the thumb lets the lever fly. */
+	public static void cook() {
+		var level = net.minecraft.client.Minecraft.getInstance().level;
+		if (level != null && !isCooking()) {
+			cookedAt = level.getGameTime();
+		}
 	}
 
 	private static float smooth(float x) {
@@ -37,12 +55,28 @@ public final class GrenadeClient {
 	public static void transform(PoseStack poseStack, AbstractClientPlayer player, float partialTick) {
 		float t = used(player, partialTick);
 		if (t < 0.0F) {
+			cookedAt = -1L;
 			return;
 		}
 		float lift = smooth((t - 3.0F) / (GrenadeItem.WIND_UP - 3.0F));
-		poseStack.translate(0.04F * lift, 0.17F * lift, 0.2F * lift);
-		poseStack.mulPose(Axis.XP.rotationDegrees(-25.0F * lift));
-		poseStack.mulPose(Axis.ZP.rotationDegrees(-12.0F * lift));
+		if (player.isShiftKeyDown()) {
+			// underhand: the arm swings down and back past the hip
+			poseStack.translate(0.06F * lift, -0.16F * lift, 0.12F * lift);
+			poseStack.mulPose(Axis.XP.rotationDegrees(30.0F * lift));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-6.0F * lift));
+		} else {
+			poseStack.translate(0.04F * lift, 0.17F * lift, 0.2F * lift);
+			poseStack.mulPose(Axis.XP.rotationDegrees(-25.0F * lift));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-12.0F * lift));
+		}
+		if (isCooking()) {
+			// the lever flying off: a little jolt of the hand, then it trembles slightly while the fuse burns
+			float c = player.level().getGameTime() - cookedAt + partialTick;
+			float jolt = c < 5.0F ? Mth.sin(c / 5.0F * Mth.PI) : 0.0F;
+			float tremble = c > 5.0F ? 0.004F * Mth.sin(c * 2.3F) : 0.0F;
+			poseStack.translate(tremble, 0.02F * jolt + tremble * 0.6F, 0.0F);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-8.0F * jolt));
+		}
 	}
 
 	public static void renderArms(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, float partialTick) {

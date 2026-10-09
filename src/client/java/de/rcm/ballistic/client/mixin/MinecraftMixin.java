@@ -33,6 +33,17 @@ public abstract class MinecraftMixin {
 		}
 	}
 
+	/** Left-click with the pin out: cook the grenade. */
+	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$grenadeCook(CallbackInfoReturnable<Boolean> cir) {
+		if (this.player != null && this.player.isUsingItem() && this.player.getUseItem().getItem() instanceof de.rcm.ballistic.gun.GrenadeItem) {
+			de.rcm.ballistic.client.gun.GrenadeClient.cook();
+			net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+				new de.rcm.ballistic.network.ModNetworking.GunInputPayload(de.rcm.ballistic.network.ModNetworking.GunInputPayload.GRENADE_COOK));
+			cir.setReturnValue(false);
+		}
+	}
+
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$rpgNoMining(boolean attacking, CallbackInfo ci) {
 		if (this.player != null && (this.player.getMainHandItem().getItem() instanceof RocketLauncherItem

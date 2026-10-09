@@ -399,6 +399,27 @@ public final class DetonationManager {
 		highExplosive(level, pos, source, 3.6F, 0, 3);
 	}
 
+	/**
+	 * A shot-down aircraft hitting the ground: the fuel goes up in a fireball, wreckage is flung about
+	 * and the crash site burns. In water just a great splash and steam.
+	 */
+	public static void aircraftCrash(ServerLevel level, Vec3 pos, @Nullable Entity source, boolean large, boolean water) {
+		if (water) {
+			level.sendParticles(ParticleTypes.SPLASH, pos.x, pos.y + 0.5, pos.z, 200, 2.5, 0.5, 2.5, 0.6);
+			level.sendParticles(ParticleTypes.CLOUD, pos.x, pos.y + 1.0, pos.z, 40, 2.0, 1.0, 2.0, 0.08);
+			level.playSound(null, pos.x, pos.y, pos.z, net.minecraft.sounds.SoundEvents.GENERIC_SPLASH, net.minecraft.sounds.SoundSource.HOSTILE, 8.0F, 0.5F);
+			level.explode(source, pos.x, pos.y, pos.z, large ? 3.0F : 2.0F, false, Level.ExplosionInteraction.NONE);
+			return;
+		}
+		broadcast(level, pos, large ? Warhead.AERIAL_BOMB : Warhead.DRONE);
+		FlyingDebris.launch(level, pos, large ? 3.0 : 2.0, large ? 14 : 9, 1.0);
+		level.explode(source, pos.x, pos.y, pos.z, large ? 5.0F : 3.6F, false, Level.ExplosionInteraction.TNT);
+		BlastPhysics.fragments(level, pos, source, 20, 14.0, 4.0F);
+		BlastPhysics.shatter(level, pos, 0.0, large ? 14.0 : 9.0, 40, 0.9F);
+		// the burning wreck: jet fuel sets the ground around alight
+		Wasteland.scorch(level, BlockPos.containing(pos), large ? 4 : 3, level.getRandom(), 0.35F, false);
+	}
+
 	/** AC-130 105 mm howitzer shell. */
 	public static void detonateHowitzerShell(ServerLevel level, Vec3 pos, Entity source) {
 		broadcast(level, pos, Warhead.AERIAL_BOMB);

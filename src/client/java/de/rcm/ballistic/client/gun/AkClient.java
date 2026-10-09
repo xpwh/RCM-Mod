@@ -40,6 +40,10 @@ public final class AkClient {
 	private static KeyMapping reload;
 	private static KeyMapping selector;
 	private static KeyMapping check;
+	private static KeyMapping inspect;
+	/** Looking the rifle over: when it started (game tick). */
+	static long inspectStart = -1000L;
+	static final int INSPECT_TICKS = 64;
 
 	// the trigger as the client sees it (left mouse button), with the shots it has predicted
 	private static boolean triggerDown;
@@ -69,6 +73,7 @@ public final class AkClient {
 		reload = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.reload", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY));
 		selector = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.selector", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, CATEGORY));
 		check = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.mag_check", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, CATEGORY));
+		inspect = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.inspect", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, CATEGORY));
 		ClientTickEvents.END_CLIENT_TICK.register(AkClient::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(GunAudio::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(ShellCasings::tick);
@@ -99,6 +104,33 @@ public final class AkClient {
 	public static float checkTime(float now) {
 		float t = now - checkStart;
 		return t >= 0.0F && t < CHECK_TICKS ? t : -1.0F;
+	}
+
+	/** Ticks into looking the rifle over, or -1. */
+	public static float inspectTime(float now) {
+		float t = now - inspectStart;
+		return t >= 0.0F && t < INSPECT_TICKS ? t : -1.0F;
+	}
+
+	/** Sounds of looking the rifle over: the sling and the rifle shifting, the press check, the slap on the magazine. */
+	private static void inspectTick(LocalPlayer player, GunState state, long now) {
+		long t = now - inspectStart;
+		Vec3 at = player.getEyePosition();
+		if (t == 1 || t == 40) {
+			GunAudio.play(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC.value(), at, 0.35F, 1.1F);
+		} else if (t == 29) {
+			GunAudio.play(ModRegistry.AK_SELECTOR, at, 0.45F, 0.75F);
+		} else if (t == 35) {
+			GunAudio.play(ModRegistry.AK_SELECTOR, at, 0.55F, 1.15F);
+			if (state.rounds() > 0) {
+				// brass in the chamber, seen: say so
+				Minecraft.getInstance().gui.setOverlayMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.ak_chamber_loaded"), false);
+			} else {
+				Minecraft.getInstance().gui.setOverlayMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.ak_chamber_empty"), false);
+			}
+		} else if (t == 50 && state.hasMag()) {
+			GunAudio.play(ModRegistry.AK_MAG_IN, at, 0.3F, 1.25F);
+		}
 	}
 
 	static boolean checking(long now) {
@@ -148,15 +180,34 @@ public final class AkClient {
 			GunState state = holdingAk(player) ? AkItem.state(stack) : null;
 			boolean checking = checking(now);
 			while (check.consumeClick()) {
+				if (player.getMainHandItem().getItem() instanceof de.rcm.ballistic.item.RocketLauncherItem) {
+					de.rcm.ballistic.client.item.RpgClient.startCheck(player);
+				}
 				if (state != null && !state.reloading() && !checking && state.hasMag()) {
 					checkStart = now;
 					checking = true;
 				}
 			}
 			magCheckTick(mc, player, state, now);
+			while (inspect.consumeClick()) {
+				if (state != null && !state.reloading() && !checking && aim <= 0.0F && inspectTime(now) < 0.0F && !triggerDown) {
+					inspectStart = now;
+				}
+			}
+			// anything else you do with the rifle breaks off looking it over
+			if (inspectTime(now) >= 0.0F && (state == null || state.reloading() || checking || mc.options.keyAttack.isDown() || AkItem.isAiming(player)
+				|| player.isSprinting())) {
+				inspectStart = -1000L;
+			}
+			if (state != null && inspectTime(now) >= 0.0F) {
+				inspectTick(player, state, now);
+			}
 			// the trigger: held down with the rifle in hand and nothing else on screen
 			boolean want = state != null && mc.screen == null && mc.options.keyAttack.isDown() && !checking;
 			if (want != triggerDown) {
+				if (want && !state.reloading() && state.mode() != GunState.SAFE && state.rounds() <= 0) {
+					AkFirstPerson.dryFire(now); // the hammer falls on nothing
+				}
 				triggerDown = want;
 				triggerTick = now;
 				pressShots = 0;

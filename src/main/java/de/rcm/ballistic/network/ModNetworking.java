@@ -403,6 +403,8 @@ public final class ModNetworking {
 		public static final int RPG_FIRE = 3;
 		public static final int TRIGGER_DOWN = 4;
 		public static final int TRIGGER_UP = 5;
+		public static final int GRENADE_COOK = 6;
+		public static final int AK_INSPECT = 7;
 		public static final Type<GunInputPayload> TYPE = new Type<>(BallisticMissiles.id("gun_input"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunInputPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunInputPayload::action, GunInputPayload::new);
@@ -424,6 +426,7 @@ public final class ModNetworking {
 				case GunInputPayload.SELECTOR -> de.rcm.ballistic.gun.AkItem.cycleMode(context.player());
 				case GunInputPayload.TRIGGER_DOWN -> de.rcm.ballistic.gun.AkItem.trigger(context.player(), true);
 				case GunInputPayload.TRIGGER_UP -> de.rcm.ballistic.gun.AkItem.trigger(context.player(), false);
+				case GunInputPayload.GRENADE_COOK -> de.rcm.ballistic.gun.GrenadeItem.cook(context.player());
 				case GunInputPayload.RPG_FIRE -> de.rcm.ballistic.item.RocketLauncherItem.serverTrigger(context.player());
 				default -> {
 				}

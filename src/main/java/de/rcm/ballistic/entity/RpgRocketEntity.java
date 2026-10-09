@@ -26,14 +26,17 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * PG-7V rocket-propelled grenade from the RPG-7. The small powder booster throws it out of the tube
- * (that charge is burnt before it leaves, so the shooter is not burnt); a few metres out the
- * sustainer motor ignites and accelerates it, spinning on its fins, trailing flame and smoke. The
- * shaped-charge warhead goes off on the piezo nose fuse at the first hard contact, or self-destructs
- * at the end of its flight.
+ * at about 115 m/s (that charge is burnt before it leaves, so the shooter is not burnt); it coasts,
+ * sagging a little, and about eleven metres out the sustainer motor lights with a crack and drives it
+ * up to some 300 m/s, spinning on its fins, trailing flame and smoke. A crosswind does what it does
+ * to the real thing: while the motor burns, the big tail fins weathercock the nose round INTO the
+ * wind, so the round curves upwind; once the motor is out, it drifts downwind. The shaped-charge
+ * warhead goes off on the piezo nose fuse at the first hard contact, or self-destructs at the end of
+ * its flight (about 900 m).
  */
 public class RpgRocketEntity extends Entity {
 	/** Ticks of coasting on the booster before the sustainer lights. */
-	public static final int SUSTAINER_IGNITION = 3;
+	public static final int SUSTAINER_IGNITION = 6;
 	private static final int SUSTAINER_BURNOUT = 45;
 	private static final int SELF_DESTRUCT = 110;
 	private static final double MUZZLE_SPEED = 1.7;
@@ -70,12 +73,17 @@ public class RpgRocketEntity extends Entity {
 		super.tick();
 		Vec3 pos = this.position();
 		Vec3 vel = this.getDeltaMovement();
+		double[] wind = de.rcm.ballistic.explosion.Wind.at(this.level().getGameTime(), pos.y);
+		// the wind across the line of flight
+		Vec3 heading = vel.lengthSqr() > 1.0E-6 ? vel.normalize() : new Vec3(0, 0, 1);
+		Vec3 w = new Vec3(wind[0], 0, wind[1]);
+		Vec3 cross = w.subtract(heading.scale(w.dot(heading)));
 		if (this.sustainerBurning()) {
-			// the sustainer pushes it up to about 300 m/s; the fins keep it pointing into the wind
+			// the sustainer pushes it up to about 300 m/s; the fins weathercock it into the wind
 			double speed = Math.min(TOP_SPEED, vel.length() + 0.32);
-			vel = vel.normalize().scale(speed).add(0, -0.006, 0);
+			vel = vel.normalize().scale(speed).add(0, -0.006, 0).subtract(cross.scale(0.15));
 		} else {
-			vel = vel.scale(0.995).add(0, this.tickCount < SUSTAINER_IGNITION ? -0.01 : -0.03, 0);
+			vel = vel.scale(0.995).add(0, this.tickCount < SUSTAINER_IGNITION ? -0.012 : -0.03, 0).add(cross.scale(0.05));
 		}
 		Vec3 next = pos.add(vel);
 		Level level = this.level();

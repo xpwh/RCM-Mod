@@ -229,6 +229,39 @@ public final class AkAnim {
 	}
 
 	/**
+	 * Looking the rifle over: a press check (the right hand eases the bolt back a little to see the
+	 * brass in the chamber and lets it snap home), and later the left hand slaps the magazine to make
+	 * sure it is seated. The rifle's own turning is in {@link AkFirstPerson}.
+	 */
+	private void inspect(float t, GunState state) {
+		Vector3f handle = new Vector3f(HANDLE);
+		if (t >= 20.0F && t < 40.0F) {
+			float b = t < 29.0F ? 0.0F : t < 32.0F ? smooth((t - 29.0F) / 3.0F) * 0.4F : t < 35.0F ? 0.4F : t < 36.0F ? 0.4F * (36.0F - t) : 0.0F;
+			this.bolt = Math.max(this.bolt, b);
+			if (t < 26.0F) {
+				float f = (t - 20.0F) / 6.0F;
+				lerp(GRIP, handle, f, this.rightHand).add(0.02F * Mth.sin(Mth.clamp(f, 0.0F, 1.0F) * Mth.PI), 0.04F * Mth.sin(Mth.clamp(f, 0.0F, 1.0F) * Mth.PI), 0.0F);
+			} else if (t < 36.0F) {
+				this.rightHand.set(handle).add(0.0F, 0.0F, BOLT_TRAVEL * this.bolt);
+			} else {
+				lerp(new Vector3f(handle).add(0.015F, 0.01F, 0.0F), GRIP, (t - 36.0F) / 4.0F, this.rightHand);
+			}
+		}
+		if (state.hasMag() && t >= 44.0F && t < 60.0F) {
+			Vector3f hold = this.mag.transformPosition(MAG_HOLD, new Vector3f()).add(0.0F, -0.02F, 0.0F);
+			if (t < 49.0F) {
+				swing(HANDGUARD, hold, (t - 44.0F) / 5.0F, this.leftHand);
+			} else if (t < 53.0F) {
+				// the slap: up into the bottom of the magazine
+				float k = Mth.sin(Mth.clamp((t - 49.0F) / 2.0F, 0.0F, 1.0F) * Mth.PI);
+				this.leftHand.set(hold).add(0.0F, 0.03F * k, 0.0F);
+			} else {
+				swing(hold, HANDGUARD, (t - 53.0F) / 7.0F, this.leftHand);
+			}
+		}
+	}
+
+	/**
 	 * @param lastShot game tick of the last shot (the client's own for the local player)
 	 */
 	public AkAnim compute(GunState state, float now, long lastShot) {
@@ -239,6 +272,13 @@ public final class AkAnim {
 	 * @param check ticks into a magazine check (local player, first person), or -1
 	 */
 	public AkAnim compute(GunState state, float now, long lastShot, float check) {
+		return this.compute(state, now, lastShot, check, -1.0F);
+	}
+
+	/**
+	 * @param inspect ticks into looking the rifle over (local player, first person), or -1
+	 */
+	public AkAnim compute(GunState state, float now, long lastShot, float check, float inspect) {
 		float shot = now - lastShot;
 		this.bolt = shot >= 0.0F && shot < AkItem.CYCLE ? Mth.sin(shot / AkItem.CYCLE * Mth.PI) : 0.0F;
 		this.magVisible = state.hasMag();
@@ -251,6 +291,8 @@ public final class AkAnim {
 		if (!state.reloading()) {
 			if (check >= 0.0F && state.hasMag()) {
 				this.magCheck(check);
+			} else if (inspect >= 0.0F) {
+				this.inspect(inspect, state);
 			}
 			return this;
 		}

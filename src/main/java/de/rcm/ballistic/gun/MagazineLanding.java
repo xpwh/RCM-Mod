@@ -10,6 +10,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -71,7 +72,7 @@ public final class MagazineLanding {
 			boolean ground = e.onGround();
 			// hits the ground fast enough to be heard (after the first knock, a bounce has to be livelier)
 			if (ground && !f.wasOnGround && f.lastVy < (f.knocks == 0 ? -0.05 : -0.1)) {
-				land(level, e, (float) Math.min(1.0, -f.lastVy * 2.2 + 0.35) * (f.knocks == 0 ? 1.0F : 0.45F));
+				knock(level, e, (float) Math.min(1.0, -f.lastVy * 2.2 + 0.35) * (f.knocks == 0 ? 1.0F : 0.45F));
 				f.knocks++;
 			}
 			f.wasOnGround = ground;
@@ -79,7 +80,11 @@ public final class MagazineLanding {
 		}
 	}
 
-	private static void land(ServerLevel level, ItemEntity e, float loud) {
+	/**
+	 * A steel object (magazine, grenade) striking the ground it lies on: the sound of the knock
+	 * depends on the block. {@code loud} 0..1 is how hard it hit.
+	 */
+	public static void knock(ServerLevel level, Entity e, float loud) {
 		BlockPos at = e.blockPosition();
 		BlockState on = level.getBlockState(at);
 		// carpet, snow layers, slabs: the block the magazine is in is the one it lies on
@@ -119,7 +124,7 @@ public final class MagazineLanding {
 		}
 	}
 
-	private static void play(ServerLevel level, ItemEntity e, SoundEvent sound, float volume, float pitch) {
+	private static void play(ServerLevel level, Entity e, SoundEvent sound, float volume, float pitch) {
 		level.playSound(null, e.getX(), e.getY(), e.getZ(), sound, SoundSource.PLAYERS, volume, pitch);
 	}
 

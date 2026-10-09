@@ -51,6 +51,9 @@ public class JetEntity extends Entity implements AirThreat {
 	private static final EntityDataAccessor<Boolean> DATA_BAY = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> DATA_TYPE = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Boolean> DATA_FIRING = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.BOOLEAN);
+	/** 0 = undamaged, 1 = shot down (synced, for the smoke and fire it trails). */
+	private static final EntityDataAccessor<Float> DATA_DAMAGE = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Boolean> DATA_CRASHING = SynchedEntityData.defineId(JetEntity.class, EntityDataSerializers.BOOLEAN);
 	/** A-10 gun run: opens fire this far before the target, ceases this close. */
 	private static final double GUN_OPEN = 200.0;
 	private static final double GUN_CEASE = 55.0;
@@ -97,6 +100,13 @@ public class JetEntity extends Entity implements AirThreat {
 	private boolean egress;
 	private int egressAge;
 	private @Nullable UUID caller;
+
+	private float health = -1.0F;
+	/** Shot down: falling (velocity in blocks per tick), and for how long. */
+	private Vec3 crashVelocity = Vec3.ZERO;
+	private int crashAge;
+	private float crashRoll;
+	private @Nullable Entity killer;
 
 	private int engagements;
 	private int flares = 6;
@@ -177,6 +187,8 @@ public class JetEntity extends Entity implements AirThreat {
 		builder.define(DATA_BAY, false);
 		builder.define(DATA_TYPE, JetType.STRIKE.ordinal());
 		builder.define(DATA_FIRING, false);
+		builder.define(DATA_DAMAGE, 0.0F);
+		builder.define(DATA_CRASHING, false);
 	}
 
 	public Vec3 getDir() {
@@ -225,11 +237,25 @@ public class JetEntity extends Entity implements AirThreat {
 		return this.getJetType() == JetType.STRIKE && this.getBombsLeft() <= 0;
 	}
 
+	/** How badly it is hit, 0..1 (the smoke and fire it trails). */
+	public float getDamage() {
+		return this.entityData.get(DATA_DAMAGE);
+	}
+
+	/** Shot down and going in. */
+	public boolean isCrashing() {
+		return this.entityData.get(DATA_CRASHING);
+	}
+
 	@Override
 	public void tick() {
 		super.tick();
 		if (!(this.level() instanceof ServerLevel level)) {
 			ClientHooks.jetClientTick.accept(this);
+			return;
+		}
+		if (this.isCrashing()) {
+			this.crashTick(level);
 			return;
 		}
 		ThreatTracker.report(level, this);
@@ -776,9 +802,121 @@ public class JetEntity extends Entity implements AirThreat {
 		}
 	}
 
+	// ------------------------------------------------------------------ damage and the crash
+
+	/** Rifle rounds, rockets and grenades can hit it (the box is the fuselage). */
+	@Override
+	public boolean isPickable() {
+		return !this.isRemoved() && !this.isCrashing();
+	}
+
 	@Override
 	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
-		return false;
+		if (this.isRemoved() || this.isCrashing() || this.isInvulnerableToBase(source)) {
+			return false;
+		}
+		Entity attacker = source.getEntity();
+		if (attacker == this || source.getDirectEntity() instanceof RocketEntity rocket && rocket.shooter() == this) {
+			return false; // its own Hellfires and Hydras going off close by
+		}
+		JetType type = this.getJetType();
+		if (this.health < 0.0F) {
+			this.health = type.maxHealth;
+		}
+		// blasts and shaped charges tear into an airframe far worse than they hurt a man
+		if (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)) {
+			amount *= 6.0F;
+		}
+		this.health -= amount;
+		this.entityData.set(DATA_DAMAGE, Mth.clamp(1.0F - this.health / type.maxHealth, 0.0F, 1.0F));
+		// hits on the airframe: sparks and a clang
+		Vec3 c = this.position().add(0, 0.8, 0);
+		level.sendParticles(ParticleTypes.CRIT, c.x, c.y, c.z, 6, 0.8, 0.4, 0.8, 0.3);
+		if (this.random.nextInt(3) == 0) {
+			level.playSound(null, c.x, c.y, c.z, SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 0.5F, 1.6F + this.random.nextFloat() * 0.3F);
+		}
+		if (this.health <= 0.0F) {
+			this.killer = attacker;
+			this.shootDown(level);
+		}
+		return true;
+	}
+
+	/** Brought down: a burst of fire, then it goes in, trailing smoke and flame. */
+	private void shootDown(ServerLevel level) {
+		if (this.isCrashing()) {
+			return;
+		}
+		JetType type = this.getJetType();
+		this.entityData.set(DATA_CRASHING, true);
+		this.entityData.set(DATA_DAMAGE, 1.0F);
+		this.entityData.set(DATA_FIRING, false);
+		this.entityData.set(DATA_BAY, false);
+		Vec3 c = this.position().add(0, 0.8, 0);
+		DetonationManager.intercepted(level, c, this);
+		level.playSound(null, c.x, c.y, c.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 8.0F, 0.7F);
+		this.crashVelocity = type == JetType.APACHE ? this.hoverVelocity.add(this.getDir().scale(0.4))
+			: this.getDir().scale(this.getSpeed());
+		this.crashAge = 0;
+		this.crashRoll = this.random.nextBoolean() ? 1.0F : -1.0F;
+		this.tellCaller(level, Component.translatable("message.ballisticmissiles.jet_shot_down").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+		if (this.killer instanceof ServerPlayer player && !this.getUUID().equals(this.caller)) {
+			player.displayClientMessage(Component.translatable("message.ballisticmissiles.jet_kill", Component.translatable(this.nameKey()))
+				.withStyle(ChatFormatting.GOLD), true);
+		}
+	}
+
+	/**
+	 * Going in: a fixed-wing aircraft rolls and its nose drops into a steepening dive; a helicopter
+	 * loses its tail rotor, spins round its mast and drops. Parts come away on the way down; where it
+	 * hits, the fuel goes up and the wreck burns.
+	 */
+	private void crashTick(ServerLevel level) {
+		JetType type = this.getJetType();
+		this.crashAge++;
+		Vec3 pos = this.position();
+		Vec3 v = this.crashVelocity;
+		Vec3 dir = this.getDir();
+		if (type.rotorcraft) {
+			// spinning faster and faster round the rotor mast, dropping like a stone
+			double spin = Math.min(0.55, 0.12 + this.crashAge * 0.012) * this.crashRoll;
+			double cos = Math.cos(spin);
+			double sin = Math.sin(spin);
+			Vec3 flat = new Vec3(dir.x * cos - dir.z * sin, 0, dir.x * sin + dir.z * cos).normalize();
+			dir = flat.add(0, -0.25, 0).normalize();
+			v = new Vec3(v.x * 0.96, Math.max(-2.2, v.y - 0.045), v.z * 0.96);
+			this.entityData.set(DATA_BANK, Mth.lerp(0.1F, this.getBank(), 0.45F * this.crashRoll));
+		} else {
+			// still flying, but no longer under control: it rolls over and the nose falls
+			v = new Vec3(v.x * 0.995, Math.max(-6.0, v.y - 0.07), v.z * 0.995);
+			dir = v.normalize();
+			this.entityData.set(DATA_BANK, this.getBank() + 0.06F * this.crashRoll);
+		}
+		this.crashVelocity = v;
+		this.entityData.set(DATA_SPEED, (float) v.length());
+		this.setDir(dir);
+		// parts tearing off
+		if (this.crashAge % 7 == 0) {
+			level.sendParticles(ParticleTypes.EXPLOSION, pos.x, pos.y + 0.8, pos.z, 1, 1.0, 0.5, 1.0, 0.0);
+			if (this.random.nextInt(2) == 0) {
+				level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 3.0F, 1.3F + this.random.nextFloat() * 0.3F);
+			}
+		}
+		Vec3 next = pos.add(v);
+		var hit = level.clip(new ClipContext(pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, this));
+		if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS || this.crashAge > 600 || next.y < level.getMinY()) {
+			Vec3 at = hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS ? hit.getLocation().subtract(v.normalize().scale(0.5)) : pos;
+			boolean water = !level.getFluidState(BlockPos.containing(at)).isEmpty() || !level.getFluidState(BlockPos.containing(at.add(0, -0.5, 0))).isEmpty();
+			DetonationManager.aircraftCrash(level, at, this.killer != null ? this.killer : this, type == JetType.SPIRIT || type == JetType.STRIKE || type == JetType.WARTHOG,
+				water);
+			this.discard();
+			return;
+		}
+		if (!level.isPositionEntityTicking(BlockPos.containing(next))) {
+			this.discard();
+			return;
+		}
+		this.setPos(next);
 	}
 
 	// ------------------------------------------------------------------ as a target for air defense
@@ -794,7 +932,7 @@ public class JetEntity extends Entity implements AirThreat {
 
 	@Override
 	public boolean isActiveThreat() {
-		return this.isAlive();
+		return this.isAlive() && !this.isCrashing();
 	}
 
 	@Override
@@ -871,11 +1009,7 @@ public class JetEntity extends Entity implements AirThreat {
 
 	@Override
 	public void destroyByInterceptor(ServerLevel level) {
-		Vec3 p = this.position().add(0, 0.8, 0);
-		DetonationManager.intercepted(level, p, this);
-		level.explode(this, p.x, p.y, p.z, 4.0F, true, Level.ExplosionInteraction.NONE);
-		this.tellCaller(level, Component.translatable("message.ballisticmissiles.jet_shot_down").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
-		this.discard();
+		this.shootDown(level);
 	}
 
 	@Override

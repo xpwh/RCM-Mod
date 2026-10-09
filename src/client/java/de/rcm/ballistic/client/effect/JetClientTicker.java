@@ -8,6 +8,7 @@ import de.rcm.ballistic.client.sound.JetSound;
 import de.rcm.ballistic.entity.JetEntity;
 import de.rcm.ballistic.entity.JetType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 /** Client side of the strike jet: engine sound layers, exhaust trail, wingtip vortices, sonic boom. */
@@ -99,6 +100,26 @@ public final class JetClientTicker {
 			if (p != null) {
 				p.configure(30 + (int) (ClientEffects.rand() * 25), burner ? 1.0F : 0.5F, burner ? 3.0F : 1.8F, 0xB0B0B0, 0x959595, burner ? 0.3F : 0.2F)
 					.physics(0.95F, 0.0F);
+			}
+		}
+		// hit: an engine trailing grey smoke, then black smoke and flame; shot down, a great black plume
+		float damage = jet.getDamage();
+		if (damage > 0.25F) {
+			Vec3 burning = center.subtract(dir.scale(tailBack * 0.6)).add(0, tailUp * 0.7, 0);
+			boolean crashing = jet.isCrashing();
+			float heavy = crashing ? 1.0F : Mth.clamp((damage - 0.25F) / 0.6F, 0.0F, 1.0F);
+			int color = heavy > 0.5F ? 0x262422 : 0x6A6662;
+			SmokeField.trail(jet.getId() * 4 + 3, burning,
+				new SmokeField.Style(0.8F + 1.6F * heavy, 3.0F + 6.0F * heavy, 900 + (int) (1500 * heavy), color, 0.55F + 0.35F * heavy, heavy * 0.5F, 0.002F, 1.0F),
+				0.5F + 0.5F * heavy);
+			if (crashing || heavy > 0.6F) {
+				for (int i = 0; i < (crashing ? 4 : 1); i++) {
+					mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.FLAME, burning.x + ClientEffects.gauss() * 0.5,
+						burning.y + ClientEffects.gauss() * 0.3, burning.z + ClientEffects.gauss() * 0.5, -dir.x * 0.1, 0.03, -dir.z * 0.1);
+				}
+			}
+			if (crashing && jet.tickCount % 3 == 0) {
+				mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, burning.x, burning.y, burning.z, 0, 0.05, 0);
 			}
 		}
 		// condensation trails high up: one per engine pair, merging and spreading behind the aircraft

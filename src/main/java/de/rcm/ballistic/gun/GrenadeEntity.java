@@ -39,12 +39,14 @@ public class GrenadeEntity extends Entity {
 		super(type, level);
 	}
 
-	public static void throwFrom(ServerLevel level, Entity thrower, Vec3 from, Vec3 velocity) {
+	/** @param fuse ticks left on the fuse (less than the full four seconds if it was cooked off in the hand) */
+	public static void throwFrom(ServerLevel level, Entity thrower, Vec3 from, Vec3 velocity, int fuse) {
 		GrenadeEntity g = ModRegistry.GRENADE_ENTITY.create(level, EntitySpawnReason.TRIGGERED);
 		if (g == null) {
 			return;
 		}
 		g.thrower = thrower;
+		g.fuse = Math.max(1, fuse);
 		g.setPos(from);
 		g.setDeltaMovement(velocity);
 		level.addFreshEntity(g);
@@ -65,8 +67,10 @@ public class GrenadeEntity extends Entity {
 		double vy = v.y;
 		double vz = v.z;
 		boolean clunk = false;
+		double impact = 0.0;
 		if (this.verticalCollision && v.y < 0.0) {
 			clunk = v.y < -0.12;
+			impact = -v.y;
 			vy = Math.abs(v.y) > 0.12 ? -v.y * 0.3 : 0.0;
 			vx *= 0.6;
 			vz *= 0.6;
@@ -74,10 +78,12 @@ public class GrenadeEntity extends Entity {
 		if (this.horizontalCollision) {
 			if (Math.abs(moved.x) < Math.abs(v.x) * 0.9) {
 				clunk |= Math.abs(v.x) > 0.08;
+				impact = Math.max(impact, Math.abs(v.x));
 				vx = -v.x * 0.35;
 			}
 			if (Math.abs(moved.z) < Math.abs(v.z) * 0.9) {
 				clunk |= Math.abs(v.z) > 0.08;
+				impact = Math.max(impact, Math.abs(v.z));
 				vz = -v.z * 0.35;
 			}
 		}
@@ -97,8 +103,11 @@ public class GrenadeEntity extends Entity {
 		}
 		ServerLevel level = (ServerLevel) this.level();
 		if (clunk) {
-			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.GRENADE_BOUNCE, SoundSource.PLAYERS, 0.6F,
+			// a clunk that sounds of what it struck: ringing on stone, a knock on wood, a thud in the grass
+			float loud = (float) Math.min(1.0, 0.3 + impact * 1.6);
+			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.GRENADE_BOUNCE, SoundSource.PLAYERS, 0.35F * loud,
 				0.9F + this.random.nextFloat() * 0.2F);
+			MagazineLanding.knock(level, this, loud * 0.75F);
 		}
 		if (--this.fuse <= 0) {
 			this.detonate(level);

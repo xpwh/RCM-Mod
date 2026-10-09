@@ -47,6 +47,9 @@ public final class RpgClient {
 	private static final Vector3f CAMERA = new Vector3f(-0.56F, 0.52F, 0.72F);
 
 	private static long firedAt = Long.MIN_VALUE / 2;
+	/** The round check (B): the launcher tipped up and turned in so you can look into the muzzle. */
+	private static final int CHECK_TICKS = 30;
+	private static long checkStart = Long.MIN_VALUE / 2;
 	private static boolean reloading;
 	private static float aim;
 	private static float prevAim;
@@ -70,10 +73,42 @@ public final class RpgClient {
 			}
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			checkTick(mc);
 			prevAim = aim;
-			boolean aiming = mc.player != null && RocketLauncherItem.isAiming(mc.player) && !reloadingNow(mc);
+			boolean aiming = mc.player != null && RocketLauncherItem.isAiming(mc.player) && !reloadingNow(mc) && !checking(mc);
 			aim = aiming ? Math.min(1.0F, aim + 0.22F) : Math.max(0.0F, aim - 0.25F);
 		});
+	}
+
+	/** B with the launcher in hand: is there a round in it? */
+	public static void startCheck(LocalPlayer player) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level == null || checking(mc) || reloadingNow(mc) || mc.level.getGameTime() - firedAt < RAISED) {
+			return;
+		}
+		checkStart = mc.level.getGameTime();
+		de.rcm.ballistic.client.gun.GunAudio.play(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON.value(), player.getEyePosition(), 0.4F, 1.3F);
+	}
+
+	public static boolean checking(Minecraft mc) {
+		return mc.level != null && mc.level.getGameTime() - checkStart < CHECK_TICKS;
+	}
+
+	private static void checkTick(Minecraft mc) {
+		if (mc.level == null || mc.player == null) {
+			return;
+		}
+		long t = mc.level.getGameTime() - checkStart;
+		if (t == 12 && mc.player.getMainHandItem().getItem() instanceof RocketLauncherItem) {
+			ItemStack stack = mc.player.getMainHandItem();
+			int spare = mc.player.getInventory().countItem(de.rcm.ballistic.ModRegistry.RPG_ROCKET);
+			boolean loaded = RocketLauncherItem.isLoaded(stack);
+			mc.gui.setOverlayMessage(net.minecraft.network.chat.Component.translatable(
+				loaded ? "message.ballisticmissiles.rpg_check_loaded" : "message.ballisticmissiles.rpg_check_empty", spare), false);
+			// a knock of the knuckles on the warhead (or into the empty tube)
+			de.rcm.ballistic.client.gun.GunAudio.play(loaded ? net.minecraft.sounds.SoundEvents.CHAIN_STEP : net.minecraft.sounds.SoundEvents.LANTERN_HIT,
+				mc.player.getEyePosition(), 0.5F, loaded ? 1.4F : 0.8F);
+		}
 	}
 
 	private static boolean reloadingNow(Minecraft mc) {
@@ -123,6 +158,17 @@ public final class RpgClient {
 			Vector3f shift = new Vector3f(CAMERA).sub(toView.transform(new Vector3f(eyeM0)));
 			poseStack.translate(shift.x * a, shift.y * a, shift.z * a);
 			poseStack.mulPose(new Quaternionf().slerp(toView, a));
+		}
+
+		// the round check: muzzle up and turned in towards you, a look down it, back on the shoulder
+		float c = (float) (mc.level.getGameTime() - checkStart) + partialTick;
+		if (c >= 0.0F && c < CHECK_TICKS) {
+			float k = c < 8.0F ? smooth(c / 8.0F) : c < 22.0F ? 1.0F : 1.0F - smooth((c - 22.0F) / 8.0F);
+			float tap = c > 10.0F && c < 15.0F ? Mth.sin((c - 10.0F) / 5.0F * Mth.PI) : 0.0F;
+			poseStack.translate(-0.12F * k, 0.12F * k, -0.1F * k - 0.015F * tap);
+			poseStack.mulPose(Axis.YP.rotationDegrees(48.0F * k));
+			poseStack.mulPose(Axis.XP.rotationDegrees(22.0F * k + 2.0F * tap));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-10.0F * k));
 		}
 
 		float t = (float) (mc.level.getGameTime() - firedAt) + partialTick;
@@ -176,6 +222,12 @@ public final class RpgClient {
 		Vector3f left = new Vector3f(TUBE);
 		Vector3f round = null;
 		boolean loaded = RocketLauncherItem.isLoaded(stack);
+		float c = (float) (mc.level.getGameTime() - checkStart) + partialTick;
+		if (c >= 0.0F && c < CHECK_TICKS) {
+			// the left hand goes forward to the muzzle and knocks on the warhead
+			float k = c < 9.0F ? smooth(c / 9.0F) : c < 20.0F ? 1.0F : 1.0F - smooth((c - 20.0F) / 8.0F);
+			left.set(TUBE).lerp(new Vector3f(WARHEAD_HOLD).add(-0.06F, 0.0F, 0.12F), k);
+		}
 		if (reloading && t >= 0.0F && t < RAISED) {
 			float insertEnd = RocketLauncherItem.RELOAD_TICKS - 1;
 			Vector3f outside = new Vector3f(WARHEAD_HOLD).add(0.0F, 0.0F, -INSERT);
