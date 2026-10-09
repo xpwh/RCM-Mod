@@ -217,7 +217,8 @@ public final class AkFirstPerson {
 		float dp = pitch - lastPitch;
 		lastYaw = yaw;
 		lastPitch = pitch;
-		float hold = 1.0F - 0.55F * aiming;
+		// at the shoulder, the sights held on the point of aim: hardly any lag
+		float hold = 1.0F - 0.85F * aiming;
 		LAG_YAW.v += Mth.clamp(dy, -25.0F, 25.0F) * 0.09F * hold;
 		LAG_PITCH.v += Mth.clamp(dp, -25.0F, 25.0F) * 0.09F * hold;
 		for (Spring sp : new Spring[] {BACK, PITCH, YAW, ROLL, LAG_YAW, LAG_PITCH}) {
@@ -271,7 +272,7 @@ public final class AkFirstPerson {
 		// breathing: a slow heave, heavy and quick when out of breath
 		float tired = Fatigue.level();
 		float breath = Fatigue.breathPhase(partialTick);
-		float steady = 1.0F - 0.5F * aim;
+		float steady = 1.0F - 0.8F * aim;
 		poseStack.mulPose(Axis.XP.rotationDegrees((Mth.sin(now * 0.045F) * 0.35F + Mth.sin(breath) * 1.6F * tired) * steady));
 		poseStack.mulPose(Axis.YP.rotationDegrees((Mth.cos(now * 0.031F) * 0.3F + Mth.cos(breath * 0.5F) * 0.9F * tired) * steady));
 		poseStack.translate(0.0F, Mth.sin(breath) * 0.012F * tired * steady, 0.0F);

@@ -84,6 +84,7 @@ public final class AkClient {
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.BulletPassPayload.TYPE, (payload, context) -> bulletPass(payload));
 		ClientPlayNetworking.registerGlobalReceiver(GunshotPayload.TYPE, (payload, context) -> remoteShot(payload));
 		RemoteGunActions.init();
+		AimOverlay.init();
 		HudElementRegistry.addLast(BallisticMissiles.id("ammo"), (graphics, tickCounter) -> hud(graphics));
 		// looking through the sights (AK or RPG) there is no crosshair: the sights are the aim
 		HudElementRegistry.replaceElement(net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.CROSSHAIR, crosshair -> (graphics, tickCounter) -> {

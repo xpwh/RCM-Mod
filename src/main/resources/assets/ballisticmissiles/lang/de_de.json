@@ -648,5 +648,7 @@
 	"tooltip.ballisticmissiles.alpha": "⚠ Noch in Entwicklung: kann Fehler haben und sich noch ändern",
 	"hud.ballisticmissiles.alpha": "Jets sind noch in Entwicklung",
 	"options.ballisticmissiles.real_sky": "Echter Himmel",
-	"options.ballisticmissiles.real_sky.tooltip": "Physikalisch berechneter Himmel: blauer Tag, Abendrot, Erdschatten in der Dämmerung. Der Nebel am Horizont passt sich an."
+	"options.ballisticmissiles.real_sky.tooltip": "Physikalisch berechneter Himmel: blauer Tag, Abendrot, Erdschatten in der Dämmerung. Der Nebel am Horizont passt sich an.",
+	"options.ballisticmissiles.aim_dot": "AK-Zielpunkt",
+	"options.ballisticmissiles.aim_dot.tooltip": "Beim Zielen mit der AK-47 zeigt ein kleiner Punkt auf dem Korn genau, wohin die Kugel fliegt."
 }

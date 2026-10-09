@@ -648,5 +648,7 @@
 	"tooltip.ballisticmissiles.alpha": "⚠ Still in development: may have bugs and may still change",
 	"hud.ballisticmissiles.alpha": "Jets are still in development",
 	"options.ballisticmissiles.real_sky": "Realistic sky",
-	"options.ballisticmissiles.real_sky.tooltip": "Physically based sky: blue day, red sunsets, the Earth's shadow at dusk. The horizon fog matches it."
+	"options.ballisticmissiles.real_sky.tooltip": "Physically based sky: blue day, red sunsets, the Earth's shadow at dusk. The horizon fog matches it.",
+	"options.ballisticmissiles.aim_dot": "AK aiming dot",
+	"options.ballisticmissiles.aim_dot.tooltip": "Aiming the AK-47, a small dot on the front sight marks exactly where the bullet goes."
 }

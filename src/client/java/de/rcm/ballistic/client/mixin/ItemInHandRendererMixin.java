@@ -26,6 +26,8 @@ public abstract class ItemInHandRendererMixin {
 		ItemStack stack, float equipProgress, PoseStack poseStack, SubmitNodeCollector collector, int light, CallbackInfo ci) {
 		if (de.rcm.ballistic.client.drone.DroneClient.isFlying() || de.rcm.ballistic.client.fighter.FighterClient.isFlying()) {
 			ci.cancel(); // goggles on, or hands on the stick and throttle
+		} else if (stack.is(ModRegistry.ROCKET_LAUNCHER) && de.rcm.ballistic.client.gun.AimOverlay.scope(partialTick) > 0.9F) {
+			ci.cancel(); // the eye at the optical sight: the launcher is out of view
 		}
 	}
 
