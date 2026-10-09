@@ -20,7 +20,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.TooltipFlag;
@@ -300,14 +299,6 @@ public class AkItem extends Item {
 			setState(stack, new GunState(Math.min(1, state.rounds()), state.ammo(), false, state.mode(), state.lastShot(), state.reloadStart(),
 				state.reloadKind(), state.reloadAmmo()));
 			state = state(stack);
-		} else if (t == (tactical ? T_TAC_OUT + 12 : T_MAG_DROP + 9)) {
-			// and lands with a clatter
-			for (ItemEntity dropped : level.getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(3.0),
-				e -> e.getItem().getItem() instanceof AkMagazineItem && e.getAge() < 14)) {
-				level.playSound(null, dropped.getX(), dropped.getY(), dropped.getZ(), SoundEvents.CHAIN_FALL, SoundSource.PLAYERS, 0.9F,
-					1.3F + level.getRandom().nextFloat() * 0.2F);
-				level.playSound(null, dropped.getX(), dropped.getY(), dropped.getZ(), SoundEvents.LANTERN_FALL, SoundSource.PLAYERS, 0.6F, 1.5F);
-			}
 		} else if (t == (tactical ? T_TAC_IN : T_MAG_IN)) {
 			this.sound(level, player, ModRegistry.AK_MAG_IN, 1.0F);
 		} else if (t == T_CHARGE && state.reloadKind() == GunState.EMPTY) {
@@ -361,6 +352,8 @@ public class AkItem extends Item {
 		item.setDeltaMovement(look.x * toss + random.triangle(0.0, 0.03), knocked ? 0.1 : 0.02, look.z * toss + random.triangle(0.0, 0.03));
 		item.setPickUpDelay(30);
 		level.addFreshEntity(item);
+		// and lands with a clatter that depends on the ground
+		MagazineLanding.watch(item);
 	}
 
 	private void sound(ServerLevel level, Player player, SoundEvent sound, float volume) {
