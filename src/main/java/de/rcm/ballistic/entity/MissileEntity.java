@@ -991,11 +991,34 @@ public class MissileEntity extends Entity implements AirThreat {
 	 * 25 to 50 blocks. Anti-radiation missiles don't care - they home on the jammer's emissions.
 	 */
 	private void applyJamming(ServerLevel level) {
-		if (this.gpsJammed || this.missileType.warhead == MissileType.Warhead.ANTI_RADAR || !JammerBlockEntity.covers(level, this.getTarget())) {
+		if (this.gpsJammed || this.missileType.warhead == MissileType.Warhead.ANTI_RADAR) {
+			return;
+		}
+		JammerBlockEntity jammer = JammerBlockEntity.covering(level, this.getTarget());
+		if (jammer == null) {
 			return;
 		}
 		this.gpsJammed = true;
 		BlockPos old = this.getTarget();
+		BlockPos spoof = jammer.spoofDestination();
+		if (spoof != null) {
+			// GPS spoofing: false satellite signals - it believes it is somewhere else and steers for the
+			// operator's point instead, a few blocks of scatter from its now-imperfect fix
+			int x = spoof.getX() + level.getRandom().nextInt(9) - 4;
+			int z = spoof.getZ() + level.getRandom().nextInt(9) - 4;
+			int y = level.hasChunk(x >> 4, z >> 4) ? level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) : spoof.getY();
+			this.entityData.set(DATA_TARGET, new BlockPos(x, y, z));
+			this.surfaceTarget = !level.hasChunk(x >> 4, z >> 4);
+			Component msg = Component.literal("⚡ ").append(Component.translatable("message.ballisticmissiles.jammer_spoofed",
+				Component.translatable(this.nameKey()), x, z)).withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
+			Vec3 o = Vec3.atCenterOf(old);
+			for (ServerPlayer player : level.players()) {
+				if (player.position().distanceToSqr(o) < 400 * 400 || player.position().distanceToSqr(Vec3.atCenterOf(jammer.getBlockPos())) < 400 * 400) {
+					player.displayClientMessage(msg, true);
+				}
+			}
+			return;
+		}
 		double angle = level.getRandom().nextDouble() * Mth.TWO_PI;
 		double miss = 25.0 + level.getRandom().nextDouble() * 25.0;
 		int x = old.getX() + (int) Math.round(Math.cos(angle) * miss);

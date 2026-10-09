@@ -17,7 +17,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Electronic-warfare jammer. Right-click to switch it on or off. The antenna masts and the shelter
+ * Electronic-warfare jammer. Right-click opens its panel (on/off, jamming or GPS spoofing, where
+ * spoofed missiles are sent); sneak + right-click switches it on or off. The antenna masts and the shelter
  * are drawn by the block entity renderer.
  */
 public class JammerBlock extends Block implements EntityBlock {
@@ -28,8 +29,16 @@ public class JammerBlock extends Block implements EntityBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof JammerBlockEntity jammer) {
-			jammer.toggle();
-			player.displayClientMessage(jammer.status(), true);
+			if (player.isSecondaryUseActive()) {
+				// sneak + right-click: just switch it on or off
+				jammer.toggle();
+				player.displayClientMessage(jammer.status(), true);
+			} else if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+				BlockPos spoof = jammer.getSpoofTarget();
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(serverPlayer, new de.rcm.ballistic.network.ModNetworking.JammerPayload(
+					pos, jammer.isActive(), jammer.getMode(), spoof != null, spoof == null ? pos.getX() : spoof.getX(), spoof == null ? pos.getZ() : spoof.getZ(),
+					jammer.isSparingOwn()));
+			}
 		}
 		return InteractionResult.SUCCESS;
 	}

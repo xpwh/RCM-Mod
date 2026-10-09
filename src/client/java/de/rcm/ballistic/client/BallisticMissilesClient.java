@@ -104,6 +104,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		);
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.ServerConfigPayload.TYPE, (payload, context) ->
 			de.rcm.ballistic.config.ServerConfig.misfireChance = payload.misfireChance());
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.JammerPayload.TYPE, (payload, context) ->
+			context.client().setScreen(new de.rcm.ballistic.client.screen.JammerScreen(payload)));
 		ClientPlayNetworking.registerGlobalReceiver(RadarDataPayload.TYPE, (payload, context) -> {
 			Minecraft mc = context.client();
 			if (mc.screen instanceof RadarScreen scope && scope.radarPos().equals(payload.radar())) {

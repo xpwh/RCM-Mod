@@ -487,6 +487,35 @@ public final class ModNetworking {
 	}
 
 	/**
+	 * The jammer's panel: server -> client opens it with the current settings; client -> server
+	 * applies the settings (spoof point present when {@code hasSpoof}).
+	 */
+	public record JammerPayload(BlockPos pos, boolean active, int mode, boolean hasSpoof, int spoofX, int spoofZ, boolean spareOwn)
+		implements CustomPacketPayload {
+		public static final Type<JammerPayload> TYPE = new Type<>(BallisticMissiles.id("jammer"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, JammerPayload> CODEC = StreamCodec.of(JammerPayload::write, JammerPayload::read);
+
+		private static void write(RegistryFriendlyByteBuf buf, JammerPayload p) {
+			buf.writeBlockPos(p.pos);
+			buf.writeBoolean(p.active);
+			buf.writeVarInt(p.mode);
+			buf.writeBoolean(p.hasSpoof);
+			buf.writeInt(p.spoofX);
+			buf.writeInt(p.spoofZ);
+			buf.writeBoolean(p.spareOwn);
+		}
+
+		private static JammerPayload read(RegistryFriendlyByteBuf buf) {
+			return new JammerPayload(buf.readBlockPos(), buf.readBoolean(), buf.readVarInt(), buf.readBoolean(), buf.readInt(), buf.readInt(), buf.readBoolean());
+		}
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/**
 	 * World settings: server -> client to show them (on join and on every change), client -> server
 	 * when an operator changes them on the settings screen.
 	 */
@@ -516,6 +545,25 @@ public final class ModNetworking {
 	}
 
 	public static void init() {
+		PayloadTypeRegistry.playS2C().register(JammerPayload.TYPE, JammerPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(JammerPayload.TYPE, JammerPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(JammerPayload.TYPE, (payload, context) -> {
+			var player = context.player();
+			BlockPos pos = payload.pos();
+			if (player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > 10 * 10 || !player.level().isLoaded(pos)
+				|| !(player.level().getBlockEntity(pos) instanceof de.rcm.ballistic.block.JammerBlockEntity jammer)) {
+				return;
+			}
+			if (jammer.getOwner() != null && !jammer.getOwner().equals(player.getUUID()) && !mayConfigure(player)) {
+				player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.jammer_not_yours")
+					.withStyle(net.minecraft.ChatFormatting.RED), true);
+				return;
+			}
+			int y = player.level().hasChunk(payload.spoofX() >> 4, payload.spoofZ() >> 4)
+				? player.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, payload.spoofX(), payload.spoofZ()) : pos.getY();
+			jammer.configure(payload.active(), payload.mode(), payload.hasSpoof() ? new BlockPos(payload.spoofX(), y, payload.spoofZ()) : null, payload.spareOwn());
+			player.displayClientMessage(jammer.status(), true);
+		});
 		PayloadTypeRegistry.playC2S().register(DroneInputPayload.TYPE, DroneInputPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(DroneInputPayload.TYPE, (payload, context) -> {
 			var player = context.player();

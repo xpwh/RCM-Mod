@@ -23,9 +23,17 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Electronic-warfare jammer. While switched on it floods GPS and the missiles' guidance bands
- * around itself: missiles aimed into its zone lose their satellite fix and miss by tens of blocks,
- * and other players' radars nearby see their tracks smeared out. Switch it on and off by hand.
+ * Electronic-warfare jammer. While switched on it floods GPS, the missiles' guidance bands and the
+ * drones' radio links around itself:
+ * <ul>
+ * <li>jamming mode: missiles aimed into its zone lose their satellite fix and miss by tens of blocks;</li>
+ * <li>GPS-spoofing mode: it broadcasts false satellite signals instead, so missiles aimed into its
+ * zone believe they are somewhere else and fly on to a point of the operator's choosing (within
+ * {@value #SPOOF_RANGE} blocks of the jammer);</li>
+ * </ul>
+ * in both, radio-controlled FPV drones near it (or near their pilots) lose their link, and other
+ * players' radars nearby see their tracks smeared out. Right-click opens its panel; sneak +
+ * right-click switches it on or off.
  */
 public class JammerBlockEntity extends BlockEntity {
 	/** Missiles aimed within this radius are thrown off. */
@@ -33,7 +41,17 @@ public class JammerBlockEntity extends BlockEntity {
 	/** Hostile radars within this radius get noisy tracks. */
 	public static final double RADAR_RADIUS = 320.0;
 
+	/** How far from the jammer a spoofed missile can be sent. */
+	public static final double SPOOF_RANGE = 600.0;
+	public static final int MODE_JAM = 0;
+	public static final int MODE_SPOOF = 1;
+
 	private boolean active = true;
+	private int mode = MODE_JAM;
+	/** Where spoofed missiles are sent, if set. */
+	private @Nullable BlockPos spoofTarget;
+	/** Leave the owner's own drones alone (off: it jams everything on the band, like a real jammer). */
+	private boolean spareOwn;
 	private @Nullable UUID owner;
 
 	public JammerBlockEntity(BlockPos pos, BlockState state) {
@@ -87,6 +105,56 @@ public class JammerBlockEntity extends BlockEntity {
 		this.setChanged();
 	}
 
+	/** The working jammer whose zone {@code target} lies in (the nearest), or null. */
+	public static @Nullable JammerBlockEntity covering(Level level, BlockPos target) {
+		for (BlockPos p : DefenseNetwork.find(level, DefenseNetwork.Kind.JAMMER, Vec3.atCenterOf(target), RADIUS)) {
+			if (level.getBlockEntity(p) instanceof JammerBlockEntity jammer && jammer.isJamming()) {
+				return jammer;
+			}
+		}
+		return null;
+	}
+
+	public int getMode() {
+		return this.mode;
+	}
+
+	/** Where this jammer sends spoofed missiles, or null if it is not spoofing (or has no point set). */
+	public @Nullable BlockPos spoofDestination() {
+		return this.mode == MODE_SPOOF ? this.spoofTarget : null;
+	}
+
+	public @Nullable BlockPos getSpoofTarget() {
+		return this.spoofTarget;
+	}
+
+	public boolean isSparingOwn() {
+		return this.spareOwn;
+	}
+
+	/** Settings from the panel. The spoof point is pulled in to {@value #SPOOF_RANGE} blocks of the jammer. */
+	public void configure(boolean active, int mode, @Nullable BlockPos spoof, boolean spareOwn) {
+		this.active = active;
+		this.mode = mode == MODE_SPOOF ? MODE_SPOOF : MODE_JAM;
+		if (spoof != null) {
+			double dx = spoof.getX() - this.worldPosition.getX();
+			double dz = spoof.getZ() - this.worldPosition.getZ();
+			double d = Math.sqrt(dx * dx + dz * dz);
+			if (d > SPOOF_RANGE) {
+				spoof = new BlockPos(this.worldPosition.getX() + (int) (dx / d * SPOOF_RANGE), spoof.getY(), this.worldPosition.getZ() + (int) (dz / d * SPOOF_RANGE));
+			}
+		}
+		this.spoofTarget = spoof;
+		this.spareOwn = spareOwn;
+		this.setChanged();
+		if (this.level != null && !this.level.isClientSide()) {
+			if (!this.active) {
+				DefenseNetwork.unregister(this.level, this.worldPosition);
+			}
+			this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_CLIENTS);
+		}
+	}
+
 	/** Is {@code target} inside the zone of any working jammer? */
 	public static boolean covers(Level level, BlockPos target) {
 		return !DefenseNetwork.find(level, DefenseNetwork.Kind.JAMMER, Vec3.atCenterOf(target), RADIUS).isEmpty();
@@ -98,14 +166,14 @@ public class JammerBlockEntity extends BlockEntity {
 	/**
 	 * How hard someone else's jammers drown out a radio-controlled drone's link (0 none, 1 total):
 	 * strongest near a jammer, at either end of the link - the drone's receiver or the pilot's goggles.
-	 * A player's own jammers are tuned to leave their own drones alone.
+	 * A jammer drowns out every drone on the band - its owner's too, unless set to spare them.
 	 */
 	public static float droneJamming(Level level, Vec3 drone, Vec3 pilot, @Nullable UUID pilotId) {
 		float worst = 0.0F;
 		for (Vec3 end : new Vec3[] {drone, pilot}) {
 			for (BlockPos p : DefenseNetwork.find(level, DefenseNetwork.Kind.JAMMER, end, DRONE_RADIUS)) {
 				if (level.getBlockEntity(p) instanceof JammerBlockEntity jammer && jammer.isJamming()
-					&& (jammer.owner == null || !jammer.owner.equals(pilotId))) {
+					&& !(jammer.spareOwn && jammer.owner != null && jammer.owner.equals(pilotId))) {
 					double d = Vec3.atCenterOf(p).distanceTo(end) / DRONE_RADIUS;
 					worst = Math.max(worst, (float) Math.min(1.0, 1.25 * (1.0 - d * d)));
 				}
@@ -125,6 +193,11 @@ public class JammerBlockEntity extends BlockEntity {
 	}
 
 	public Component status() {
+		if (this.active && this.spoofDestination() != null) {
+			BlockPos t = this.spoofDestination();
+			return Component.translatable("message.ballisticmissiles.jammer_spoofing", (int) RADIUS, t.getX(), t.getZ())
+				.withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
+		}
 		return this.active
 			? Component.translatable("message.ballisticmissiles.jammer_on", (int) RADIUS).withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD)
 			: Component.translatable("message.ballisticmissiles.jammer_off").withStyle(ChatFormatting.GRAY);
@@ -142,6 +215,11 @@ public class JammerBlockEntity extends BlockEntity {
 	protected void saveAdditional(ValueOutput output) {
 		super.saveAdditional(output);
 		output.putBoolean("Active", this.active);
+		output.putInt("Mode", this.mode);
+		output.putBoolean("SpareOwn", this.spareOwn);
+		if (this.spoofTarget != null) {
+			output.store("Spoof", BlockPos.CODEC, this.spoofTarget);
+		}
 		if (this.owner != null) {
 			output.store("Owner", UUIDUtil.CODEC, this.owner);
 		}
@@ -151,6 +229,9 @@ public class JammerBlockEntity extends BlockEntity {
 	protected void loadAdditional(ValueInput input) {
 		super.loadAdditional(input);
 		this.active = input.getBooleanOr("Active", true);
+		this.mode = input.getIntOr("Mode", MODE_JAM);
+		this.spareOwn = input.getBooleanOr("SpareOwn", false);
+		this.spoofTarget = input.read("Spoof", BlockPos.CODEC).orElse(null);
 		this.owner = input.read("Owner", UUIDUtil.CODEC).orElse(null);
 	}
 
