@@ -129,6 +129,15 @@ public class SoldierEntity extends PathfinderMob {
 	private long grenadeThrown = -1000L;
 	private long fleeUntil;
 	private @Nullable Vec3 fleeFrom;
+	/** How long he keeps hunting someone he has lost sight of before he gives up, ticks (15 s). */
+	private static final int MEMORY = 300;
+	// losing you: which way you were going, and the spots he is checking one after another
+	private Vec3 lastVelocity = Vec3.ZERO;
+	private @Nullable Vec3 searchPoint;
+	private int searchStep;
+	private int searchLook;
+	private long searchFor = -1L;
+	private long gaveUp = -10000L;
 	/** Rounds fired in the current burst: each one climbs a little further off the aim. */
 	private int burstShots;
 
@@ -249,7 +258,15 @@ public class SoldierEntity extends PathfinderMob {
 			this.flee(level, now);
 		} else if (inSight) {
 			this.combat(level, t, now);
-		} else if (t != null && now - this.lastSeen < 400) {
+		} else if (t != null && now - this.lastSeen >= MEMORY) {
+			// gave up: the enemy got away (or is hiding well). Stays watchful, goes back to his post
+			this.awareness.put(t.getId(), 0.3F);
+			this.target = null;
+			this.investigate = null;
+			this.searchPoint = null;
+			this.gaveUp = now;
+			this.patrol(level, now);
+		} else if (t != null) {
 			this.search(level, now);
 		} else if (this.investigate != null && now < this.investigateUntil) {
 			this.target = null;
@@ -284,17 +301,22 @@ public class SoldierEntity extends PathfinderMob {
 		if (cone <= 0.0F) {
 			return 0.0F;
 		}
-		if (!this.lineOfSight(level, eye, other, e) && !this.lineOfSight(level, eye, e.getBoundingBox().getCenter(), e)) {
+		boolean head = this.lineOfSight(level, eye, other, e);
+		boolean body = this.lineOfSight(level, eye, e.getBoundingBox().getCenter(), e);
+		if (!head && !body) {
 			return 0.0F;
 		}
+		// only the head over the wall, or only the body below an overhang: much harder to make out
+		float exposed = head && body ? 1.0F : 0.45F;
 		float light = level.getMaxLocalRawBrightness(e.blockPosition()) / 15.0F;
 		Long flash = FLASHES.get(e.getId());
 		float lit = Math.max(0.15F + 0.85F * light, flash != null && level.getGameTime() - flash < 30 ? 1.0F : 0.0F);
 		double moved = Mth.square(e.getX() - e.xo) + Mth.square(e.getZ() - e.zo);
 		float stance = e.isCrouching() ? 0.45F : e.isSprinting() ? 1.3F : 1.0F;
-		float motion = moved > 0.003 ? 1.15F : 0.8F;
+		// movement catches the eye; someone keeping still is easy to overlook
+		float motion = moved > 0.003 ? 1.15F : 0.6F;
 		float near = (float) Mth.clamp(1.0 - d / VIEW_RANGE, 0.0, 1.0);
-		return cone * lit * stance * motion * (0.12F + 0.88F * near * near);
+		return cone * exposed * lit * stance * motion * (0.12F + 0.88F * near * near);
 	}
 
 	private boolean lineOfSight(Level level, Vec3 from, Vec3 to, LivingEntity e) {
@@ -350,6 +372,9 @@ public class SoldierEntity extends PathfinderMob {
 		this.target = pick;
 		this.lastSeen = now;
 		this.lastKnown = pick.position();
+		this.lastVelocity = new Vec3(pick.getX() - pick.xo, 0.0, pick.getZ() - pick.zo);
+		this.searchPoint = null;
+		this.searchStep = 0;
 		if (now - this.lastReport > 40) {
 			this.report(level, pick, now);
 		}
@@ -415,7 +440,10 @@ public class SoldierEntity extends PathfinderMob {
 		if (hurt && source.getEntity() instanceof LivingEntity attacker && this.isEnemy(attacker)) {
 			// hit: he knows roughly where it came from, and wants out of it
 			this.awareness.put(attacker.getId(), 1.0F);
-			this.lastKnown = attacker.position();
+			// hit from somewhere over there: the direction is clear, the exact spot less so the further off
+			double err = attacker.distanceTo(this) * 0.15;
+			var r = this.getRandom();
+			this.lastKnown = attacker.position().add((r.nextDouble() - 0.5) * err, 0.0, (r.nextDouble() - 0.5) * err);
 			if (this.target == null) {
 				this.target = attacker;
 				this.lastSeen = level.getGameTime() - 10; // known, not necessarily seen: search unless in sight
@@ -439,7 +467,7 @@ public class SoldierEntity extends PathfinderMob {
 		if (wantsCover && this.cover != null) {
 			this.setState(COVER, this.reload > 0 ? "lädt nach" : this.suppression > 0.6F ? "unter Beschuss" : "verwundet");
 			if (this.position().distanceToSqr(this.cover) > 1.0) {
-				this.getNavigation().moveTo(this.cover.x, this.cover.y, this.cover.z, 1.25);
+				this.go(this.cover.x, this.cover.y, this.cover.z, 1.25);
 			} else {
 				this.getNavigation().stop();
 				this.crouch = true;
@@ -452,7 +480,7 @@ public class SoldierEntity extends PathfinderMob {
 			}
 			this.setState(COMBAT, this.flankSide > 0 ? "flankiert rechts" : "flankiert links");
 			if (this.position().distanceToSqr(this.flank) > 9.0) {
-				this.getNavigation().moveTo(this.flank.x, this.flank.y, this.flank.z, 1.2);
+				this.go(this.flank.x, this.flank.y, this.flank.z, 1.2);
 				firing = d < 14.0; // on the move he only fires when it is close
 			} else {
 				this.getNavigation().stop();
@@ -460,10 +488,10 @@ public class SoldierEntity extends PathfinderMob {
 		} else {
 			this.setState(COMBAT, this.squadSize > 1 && this.support ? "gibt Feuerschutz" : "Ziel in Sicht");
 			if (d > 45.0) {
-				this.getNavigation().moveTo(t, 1.0);
+				this.go(t.getX(), t.getY(), t.getZ(), 1.0);
 			} else if (d < 7.0) {
 				Vec3 away = this.position().subtract(t.position()).normalize().scale(6.0);
-				this.getNavigation().moveTo(this.getX() + away.x, this.getY(), this.getZ() + away.z, 1.1);
+				this.go(this.getX() + away.x, this.getY(), this.getZ() + away.z, 1.1);
 			} else {
 				this.getNavigation().stop();
 				if (--this.strafeTimer <= 0) {
@@ -544,15 +572,37 @@ public class SoldierEntity extends PathfinderMob {
 		if (this.reload == 0 && this.rounds <= 0) {
 			this.startReload(level);
 		}
-		this.setState(SEARCH, this.squadSize > 1 && !this.support ? "rückt von der Seite vor" : "sucht letzte Position");
-		// the flankers close in from the side, the others go straight for it
-		Vec3 goal = this.squadSize > 1 && !this.support && d > 10.0 ? this.flankPoint(this.lastKnown) : this.lastKnown;
-		if (this.position().distanceToSqr(goal) > 4.0) {
-			this.getNavigation().moveTo(goal.x, goal.y, goal.z, 0.95);
-			this.getLookControl().setLookAt(spot.x, spot.y + 0.5, spot.z, 30.0F, 30.0F);
+		int left = (int) Math.max(0L, (MEMORY - lost) / 20L);
+		if (this.searchPoint == null || this.searchFor != this.lastSeen) {
+			// where did he go? Where he was last seen, carried on the way he was moving
+			this.searchFor = this.lastSeen;
+			this.searchStep = 0;
+			this.searchLook = 0;
+			Vec3 ahead = this.lastVelocity.scale(15.0);
+			if (ahead.length() > 8.0) {
+				ahead = ahead.normalize().scale(8.0);
+			}
+			boolean flanker = this.squadSize > 1 && !this.support && d > 10.0;
+			this.searchPoint = flanker ? this.flankPoint(this.lastKnown.add(ahead)) : this.lastKnown.add(ahead);
+		}
+		Vec3 goal = this.searchPoint;
+		this.setState(SEARCH, (this.searchStep == 0 ? (this.squadSize > 1 && !this.support ? "rückt von der Seite vor" : "folgt der Spur")
+			: "sucht Stelle " + (this.searchStep + 1)) + ", gibt in " + left + " s auf");
+		if (this.position().distanceToSqr(goal) > 4.0 && !this.getNavigation().isStuck()) {
+			this.go(goal.x, goal.y, goal.z, this.searchStep == 0 ? 0.95 : 0.7);
+			this.getLookControl().setLookAt(goal.x, goal.y + 1.5, goal.z, 30.0F, 30.0F);
 		} else {
+			// here: look around a while, then try another likely spot nearby
 			this.getNavigation().stop();
 			this.lookAround();
+			if (++this.searchLook > 60) {
+				this.searchLook = 0;
+				this.searchStep++;
+				var r = this.getRandom();
+				double a = r.nextDouble() * Math.PI * 2.0;
+				double rr = 4.0 + r.nextDouble() * 6.0;
+				this.searchPoint = this.lastKnown.add(Math.cos(a) * rr, 0.0, Math.sin(a) * rr);
+			}
 		}
 	}
 
@@ -632,7 +682,7 @@ public class SoldierEntity extends PathfinderMob {
 		}
 		Vec3 dest = this.position().add(away.normalize().scale(10.0));
 		if (this.tickCount % 10 == 0 || this.getNavigation().isDone()) {
-			this.getNavigation().moveTo(dest.x, dest.y, dest.z, 1.45);
+			this.go(dest.x, dest.y, dest.z, 1.45);
 		}
 	}
 
@@ -689,7 +739,7 @@ public class SoldierEntity extends PathfinderMob {
 		this.setState(INVESTIGATE, "prüft Geräusch");
 		Vec3 p = this.investigate;
 		if (this.position().distanceToSqr(p) > 4.0) {
-			this.getNavigation().moveTo(p.x, p.y, p.z, 0.8);
+			this.go(p.x, p.y, p.z, 0.8);
 			if (this.tickCount % 20 == 0) {
 				this.getLookControl().setLookAt(p.x, p.y + 1.0, p.z, 20.0F, 20.0F);
 			}
@@ -700,7 +750,7 @@ public class SoldierEntity extends PathfinderMob {
 	}
 
 	private void patrol(ServerLevel level, long now) {
-		this.setState(PATROL, "Patrouille");
+		this.setState(PATROL, now - this.gaveUp < 400 ? "hat dich verloren, wachsam" : "Patrouille");
 		if (this.reload == 0 && this.rounds < MAGAZINE / 2) {
 			this.startReload(level); // top up while it is quiet
 		}
@@ -709,10 +759,26 @@ public class SoldierEntity extends PathfinderMob {
 			Vec3 h = this.home;
 			double a = this.getRandom().nextDouble() * Math.PI * 2.0;
 			double r = 3.0 + this.getRandom().nextDouble() * 9.0;
-			this.getNavigation().moveTo(h.x + Math.cos(a) * r, h.y, h.z + Math.sin(a) * r, 0.55);
+			this.go(h.x + Math.cos(a) * r, h.y, h.z + Math.sin(a) * r, 0.55);
 		}
 		if (this.getNavigation().isDone()) {
 			this.lookAround();
+		}
+	}
+
+	private @Nullable Vec3 goingTo;
+	private long goingSince;
+
+	/** Walks to a spot - planning the path again only when the spot moves or every half second, not every tick. */
+	private void go(double x, double y, double z, double speed) {
+		Vec3 dest = new Vec3(x, y, z);
+		long now = this.level().getGameTime();
+		if (this.goingTo == null || this.goingTo.distanceToSqr(dest) > 2.25 || this.getNavigation().isDone() || now - this.goingSince > 10) {
+			this.getNavigation().moveTo(x, y, z, speed);
+			this.goingTo = dest;
+			this.goingSince = now;
+		} else {
+			this.getNavigation().setSpeedModifier(speed);
 		}
 	}
 
