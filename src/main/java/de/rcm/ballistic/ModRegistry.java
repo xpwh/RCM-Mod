@@ -328,6 +328,23 @@ public final class ModRegistry {
 			.lightLevel(s -> s.getValue(de.rcm.ballistic.bunker.GeneratorBlock.LIT) ? 7 : 0)
 	);
 
+	public static final Block RUNWAY_KIT = registerBlock(
+		"runway", de.rcm.ballistic.runway.RunwayKitBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0F, 6.0F).sound(SoundType.STONE)
+	);
+	public static final Block RUNWAY_ASPHALT = registerBlock(
+		"runway_asphalt", Block::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(2.0F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()
+	);
+	public static final Block RUNWAY_MARKING = registerBlock(
+		"runway_marking", Block::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.SNOW).strength(2.0F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()
+	);
+	public static final Block RUNWAY_LIGHT = registerBlock(
+		"runway_light", de.rcm.ballistic.runway.RunwayLightBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.5F).sound(SoundType.GLASS).noCollision().lightLevel(s -> 12)
+	);
+
 	public static final Block MISSILE_SILO = registerBlock(
 		"missile_silo",
 		MissileSiloBlock::new,
@@ -477,6 +494,18 @@ public final class ModRegistry {
 	public static final Item BUNKER_ITEM = registerItem(
 		"bunker", props -> new de.rcm.ballistic.item.DefenseBlockItem(BUNKER, props, "bunker"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
 	);
+	public static final Item RUNWAY_ITEM = registerItem(
+		"runway", props -> new de.rcm.ballistic.item.DefenseBlockItem(RUNWAY_KIT, props, "runway"), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item RUNWAY_ASPHALT_ITEM = registerItem(
+		"runway_asphalt", props -> new BlockItem(RUNWAY_ASPHALT, props), new Item.Properties().useBlockDescriptionPrefix()
+	);
+	public static final Item RUNWAY_MARKING_ITEM = registerItem(
+		"runway_marking", props -> new BlockItem(RUNWAY_MARKING, props), new Item.Properties().useBlockDescriptionPrefix()
+	);
+	public static final Item RUNWAY_LIGHT_ITEM = registerItem(
+		"runway_light", props -> new BlockItem(RUNWAY_LIGHT, props), new Item.Properties().useBlockDescriptionPrefix()
+	);
 	public static final Item AIR_FILTER_ITEM = registerItem("air_filter", props -> new BlockItem(AIR_FILTER, props), new Item.Properties().useBlockDescriptionPrefix());
 	public static final Item EMERGENCY_GENERATOR_ITEM = registerItem(
 		"emergency_generator", props -> new BlockItem(EMERGENCY_GENERATOR, props), new Item.Properties().useBlockDescriptionPrefix()
@@ -603,6 +632,14 @@ public final class ModRegistry {
 	public static final SoundEvent JET_AFTERBURNER = sound("jet.afterburner");
 	public static final SoundEvent JET_BOOM = sound("jet.boom");
 	public static final SoundEvent JET_SUB = sound("jet.sub");
+	public static final SoundEvent JET_STARTUP = sound("jet.startup");
+	public static final SoundEvent JET_SHUTDOWN = sound("jet.shutdown");
+	public static final SoundEvent JET_WIND = sound("jet.wind");
+	public static final SoundEvent JET_GROWL = sound("jet.growl");
+	public static final SoundEvent JET_LOCK = sound("jet.lock");
+	public static final SoundEvent JET_WARN_STALL = sound("jet.warn_stall");
+	public static final SoundEvent JET_WARN_PULLUP = sound("jet.warn_pullup");
+	public static final SoundEvent JET_TYRE = sound("jet.tyre");
 	public static final SoundEvent A10_GUN = sound("a10.gun");
 	public static final SoundEvent A10_ENGINE = sound("a10.engine");
 	public static final SoundEvent A10_GUN_TAIL = sound("a10.gun_tail");
@@ -722,6 +759,10 @@ public final class ModRegistry {
 		output.accept(TARGET_DESIGNATOR);
 		output.accept(F35_ITEM);
 		output.accept(F22_ITEM);
+		output.accept(RUNWAY_ITEM);
+		output.accept(RUNWAY_ASPHALT_ITEM);
+		output.accept(RUNWAY_MARKING_ITEM);
+		output.accept(RUNWAY_LIGHT_ITEM);
 		output.accept(COMMAND_CENTER_ITEM);
 		output.accept(AIRSTRIKE_RADIO);
 	});

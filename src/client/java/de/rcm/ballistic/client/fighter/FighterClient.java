@@ -90,6 +90,12 @@ public final class FighterClient {
 		while (mc.options.keyAttack.consumeClick()) {
 			// held state is read below
 		}
+		// this client flies the jet: hand it the stick before it ticks
+		var o = mc.options;
+		boolean free = mc.screen == null;
+		float throttle = free ? (o.keyUp.isDown() ? 1.0F : 0.0F) - (o.keyDown.isDown() ? 1.0F : 0.0F) : 0.0F;
+		float roll = free ? (o.keyRight.isDown() ? 1.0F : 0.0F) - (o.keyLeft.isDown() ? 1.0F : 0.0F) : 0.0F;
+		flying.setControls(throttle, free && o.keySprint.isDown(), roll, player.getYRot(), player.getXRot(), free && o.keyAttack.isDown());
 	}
 
 	private static void endTick(Minecraft mc) {
@@ -111,14 +117,47 @@ public final class FighterClient {
 			candidate = null;
 			return;
 		}
-		var o = mc.options;
-		float throttle = (o.keyUp.isDown() ? 1.0F : 0.0F) - (o.keyDown.isDown() ? 1.0F : 0.0F);
-		float roll = (o.keyRight.isDown() ? 1.0F : 0.0F) - (o.keyLeft.isDown() ? 1.0F : 0.0F);
-		boolean gun = o.keyAttack.isDown() && mc.screen == null;
+		boolean gun = mc.options.keyAttack.isDown() && mc.screen == null;
 		lock(mc, player, jet);
-		ClientPlayNetworking.send(new FighterInputPayload(jet.getId(), throttle, o.keySprint.isDown(), roll, player.getYRot(), player.getXRot(), gun,
-			pendingAction, locked != null ? locked.getId() : -1));
+		warnings(mc, jet);
+		int action = jet.takeCrashReport() ? FighterEntity.ACTION_CRASH : pendingAction;
+		Vec3 v = jet.getDeltaMovement();
+		ClientPlayNetworking.send(new FighterInputPayload(jet.getId(), jet.simThrottle(), jet.simAfterburner(), jet.simRoll(), (float) jet.simSpeed(),
+			jet.simG(), jet.simGear(), (float) v.x, (float) v.y, (float) v.z, gun, action, locked != null ? locked.getId() : -1));
 		pendingAction = FighterEntity.ACTION_NONE;
+	}
+
+	/** The seeker's audio state for the cockpit: 0 silent (no missiles), 1 searching, 2 tracking something, 3 locked. */
+	public static int seeker() {
+		FighterEntity jet = flying;
+		if (jet == null || jet.missiles() <= 0 || !jet.engineRunning()) {
+			return 0;
+		}
+		if (locked != null) {
+			return 3;
+		}
+		return candidate != null && lockTicks > 0 ? 2 : 1;
+	}
+
+	/** How far the lock has come along, 0..1. */
+	public static float lockProgress() {
+		return Mth.clamp(lockTicks / (float) LOCK_TIME, 0.0F, 1.0F);
+	}
+
+	/** Cockpit warnings: stall beeps, and the "pull up" warble when the ground is coming up fast. */
+	private static void warnings(Minecraft mc, FighterEntity jet) {
+		if (jet.onGround() || jet.isCrashing()) {
+			return;
+		}
+		float speed = jet.speed();
+		if (speed < jet.type().stallSpeed && jet.tickCount % 12 == 0) {
+			mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(ModRegistry.JET_WARN_STALL, 1.0F, 0.45F));
+		}
+		Vec3 f = jet.forward();
+		double agl = jet.getY() - mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(jet.getX()), Mth.floor(jet.getZ()));
+		if (f.y < -0.2 && agl / Math.max(0.1, -f.y * speed) < 60.0 && jet.tickCount % 16 == 0) {
+			mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(ModRegistry.JET_WARN_PULLUP, 1.0F, 0.5F));
+		}
 	}
 
 	/** The seeker: hold a target in the small circle for a second and it locks. */
@@ -157,9 +196,6 @@ public final class FighterClient {
 			candidate = best;
 			lockTicks = 0;
 		}
-		if (candidate != null && lockTicks > 0 && lockTicks < LOCK_TIME && lockTicks % 5 == 0) {
-			player.playSound(ModRegistry.RADIO_CLICK, 0.4F, 1.8F); // the seeker growling as it acquires
-		}
 		if (candidate != null && lockTicks == LOCK_TIME && locked != candidate) {
 			locked = candidate;
 			player.playSound(ModRegistry.TARGET_LOCK, 0.8F, 1.3F);
@@ -191,7 +227,10 @@ public final class FighterClient {
 		}
 		if (mc.player != null && jet.pilot() == mc.player && !jet.clientSoundStarted) {
 			jet.clientSoundStarted = true;
-			mc.getSoundManager().play(new FighterSound(jet, FighterSound.Layer.COCKPIT));
+			for (FighterSound.Layer layer : new FighterSound.Layer[] {FighterSound.Layer.COCKPIT, FighterSound.Layer.WIND, FighterSound.Layer.GROWL,
+				FighterSound.Layer.LOCK}) {
+				mc.getSoundManager().play(new FighterSound(jet, layer));
+			}
 		} else if (jet.pilot() != mc.player) {
 			jet.clientSoundStarted = false;
 		}
@@ -328,7 +367,8 @@ public final class FighterClient {
 		String hdg = String.format("%03d", heading);
 		g.drawString(font, hdg, cx - font.width(hdg) / 2, cy - 70, HUD, true);
 		// engine and weapons (bottom)
-		String thr = "THR " + Math.round(jet.throttle() * 100.0F) + "%" + (jet.isAfterburner() ? "  AB" : "");
+		String thr = !jet.engineRunning() ? "ENG START " + Math.round(jet.spool() * 100.0F) + "%"
+			: "THR " + Math.round(jet.throttle() * 100.0F) + "%" + (jet.isAfterburner() ? "  AB" : "");
 		g.drawString(font, thr, cx - 160, h - 70, jet.isAfterburner() ? 0xFFFFA040 : HUD, true);
 		String weapons = "GUN " + jet.ammo() + "   AIM-120 x" + jet.missiles() + "   FLR " + jet.flares();
 		g.drawString(font, weapons, cx - font.width(weapons) / 2, h - 58, HUD, true);

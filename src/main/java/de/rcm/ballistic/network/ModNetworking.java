@@ -440,21 +440,29 @@ public final class ModNetworking {
 	}
 
 	/** The fighter pilot's controls, every tick. */
-	public record FighterInputPayload(int jet, float throttle, boolean afterburner, float roll, float yaw, float pitch, boolean trigger, int action,
-		int lock) implements CustomPacketPayload {
+	/**
+	 * The pilot's client flies the jet: each tick it tells the server the flight state it worked out (the
+	 * position itself goes with the vanilla vehicle packet) along with the trigger and any weapon action.
+	 */
+	public record FighterInputPayload(int jet, float throttle, boolean afterburner, float roll, float speed, float g, boolean gear, float vx,
+		float vy, float vz, boolean trigger, int action, int lock) implements CustomPacketPayload {
 		public static final Type<FighterInputPayload> TYPE = new Type<>(BallisticMissiles.id("fighter_input"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, FighterInputPayload> CODEC = StreamCodec.of((buf, p) -> {
 			buf.writeVarInt(p.jet());
 			buf.writeFloat(p.throttle());
 			buf.writeBoolean(p.afterburner());
 			buf.writeFloat(p.roll());
-			buf.writeFloat(p.yaw());
-			buf.writeFloat(p.pitch());
+			buf.writeFloat(p.speed());
+			buf.writeFloat(p.g());
+			buf.writeBoolean(p.gear());
+			buf.writeFloat(p.vx());
+			buf.writeFloat(p.vy());
+			buf.writeFloat(p.vz());
 			buf.writeBoolean(p.trigger());
 			buf.writeVarInt(p.action());
 			buf.writeVarInt(p.lock() + 1);
 		}, buf -> new FighterInputPayload(buf.readVarInt(), buf.readFloat(), buf.readBoolean(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
-			buf.readBoolean(), buf.readVarInt(), buf.readVarInt() - 1));
+			buf.readBoolean(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readBoolean(), buf.readVarInt(), buf.readVarInt() - 1));
 
 		@Override
 		public Type<? extends CustomPacketPayload> type() {
@@ -682,8 +690,8 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playC2S().register(FighterInputPayload.TYPE, FighterInputPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(FighterInputPayload.TYPE, (payload, context) -> {
 			if (context.player().level().getEntity(payload.jet()) instanceof de.rcm.ballistic.entity.FighterEntity jet) {
-				jet.input(context.player(), payload.throttle(), payload.afterburner(), payload.roll(), payload.yaw(), payload.pitch(), payload.trigger(),
-					payload.action(), payload.lock());
+				jet.input(context.player(), payload.throttle(), payload.afterburner(), payload.roll(), payload.speed(), payload.g(), payload.gear(),
+					new net.minecraft.world.phys.Vec3(payload.vx(), payload.vy(), payload.vz()), payload.trigger(), payload.action(), payload.lock());
 			}
 		});
 		PayloadTypeRegistry.playS2C().register(de.rcm.ballistic.ai.SoldierDebug.Payload.TYPE, de.rcm.ballistic.ai.SoldierDebug.Payload.CODEC);

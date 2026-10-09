@@ -94,6 +94,7 @@ Bullet impacts on earth, stone, wood and flesh use Minecraft's own sounds. Other
 | Sound | Source | Author | License |
 |---|---|---|---|
 | Fighter jet roar (loop) | https://freesound.org/s/395419/ (F/A-18 Hornet airshow) | hhoffren | CC0 1.0 |
+| Fighter engine start-up / shut-down (`jet/startup`, `jet/shutdown`) | derived from the F/A-18 recording above (resampled along the spool-up curve) | hhoffren | CC0 1.0 |
 | Fighter jet far + low end (loops) | https://freesound.org/s/742242/ (high-altitude F-16) | klankbeeld | CC BY 4.0 |
 | Afterburner (loop) | https://freesound.org/s/349713/ (CF-18 vertical climb) | lonemonk | CC BY 4.0 |
 | Sonic boom | https://freesound.org/s/182050/ (US Government footage) | qubodup | CC0 1.0 |

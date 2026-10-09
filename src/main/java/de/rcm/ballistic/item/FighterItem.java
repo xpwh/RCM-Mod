@@ -35,7 +35,11 @@ public class FighterItem extends Item {
 		if (!level.noCollision(new AABB(at.x - 1.8, at.y, at.z - 1.8, at.x + 1.8, at.y + 3.2, at.z + 1.8))) {
 			return InteractionResult.FAIL;
 		}
-		FighterEntity.place(level, player, at, player.getYRot(), this.type);
+		float yaw = player.getYRot();
+		if (de.rcm.ballistic.runway.RunwayBuilder.isRunway(level.getBlockState(context.getClickedPos()))) {
+			yaw = Math.round(yaw / 90.0F) * 90.0F; // on a runway: lined up on the centreline heading
+		}
+		FighterEntity.place(level, player, at, yaw, this.type);
 		level.playSound(null, at.x, at.y, at.z, de.rcm.ballistic.ModRegistry.METAL_THUD, net.minecraft.sounds.SoundSource.NEUTRAL, 2.0F, 0.6F);
 		if (!player.getAbilities().instabuild) {
 			context.getItemInHand().shrink(1);

@@ -632,5 +632,17 @@
 	"message.ballisticmissiles.jammer_spoofed": "%s spoofed - redirected to %s / %s!",
 	"message.ballisticmissiles.jammer_not_yours": "This jammer is not yours.",
 	"options.ballisticmissiles.dynamic_lights": "Dynamic Light",
-	"options.ballisticmissiles.dynamic_lights.tooltip": "Muzzle flashes, rocket motors and explosions light up their surroundings for a moment - most of all at night."
+	"options.ballisticmissiles.dynamic_lights.tooltip": "Muzzle flashes, rocket motors and explosions light up their surroundings for a moment - most of all at night.",
+	"block.ballisticmissiles.runway": "Runway (Kit)",
+	"block.ballisticmissiles.runway_asphalt": "Runway Asphalt",
+	"block.ballisticmissiles.runway_marking": "Runway Marking",
+	"block.ballisticmissiles.runway_light": "Runway Light",
+	"tooltip.ballisticmissiles.runway.good": "Lays a 600 m long, 27 m wide military runway the way you face: levelled, marked, numbered and lit",
+	"tooltip.ballisticmissiles.runway.bad": "Clears everything in its way (trees, hills) and needs room",
+	"tooltip.ballisticmissiles.runway.info": "On asphalt jets roll freely and lift off cleanly; on grass and dirt they barely reach flying speed",
+	"message.ballisticmissiles.runway_started": "Building runway %s/%s ...",
+	"message.ballisticmissiles.runway_built": "Runway finished",
+	"subtitles.ballisticmissiles.jet_startup": "Jet engine starts",
+	"subtitles.ballisticmissiles.jet_shutdown": "Jet engine winds down",
+	"subtitles.ballisticmissiles.jet_tyre": "Tyres screech on touchdown"
 }

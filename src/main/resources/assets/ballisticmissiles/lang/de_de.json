@@ -632,5 +632,17 @@
 	"message.ballisticmissiles.jammer_spoofed": "%s durch GPS-Spoofing umgeleitet nach %s / %s!",
 	"message.ballisticmissiles.jammer_not_yours": "Dieser Störsender gehört dir nicht.",
 	"options.ballisticmissiles.dynamic_lights": "Dynamisches Licht",
-	"options.ballisticmissiles.dynamic_lights.tooltip": "Mündungsfeuer, Raketenmotoren und Explosionen erhellen kurz die Umgebung – besonders nachts."
+	"options.ballisticmissiles.dynamic_lights.tooltip": "Mündungsfeuer, Raketenmotoren und Explosionen erhellen kurz die Umgebung – besonders nachts.",
+	"block.ballisticmissiles.runway": "Startbahn (Bausatz)",
+	"block.ballisticmissiles.runway_asphalt": "Startbahn-Asphalt",
+	"block.ballisticmissiles.runway_marking": "Startbahn-Markierung",
+	"block.ballisticmissiles.runway_light": "Startbahn-Feuer",
+	"tooltip.ballisticmissiles.runway.good": "Baut eine 600 m lange, 27 m breite Militär-Startbahn in Blickrichtung: planiert, mit Markierungen, Kennziffern und Befeuerung",
+	"tooltip.ballisticmissiles.runway.bad": "Räumt alles im Weg ab (Bäume, Hügel) und braucht Platz",
+	"tooltip.ballisticmissiles.runway.info": "Auf Asphalt rollen Jets frei und heben sauber ab, auf Gras und Erde kommen sie kaum auf Abhebegeschwindigkeit",
+	"message.ballisticmissiles.runway_started": "Startbahn %s/%s wird gebaut ...",
+	"message.ballisticmissiles.runway_built": "Startbahn fertig",
+	"subtitles.ballisticmissiles.jet_startup": "Jet-Triebwerk startet",
+	"subtitles.ballisticmissiles.jet_shutdown": "Jet-Triebwerk läuft aus",
+	"subtitles.ballisticmissiles.jet_tyre": "Reifen quietschen beim Aufsetzen"
 }

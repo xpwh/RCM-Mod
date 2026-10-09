@@ -1402,5 +1402,75 @@
 	},
 	"silence": {
 		"sounds": []
+	},
+	"jet.startup": {
+		"subtitle": "subtitles.ballisticmissiles.jet_startup",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/startup",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"jet.shutdown": {
+		"subtitle": "subtitles.ballisticmissiles.jet_shutdown",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/shutdown",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"jet.wind": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/wind"
+			}
+		]
+	},
+	"jet.growl": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/growl"
+			}
+		]
+	},
+	"jet.lock": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/lock"
+			}
+		]
+	},
+	"jet.warn_stall": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/warn_stall"
+			}
+		]
+	},
+	"jet.warn_pullup": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/warn_pullup"
+			}
+		]
+	},
+	"jet.tyre": {
+		"subtitle": "subtitles.ballisticmissiles.jet_tyre",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/tyre1",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "ballisticmissiles:jet/tyre2",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "ballisticmissiles:jet/tyre3",
+				"attenuation_distance": 64
+			}
+		]
 	}
 }

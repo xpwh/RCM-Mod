@@ -20,6 +20,10 @@
 		"ballisticmissiles:bunker",
 		"ballisticmissiles:air_filter",
 		"ballisticmissiles:emergency_generator",
-		"ballisticmissiles:orbital_uplink"
+		"ballisticmissiles:orbital_uplink",
+		"ballisticmissiles:runway_asphalt",
+		"ballisticmissiles:runway_marking",
+		"ballisticmissiles:runway_light",
+		"ballisticmissiles:runway"
 	]
 }

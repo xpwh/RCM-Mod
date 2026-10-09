@@ -6,7 +6,8 @@
 		"ChunkMapAccessor",
 		"ChunkMapMixin",
 		"GrowthMixin",
-		"TrackedEntityMixin"
+		"TrackedEntityMixin",
+		"VehicleMoveMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

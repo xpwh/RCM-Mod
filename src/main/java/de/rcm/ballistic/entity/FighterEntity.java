@@ -73,6 +73,7 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	public static final int ACTION_NONE = 0;
 	public static final int ACTION_MISSILE = 1;
 	public static final int ACTION_FLARES = 2;
+	public static final int ACTION_CRASH = 3;
 
 	private static final EntityDataAccessor<Integer> DATA_TYPE = SynchedEntityData.defineId(FighterEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Float> DATA_THROTTLE = SynchedEntityData.defineId(FighterEntity.class, EntityDataSerializers.FLOAT);
@@ -89,6 +90,10 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	private static final EntityDataAccessor<Float> DATA_HEALTH = SynchedEntityData.defineId(FighterEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Boolean> DATA_CRASHING = SynchedEntityData.defineId(FighterEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> DATA_WARNING = SynchedEntityData.defineId(FighterEntity.class, EntityDataSerializers.INT);
+	/** Game time the engine start began, or -1 with the engine off. */
+	private static final EntityDataAccessor<Integer> DATA_ENGINE = SynchedEntityData.defineId(FighterEntity.class, EntityDataSerializers.INT);
+	/** Ticks from pressing the starter to a stable idle (the jet fuel starter spins the engine up, light-off, spool-up). */
+	public static final int START_TICKS = 170;
 
 	private final InterpolationHandler interpolation = new InterpolationHandler(this, 2);
 
@@ -100,8 +105,17 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	private float aimPitch;
 	private boolean trigger;
 	private int lastInput = -100;
-	// flight
+	// flight, worked out by whichever side flies the jet (see fly())
 	private double speed;
+	private float throttleL;
+	private boolean abL;
+	private float rollL;
+	private float gL = 1.0F;
+	private boolean gearL = true;
+	private boolean hadAuthority;
+	private boolean wasOnGround = true;
+	private boolean crashReported;
+	private boolean crashSent;
 	private double sink;
 	private float aileron;
 	private float gunCarry;
@@ -119,6 +133,7 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 	public FighterEntity(EntityType<? extends FighterEntity> type, Level level) {
 		super(type, level);
+		this.setNoGravity(true); // it flies on its own wings (and servers would otherwise kick the pilot for flying)
 	}
 
 	public static FighterEntity place(ServerLevel level, Player owner, Vec3 at, float yaw, FighterType type) {
@@ -150,6 +165,7 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		builder.define(DATA_HEALTH, 60.0F);
 		builder.define(DATA_CRASHING, false);
 		builder.define(DATA_WARNING, 0);
+		builder.define(DATA_ENGINE, -1);
 	}
 
 	// ------------------------------------------------------------------ state
@@ -159,15 +175,15 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	}
 
 	public float throttle() {
-		return this.entityData.get(DATA_THROTTLE);
+		return this.simulatedHere() ? this.throttleL : this.entityData.get(DATA_THROTTLE);
 	}
 
 	public boolean isAfterburner() {
-		return this.entityData.get(DATA_AB);
+		return this.simulatedHere() ? this.abL : this.entityData.get(DATA_AB);
 	}
 
 	public float roll() {
-		return this.entityData.get(DATA_ROLL);
+		return this.simulatedHere() ? this.rollL : this.entityData.get(DATA_ROLL);
 	}
 
 	public float getRoll(float partialTick) {
@@ -175,7 +191,12 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	}
 
 	public float speed() {
-		return this.entityData.get(DATA_SPEED);
+		return this.simulatedHere() ? (float) this.speed : this.entityData.get(DATA_SPEED);
+	}
+
+	/** The pilot's own client works the flight out itself; everyone else is told by the server. */
+	private boolean simulatedHere() {
+		return this.level().isClientSide() && this.hadAuthority;
 	}
 
 	public float mach() {
@@ -183,11 +204,11 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	}
 
 	public float gLoad() {
-		return this.entityData.get(DATA_G);
+		return this.simulatedHere() ? this.gL : this.entityData.get(DATA_G);
 	}
 
 	public boolean gearDown() {
-		return this.entityData.get(DATA_GEAR);
+		return this.simulatedHere() ? this.gearL : this.entityData.get(DATA_GEAR);
 	}
 
 	public boolean bayOpen() {
@@ -216,6 +237,16 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 	public boolean isCrashing() {
 		return this.entityData.get(DATA_CRASHING);
+	}
+
+	/** How far the engine has spooled up: 0 off, 1 running (idle or above). */
+	public float spool() {
+		int start = this.entityData.get(DATA_ENGINE);
+		return start < 0 ? 0.0F : Mth.clamp((float) (this.level().getGameTime() - start) / START_TICKS, 0.0F, 1.0F);
+	}
+
+	public boolean engineRunning() {
+		return this.spool() >= 1.0F;
 	}
 
 	/** Ticks of missile warning left (something has been launched at this jet). */
@@ -252,17 +283,68 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 	// ------------------------------------------------------------------ the pilot's controls
 
-	/** Server: the pilot's controls this tick. */
-	public void input(ServerPlayer player, float throttleAxis, boolean afterburner, float roll, float yaw, float pitch, boolean trigger, int action,
-		int lockTarget) {
-		if (player != this.pilot() || !Float.isFinite(throttleAxis) || !Float.isFinite(roll) || !Float.isFinite(yaw) || !Float.isFinite(pitch)) {
-			return;
-		}
+	/** Pilot's client, before the jet ticks: the stick, throttle and where he is looking. */
+	public void setControls(float throttleAxis, boolean afterburner, float roll, float yaw, float pitch, boolean trigger) {
 		this.throttleAxis = Mth.clamp(throttleAxis, -1.0F, 1.0F);
 		this.afterburnerWanted = afterburner;
 		this.rollAxis = Mth.clamp(roll, -1.0F, 1.0F);
 		this.aimYaw = Mth.wrapDegrees(yaw);
 		this.aimPitch = Mth.clamp(pitch, -90.0F, 90.0F);
+		this.trigger = trigger;
+	}
+
+	/** Pilot's client: true once, after the jet hit something it could not survive (the server then wrecks it). */
+	public boolean takeCrashReport() {
+		boolean r = this.crashReported && !this.crashSent;
+		this.crashSent |= r;
+		return r;
+	}
+
+	/** Pilot's client: the flight state it has worked out, for the server to pass on to everyone else. */
+	public float simThrottle() {
+		return this.throttleL;
+	}
+
+	public boolean simAfterburner() {
+		return this.abL;
+	}
+
+	public float simRoll() {
+		return this.rollL;
+	}
+
+	public float simG() {
+		return this.gL;
+	}
+
+	public boolean simGear() {
+		return this.gearL;
+	}
+
+	public double simSpeed() {
+		return this.speed;
+	}
+
+	/**
+	 * Server: the pilot's state this tick. His client flies the jet (like a boat), so it moves smoothly for
+	 * him at any speed; the server takes the flight state from him and runs the weapons, damage and radar.
+	 */
+	public void input(ServerPlayer player, float throttle, boolean afterburner, float roll, float speed, float g, boolean gear, Vec3 velocity,
+		boolean trigger, int action, int lockTarget) {
+		if (player != this.pilot() || !Float.isFinite(throttle) || !Float.isFinite(roll) || !Float.isFinite(speed) || !Float.isFinite(g)
+			|| !Double.isFinite(velocity.lengthSqr())) {
+			return;
+		}
+		FighterType type = this.type();
+		this.throttleL = Mth.clamp(throttle, 0.0F, 1.0F);
+		this.abL = afterburner && this.throttleL > 0.95F;
+		this.rollL = Mth.wrapDegrees(roll);
+		this.speed = Mth.clamp(speed, 0.0F, type.maxSpeed * 1.3F);
+		this.gL = Mth.clamp(g, 0.0F, 15.0F);
+		this.gearL = gear;
+		double v = velocity.length();
+		double cap = type.maxSpeed * 1.5;
+		this.setDeltaMovement(v > cap ? velocity.scale(cap / v) : velocity);
 		this.trigger = trigger;
 		this.lastInput = this.tickCount;
 		ServerLevel level = (ServerLevel) this.level();
@@ -270,6 +352,8 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 			this.fireMissile(level, player, lockTarget);
 		} else if (action == ACTION_FLARES) {
 			this.releaseFlares(level);
+		} else if (action == ACTION_CRASH && !this.isRemoved()) {
+			this.crash(level);
 		}
 	}
 
@@ -279,25 +363,116 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	public void tick() {
 		this.rollO = this.roll();
 		super.tick();
+		this.interpolation.interpolate();
+		boolean authority = this.isLocalInstanceAuthoritative();
+		if (authority && !this.hadAuthority) {
+			// taking over the flight (boarding, or the server after an ejection): carry on from where it is
+			this.throttleL = this.entityData.get(DATA_THROTTLE);
+			this.abL = this.entityData.get(DATA_AB);
+			this.rollL = this.entityData.get(DATA_ROLL);
+			this.bankSmoothed = this.rollL;
+			this.aileron = 0.0F;
+			this.gL = this.entityData.get(DATA_G);
+			this.gearL = this.entityData.get(DATA_GEAR);
+			this.speed = this.entityData.get(DATA_SPEED);
+			this.crashReported = false;
+			this.crashSent = false;
+		}
+		this.hadAuthority = authority;
 		if (this.level().isClientSide()) {
+			if (authority && !this.crashReported && this.fly()) {
+				this.crashReported = true; // reported with the next input; the server wrecks it
+				this.speed = 0.0;
+			}
 			return;
 		}
 		ServerLevel level = (ServerLevel) this.level();
-		FighterType type = this.type();
+		if (authority && this.fly()) {
+			this.crash(level);
+			return;
+		}
+		if (!authority && this.tickCount - this.lastInput > 10) {
+			this.trigger = false; // the pilot's packets stopped coming
+		}
+		if (this.isInWater() && this.speed > 1.0) {
+			this.crash(level);
+			return;
+		}
+		boolean ground = this.onGround();
+		if (ground && !this.wasOnGround && this.tickCount > 5) {
+			if (this.speed > 2.5 && this.gearDown()) {
+				// the main wheels spin up from standstill: a screech and a puff of rubber smoke
+				level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.JET_TYRE, SoundSource.NEUTRAL, 2.5F, 0.9F + this.random.nextFloat() * 0.2F);
+				Vec3 r = this.rightVec(this.forward());
+				for (int side = -1; side <= 1; side += 2) {
+					Vec3 wheel = this.position().add(r.scale(side * 1.6)).subtract(this.forward().scale(1.0));
+					level.sendParticles(net.minecraft.core.particles.ParticleTypes.CLOUD, true, false, wheel.x, wheel.y + 0.2, wheel.z, 6, 0.3, 0.1, 0.3, 0.02);
+				}
+			} else {
+				level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.METAL_THUD, SoundSource.NEUTRAL, 2.0F, 0.7F);
+			}
+		}
+		this.wasOnGround = ground;
+		if (this.gearL != this.gearDown()) {
+			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.HYDRAULIC_EXTEND, SoundSource.NEUTRAL, 1.2F, 1.3F);
+		}
+		// pass the flight state on to everyone watching
+		this.entityData.set(DATA_THROTTLE, this.throttleL);
+		this.entityData.set(DATA_AB, this.abL);
+		this.entityData.set(DATA_ROLL, this.rollL);
+		this.entityData.set(DATA_SPEED, (float) this.speed);
+		this.entityData.set(DATA_G, this.gL);
+		this.entityData.set(DATA_GEAR, this.gearL);
+
+		// weapons, bay, chunk loading, radar
 		Player pilot = this.pilot();
-		boolean flown = pilot != null && this.tickCount - this.lastInput < 10 && !this.isCrashing();
+		this.gun(level, pilot != null && !this.isCrashing() && this.trigger, this.forward());
+		if (this.missileCooldown > 0) {
+			this.missileCooldown--;
+		}
+		if (this.flareCooldown > 0) {
+			this.flareCooldown--;
+		}
+		this.entityData.set(DATA_BAY, level.getGameTime() < this.bayUntil);
+		if (this.warning() > 0) {
+			this.entityData.set(DATA_WARNING, this.warning() - 1);
+		}
+		if (this.isCrashing() && ++this.crashAge > 600) {
+			this.crash(level);
+			return;
+		}
+		if (pilot != null || !this.onGround()) {
+			Vec3 ahead = this.forward().scale(this.speed * 12.0);
+			level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, this.chunkPosition(), 2);
+			level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(this.position().add(ahead))), 2);
+		}
+		if (this.isActiveThreat()) {
+			ThreatTracker.report(level, this);
+		}
+	}
+
+	/**
+	 * One tick of flight, on whichever side flies the jet: the pilot's client, or the server when nobody
+	 * is at the stick. Returns true if it hit something it cannot survive.
+	 */
+	private boolean fly() {
+		Level level = this.level();
+		FighterType type = this.type();
+		boolean flown = this.getControllingPassenger() != null;
 		boolean grounded = this.onGround();
 
 		// throttle and afterburner
-		float throttle = this.throttle();
-		if (flown) {
+		float throttle = this.throttleL;
+		boolean running = this.engineRunning();
+		if (!running) {
+			throttle = 0.0F; // still starting up (or off): the throttle stays at idle
+		} else if (flown) {
 			throttle = Mth.clamp(throttle + this.throttleAxis * 0.012F, 0.0F, 1.0F);
 		} else if (grounded) {
 			throttle = Math.max(0.0F, throttle - 0.02F);
 		}
-		boolean ab = flown && this.afterburnerWanted && throttle > 0.95F;
-		this.entityData.set(DATA_THROTTLE, throttle);
-		this.entityData.set(DATA_AB, ab);
+		this.throttleL = throttle;
+		this.abL = flown && running && this.afterburnerWanted && throttle > 0.95F;
 
 		// steering: the nose swings towards where the pilot looks, as fast as the airframe allows
 		Vec3 fwd = this.forward();
@@ -327,10 +502,19 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		this.setRot((float) (Mth.atan2(-newFwd.x, newFwd.z) * Mth.RAD_TO_DEG), (float) (-Math.asin(Mth.clamp(newFwd.y, -1.0, 1.0)) * Mth.RAD_TO_DEG));
 
 		// speed: thrust, drag rising with the square of speed, gravity along the climb or dive
-		double thrust = this.isCrashing() ? 0.0 : throttle * (ab ? type.afterburnerThrust : type.dryThrust());
-		double drag = type.drag() * this.speed * this.speed + (this.gearDown() ? 0.0004 * this.speed : 0.0);
+		// even at idle a jet engine pushes: the jet creeps forward with the brakes off
+		// a jet engine gives most thrust standing still and loses some as the air rams in: off the brakes it
+		// pushes like a real one (about 0.7 g dry, 1.1 g with afterburner), up high it balances the drag
+		double base = this.abL ? type.afterburnerThrust : type.dryThrust();
+		double ram = Math.max(0.0, 1.0 - this.speed / (type.stallSpeed * 2.0));
+		double thrust = this.isCrashing() || !running ? 0.0
+			: Math.max(throttle, 0.03F) * (base + Math.max(0.0, (this.abL ? 0.03 : 0.02) - base) * ram);
+		double drag = type.drag() * this.speed * this.speed + (this.gearL ? 0.0004 * this.speed : 0.0);
 		if (grounded) {
-			drag += throttle < 0.05F ? 0.06 : 0.0015; // brakes on with the throttle closed, rolling resistance otherwise
+			// brakes on with the throttle closed; otherwise rolling resistance - small on a runway, on grass and
+			// dirt the wheels sink in and the jet barely gets to flying speed
+			boolean runway = de.rcm.ballistic.runway.RunwayBuilder.isRunway(level.getBlockState(this.getOnPos()));
+			drag += throttle < 0.05F ? 0.06 : runway ? 0.0008 : 0.0016 + 0.012 * Math.min(1.0, this.speed / type.stallSpeed);
 		}
 		this.speed = Math.max(0.0, this.speed + thrust - drag - GRAVITY * newFwd.y);
 
@@ -352,32 +536,24 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 		// touching down gently on the gear is a landing; anything else is a crash
 		if (this.horizontalCollision && this.speed > 1.5 || this.verticalCollision && !grounded && this.onGround()
-			&& !(this.gearDown() && fallSpeed < 0.45 && Math.abs(this.getXRot()) < 18.0F && this.speed < 7.5) && this.speed > 1.0) {
-			this.crash(level);
-			return;
+			&& !(this.gearL && fallSpeed < 0.45 && Math.abs(this.getXRot()) < 18.0F && this.speed < 7.5) && this.speed > 1.0) {
+			return true;
 		}
 		if (this.onGround() && !grounded) {
 			this.setXRot(Math.min(0.0F, this.getXRot()));
-			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.METAL_THUD, SoundSource.NEUTRAL, 2.0F, 0.7F);
 		}
 		if (this.isInWater() && this.speed > 1.0) {
-			this.crash(level);
-			return;
+			return true;
 		}
 
 		// gear: up once airborne and fast, down when slow and near the ground
 		double agl = this.getY() - level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(this.getX()), Mth.floor(this.getZ()));
-		boolean gear = this.onGround() || this.speed < 7.0 && agl < 40.0;
-		if (gear != this.gearDown()) {
-			this.entityData.set(DATA_GEAR, gear);
-			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.HYDRAULIC_EXTEND, SoundSource.NEUTRAL, 1.2F, 1.3F);
-		}
+		this.gearL = this.onGround() || this.speed < 7.0 && agl < 40.0;
 
 		// bank into the turn (coordinated: tan(bank) = v * omega / g), plus aileron rolls on A/D
 		double omegaMs = turned * 20.0;
 		double vMs = this.speed * 20.0;
-		double g = Math.sqrt(1.0 + Math.pow(vMs * omegaMs / 9.81, 2));
-		this.entityData.set(DATA_G, (float) g);
+		this.gL = (float) Math.sqrt(1.0 + Math.pow(vMs * omegaMs / 9.81, 2));
 		float bank = 0.0F;
 		if (!this.onGround() && turned > 1.0E-4) {
 			double side = fwd.cross(newFwd).y;
@@ -387,37 +563,13 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		if (flown && !this.onGround()) {
 			this.aileron += this.rollAxis * 14.0F;
 		}
-		if (Math.abs(this.rollAxis) < 0.1F) {
+		if (!flown || Math.abs(this.rollAxis) < 0.1F) {
 			float rest = Mth.wrapDegrees(this.aileron);
 			this.aileron = Math.abs(rest) < 9.0F ? 0.0F : this.aileron - Math.signum(rest) * 9.0F;
 		}
 		this.bankSmoothed = Mth.approach(this.bankSmoothed, bank, 6.0F);
-		this.entityData.set(DATA_ROLL, Mth.wrapDegrees(this.bankSmoothed + this.aileron));
-		this.entityData.set(DATA_SPEED, (float) this.speed);
-
-		// weapons, bay, damage smoke, chunk loading, radar
-		this.gun(level, flown && this.trigger, newFwd);
-		if (this.missileCooldown > 0) {
-			this.missileCooldown--;
-		}
-		if (this.flareCooldown > 0) {
-			this.flareCooldown--;
-		}
-		this.entityData.set(DATA_BAY, level.getGameTime() < this.bayUntil);
-		if (this.warning() > 0) {
-			this.entityData.set(DATA_WARNING, this.warning() - 1);
-		}
-		if (this.isCrashing() && ++this.crashAge > 600) {
-			this.crash(level);
-			return;
-		}
-		if (pilot != null || !this.onGround()) {
-			level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, this.chunkPosition(), 2);
-			level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(this.position().add(vel.scale(12.0)))), 2);
-		}
-		if (this.isActiveThreat()) {
-			ThreatTracker.report(level, this);
-		}
+		this.rollL = Mth.wrapDegrees(this.bankSmoothed + this.aileron);
+		return false;
 	}
 
 	private float bankSmoothed;
@@ -597,6 +749,14 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	@Override
 	protected void removePassenger(Entity passenger) {
 		super.removePassenger(passenger);
+		if (!this.level().isClientSide() && this.onGround() && !this.isRemoved() && this.entityData.get(DATA_ENGINE) >= 0) {
+			// climbing out on the ground: engine shut down, canopy up
+			this.entityData.set(DATA_ENGINE, -1);
+			this.throttleL = 0.0F;
+			this.level().playSound(null, this.getX(), this.getY() + CENTRE, this.getZ(), ModRegistry.JET_SHUTDOWN, SoundSource.NEUTRAL, 2.5F,
+				this.type().enginePitch);
+			this.level().playSound(null, this.getX(), this.getY() + CENTRE, this.getZ(), ModRegistry.HYDRAULIC_EXTEND, SoundSource.NEUTRAL, 1.0F, 1.4F);
+		}
 		if (!this.level().isClientSide() && !this.onGround() && this.speed > 2.0 && passenger instanceof LivingEntity pilot && !this.isRemoved()) {
 			// ejection: the seat fires the pilot clear above the jet, then the parachute opens
 			Vec3 up = this.up(this.roll());
@@ -628,14 +788,23 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 				this.entityData.set(DATA_MISSILES, t.missiles);
 				this.entityData.set(DATA_FLARES, 24);
 			}
-			player.startRiding(this);
+			if (player.startRiding(this)) {
+				// canopy down, then the start: the jet fuel starter winds the engine up to light-off and idle
+				this.level().playSound(null, this.getX(), this.getY() + CENTRE, this.getZ(), ModRegistry.HYDRAULIC_RETRACT, SoundSource.NEUTRAL, 1.0F, 1.4F);
+				if (this.entityData.get(DATA_ENGINE) < 0) {
+					this.entityData.set(DATA_ENGINE, (int) this.level().getGameTime());
+					this.level().playSound(null, this.getX(), this.getY() + CENTRE, this.getZ(), ModRegistry.JET_STARTUP, SoundSource.NEUTRAL, 3.0F,
+						this.type().enginePitch);
+				}
+			}
 		}
 		return InteractionResult.SUCCESS;
 	}
 
 	@Override
 	public @Nullable LivingEntity getControllingPassenger() {
-		return null; // flown from packets on the server, not driven like a boat
+		// the pilot's client flies it (like a boat); once it is going down, the server takes over
+		return !this.isCrashing() && this.getFirstPassenger() instanceof Player p ? p : null;
 	}
 
 	@Override
@@ -797,6 +966,7 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		output.putInt("Missiles", this.missiles());
 		output.putInt("Flares", this.flares());
 		output.putFloat("Health", this.health());
+		output.putBoolean("EngineRunning", this.entityData.get(DATA_ENGINE) >= 0);
 		if (this.owner != null) {
 			output.store("Owner", UUIDUtil.CODEC, this.owner);
 		}
@@ -810,5 +980,6 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		this.entityData.set(DATA_FLARES, input.getIntOr("Flares", 24));
 		this.entityData.set(DATA_HEALTH, input.getFloatOr("Health", this.type().maxHealth));
 		this.owner = input.read("Owner", UUIDUtil.CODEC).orElse(null);
+		this.entityData.set(DATA_ENGINE, input.getBooleanOr("EngineRunning", false) ? 0 : -1);
 	}
 }
