@@ -87,9 +87,11 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 	/** Pilot's eye in model space (x right, y forward, z up from the centreline), see FighterEntity's seat. */
 	public static final float F22_EYE = 5.3F;
 	public static final float F35_EYE = 4.3F;
-	private static final BoxMesh F22_PIT = buildCockpit(F22_EYE, 0.66F, 0.72F, true);
-	private static final BoxMesh F35_PIT = buildCockpit(F35_EYE, 0.76F, 0.8F, false);
-	private static final BoxMesh F22_HUD = buildF22Hud();
+	/** Top of the instrument panel: low, so the view over the nose stays open. */
+	private static final float F22_PANEL_TOP = 0.6F;
+	private static final float F35_PANEL_TOP = 0.64F;
+	private static final BoxMesh F22_PIT = buildCockpit(F22_EYE, 0.64F, F22_PANEL_TOP, true);
+	private static final BoxMesh F35_PIT = buildCockpit(F35_EYE, 0.7F, F35_PANEL_TOP, false);
 
 	public FighterRenderer(EntityRendererProvider.Context context) {
 		super(context);
@@ -168,11 +170,8 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 		if (state.displays) {
 			CockpitDisplays.Data data = state.cockpit;
 			float eye = f22 ? F22_EYE : F35_EYE;
-			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> CockpitDisplays.draw(pose, consumer, data, f22, eye));
-		}
-		if (f22) {
-			// the HUD combiner glass above the glare shield
-			collector.submitCustomGeometry(poseStack, GLASS_TYPE, (pose, consumer) -> F22_HUD.emit(pose, consumer, light, 0x3080FFB0));
+			float top = f22 ? F22_PANEL_TOP : F35_PANEL_TOP;
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> CockpitDisplays.draw(pose, consumer, data, f22, eye, top));
 		}
 		// the canopy: tinted glass you can see through (more so from inside)
 		BoxMesh canopy = f22 ? F22_CANOPY : F35_CANOPY;
@@ -489,7 +488,7 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 		float w = 0.37F; // tub half width (inside the fuselage skin)
 		float floor = -0.15F;
 		float back = eye - 0.62F;
-		float panel = eye + 0.72F;
+		float panel = eye + CockpitDisplays.PANEL;
 		// floor, rear bulkhead, side walls up to the sills
 		b.box(-w, back, floor - 0.06F, w, panel + 0.5F, floor, PIT_GREY);
 		b.box(-w, back - 0.06F, floor, w, back, sill + 0.1F, PIT_GREY);
@@ -523,23 +522,21 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 		b.box(-w, panel, floor + 0.15F, w, panel + 0.12F, panelTop, PIT_GREY);
 		// centre pedestal between the knees
 		b.box(-0.09F, panel - 0.25F, floor + 0.15F, 0.09F, panel, 0.38F, CONSOLE);
-		// glare shield: over the panel and forward to the windscreen, keeping the sun off the displays
+		// glare shield: a thin hood over the panel, running forward under the windscreen
 		b.hexa(FRAME,
-			v(-w, panel - 0.06F, panelTop - 0.02F), v(w, panel - 0.06F, panelTop - 0.02F), v(w, panel - 0.06F, panelTop + 0.04F), v(-w, panel - 0.06F, panelTop + 0.04F),
-			v(-w + 0.08F, panel + 0.45F, panelTop - 0.02F), v(w - 0.08F, panel + 0.45F, panelTop - 0.02F), v(w - 0.08F, panel + 0.45F, panelTop + 0.07F),
-			v(-w + 0.08F, panel + 0.45F, panelTop + 0.07F));
+			v(-w, panel - 0.05F, panelTop - 0.012F), v(w, panel - 0.05F, panelTop - 0.012F), v(w, panel - 0.05F, panelTop + 0.018F), v(-w, panel - 0.05F, panelTop + 0.018F),
+			v(-w + 0.1F, panel + 0.35F, panelTop - 0.01F), v(w - 0.1F, panel + 0.35F, panelTop - 0.01F), v(w - 0.1F, panel + 0.35F, panelTop + 0.03F),
+			v(-w + 0.1F, panel + 0.35F, panelTop + 0.03F));
 		// display bezels on the panel face
 		float face = panel - 0.005F;
 		if (f22) {
-			// three 6.25 x 6.25 in. colour MFDs, the primary one in the middle, and the up-front display above
-			b.box(-0.115F, face - 0.01F, 0.3F, 0.115F, face, 0.53F, BEZEL);
-			b.box(-0.37F, face - 0.01F, 0.38F, -0.15F, face, 0.6F, BEZEL);
-			b.box(0.15F, face - 0.01F, 0.38F, 0.37F, face, 0.6F, BEZEL);
-			b.box(-0.11F, face - 0.01F, 0.56F, 0.11F, face, panelTop - 0.02F, BEZEL);
+			// three 6.25 x 6.25 in. colour MFDs, the primary one in the middle
+			b.box(-0.115F, face - 0.01F, panelTop - 0.27F, 0.115F, face, panelTop - 0.05F, BEZEL);
+			b.box(-0.35F, face - 0.01F, panelTop - 0.23F, -0.15F, face, panelTop - 0.03F, BEZEL);
+			b.box(0.15F, face - 0.01F, panelTop - 0.23F, 0.35F, face, panelTop - 0.03F, BEZEL);
 		} else {
 			// the panoramic cockpit display: one 20 x 8 in. touch screen across the whole panel
-			b.box(-0.33F, face - 0.01F, 0.42F, 0.33F, face, panelTop - 0.03F, BEZEL);
-			b.box(-0.2F, face - 0.01F, 0.3F, 0.2F, face, 0.4F, CONSOLE);
+			b.box(-0.33F, face - 0.01F, panelTop - 0.31F, 0.33F, face, panelTop - 0.02F, BEZEL);
 		}
 		if (!f22) {
 			// the F-35's canopy has a frame bow behind the pilot's head
@@ -548,17 +545,6 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 			b.beam(v(-0.3F, y, 1.08F), v(0.3F, y, 1.08F), 0.06F, 0.06F, FRAME);
 			b.beam(v(0.3F, y, 1.08F), v(0.42F, y, 0.86F), 0.06F, 0.06F, FRAME);
 		}
-		return b.build();
-	}
-
-	/** The F-22's HUD: the combiner glass standing on the glare shield, in the pilot's line of sight. */
-	private static BoxMesh buildF22Hud() {
-		BoxMesh.Builder b = new BoxMesh.Builder();
-		float y = F22_EYE + 0.68F;
-		b.hexa(F22_GLASS,
-			v(-0.1F, y, 0.76F), v(0.1F, y, 0.76F), v(0.1F, y + 0.008F, 0.76F), v(-0.1F, y + 0.008F, 0.76F),
-			v(-0.1F, y + 0.06F, 0.96F), v(0.1F, y + 0.06F, 0.96F), v(0.1F, y + 0.068F, 0.96F), v(-0.1F, y + 0.068F, 0.96F));
-		b.box(-0.11F, y - 0.08F, 0.72F, 0.11F, y + 0.06F, 0.77F, FRAME);
 		return b.build();
 	}
 

@@ -96,28 +96,28 @@ public final class CockpitDisplays {
 		}
 	}
 
-	/** Draws onto the panel face of the cockpit built around a pilot's eye at (0, eye, 0.95). */
-	public static void draw(PoseStack.Pose pose, VertexConsumer c, Data d, boolean f22, float eye) {
-		float y = eye + 0.72F - 0.017F;
+	/** Distance of the instrument panel ahead of the pilot's eye. */
+	public static final float PANEL = 0.8F;
+
+	/** Draws onto the panel face of the cockpit built around a pilot's eye at (0, eye, 0.95), panel top at {@code top}. */
+	public static void draw(PoseStack.Pose pose, VertexConsumer c, Data d, boolean f22, float eye, float top) {
+		float y = eye + PANEL - 0.017F;
 		if (f22) {
-			adi(pose, c, y, -0.26F, 0.49F, 0.095F, d);
-			tsd(pose, c, y, 0.0F, 0.415F, 0.1F, d);
-			stores(pose, c, y, 0.26F, 0.49F, 0.095F, d);
-			// up-front display: a strip that lights amber or red with a caution or warning
-			int ufd = d.warning && d.blink ? 0xFFE02020 : d.caution && d.blink ? 0xFFE0A020 : 0xFF103018;
-			rect(pose, c, y, -0.1F, 0.575F, 0.1F, 0.69F, ufd);
+			// three colour MFDs: attitude left, tactical situation in the middle, engine and stores right
+			adi(pose, c, y, -0.25F, top - 0.13F, 0.09F, d);
+			tsd(pose, c, y, 0.0F, top - 0.16F, 0.1F, d);
+			stores(pose, c, y, 0.25F, top - 0.13F, 0.09F, d);
 		} else {
 			// the panoramic display, split into its usual portals
-			rect(pose, c, y, -0.32F, 0.43F, 0.32F, 0.77F, 0xFF05080C);
-			adi(pose, c, y - 0.003F, -0.22F, 0.6F, 0.095F, d);
-			tsd(pose, c, y - 0.003F, 0.0F, 0.6F, 0.1F, d);
-			stores(pose, c, y - 0.003F, 0.22F, 0.6F, 0.095F, d);
+			rect(pose, c, y, -0.32F, top - 0.3F, 0.32F, top - 0.03F, 0xFF05080C);
+			adi(pose, c, y - 0.003F, -0.215F, top - 0.165F, 0.095F, d);
+			tsd(pose, c, y - 0.003F, 0.0F, top - 0.165F, 0.1F, d);
+			stores(pose, c, y - 0.003F, 0.215F, top - 0.165F, 0.095F, d);
 		}
 		// master warning (red) and caution (amber) on the glare shield edge
-		float lz = (f22 ? 0.72F : 0.8F) - 0.015F;
-		float ly = eye + 0.655F;
-		rect(pose, c, ly, -0.36F, lz, -0.3F, lz + 0.03F, d.warning && d.blink ? 0xFFFF2020 : 0xFF301010);
-		rect(pose, c, ly, 0.3F, lz, 0.36F, lz + 0.03F, d.caution && d.blink ? 0xFFFFB020 : 0xFF302010);
+		float ly = eye + PANEL - 0.045F;
+		rect(pose, c, ly, -0.33F, top - 0.008F, -0.27F, top + 0.014F, d.warning && d.blink ? 0xFFFF2020 : 0xFF301010);
+		rect(pose, c, ly, 0.27F, top - 0.008F, 0.33F, top + 0.014F, d.caution && d.blink ? 0xFFFFB020 : 0xFF302010);
 	}
 
 	/** Attitude: centre (cx, cz), half size h. */
