@@ -3,14 +3,9 @@
 #moj_import <minecraft:dynamictransforms.glsl>
 #moj_import <minecraft:projection.glsl>
 
-// Volumetric clouds: the geometry is just the base and/or top plane of the cloud layer; the fragment
-// shader marches through the layer along each view ray. Positions arrive relative to the camera.
-//  Color   r coverage, g daylight, b rain, a quality (1 fancy, 0.5 fast)
-//  UV0     wind offset (blocks)
-//  UV1     base height, thickness (blocks)
-//  UV2     x: how far out the planes reach (blocks): the clouds fade out before their edge
-//          y: thunderstorm (low 7 bits) and a lightning flash (next 7 bits), 0-127 each
-//  Normal  direction to the sun (or the moon at night)
+// Shared by the volumetric clouds and the light pass (see include/clouds_common.glsl for the vertex
+// data). For the clouds the geometry is the base and/or top plane of the cloud layer; for the light pass
+// a quad over the whole view. Either way positions arrive relative to the camera, so they give the ray.
 
 in vec3 Position;
 in vec4 Color;
@@ -21,21 +16,21 @@ in vec3 Normal;
 
 out vec3 relPos;
 out vec4 cloudInfo;
-flat out vec2 wind;
-flat out ivec2 layer;
+flat out vec2 vWind;
+flat out ivec2 vLayer;
 flat out vec3 sunDir;
 flat out float reach;
-flat out float storm;
+flat out float vStorm;
 flat out float lightning;
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     relPos = Position;
     cloudInfo = Color;
-    wind = UV0;
-    layer = UV1;
+    vWind = UV0;
+    vLayer = UV1;
     sunDir = normalize(Normal);
     reach = float(UV2.x);
-    storm = float(UV2.y & 127) / 127.0;
+    vStorm = float(UV2.y & 127) / 127.0;
     lightning = float((UV2.y >> 7) & 127) / 127.0;
 }

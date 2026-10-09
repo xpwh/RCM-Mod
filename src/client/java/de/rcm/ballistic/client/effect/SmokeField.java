@@ -112,6 +112,10 @@ public final class SmokeField {
 		if (count >= CAP) {
 			return; // full (trails already space their puffs out long before this)
 		}
+		int amount = de.rcm.ballistic.client.ModConfig.smokeAmount;
+		if (amount < 100 && ClientEffects.rand() * 100.0F >= amount) {
+			return; // less smoke, as set in the settings
+		}
 		int i = count++;
 		X[i] = x;
 		Y[i] = y;

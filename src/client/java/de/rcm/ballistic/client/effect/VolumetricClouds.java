@@ -10,6 +10,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import de.rcm.ballistic.BallisticMissiles;
+import de.rcm.ballistic.client.ModConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
@@ -58,6 +59,66 @@ public final class VolumetricClouds {
 		.withVertexFormat(DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS)
 		.build();
 	private static RenderType type;
+	/** The light pass: cloud shadows on the ground (before the clouds), light shafts in the air (after them). */
+	private static final RenderPipeline SHADOW_PIPELINE = lightPipeline("pipeline/cloud_shadows", false);
+	private static final RenderPipeline SHAFT_PIPELINE = lightPipeline("pipeline/light_shafts", true);
+	private static RenderType shadowType;
+	private static RenderType shaftType;
+	private static final Identifier DEPTH_ID = BallisticMissiles.id("textures/environment/world_depth");
+	private static DepthCopy depth;
+
+	private static RenderPipeline lightPipeline(String location, boolean shafts) {
+		RenderPipeline.Builder b = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
+			.withLocation(BallisticMissiles.id(location))
+			.withVertexShader(BallisticMissiles.id("core/volumetric_clouds"))
+			.withFragmentShader(BallisticMissiles.id("core/volumetric_light"))
+			.withSampler("Sampler0")
+			.withSampler("Sampler1")
+			.withSampler("Sampler2")
+			// shadows: the colour already there darkened by the alpha; shafts: light added on top
+			.withBlend(shafts ? BlendFunction.ADDITIVE
+				: new BlendFunction(com.mojang.blaze3d.platform.SourceFactor.ONE, com.mojang.blaze3d.platform.DestFactor.ONE_MINUS_SRC_ALPHA))
+			.withDepthTestFunction(com.mojang.blaze3d.platform.DepthTestFunction.NO_DEPTH_TEST)
+			.withCull(false)
+			.withDepthWrite(false)
+			.withVertexFormat(DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS);
+		if (shafts) {
+			b = b.withShaderDefine("RAYS");
+		}
+		return b.build();
+	}
+
+	/**
+	 * A copy of the world's depth, taken at the end of the main pass (before the hand is drawn, which
+	 * clears it): the light pass reads how far away the world is at every pixel from it.
+	 */
+	private static final class DepthCopy extends net.minecraft.client.renderer.texture.AbstractTexture {
+		void match(com.mojang.blaze3d.textures.GpuTexture source) {
+			int w = source.getWidth(0);
+			int h = source.getHeight(0);
+			if (this.texture != null && this.texture.getWidth(0) == w && this.texture.getHeight(0) == h) {
+				return;
+			}
+			if (this.textureView != null) {
+				this.textureView.close();
+			}
+			if (this.texture != null) {
+				this.texture.close();
+			}
+			var device = RenderSystem.getDevice();
+			this.texture = device.createTexture(() -> "Ballistic Missiles world depth copy",
+				com.mojang.blaze3d.textures.GpuTexture.USAGE_COPY_DST | com.mojang.blaze3d.textures.GpuTexture.USAGE_TEXTURE_BINDING,
+				com.mojang.blaze3d.textures.TextureFormat.DEPTH32, w, h, 1, 1);
+			this.textureView = device.createTextureView(this.texture);
+			this.sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
+		}
+
+		void copy(com.mojang.blaze3d.textures.GpuTexture source) {
+			this.match(source);
+			RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(source, this.texture, 0, 0, 0, 0, 0, this.texture.getWidth(0),
+				this.texture.getHeight(0));
+		}
+	}
 
 	private static DynamicTexture map;
 	/** Holes punched through the layer (0-1) and exhaust smoke spread along it (0-1), per texel. */
@@ -79,75 +140,41 @@ public final class VolumetricClouds {
 	private static final double WIND_Z = 0.025;
 	/** Cloud base of the current dimension (blocks), or NaN where there are no clouds. */
 	private static float base = Float.NaN;
-	/** Switched on or off with /volcloud; off, Minecraft's own clouds come back. */
-	private static boolean enabled = true;
-	/** How much of the fair-weather sky is clouded (percent), set with /volcloud; rain and storms add to it. */
-	private static int amount = 40;
 	/** A lightning flash lighting the storm clouds from inside (0-1), dying away in a few frames. */
 	private static float flash;
 	private static float prevFlash;
-	private static final java.nio.file.Path CONFIG = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
-		.resolve("ballisticmissiles-clouds.properties");
 
 	private VolumetricClouds() {
 	}
 
 	public static void init() {
-		load();
 		RenderPipelines.register(PIPELINE);
+		RenderPipelines.register(SHADOW_PIPELINE);
+		RenderPipelines.register(SHAFT_PIPELINE);
 		ClientTickEvents.END_CLIENT_TICK.register(VolumetricClouds::tick);
 		WorldRenderEvents.END_MAIN.register(VolumetricClouds::render);
 	}
 
 	/** Whether the volumetric clouds are drawn (instead of Minecraft's own). */
 	public static boolean enabled() {
-		return enabled;
+		return ModConfig.clouds;
 	}
 
 	public static void setEnabled(boolean on) {
-		enabled = on;
+		ModConfig.clouds = on;
 		if (!on) {
 			base = Float.NaN;
 		}
-		save();
+		ModConfig.save();
 	}
 
 	public static int amount() {
-		return amount;
+		return ModConfig.cloudAmount;
 	}
 
 	public static void setAmount(int percent) {
-		amount = Mth.clamp(percent, 0, 100);
-		save();
-	}
-
-	private static void load() {
-		try {
-			if (java.nio.file.Files.exists(CONFIG)) {
-				java.util.Properties p = new java.util.Properties();
-				try (var in = java.nio.file.Files.newInputStream(CONFIG)) {
-					p.load(in);
-				}
-				enabled = Boolean.parseBoolean(p.getProperty("enabled", "true"));
-				amount = Mth.clamp(Integer.parseInt(p.getProperty("amount", "40").trim()), 0, 100);
-			}
-		} catch (Exception e) {
-			BallisticMissiles.LOGGER.warn("Could not read {}: {}", CONFIG, e.toString());
-		}
-	}
-
-	private static void save() {
-		try {
-			java.util.Properties p = new java.util.Properties();
-			p.setProperty("enabled", Boolean.toString(enabled));
-			p.setProperty("amount", Integer.toString(amount));
-			java.nio.file.Files.createDirectories(CONFIG.getParent());
-			try (var out = java.nio.file.Files.newOutputStream(CONFIG)) {
-				p.store(out, "Ballistic Missiles - volumetric clouds (/volcloud)");
-			}
-		} catch (Exception e) {
-			BallisticMissiles.LOGGER.warn("Could not write {}: {}", CONFIG, e.toString());
-		}
+		ModConfig.cloudAmount = Mth.clamp(percent, 0, 100);
+		ModConfig.save();
 	}
 
 	/** Bottom of the cloud layer here, NaN if this dimension has none. */
@@ -168,6 +195,23 @@ public final class VolumetricClouds {
 				.createRenderSetup());
 		}
 		return type;
+	}
+
+	private static RenderType lightType(boolean shafts) {
+		if (shafts ? shaftType == null : shadowType == null) {
+			RenderType t = RenderType.create(shafts ? "ballisticmissiles_light_shafts" : "ballisticmissiles_cloud_shadows", RenderSetup.builder(
+					shafts ? SHAFT_PIPELINE : SHADOW_PIPELINE)
+				.withTexture("Sampler0", MAP_ID, () -> RenderSystem.getSamplerCache().getRepeat(FilterMode.LINEAR))
+				.withTexture("Sampler1", NOISE_ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
+				.withTexture("Sampler2", DEPTH_ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.createRenderSetup());
+			if (shafts) {
+				shaftType = t;
+			} else {
+				shadowType = t;
+			}
+		}
+		return shafts ? shaftType : shadowType;
 	}
 
 	// ------------------------------------------------------------------ disturbances
@@ -363,7 +407,7 @@ public final class VolumetricClouds {
 		prevFlash = flash;
 		flash *= 0.55F;
 		float thunder = mc.level.getThunderLevel(1.0F);
-		if (thunder > 0.2F && enabled) {
+		if (thunder > 0.2F && ModConfig.clouds) {
 			boolean bolt = false;
 			for (var e : mc.level.entitiesForRendering()) {
 				if (e instanceof net.minecraft.world.entity.LightningBolt && e.tickCount < 2) {
@@ -492,7 +536,7 @@ public final class VolumetricClouds {
 
 	private static void render(WorldRenderContext context) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.level == null || !enabled || mc.options.getCloudsType() == CloudStatus.OFF) {
+		if (mc.level == null || !ModConfig.clouds || mc.options.getCloudsType() == CloudStatus.OFF) {
 			base = Float.NaN;
 			return;
 		}
@@ -520,7 +564,7 @@ public final class VolumetricClouds {
 		float rain = mc.level.getRainLevel(partialTick);
 		float thunder = mc.level.getThunderLevel(partialTick);
 		// rain clouds the sky over; a thunderstorm closes it almost completely
-		float coverage = Mth.clamp(amount / 100.0F + rain * 0.35F + thunder * 0.3F + WinterClient.amount() * 0.35F, 0.0F, 0.99F);
+		float coverage = Mth.clamp(ModConfig.cloudAmount / 100.0F + rain * 0.35F + thunder * 0.3F + WinterClient.amount() * 0.35F, 0.0F, 0.99F);
 		float lightning = Mth.lerp(partialTick, prevFlash, flash);
 		// UV2: x reach, y storm (low 7 bits) and lightning (next 7)
 		int storm = Math.round(thunder * 127.0F) | Math.round(lightning * 127.0F) << 7;
@@ -534,17 +578,58 @@ public final class VolumetricClouds {
 		float top = base + THICKNESS;
 		double camY = cam.y;
 		float reach = Math.max(256.0F, mc.options.getEffectiveRenderDistance() * 16.0F * 4.0F);
-		VertexConsumer consumer = context.consumers().getBuffer(type());
 		PoseStack.Pose pose = context.matrices().last();
-		// alpha: quality (clouds set to "fast": half the steps, no fine detail)
-		int quality = mc.options.getCloudsType() == CloudStatus.FAST ? 0x80 : 0xFF;
-		int color = quality << 24 | Math.round(coverage * 255.0F) << 16 | Math.round(day * 255.0F) << 8 | Math.round(rain * 255.0F);
+		// alpha: quality level (Minecraft's "fast" clouds: the lowest)
+		ModConfig.Quality quality = mc.options.getCloudsType() == CloudStatus.FAST ? ModConfig.Quality.LOW : ModConfig.cloudQuality;
+		int color = Math.round(quality.ordinal() * 85.0F) << 24 | Math.round(coverage * 255.0F) << 16 | Math.round(day * 255.0F) << 8
+			| Math.round(rain * 255.0F);
+		// thickness, and which parts of the light pass are wanted
+		boolean shadows = ModConfig.cloudShadows;
+		boolean shafts = ModConfig.lightShafts && quality != ModConfig.Quality.LOW;
+		int layer = THICKNESS | (shadows ? 256 : 0) | (shafts ? 512 : 0);
+		boolean light = (shadows || shafts) && day > 0.05F && camY < bottom;
+		if (light) {
+			var target = mc.getMainRenderTarget();
+			if (target.getDepthTexture() == null) {
+				light = false;
+			} else {
+				if (depth == null) {
+					depth = new DepthCopy();
+					mc.getTextureManager().register(DEPTH_ID, depth);
+				}
+				depth.copy(target.getDepthTexture());
+			}
+		}
+		if (light && shadows) {
+			screen(context.consumers().getBuffer(lightType(false)), pose, camera, color, windX, windZ, bottom, layer, reach, storm, sx, sy);
+		}
+		VertexConsumer consumer = context.consumers().getBuffer(type());
 		// below the layer the rays enter through its base, above it through its top; inside, both planes catch them
 		if (camY < top) {
 			plane(consumer, pose, (float) (bottom - camY), reach, storm, color, windX, windZ, bottom, sx, sy);
 		}
 		if (camY > bottom) {
 			plane(consumer, pose, (float) (top - camY), reach, storm, color, windX, windZ, bottom, sx, sy);
+		}
+		if (light && shafts) {
+			screen(context.consumers().getBuffer(lightType(true)), pose, camera, color, windX, windZ, bottom, layer, reach, storm, sx, sy);
+		}
+	}
+
+	/** A quad right across the view, a block in front of the eye (the light pass ignores depth). */
+	private static void screen(VertexConsumer consumer, PoseStack.Pose pose, Camera camera, int color, float windX, float windZ, float bottom, int layer,
+		float reach, int storm, float sx, float sy) {
+		org.joml.Vector3fc f = camera.forwardVector();
+		org.joml.Vector3fc u = camera.upVector();
+		org.joml.Vector3fc l = camera.leftVector();
+		float w = 6.0F; // wide enough for any field of view
+		float[][] corners = {{w, -w}, {-w, -w}, {-w, w}, {w, w}};
+		for (float[] c : corners) {
+			float x = f.x() + l.x() * c[0] + u.x() * c[1];
+			float y = f.y() + l.y() * c[0] + u.y() * c[1];
+			float z = f.z() + l.z() * c[0] + u.z() * c[1];
+			consumer.addVertex(pose, x, y, z).setColor(color).setUv(windX, windZ).setOverlay(OverlayTexture.pack((int) bottom, layer))
+				.setLight((int) reach | storm << 16).setNormal(pose, sx, sy, 0.0F);
 		}
 	}
 

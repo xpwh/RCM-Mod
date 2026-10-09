@@ -237,6 +237,7 @@ public final class ClientEffects {
 	 * far beyond the vanilla attenuation range.
 	 */
 	public static void playDistant(Minecraft mc, SoundEvent sound, Vec3 source, float volume, float pitch) {
+		volume *= de.rcm.ballistic.client.ModConfig.explosionVolume / 100.0F;
 		if (volume <= 0.01F) {
 			return;
 		}
@@ -536,6 +537,7 @@ public final class ClientEffects {
 
 	/** Like {@link #playDistant} but on the master channel. */
 	static void playLoud(Minecraft mc, net.minecraft.sounds.SoundEvent sound, Vec3 source, float volume, float pitch) {
+		volume *= de.rcm.ballistic.client.ModConfig.explosionVolume / 100.0F;
 		if (volume <= 0.01F) {
 			return;
 		}

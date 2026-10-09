@@ -69,7 +69,7 @@ public final class BulletHoles {
 
 	private static void place(Vec3 at, Direction face, int kind, Vec3 dir, boolean predicted) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.level == null) {
+		if (mc.level == null || !de.rcm.ballistic.client.ModConfig.bulletHoles) {
 			return;
 		}
 		BlockPos block = BlockPos.containing(at.subtract(face.getStepX() * 0.05, face.getStepY() * 0.05, face.getStepZ() * 0.05));

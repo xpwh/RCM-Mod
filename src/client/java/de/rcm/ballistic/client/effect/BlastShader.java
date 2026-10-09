@@ -138,7 +138,7 @@ public final class BlastShader {
 			active = false;
 			return;
 		}
-		boolean wanted = mc.level != null && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
+		boolean wanted = mc.level != null && de.rcm.ballistic.client.ModConfig.screenEffects > 0 && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
 			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F || suppression > 0.01F);
 		if (!wanted) {
 			if (ours) {
@@ -169,7 +169,9 @@ public final class BlastShader {
 		}
 		int time = (int) ((System.nanoTime() / 10_000_000L) % 65536L); // centiseconds, 16 bit
 		int kindByte = kind.ordinal() * 36;
-		img.setPixel(0, 0, argb(kindByte, strength, exposure, shellShock()));
+		// how strong the screen effects are, as set in the settings
+		float k = de.rcm.ballistic.client.ModConfig.screenEffects / 100.0F;
+		img.setPixel(0, 0, argb(kindByte, strength * k, exposure * k, shellShock() * k));
 
 		Camera camera = mc.gameRenderer.getMainCamera();
 		double tanHalf = Math.tan(Math.toRadians(mc.options.fov().get()) * 0.5);
@@ -186,12 +188,12 @@ public final class BlastShader {
 		}
 		// light streaming out of the fireball: only while it is in view and still glowing
 		float rays = onScreen ? Mth.clamp(heat * 1.3F + exposure * 0.6F, 0.0F, 1.0F) : exposure * 0.25F;
-		img.setPixel(1, 0, argb(byteOf(rays), (time & 0xFF) / 255.0F, ((time >> 8) & 0xFF) / 255.0F, heat));
+		img.setPixel(1, 0, argb(byteOf(rays * k), (time & 0xFF) / 255.0F, ((time >> 8) & 0xFF) / 255.0F, heat * k));
 		img.setPixel(2, 0, byteOf(WinterClient.amount()) << 24 | (tint & 0xFFFFFF)); // alpha: nuclear winter
-		img.setPixel(3, 0, argb(byteOf(dust), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
-		img.setPixel(4, 0, argb(byteOf(drench), suppression, 0.0F, quake));
+		img.setPixel(3, 0, argb(byteOf(dust * k), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
+		img.setPixel(4, 0, argb(byteOf(drench * k), suppression * k, 0.0F, quake * k));
 		img.setPixel(5, 0, byteOf(SmokeField.fog()) << 24 | (SmokeField.fogColor() & 0xFFFFFF)); // standing in thick smoke
-		img.setPixel(6, 0, argb(255, afterX, afterY, afterimage));
+		img.setPixel(6, 0, argb(255, afterX, afterY, afterimage * k));
 		img.setPixel(7, 0, 0);
 		params.upload();
 	}

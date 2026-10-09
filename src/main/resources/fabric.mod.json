@@ -16,6 +16,9 @@
 		],
 		"client": [
 			"de.rcm.ballistic.client.BallisticMissilesClient"
+		],
+		"modmenu": [
+			"de.rcm.ballistic.client.gui.ModMenuIntegration"
 		]
 	},
 	"mixins": [
