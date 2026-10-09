@@ -165,6 +165,7 @@ public class RocketLauncherItem extends Item {
 	 * off only the low thump and its echo.
 	 */
 	private static void shotSound(ServerLevel level, Vec3 at) {
+		de.rcm.ballistic.ai.Senses.noise(level, at, de.rcm.ballistic.ai.Senses.RPG_RANGE, de.rcm.ballistic.ai.Senses.GUNSHOT, null);
 		long seed = level.getRandom().nextLong();
 		float pitch = 0.96F + level.getRandom().nextFloat() * 0.08F;
 		for (ServerPlayer p : level.players()) {

@@ -315,7 +315,8 @@ public final class AkClient {
 		GunAudio.shot(muzzle, false);
 		de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(dir.scale(0.4)), 0xFFC878, 1.0F, 10.0F, 40.0F + ClientEffects.rand() * 20.0F);
 		Entity shooter = mc.level.getEntity(p.shooter());
-		if (shooter instanceof Player other && muzzle.distanceTo(mc.gameRenderer.getMainCamera().position()) < 96.0) {
+		if (shooter != null && muzzle.distanceTo(mc.gameRenderer.getMainCamera().position()) < 96.0) {
+			Entity other = shooter;
 			effects(other, muzzle, new Vec3(p.dx(), p.dy(), p.dz()), false);
 		}
 	}
@@ -338,7 +339,7 @@ public final class AkClient {
 	}
 
 	/** Brass and powder smoke. */
-	private static void effects(Player player, Vec3 muzzle, Vec3 look, boolean own) {
+	private static void effects(Entity player, Vec3 muzzle, Vec3 look, boolean own) {
 		Minecraft mc = Minecraft.getInstance();
 		Vec3 right = look.cross(new Vec3(0, 1, 0));
 		right = right.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : right.normalize();

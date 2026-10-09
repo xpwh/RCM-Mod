@@ -33,6 +33,8 @@ import org.joml.Vector3f;
  * and one that buries itself keeps glowing where it lies until the charge is spent. After about
  * 900 m (some three seconds' flight here) the charge gutters, reddens and goes out.
  * <p>
+ * A tracer that hits sprays burning compound; at night it lights up what it passes.
+ * <p>
  * Purely visual and client-side, flown with the same ballistics as {@code BulletEntity} from the
  * moment of the shot, so it is there from the first frame whatever the network does.
  */
@@ -86,6 +88,10 @@ public final class TracerFx {
 		for (int i = TRACERS.size() - 1; i >= 0; i--) {
 			Tracer t = TRACERS.get(i);
 			t.age++;
+			// the burning pellet lights what it passes (the dynamic light only shows where it is dark)
+			if (t.age > 1 && (t.stopped ? t.emberLife > 4 : t.age < BURN)) {
+				de.rcm.ballistic.client.effect.DynamicLights.steady(t.pos, 0x8CFF6A, t.stopped ? 0.25F : 0.5F, t.stopped ? 3.0F : 6.0F);
+			}
 			if (t.stopped) {
 				if (--t.emberLife <= 0) {
 					TRACERS.remove(i);
@@ -143,6 +149,7 @@ public final class TracerFx {
 			if (t.ricochets < 3 && Math.random() < chance) {
 				// skips off, losing most of its speed, very often kicked steeply upward
 				t.ricochets++;
+				sparks(level, end, n, 6);
 				Vec3 out = dir.subtract(n.scale(2.0 * dir.dot(n)));
 				out = out.add((Math.random() - 0.5) * 0.5, Math.random() * 0.6, (Math.random() - 0.5) * 0.5).normalize();
 				t.vel = out.scale(t.vel.length() * (0.3 + Math.random() * 0.2));
@@ -150,7 +157,8 @@ public final class TracerFx {
 				left *= 1.0 - f;
 				continue;
 			}
-			// buried: keeps burning where it lies
+			// buried: keeps burning where it lies, after a spray of burning compound
+			sparks(level, end, n, 10);
 			t.pos = end.add(n.scale(0.03));
 			t.stopped = true;
 			t.emberLife = Math.max(6, Math.min(BURN - t.age, 30 + (int) (Math.random() * 30)));
@@ -159,6 +167,14 @@ public final class TracerFx {
 		t.pos = t.pos.add(t.vel.scale(left));
 		t.vel = t.vel.scale(DRAG).add(0, -GRAVITY, 0);
 		corner(t, t.age, t.pos);
+	}
+
+	/** Burning tracer compound knocked off on impact. */
+	private static void sparks(Level level, Vec3 at, Vec3 normal, int count) {
+		for (int i = 0; i < count; i++) {
+			Vec3 v = normal.scale(0.08 + Math.random() * 0.12).add((Math.random() - 0.5) * 0.25, Math.random() * 0.15, (Math.random() - 0.5) * 0.25);
+			level.addParticle(de.rcm.ballistic.ModRegistry.SPARK, at.x, at.y, at.z, v.x, v.y, v.z);
+		}
 	}
 
 	private static double fraction(Vec3 from, Vec3 at, Vec3 to) {
@@ -257,7 +273,8 @@ public final class TracerFx {
 		if (burnLeft < 1.0F) {
 			flicker *= 0.55F + 0.45F * Mth.sin(life * 41.0F + t.seed);
 		}
-		float strength = ignite * burnLeft * flicker * (0.45F + 0.55F * night);
+		// bright enough to follow by day (a vivid moving point), dazzling at night
+		float strength = ignite * burnLeft * flicker * (0.72F + 0.28F * night);
 		if (strength <= 0.02F) {
 			return;
 		}
@@ -266,11 +283,12 @@ public final class TracerFx {
 		int core = burnLeft > 0.5F ? 0xF2FFE8 : 0xFFE0B0;
 		Vector3f head = at(t, now, cam);
 		float dist = head.length();
-		float size = Math.max(0.035F, dist * 0.0022F);
+		// never smaller on screen than a burning point you can still pick out far downrange
+		float size = Math.max(0.045F, dist * 0.0032F);
 
 		// the dash the eye smears it into: back along the real path, tapering and fading
 		if (!t.stopped) {
-			double persist = 0.32 + 0.38 * night;
+			double persist = 0.45 + 0.45 * night;
 			int segments = 10;
 			Vector3f prev = head;
 			for (int s = 1; s <= segments; s++) {

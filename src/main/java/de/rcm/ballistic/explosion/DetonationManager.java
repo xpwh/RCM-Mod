@@ -604,6 +604,7 @@ public final class DetonationManager {
 			range = 4000.0;
 		}
 		DetonationPayload payload = new DetonationPayload(warhead.ordinal(), pos.x, pos.y, pos.z);
+		de.rcm.ballistic.ai.Senses.noise(level, pos, Math.min(range, de.rcm.ballistic.ai.Senses.EXPLOSION_RANGE), de.rcm.ballistic.ai.Senses.EXPLOSION, null);
 		for (ServerPlayer player : level.players()) {
 			if (player.position().distanceToSqr(pos) < range * range) {
 				ServerPlayNetworking.send(player, payload);

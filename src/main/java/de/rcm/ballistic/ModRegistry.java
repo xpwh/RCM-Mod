@@ -172,6 +172,11 @@ public final class ModRegistry {
 		EntityType.Builder.<de.rcm.ballistic.entity.DestroyerEntity>of(de.rcm.ballistic.entity.DestroyerEntity::new, MobCategory.MISC).sized(5.0F, 6.0F)
 			.clientTrackingRange(32).updateInterval(1).fireImmune()
 	);
+	public static final EntityType<de.rcm.ballistic.ai.SoldierEntity> SOLDIER = registerEntity(
+		"soldier",
+		EntityType.Builder.<de.rcm.ballistic.ai.SoldierEntity>of(de.rcm.ballistic.ai.SoldierEntity::new, MobCategory.MISC).sized(0.6F, 1.8F)
+			.eyeHeight(1.62F).clientTrackingRange(10)
+	);
 	public static final EntityType<de.rcm.ballistic.entity.FpvDroneEntity> FPV_DRONE = registerEntity(
 		"fpv_drone",
 		EntityType.Builder.<de.rcm.ballistic.entity.FpvDroneEntity>of(de.rcm.ballistic.entity.FpvDroneEntity::new, MobCategory.MISC).sized(0.6F, 0.25F)
@@ -415,6 +420,8 @@ public final class ModRegistry {
 		}
 	}
 
+	/** Only from {@code /bmai werkzeug}: no recipe, not in the creative tab. */
+	public static final Item AI_TOOL = registerItem("ai_tool", de.rcm.ballistic.ai.AiToolItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item TARGET_DESIGNATOR = registerItem(
 		"target_designator", TargetDesignatorItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
 	);

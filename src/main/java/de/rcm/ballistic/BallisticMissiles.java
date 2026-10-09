@@ -35,6 +35,9 @@ public class BallisticMissiles implements ModInitializer {
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.NuclearWinter::tick);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.defense.FarTracker::tick);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.gun.MagazineLanding::tick);
+		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.ai.SoldierDebug::tick);
+		net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry.register(ModRegistry.SOLDIER,
+			de.rcm.ballistic.ai.SoldierEntity.createAttributes());
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % 6000 == 0) {
 				RadiationManager.save(server);
@@ -44,6 +47,8 @@ public class BallisticMissiles implements ModInitializer {
 		de.rcm.ballistic.config.ServerConfig.load();
 		net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) ->
 			de.rcm.ballistic.config.ServerConfigCommand.register(dispatcher));
+		net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) ->
+			de.rcm.ballistic.ai.SoldierCommand.register(dispatcher));
 		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.NuclearWinter::save);
@@ -72,6 +77,8 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.entity.FpvDroneEntity.clearPilots();
 			de.rcm.ballistic.gun.AkItem.release(null);
 			de.rcm.ballistic.gun.GrenadeItem.forget(null);
+			de.rcm.ballistic.ai.SoldierDebug.clear();
+			de.rcm.ballistic.ai.SoldierEntity.clearStatic();
 		});
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			de.rcm.ballistic.gun.AkItem.release(handler.player.getUUID());

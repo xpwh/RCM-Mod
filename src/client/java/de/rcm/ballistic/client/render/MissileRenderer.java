@@ -28,7 +28,7 @@ import org.joml.Vector3f;
 public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRenderer.State> {
 	private static final Identifier FLAME_TEXTURE = BallisticMissiles.id("textures/entity/exhaust_flame.png");
 	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(FLAME_TEXTURE);
-	static final RenderType GLOW_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/glow.png"));
+	public static final RenderType GLOW_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/glow.png"));
 	static final RenderType PLASMA_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/plasma.png"));
 	private static final Map<MissileType, RenderType> BODY_TYPES = new EnumMap<>(MissileType.class);
 

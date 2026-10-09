@@ -656,6 +656,7 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playC2S().register(GunInputPayload.TYPE, GunInputPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(GunActionPayload.TYPE, GunActionPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(BulletPassPayload.TYPE, BulletPassPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(de.rcm.ballistic.ai.SoldierDebug.Payload.TYPE, de.rcm.ballistic.ai.SoldierDebug.Payload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(GunInputPayload.TYPE, (payload, context) -> {
 			switch (payload.action()) {
 				case GunInputPayload.RELOAD -> de.rcm.ballistic.gun.AkItem.requestReload(context.player(), false);

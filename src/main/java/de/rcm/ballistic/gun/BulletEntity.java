@@ -123,6 +123,7 @@ public class BulletEntity extends Entity {
 		BlockHitResult hit = server.clip(new ClipContext(pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.WATER, CollisionContext.empty()));
 		Vec3 end = hit.getType() == HitResult.Type.MISS ? next : hit.getLocation();
 		this.nearMisses(server, pos, end, vel);
+		this.soldiersPassed(server, pos, end);
 		Entity struck = this.firstHit(server, pos, end);
 		if (struck != null) {
 			this.hitEntity(server, struck, pos, end);
@@ -167,6 +168,26 @@ public class BulletEntity extends Entity {
 				this.passed.add(p.getId());
 				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new de.rcm.ballistic.network.ModNetworking.BulletPassPayload(
 					closest.x, closest.y, closest.z, (float) d, vel.length() > 17.5));
+			}
+		}
+	}
+
+	private void soldiersPassed(ServerLevel level, Vec3 a, Vec3 b) {
+		Vec3 ab = b.subtract(a);
+		double len2 = ab.lengthSqr();
+		if (len2 < 1.0E-6) {
+			return;
+		}
+		for (de.rcm.ballistic.ai.SoldierEntity s : level.getEntitiesOfClass(de.rcm.ballistic.ai.SoldierEntity.class, new AABB(a, b).inflate(5.0))) {
+			if (s == this.shooter || this.passed.contains(s.getId())) {
+				continue;
+			}
+			Vec3 ear = s.getEyePosition();
+			double t = Mth.clamp(ear.subtract(a).dot(ab) / len2, 0.0, 1.0);
+			Vec3 closest = a.add(ab.scale(t));
+			if (closest.distanceTo(ear) <= 4.0) {
+				this.passed.add(s.getId());
+				s.bulletPassed(closest, this.shooter);
 			}
 		}
 	}

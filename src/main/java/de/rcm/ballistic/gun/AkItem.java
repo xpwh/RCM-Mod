@@ -201,20 +201,33 @@ public class AkItem extends Item {
 		spread *= isAiming(player) ? 0.35 : 1.3;
 		var random = level.getRandom();
 		Vec3 dir = aim.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
-		boolean tracer = state.ammo() == GunState.TRACER;
-		BulletEntity.fire(level, player, muzzle, dir.scale(MUZZLE_VELOCITY), tracer);
+		// a tracer magazine is loaded the way soldiers load them: every fourth round a tracer, and the
+		// last three all tracers - so the stream shows where the fire goes, and the magazine running dry
+		// shows in the shooter's own fire before the hammer falls on nothing
+		boolean tracer = state.ammo() == GunState.TRACER && (state.rounds() % 4 == 0 || state.rounds() <= 3);
+		shoot(level, player, muzzle, dir, tracer, left == 0);
+		if (left == 0) {
+			TRIGGERS.remove(player.getUUID()); // the bolt stays forward on an empty chamber: the next pull just clicks
+		}
+	}
+
+	/**
+	 * One round leaving an AK's muzzle, whoever holds it (a player or a soldier): the bullet, the shot
+	 * everybody near hears and sees (sound, flash, tracer), and the noise soldiers react to.
+	 */
+	public static void shoot(ServerLevel level, net.minecraft.world.entity.LivingEntity shooter, Vec3 muzzle, Vec3 dir, boolean tracer, boolean last) {
+		BulletEntity.fire(level, shooter, muzzle, dir.scale(MUZZLE_VELOCITY), tracer);
 		// everybody near hears it; the shooter gets it too, for the tracer on the bullet's true line
-		GunshotPayload shot = new GunshotPayload(player.getId(), muzzle.x, muzzle.y, muzzle.z, (float) dir.x, (float) dir.y, (float) dir.z,
-			(left == 0 ? GunshotPayload.LAST : 0) | (tracer ? GunshotPayload.TRACER : 0));
+		GunshotPayload shot = new GunshotPayload(shooter.getId(), muzzle.x, muzzle.y, muzzle.z, (float) dir.x, (float) dir.y, (float) dir.z,
+			(last ? GunshotPayload.LAST : 0) | (tracer ? GunshotPayload.TRACER : 0));
 		for (ServerPlayer p : level.players()) {
 			if (p.position().distanceToSqr(muzzle) < 900.0 * 900.0) {
 				ServerPlayNetworking.send(p, shot);
 			}
 		}
-		level.gameEvent(player, net.minecraft.world.level.gameevent.GameEvent.PROJECTILE_SHOOT, muzzle);
-		if (left == 0) {
-			TRIGGERS.remove(player.getUUID()); // the bolt stays forward on an empty chamber: the next pull just clicks
-		}
+		level.gameEvent(shooter, net.minecraft.world.level.gameevent.GameEvent.PROJECTILE_SHOOT, muzzle);
+		de.rcm.ballistic.ai.SoldierEntity.flash(shooter);
+		de.rcm.ballistic.ai.Senses.noise(level, muzzle, de.rcm.ballistic.ai.Senses.GUNSHOT_RANGE, de.rcm.ballistic.ai.Senses.GUNSHOT, shooter);
 	}
 
 	// ------------------------------------------------------------------ reload and selector

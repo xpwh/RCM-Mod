@@ -72,6 +72,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModRegistry.GRENADE_ENTITY, de.rcm.ballistic.client.render.GrenadeRenderers.EntityRendererImpl::new);
 		EntityRendererRegistry.register(ModRegistry.RPG_GRENADE, de.rcm.ballistic.client.render.RpgGrenadeRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.FPV_DRONE, de.rcm.ballistic.client.render.FpvDroneRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.SOLDIER, de.rcm.ballistic.client.ai.SoldierRenderer::new);
+		de.rcm.ballistic.client.ai.AiDebugClient.init();
 		de.rcm.ballistic.client.drone.DroneClient.init();
 		de.rcm.ballistic.client.item.RpgClient.init();
 		de.rcm.ballistic.client.gun.AkClient.init();
