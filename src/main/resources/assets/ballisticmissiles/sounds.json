@@ -1146,5 +1146,261 @@
 				"attenuation_distance": 24
 			}
 		]
+	},
+	"water.splash_small": {
+		"subtitle": "subtitles.ballisticmissiles.splash_small",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:water/splash_small1"
+			},
+			{
+				"name": "ballisticmissiles:water/splash_small2"
+			}
+		]
+	},
+	"water.splash": {
+		"subtitle": "subtitles.ballisticmissiles.splash",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:water/splash1"
+			},
+			{
+				"name": "ballisticmissiles:water/splash2"
+			}
+		]
+	},
+	"water.splash_huge": {
+		"subtitle": "subtitles.ballisticmissiles.splash_huge",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:water/splash_huge1"
+			},
+			{
+				"name": "ballisticmissiles:water/splash_huge2"
+			}
+		]
+	},
+	"metal.thud": {
+		"subtitle": "subtitles.ballisticmissiles.metal_thud",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:metal/thud1"
+			},
+			{
+				"name": "ballisticmissiles:metal/thud2"
+			}
+		]
+	},
+	"metal.crash": {
+		"subtitle": "subtitles.ballisticmissiles.metal_crash",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:metal/crash1"
+			},
+			{
+				"name": "ballisticmissiles:metal/crash2"
+			}
+		]
+	},
+	"hydraulic.extend": {
+		"subtitle": "subtitles.ballisticmissiles.hydraulic",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:hydraulic/extend1"
+			},
+			{
+				"name": "ballisticmissiles:hydraulic/extend2"
+			}
+		]
+	},
+	"hydraulic.retract": {
+		"subtitle": "subtitles.ballisticmissiles.hydraulic",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:hydraulic/retract1"
+			},
+			{
+				"name": "ballisticmissiles:hydraulic/retract2"
+			}
+		]
+	},
+	"air.release": {
+		"subtitle": "subtitles.ballisticmissiles.air_release",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:air/release1"
+			},
+			{
+				"name": "ballisticmissiles:air/release2"
+			},
+			{
+				"name": "ballisticmissiles:air/release3"
+			}
+		]
+	},
+	"air.launch": {
+		"subtitle": "subtitles.ballisticmissiles.air_launch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:air/launch1"
+			},
+			{
+				"name": "ballisticmissiles:air/launch2"
+			}
+		]
+	},
+	"door.heavy_open": {
+		"subtitle": "subtitles.ballisticmissiles.door_open",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:door/heavy_open1"
+			},
+			{
+				"name": "ballisticmissiles:door/heavy_open2"
+			}
+		]
+	},
+	"door.heavy_close": {
+		"subtitle": "subtitles.ballisticmissiles.door_close",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:door/heavy_close1"
+			},
+			{
+				"name": "ballisticmissiles:door/heavy_close2"
+			}
+		]
+	},
+	"chain.rattle": {
+		"subtitle": "subtitles.ballisticmissiles.chain",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:chain/rattle1"
+			},
+			{
+				"name": "ballisticmissiles:chain/rattle2"
+			}
+		]
+	},
+	"truck.diesel": {
+		"subtitle": "subtitles.ballisticmissiles.truck",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:truck/diesel"
+			}
+		]
+	},
+	"bunker.generator": {
+		"subtitle": "subtitles.ballisticmissiles.generator",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bunker/generator"
+			}
+		]
+	},
+	"bunker.vent": {
+		"subtitle": "subtitles.ballisticmissiles.vent",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bunker/vent"
+			}
+		]
+	},
+	"rpg.load": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_load",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/load"
+			}
+		]
+	},
+	"rpg.knock": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_knock",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/knock1"
+			},
+			{
+				"name": "ballisticmissiles:rpg/knock2"
+			}
+		]
+	},
+	"mag.drop": {
+		"subtitle": "subtitles.ballisticmissiles.mag_drop",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:mag/drop1"
+			},
+			{
+				"name": "ballisticmissiles:mag/drop2"
+			},
+			{
+				"name": "ballisticmissiles:mag/drop3"
+			},
+			{
+				"name": "ballisticmissiles:mag/drop4"
+			},
+			{
+				"name": "ballisticmissiles:mag/drop5"
+			}
+		]
+	},
+	"gear.rustle": {
+		"subtitle": "subtitles.ballisticmissiles.gear",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gear/rustle1"
+			},
+			{
+				"name": "ballisticmissiles:gear/rustle2"
+			},
+			{
+				"name": "ballisticmissiles:gear/rustle3"
+			},
+			{
+				"name": "ballisticmissiles:gear/rustle4"
+			}
+		]
+	},
+	"drone.place": {
+		"subtitle": "subtitles.ballisticmissiles.drone_place",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:drone/place"
+			}
+		]
+	},
+	"radio.click": {
+		"subtitle": "subtitles.ballisticmissiles.radio_click",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:radio/click"
+			}
+		]
+	},
+	"radio.squelch": {
+		"subtitle": "subtitles.ballisticmissiles.radio_squelch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:radio/squelch1"
+			},
+			{
+				"name": "ballisticmissiles:radio/squelch2"
+			}
+		]
+	},
+	"flare.launch": {
+		"subtitle": "subtitles.ballisticmissiles.flare_launch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:flare/launch1"
+			},
+			{
+				"name": "ballisticmissiles:flare/launch2"
+			}
+		]
+	},
+	"silence": {
+		"sounds": []
 	}
 }

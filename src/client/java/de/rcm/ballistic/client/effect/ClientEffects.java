@@ -792,7 +792,7 @@ public final class ClientEffects {
 				playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, near, 0.55F);
 				playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, near, 0.7F);
 				playDistant(mc, ModRegistry.EXPLOSION_FAR, this.pos, near * 0.7F, 0.6F);
-				playDistant(mc, net.minecraft.sounds.SoundEvents.GENERIC_SPLASH, s, Math.min(1.0F, near), 0.4F);
+				playDistant(mc, de.rcm.ballistic.ModRegistry.WATER_SPLASH_HUGE, s, Math.min(1.0F, near), 0.8F);
 				if (this.distance < 60) {
 					deafen(mc, (float) (0.6 - this.distance / 100.0), 40);
 				}
@@ -874,7 +874,7 @@ public final class ClientEffects {
 			Vec3 c = this.pos.add(0, 0.5, 0);
 			if (t == 0) {
 				fireball(c, 1.5, 14, 2.5F, 0.5, 20);
-				vanilla(ParticleTypes.EXPLOSION, c.x, c.y, c.z, 0, 0, 0);
+				vanilla(de.rcm.ballistic.ModRegistry.BURST, c.x, c.y, c.z, 0, 0, 0);
 			}
 			if (t == this.soundDelay) {
 				playDistant(mc, ModRegistry.EXPLOSION_FAR, this.pos, (float) (0.8 - this.distance / 1500.0), 1.3F);

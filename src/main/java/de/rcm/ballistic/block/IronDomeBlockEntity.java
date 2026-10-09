@@ -145,19 +145,19 @@ public class IronDomeBlockEntity extends BlockEntity implements DefenseSiteBlock
 		var random = level.getRandom();
 		// the sounds of it: the truck's diesel and reversing beeper, the rams, the crane, the pod clanking home
 		if (t == 20 || t == 245) {
-			level.playSound(null, here.x - 3, here.y, here.z, net.minecraft.sounds.SoundEvents.RAVAGER_STEP, SoundSource.BLOCKS, 2.0F, 0.5F);
+			level.playSound(null, here.x - 3, here.y, here.z, ModRegistry.TRUCK_DIESEL, SoundSource.BLOCKS, 2.5F, 1.0F);
 		}
 		if (t >= 30 && t < 80 && t % 10 == 0) {
 			level.playSound(null, here.x - 3, here.y, here.z, ModRegistry.COUNTDOWN_BEEP, SoundSource.BLOCKS, 0.8F, 1.6F);
 		}
 		if (t == 2 || t == 285) {
-			level.playSound(null, here.x, here.y + 1, here.z, net.minecraft.sounds.SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 1.5F, 0.5F);
+			level.playSound(null, here.x, here.y + 1, here.z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 1.8F, 1.0F);
 		}
 		if (t == 95 || t == 160) {
-			level.playSound(null, here.x - 1.5, here.y + 2, here.z, net.minecraft.sounds.SoundEvents.CHAIN_PLACE, SoundSource.BLOCKS, 1.5F, 0.6F);
+			level.playSound(null, here.x - 1.5, here.y + 2, here.z, ModRegistry.CHAIN_RATTLE, SoundSource.BLOCKS, 1.5F, 0.9F);
 		}
 		if (t == 150 || t == RELOAD_SEATED) {
-			level.playSound(null, here.x, here.y + 1.5, here.z, net.minecraft.sounds.SoundEvents.ANVIL_PLACE, SoundSource.BLOCKS, 0.7F, 0.6F + random.nextFloat() * 0.1F);
+			level.playSound(null, here.x, here.y + 1.5, here.z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 1.2F, 0.95F + random.nextFloat() * 0.1F);
 		}
 		if (t == RELOAD_SEATED) {
 			this.ammo = MAGAZINE;

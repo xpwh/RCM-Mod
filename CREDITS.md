@@ -18,6 +18,37 @@ Bullet impacts on earth, stone, wood and flesh use Minecraft's own sounds. Other
 | Bullet flyby | https://freesound.org/s/855248/ "Real Bullet Flyby Sound" | qubodup | CC0 1.0 |
 | Bullets hitting metal | https://freesound.org/s/116645/ "bullets hit EDIT" | Woodingp | CC0 1.0 |
 
+## Foley: water, metal, machinery, handling, radio, flares (`tools/import_foley_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Water splashes | https://freesound.org/s/442773/ "Big Water Splash" | qubodup | CC0 1.0 |
+| Water splashes | https://freesound.org/s/434978/ "Water Splash (pool dive)" | felix.blume | CC0 1.0 |
+| Water splashes | https://freesound.org/s/260131/ "Cannonball off dock" | SpliceSound | CC0 1.0 |
+| Metal thud, cold-launch thump | https://freesound.org/s/640204/ "Heavy Metal Thud on Ground" | 7of9Designs | CC0 1.0 |
+| Metal crash | https://freesound.org/s/859154/ "Metal Chunk Dropped in Metal Dumpster" | qubodup | CC0 1.0 |
+| Metal crash | https://freesound.org/s/703247/ "Big falling debris (crash)" | xkeril | CC0 1.0 |
+| Hydraulic rams | https://freesound.org/s/835133/ "Hydraulics Moving (shorter)" | Autobot8299 | CC0 1.0 |
+| Hydraulic rams | https://freesound.org/s/637811/ "scissor lifts hydraulic movements" | kyles | CC0 1.0 |
+| Air release | https://freesound.org/s/454033/ "garbage truck hydraulics + air release" | kyles | CC0 1.0 |
+| Cold-launch gas whoomp | https://freesound.org/s/751354/ "Air Pump Release Variations" | itmightgetloud | CC0 1.0 |
+| Heavy steel door open | https://freesound.org/s/383830/ "Opening Closing Big Heavy Metal Exterior Door" | deleted_user_7146007 | CC0 1.0 |
+| Heavy steel door close | https://freesound.org/s/426623/ "Heavy Metal Door (Medium)" | mrh4hn | CC0 1.0 |
+| Chain rattle | https://freesound.org/s/798148/ "Chain Metal Rattle 02" | KVV_Audio | CC BY 4.0 |
+| Truck diesel | https://freesound.org/s/187564/ "Truck Engine Idle Loops (US Government video)" | qubodup | CC0 1.0 |
+| Bunker generator | https://freesound.org/s/606933/ "large diesel emergency generator" | Garuda1982 | CC0 1.0 |
+| Bunker ventilation | https://freesound.org/s/835642/ "Large ventilation system" | kevp888 | CC BY 4.0 |
+| RPG loading, knock | https://freesound.org/s/725401/ "Inserting a rocket into an RPG-7 rocket launcher" | serøutōnin--deprivəd | CC0 1.0 |
+| Magazine drops | https://freesound.org/s/444402/ "Magazine Hitting Surface" | MootMcnoodles | CC0 1.0 |
+| Magazine drops | https://freesound.org/s/123010/ "magazinedrop" | j1987 | CC0 1.0 |
+| Gear rustle | https://freesound.org/s/427864/ "Jacket Handling" | leonelmail | CC BY 4.0 |
+| Drone set down | https://freesound.org/s/637747/ "phone cordless plastic put down" | kyles | CC0 1.0 |
+| Radio key-up | https://freesound.org/s/701314/ "Walkie Talkie button press tone" | SEF7 | CC0 1.0 |
+| Radio squelch | https://freesound.org/s/524205/ "Radio Sign Off / Squelch" | JovianSounds | CC0 1.0 |
+| Radio squelch | https://freesound.org/s/760245/ "Walkie-talkie end of transmission" | LukaCafuka | CC0 1.0 |
+| Flare launch | https://freesound.org/s/675636/ "Flares gun fires" | craigsmith | CC0 1.0 |
+| Flare burn | https://freesound.org/s/348767/ "road flare ignite burns" | frankelmedico | CC0 1.0 |
+
 ## RPG-7 (`tools/import_rpg_sounds.py`)
 
 | Sound | Source | Author | License |

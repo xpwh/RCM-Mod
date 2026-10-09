@@ -368,6 +368,46 @@ public class CloudParticle extends SingleQuadParticle {
 		}
 	}
 
+	/** A blast's small fireball (sent by the server, which cannot tune particles): it rolls into dark smoke. */
+	public static class BurstProvider implements ParticleProvider<SimpleParticleType> {
+		private final SpriteSet sprites;
+
+		public BurstProvider(SpriteSet sprites) {
+			this.sprites = sprites;
+		}
+
+		@Override
+		public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double dx, double dy, double dz, RandomSource random) {
+			float s = 1.2F + random.nextFloat() * 1.0F;
+			return new CloudParticle(level, x, y, z, dx * 0.3, dy * 0.3 + 0.02, dz * 0.3, this.sprites, FIRE_SHAPES, true)
+				.configure(28 + random.nextInt(14), s, s * 2.6F, 0xFFE2A0, 0xFF6A20, 0.95F)
+				.physics(0.9F, 0.004F)
+				.turbulence(0.02F)
+				.cooling(0.3F, 0x2E2A26);
+		}
+	}
+
+	/** Dust and grit thrown up off the ground (and off blocks a blast tears out); only some become visible puffs. */
+	public static class DustProvider implements ParticleProvider<SimpleParticleType> {
+		private final SpriteSet sprites;
+
+		public DustProvider(SpriteSet sprites) {
+			this.sprites = sprites;
+		}
+
+		@Override
+		public @Nullable Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double dx, double dy, double dz, RandomSource random) {
+			if (random.nextFloat() < 0.6F) {
+				return null; // blasts ask for a great many; a few soft puffs read better and cost less
+			}
+			float s = 0.6F + random.nextFloat() * 0.7F;
+			return new CloudParticle(level, x, y, z, dx * 0.5, dy * 0.5, dz * 0.5, this.sprites, SMOKE_SHAPES, false)
+				.configure(50 + random.nextInt(40), s, s * 3.0F, 0x9C8B74, 0x8A7D6C, 0.55F)
+				.physics(0.88F, -0.0015F)
+				.turbulence(0.01F);
+		}
+	}
+
 	public static class FireProvider implements ParticleProvider<SimpleParticleType> {
 		private final SpriteSet sprites;
 

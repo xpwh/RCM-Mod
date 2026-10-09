@@ -332,7 +332,7 @@ public class MissileEntity extends Entity implements AirThreat {
 		}
 		Vec3 top = this.getSiloTop();
 		if (this.stateAge == 0) {
-			level.playSound(null, top.x, top.y, top.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 6.0F, 0.5F);
+			level.playSound(null, top.x, top.y, top.z, ModRegistry.AIR_LAUNCH, SoundSource.BLOCKS, 8.0F, 1.0F);
 		}
 		// gas generator: hard push, then the missile coasts and slows down above the hatch. Under
 		// water (submarine launch) it rises in a bubble column and only lights its motor once it has
@@ -349,7 +349,7 @@ public class MissileEntity extends Entity implements AirThreat {
 				// broaching: a white plume of spray as the missile leaves the water
 				level.sendParticles(ParticleTypes.SPLASH, this.getX(), this.getY(), this.getZ(), 200, 1.5, 0.5, 1.5, 0.6);
 				level.sendParticles(ParticleTypes.CLOUD, this.getX(), this.getY(), this.getZ(), 40, 1.2, 1.0, 1.2, 0.1);
-				level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_SPLASH, SoundSource.BLOCKS, 8.0F, 0.5F);
+				level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.WATER_SPLASH_HUGE, SoundSource.BLOCKS, 8.0F, 1.0F);
 			}
 			if (this.seaLaunch) {
 				// thrown clear of the water by the gas bubble: it keeps rising unpowered, slowing like a
@@ -804,7 +804,7 @@ public class MissileEntity extends Entity implements AirThreat {
 			// flight termination: the range safety officer pushes the button
 			this.announce(level, "message.ballisticmissiles.misfire_terminated", ChatFormatting.YELLOW);
 			DetonationManager.intercepted(level, this.position().add(dir.scale(this.missileType.length * 0.5)), this);
-			level.playSound(null, this.getX(), this.getY(), this.getZ(), net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 12.0F, 0.6F);
+			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.EXPLOSION_NEAR, SoundSource.BLOCKS, 12.0F, 1.0F);
 			this.discard();
 			return;
 		}

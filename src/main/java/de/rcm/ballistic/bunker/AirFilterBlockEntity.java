@@ -43,7 +43,9 @@ public class AirFilterBlockEntity extends BlockEntity {
 				level.setBlock(generator, g.setValue(GeneratorBlock.LIT, true), Block.UPDATE_ALL);
 			}
 			if (server.getGameTime() % 80 == 0) {
-				level.playSound(null, pos, SoundEvents.BEACON_AMBIENT, SoundSource.BLOCKS, 0.5F, 0.6F);
+				// the plant running: the filter's fan, and the diesel generator feeding it
+				level.playSound(null, pos, de.rcm.ballistic.ModRegistry.BUNKER_VENT, SoundSource.BLOCKS, 0.45F, 1.0F);
+				level.playSound(null, generator, de.rcm.ballistic.ModRegistry.BUNKER_GENERATOR, SoundSource.BLOCKS, 0.6F, 1.0F);
 			}
 		}
 	}

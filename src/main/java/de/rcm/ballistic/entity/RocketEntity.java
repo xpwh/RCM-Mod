@@ -214,7 +214,7 @@ public class RocketEntity extends Entity implements de.rcm.ballistic.defense.Air
 	@Override
 	public void destroyByInterceptor(ServerLevel level) {
 		Vec3 p = this.position();
-		level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION, p.x, p.y, p.z, 2, 0.3, 0.3, 0.3, 0.0);
+		level.sendParticles(de.rcm.ballistic.ModRegistry.BURST, p.x, p.y, p.z, 2, 0.3, 0.3, 0.3, 0.0);
 		level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, p.x, p.y, p.z, 10, 0.5, 0.5, 0.5, 0.05);
 		this.discard();
 	}

@@ -120,13 +120,13 @@ public class SpentStageEntity extends Entity {
 		if (water) {
 			level.sendParticles(ParticleTypes.SPLASH, at.x, at.y + 0.5, at.z, 120, 1.5, 0.5, 1.5, 0.6);
 			level.sendParticles(ParticleTypes.CLOUD, at.x, at.y + 1, at.z, 30, 1.0, 1.5, 1.0, 0.1);
-			level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_SPLASH, SoundSource.BLOCKS, 8.0F, 0.5F);
+			level.playSound(null, at.x, at.y, at.z, ModRegistry.WATER_SPLASH_HUGE, SoundSource.BLOCKS, 8.0F, 1.0F);
 		} else {
 			// an empty steel casing hitting the ground at speed: a crash, a fireball of leftover fuel
-			level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y + 0.5, at.z, 3, 1.0, 0.5, 1.0, 0.0);
+			level.sendParticles(ModRegistry.BURST, at.x, at.y + 0.5, at.z, 3, 1.0, 0.5, 1.0, 0.0);
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y + 1, at.z, 40, 1.2, 1.2, 1.2, 0.05);
-			level.playSound(null, at.x, at.y, at.z, SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 6.0F, 0.4F);
-			level.explode(this, at.x, at.y, at.z, 2.0F, true, Level.ExplosionInteraction.NONE);
+			level.playSound(null, at.x, at.y, at.z, ModRegistry.METAL_CRASH, SoundSource.BLOCKS, 6.0F, 0.9F);
+			de.rcm.ballistic.explosion.Blasts.explode(level, this, at.x, at.y, at.z, 2.0F, true, Level.ExplosionInteraction.NONE);
 		}
 		this.discard();
 	}

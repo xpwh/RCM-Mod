@@ -62,8 +62,8 @@ public class MissileItem extends Item {
 			}
 			missile.setPos(x, y, z);
 			serverLevel.addFreshEntity(missile);
-			serverLevel.playSound(null, x, y, z, SoundEvents.NETHERITE_BLOCK_PLACE, SoundSource.BLOCKS, 1.5F, 0.6F);
-			serverLevel.playSound(null, x, y, z, SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 1.0F, 0.5F);
+			serverLevel.playSound(null, x, y, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 1.5F, 0.9F);
+			serverLevel.playSound(null, x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 1.2F, 1.0F);
 			if (player == null || !player.getAbilities().instabuild) {
 				context.getItemInHand().shrink(1);
 			}

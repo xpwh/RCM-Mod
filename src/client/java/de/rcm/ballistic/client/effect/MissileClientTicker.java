@@ -185,8 +185,8 @@ public final class MissileClientTicker {
 		for (int i = 0; i < 30; i++) {
 			ClientEffects.vanilla(ParticleTypes.FALLING_WATER, s.x + ClientEffects.gauss() * 1.5, s.y + 2 + ClientEffects.rand() * 6, s.z + ClientEffects.gauss() * 1.5, 0, 0, 0);
 		}
-		ClientEffects.playDistant(mc, net.minecraft.sounds.SoundEvents.GENERIC_SPLASH, s, 1.0F, 0.45F);
-		ClientEffects.playDistant(mc, net.minecraft.sounds.SoundEvents.GENERIC_SPLASH, s, 0.9F, 0.6F);
+		ClientEffects.playDistant(mc, de.rcm.ballistic.ModRegistry.WATER_SPLASH_HUGE, s, 1.0F, 0.9F);
+		ClientEffects.playDistant(mc, de.rcm.ballistic.ModRegistry.WATER_SPLASH, s, 0.9F, 0.8F);
 		ClientEffects.playDistant(mc, ModRegistry.EXPLOSION_SUB, s, (float) Math.max(0.0, 0.7 - ClientEffects.distanceToCamera(mc, s) / 400.0), 0.6F);
 		ClientEffects.addShake((float) Math.max(0.0, 0.8 - ClientEffects.distanceToCamera(mc, s) / 80.0));
 	}

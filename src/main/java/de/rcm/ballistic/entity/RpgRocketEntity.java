@@ -106,7 +106,7 @@ public class RpgRocketEntity extends Entity {
 			if (server.getFluidState(net.minecraft.core.BlockPos.containing(next)).isEmpty() == false) {
 				// into the water: it dives, slows and the fuse never meets anything hard enough
 				server.sendParticles(ParticleTypes.SPLASH, next.x, next.y + 0.3, next.z, 40, 0.5, 0.2, 0.5, 0.4);
-				server.playSound(null, next.x, next.y, next.z, SoundEvents.GENERIC_SPLASH, SoundSource.NEUTRAL, 1.5F, 1.2F);
+				server.playSound(null, next.x, next.y, next.z, de.rcm.ballistic.ModRegistry.WATER_SPLASH, SoundSource.NEUTRAL, 1.5F, 1.1F);
 				this.discard();
 				return;
 			}

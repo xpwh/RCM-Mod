@@ -542,7 +542,7 @@ public class JetEntity extends Entity implements AirThreat {
 				var hit = level.clip(new ClipContext(nose, nose.add(aim.subtract(nose).normalize().scale(220.0)), ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, this));
 				Vec3 p = hit.getLocation();
 				this.shells.add(new Shell(this.tickCount + (int) (p.distanceTo(nose) / 25.0), p, false));
-				level.sendParticles(ParticleTypes.EXPLOSION, nose.x, nose.y, nose.z, 1, 0.1, 0.1, 0.1, 0.0);
+				level.sendParticles(ModRegistry.BURST, nose.x, nose.y, nose.z, 1, 0.1, 0.1, 0.1, 0.0);
 				if (gun % 6 == 0) {
 					level.playSound(null, nose.x, nose.y, nose.z, ModRegistry.CHAIN_GUN, SoundSource.HOSTILE, 12.0F, 0.95F + random.nextFloat() * 0.1F);
 				}
@@ -769,13 +769,14 @@ public class JetEntity extends Entity implements AirThreat {
 			var hit = level.clip(new ClipContext(muzzle, end, ClipContext.Block.COLLIDER,
 				ClipContext.Fluid.ANY, this));
 			Vec3 p = hit.getLocation();
-			level.sendParticles(ParticleTypes.EXPLOSION, p.x, p.y, p.z, 1, 0.2, 0.2, 0.2, 0.0);
+			level.sendParticles(ModRegistry.BURST, p.x, p.y, p.z, 1, 0.2, 0.2, 0.2, 0.0);
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, p.x, p.y + 0.3, p.z, 3, 0.4, 0.4, 0.4, 0.02);
 			for (var living : level.getEntitiesOfClass(LivingEntity.class, new AABB(p, p).inflate(2.0))) {
 				living.hurtServer(level, level.damageSources().explosion(this, null), 14.0F);
 			}
 			if (random.nextInt(8) == 0) {
-				level.explode(this, p.x, p.y, p.z, 1.6F, false, Level.ExplosionInteraction.TNT);
+				de.rcm.ballistic.explosion.Blasts.explode(level, this, p.x, p.y, p.z, 1.6F, false, Level.ExplosionInteraction.TNT);
+				level.playSound(null, p.x, p.y, p.z, ModRegistry.GRENADE_EXPLODE, SoundSource.HOSTILE, 3.0F, 0.9F + random.nextFloat() * 0.2F);
 			}
 		}
 		return dive;
@@ -831,9 +832,9 @@ public class JetEntity extends Entity implements AirThreat {
 		this.entityData.set(DATA_DAMAGE, Mth.clamp(1.0F - this.health / type.maxHealth, 0.0F, 1.0F));
 		// hits on the airframe: sparks and a clang
 		Vec3 c = this.position().add(0, 0.8, 0);
-		level.sendParticles(ParticleTypes.CRIT, c.x, c.y, c.z, 6, 0.8, 0.4, 0.8, 0.3);
+		level.sendParticles(ModRegistry.SPARK, c.x, c.y, c.z, 6, 0.8, 0.4, 0.8, 0.3);
 		if (this.random.nextInt(3) == 0) {
-			level.playSound(null, c.x, c.y, c.z, SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 0.5F, 1.6F + this.random.nextFloat() * 0.3F);
+			level.playSound(null, c.x, c.y, c.z, ModRegistry.BULLET_IMPACT_METAL, SoundSource.HOSTILE, 2.0F, 0.9F + this.random.nextFloat() * 0.2F);
 		}
 		if (this.health <= 0.0F) {
 			this.killer = attacker;
@@ -854,7 +855,7 @@ public class JetEntity extends Entity implements AirThreat {
 		this.entityData.set(DATA_BAY, false);
 		Vec3 c = this.position().add(0, 0.8, 0);
 		DetonationManager.intercepted(level, c, this);
-		level.playSound(null, c.x, c.y, c.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 8.0F, 0.7F);
+		level.playSound(null, c.x, c.y, c.z, ModRegistry.EXPLOSION_NEAR, SoundSource.HOSTILE, 8.0F, 1.0F);
 		this.crashVelocity = type == JetType.APACHE ? this.hoverVelocity.add(this.getDir().scale(0.4))
 			: this.getDir().scale(this.getSpeed());
 		this.crashAge = 0;
@@ -897,9 +898,9 @@ public class JetEntity extends Entity implements AirThreat {
 		this.setDir(dir);
 		// parts tearing off
 		if (this.crashAge % 7 == 0) {
-			level.sendParticles(ParticleTypes.EXPLOSION, pos.x, pos.y + 0.8, pos.z, 1, 1.0, 0.5, 1.0, 0.0);
+			level.sendParticles(ModRegistry.BURST, pos.x, pos.y + 0.8, pos.z, 2, 1.0, 0.5, 1.0, 0.0);
 			if (this.random.nextInt(2) == 0) {
-				level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 3.0F, 1.3F + this.random.nextFloat() * 0.3F);
+				level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.GRENADE_EXPLODE, SoundSource.HOSTILE, 4.0F, 0.85F + this.random.nextFloat() * 0.3F);
 			}
 		}
 		Vec3 next = pos.add(v);
@@ -1000,10 +1001,10 @@ public class JetEntity extends Entity implements AirThreat {
 			this.lastFlareTick = this.tickCount;
 			Vec3 tail = this.position().add(0, 0.5, 0).subtract(this.getDir().scale(5.0));
 			for (int i = 0; i < 12; i++) {
-				level.sendParticles(ParticleTypes.FIREWORK, tail.x, tail.y, tail.z, 4, 1.5, 1.0, 1.5, 0.25);
+				level.sendParticles(ModRegistry.SPARK, tail.x, tail.y, tail.z, 6, 1.5, 1.0, 1.5, 0.25);
 				level.sendParticles(ParticleTypes.FLAME, tail.x, tail.y - i * 0.6, tail.z, 3, 1.2, 0.4, 1.2, 0.05);
 			}
-			level.playSound(null, tail.x, tail.y, tail.z, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.HOSTILE, 6.0F, 0.6F);
+			level.playSound(null, tail.x, tail.y, tail.z, ModRegistry.FLARE_LAUNCH, SoundSource.HOSTILE, 6.0F, 1.0F);
 		}
 	}
 

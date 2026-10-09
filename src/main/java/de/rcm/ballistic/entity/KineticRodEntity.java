@@ -138,7 +138,7 @@ public class KineticRodEntity extends Entity {
 			Vec3 p = pos.subtract(vel.scale((double) i / steps));
 			if (heat > 0.05F) {
 				// ionised air glowing behind it, then a long white trail
-				level.addParticle(ParticleTypes.END_ROD, p.x + this.random.nextGaussian() * 0.2, p.y, p.z + this.random.nextGaussian() * 0.2, 0, 0, 0);
+				level.addParticle(ModRegistry.SPARK, p.x + this.random.nextGaussian() * 0.2, p.y, p.z + this.random.nextGaussian() * 0.2, 0, 0, 0);
 				if (this.random.nextFloat() < heat) {
 					level.addParticle(ParticleTypes.FLAME, p.x, p.y, p.z, 0, 0, 0);
 				}
@@ -150,7 +150,7 @@ public class KineticRodEntity extends Entity {
 					de.rcm.ballistic.ClientHooks.smokeTrail.emit(this.getId(), p, 1.1F, heat);
 				}
 			} else if (i % 4 == 0) {
-				level.addParticle(ParticleTypes.FIREWORK, p.x, p.y, p.z, 0, 0, 0);
+				level.addParticle(ModRegistry.SPARK, p.x, p.y, p.z, 0, 0, 0);
 			}
 		}
 	}

@@ -272,10 +272,12 @@ public final class ModRegistry {
 		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(4.0F, 600.0F).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
 	);
 
+	public static final SoundEvent DOOR_HEAVY_OPEN = sound("door.heavy_open");
+	public static final SoundEvent DOOR_HEAVY_CLOSE = sound("door.heavy_close");
 	/** Blast-rated steel door: opens by hand, survives a nuclear blast outside the crater core. */
 	public static final BlockSetType BLAST_DOOR_TYPE = new BlockSetType(
 		"ballisticmissiles_blast", true, false, false, BlockSetType.PressurePlateSensitivity.MOBS, SoundType.NETHERITE_BLOCK,
-		SoundEvents.IRON_DOOR_CLOSE, SoundEvents.IRON_DOOR_OPEN, SoundEvents.IRON_TRAPDOOR_CLOSE, SoundEvents.IRON_TRAPDOOR_OPEN,
+		DOOR_HEAVY_CLOSE, DOOR_HEAVY_OPEN, DOOR_HEAVY_CLOSE, DOOR_HEAVY_OPEN,
 		SoundEvents.STONE_PRESSURE_PLATE_CLICK_OFF, SoundEvents.STONE_PRESSURE_PLATE_CLICK_ON, SoundEvents.STONE_BUTTON_CLICK_OFF,
 		SoundEvents.STONE_BUTTON_CLICK_ON
 	);
@@ -609,6 +611,29 @@ public final class ModRegistry {
 	public static final SoundEvent AK_SHOT = sound("ak.shot");
 	public static final SoundEvent AK_SHOT_MID = sound("ak.shot_mid");
 	public static final SoundEvent AK_SHOT_FAR = sound("ak.shot_far");
+	public static final SoundEvent WATER_SPLASH_SMALL = sound("water.splash_small");
+	public static final SoundEvent WATER_SPLASH = sound("water.splash");
+	public static final SoundEvent WATER_SPLASH_HUGE = sound("water.splash_huge");
+	public static final SoundEvent METAL_THUD = sound("metal.thud");
+	public static final SoundEvent METAL_CRASH = sound("metal.crash");
+	public static final SoundEvent HYDRAULIC_EXTEND = sound("hydraulic.extend");
+	public static final SoundEvent HYDRAULIC_RETRACT = sound("hydraulic.retract");
+	public static final SoundEvent AIR_RELEASE = sound("air.release");
+	public static final SoundEvent AIR_LAUNCH = sound("air.launch");
+	public static final SoundEvent CHAIN_RATTLE = sound("chain.rattle");
+	public static final SoundEvent TRUCK_DIESEL = sound("truck.diesel");
+	public static final SoundEvent BUNKER_GENERATOR = sound("bunker.generator");
+	public static final SoundEvent BUNKER_VENT = sound("bunker.vent");
+	public static final SoundEvent RPG_LOAD = sound("rpg.load");
+	public static final SoundEvent RPG_KNOCK = sound("rpg.knock");
+	public static final SoundEvent MAG_DROP = sound("mag.drop");
+	public static final SoundEvent GEAR_RUSTLE = sound("gear.rustle");
+	public static final SoundEvent DRONE_PLACE = sound("drone.place");
+	public static final SoundEvent RADIO_CLICK = sound("radio.click");
+	public static final SoundEvent RADIO_SQUELCH = sound("radio.squelch");
+	public static final SoundEvent FLARE_LAUNCH = sound("flare.launch");
+	/** Plays nothing: given to Minecraft's explosions, whose sound the mod makes itself. */
+	public static final SoundEvent SILENCE = sound("silence");
 	public static final SoundEvent RPG_SHOT = sound("rpg.shot");
 	public static final SoundEvent RPG_SHOT_FAR = sound("rpg.shot_far");
 	public static final SoundEvent RPG_MOTOR = sound("rpg.motor");
@@ -639,6 +664,12 @@ public final class ModRegistry {
 	// ---------- Particles ----------
 	public static final SimpleParticleType SMOKE = particle("smoke");
 	public static final SimpleParticleType FIRE = particle("fire");
+	/** A hot fleck of metal or burning magnesium: bright, falling, bouncing, dying out. */
+	public static final SimpleParticleType SPARK = particle("spark");
+	/** A small fireball that rolls into smoke - what a blast leaves in the air. */
+	public static final SimpleParticleType BURST = particle("burst");
+	/** Dust and grit thrown up off the ground. */
+	public static final SimpleParticleType DUST = particle("dust");
 
 	// ---------- Creative tabs ----------
 	/** Every missile and warhead. */

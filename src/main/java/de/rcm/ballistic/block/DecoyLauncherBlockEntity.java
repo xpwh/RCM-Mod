@@ -103,11 +103,11 @@ public class DecoyLauncherBlockEntity extends BlockEntity implements DefenseSite
 		int y = level.hasChunk(x >> 4, z >> 4) ? level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) : (int) here.y;
 		Vec3 decoy = new Vec3(x + 0.5, y, z + 0.5);
 		Vec3 burst = here.add(0, 14, 0);
-		level.sendParticles(ParticleTypes.FIREWORK, burst.x, burst.y, burst.z, 60, 4.0, 3.0, 4.0, 0.15);
+		level.sendParticles(ModRegistry.SPARK, burst.x, burst.y, burst.z, 80, 4.0, 3.0, 4.0, 0.15);
 		level.sendParticles(ParticleTypes.FLAME, burst.x, burst.y, burst.z, 40, 3.0, 2.0, 3.0, 0.05);
 		level.sendParticles(ParticleTypes.WHITE_ASH, burst.x, burst.y, burst.z, 200, 6.0, 4.0, 6.0, 0.02);
 		level.sendParticles(ParticleTypes.CLOUD, here.x, here.y + 1, here.z, 25, 0.6, 0.4, 0.6, 0.1);
-		level.playSound(null, here.x, here.y, here.z, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.BLOCKS, 6.0F, 0.6F);
+		level.playSound(null, here.x, here.y, here.z, ModRegistry.FLARE_LAUNCH, SoundSource.BLOCKS, 6.0F, 0.9F);
 		level.playSound(null, here.x, here.y, here.z, ModRegistry.SAM_LAUNCH, SoundSource.BLOCKS, 5.0F, 1.9F);
 		float chance = threat instanceof RocketEntity ? 0.4F : 0.6F;
 		if (random.nextFloat() < chance) {
@@ -194,7 +194,7 @@ public class DecoyLauncherBlockEntity extends BlockEntity implements DefenseSite
 				for (int i = 0; i < 24; i++) {
 					// the round's spark trail along its arc
 					double s = 0.6 + i * 0.05;
-					this.level.addParticle(ParticleTypes.FIREWORK, muzzle.x, muzzle.y, muzzle.z, axis.x * s, axis.y * s, axis.z * s);
+					this.level.addParticle(ModRegistry.SPARK, muzzle.x, muzzle.y, muzzle.z, axis.x * s, axis.y * s, axis.z * s);
 				}
 			}
 		}

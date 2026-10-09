@@ -185,8 +185,8 @@ public class MissileSiloBlockEntity extends BlockEntity {
 		}
 		if (remaining == HATCH_OPEN_BEFORE) {
 			silo.setHatch(true);
-			level.playSound(null, top.x, top.y, top.z, SoundEvents.IRON_DOOR_OPEN, SoundSource.BLOCKS, 4.0F, 0.5F);
-			level.playSound(null, top.x, top.y, top.z, SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 4.0F, 0.4F);
+			level.playSound(null, top.x, top.y, top.z, ModRegistry.DOOR_HEAVY_OPEN, SoundSource.BLOCKS, 4.0F, 0.75F);
+			level.playSound(null, top.x, top.y, top.z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 4.0F, 0.8F);
 		}
 		if (++silo.age >= total) {
 			silo.launch(server, top);

@@ -212,7 +212,7 @@ public final class DetonationManager {
 		for (BlockPos p : fried) {
 			level.destroyBlock(p, true);
 			if (random.nextInt(4) == 0) {
-				level.sendParticles(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, p.getX() + 0.5, p.getY() + 0.3, p.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.3);
+				level.sendParticles(de.rcm.ballistic.ModRegistry.SPARK, p.getX() + 0.5, p.getY() + 0.3, p.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.3);
 			}
 		}
 	}
@@ -269,14 +269,14 @@ public final class DetonationManager {
 	public static void interceptorBurst(ServerLevel level, Vec3 pos, Entity source) {
 		broadcast(level, pos, Warhead.BOMBLET);
 		if (pos.y < level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(pos.x), Mth.floor(pos.z)) + 6) {
-			level.explode(source, pos.x, pos.y, pos.z, 2.0F, false, Level.ExplosionInteraction.NONE);
+			Blasts.explode(level, source, pos.x, pos.y, pos.z, 2.0F, false, Level.ExplosionInteraction.NONE);
 		}
 	}
 
 	public static void detonateBomblet(ServerLevel level, Vec3 pos, Entity source) {
 		broadcast(level, pos, Warhead.BOMBLET);
 		FlyingDebris.launch(level, pos, 2.0, 2, 0.9);
-		level.explode(source, pos.x, pos.y, pos.z, 3.2F, false, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, 3.2F, false, Level.ExplosionInteraction.TNT);
 		BlastPhysics.fragments(level, pos, source, 20, 14.0, 4.0F); // bomblets are fragmentation weapons
 	}
 
@@ -325,10 +325,10 @@ public final class DetonationManager {
 		Vec3 d = dir.lengthSqr() < 1.0E-6 ? new Vec3(0, -1, 0) : dir.normalize();
 		Vec3 deep = pos.add(d.scale(5.0));
 		RandomSource random = level.getRandom();
-		level.explode(source, deep.x, deep.y, deep.z, 18.0F, false, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, source, deep.x, deep.y, deep.z, 18.0F, false, Level.ExplosionInteraction.TNT);
 		for (int i = 0; i < 6; i++) {
 			double a = i * Mth.TWO_PI / 6 + random.nextDouble() * 0.5;
-			level.explode(source, pos.x + Math.cos(a) * 7, pos.y - 2, pos.z + Math.sin(a) * 7, 10.0F, false, Level.ExplosionInteraction.TNT);
+			Blasts.explode(level, source, pos.x + Math.cos(a) * 7, pos.y - 2, pos.z + Math.sin(a) * 7, 10.0F, false, Level.ExplosionInteraction.TNT);
 		}
 		Wasteland.crater(level, pos, 21.0, 15.0, random);
 		BlastPhysics.shatter(level, pos, 0.0, 90.0, 2500, 1.0F);
@@ -377,7 +377,7 @@ public final class DetonationManager {
 		level.sendParticles(ParticleTypes.SPLASH, pos.x, pos.y + 1.0, pos.z, 400, 2.5, 3.0, 2.5, 1.2);
 		level.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, pos.x, pos.y, pos.z, 200, 2.0, 1.0, 2.0, 0.6);
 		level.sendParticles(ParticleTypes.CLOUD, pos.x, pos.y + 2.0, pos.z, 80, 2.0, 4.0, 2.0, 0.2);
-		level.explode(null, pos.x, pos.y, pos.z, 6.5F, false, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, null, pos.x, pos.y, pos.z, 6.5F, false, Level.ExplosionInteraction.TNT);
 	}
 
 	/** 155 mm artillery shell. */
@@ -406,7 +406,7 @@ public final class DetonationManager {
 	public static void fuelExplosion(ServerLevel level, Vec3 pos, @Nullable Entity source, float power) {
 		broadcast(level, pos, power > 5.0F ? Warhead.AERIAL_BOMB : Warhead.DRONE);
 		FlyingDebris.launch(level, pos, Math.min(4.0, power * 0.5), (int) Math.min(18, 6 + power), 1.1);
-		level.explode(source, pos.x, pos.y, pos.z, Math.min(power, 9.0F), true, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, Math.min(power, 9.0F), true, Level.ExplosionInteraction.TNT);
 		BlastPhysics.shatter(level, pos, 0.0, power * 3.0, 50, 0.9F);
 		Wasteland.scorch(level, BlockPos.containing(pos), (int) Mth.clamp(power * 0.6F, 2, 6), level.getRandom(), 0.4F, false);
 	}
@@ -419,13 +419,13 @@ public final class DetonationManager {
 		if (water) {
 			level.sendParticles(ParticleTypes.SPLASH, pos.x, pos.y + 0.5, pos.z, 200, 2.5, 0.5, 2.5, 0.6);
 			level.sendParticles(ParticleTypes.CLOUD, pos.x, pos.y + 1.0, pos.z, 40, 2.0, 1.0, 2.0, 0.08);
-			level.playSound(null, pos.x, pos.y, pos.z, net.minecraft.sounds.SoundEvents.GENERIC_SPLASH, net.minecraft.sounds.SoundSource.HOSTILE, 8.0F, 0.5F);
-			level.explode(source, pos.x, pos.y, pos.z, large ? 3.0F : 2.0F, false, Level.ExplosionInteraction.NONE);
+			level.playSound(null, pos.x, pos.y, pos.z, de.rcm.ballistic.ModRegistry.WATER_SPLASH_HUGE, net.minecraft.sounds.SoundSource.HOSTILE, 8.0F, 0.9F);
+			Blasts.explode(level, source, pos.x, pos.y, pos.z, large ? 3.0F : 2.0F, false, Level.ExplosionInteraction.NONE);
 			return;
 		}
 		broadcast(level, pos, large ? Warhead.AERIAL_BOMB : Warhead.DRONE);
 		FlyingDebris.launch(level, pos, large ? 3.0 : 2.0, large ? 14 : 9, 1.0);
-		level.explode(source, pos.x, pos.y, pos.z, large ? 5.0F : 3.6F, false, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, large ? 5.0F : 3.6F, false, Level.ExplosionInteraction.TNT);
 		BlastPhysics.fragments(level, pos, source, 20, 14.0, 4.0F);
 		BlastPhysics.shatter(level, pos, 0.0, large ? 14.0 : 9.0, 40, 0.9F);
 		// the burning wreck: jet fuel sets the ground around alight
@@ -443,7 +443,7 @@ public final class DetonationManager {
 	public static void detonateRpg(ServerLevel level, Vec3 pos, Entity source) {
 		broadcast(level, pos, Warhead.BOMBLET);
 		FlyingDebris.launch(level, pos, 1.2, 4, 0.6);
-		level.explode(source, pos.x, pos.y, pos.z, 3.0F, false, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, 3.0F, false, Level.ExplosionInteraction.TNT);
 		BlastPhysics.fragments(level, pos, source, 14, 10.0, 3.5F);
 		BlastPhysics.shatter(level, pos, 0.0, 9.0, 40, 0.9F);
 		scorch(level, BlockPos.containing(pos), 1, level.getRandom(), 0.03F);
@@ -483,7 +483,7 @@ public final class DetonationManager {
 	/** Small high-explosive round: 40 mm Bofors, 30 mm chain gun, Hydra 70 rocket. */
 	public static void detonateSmallRound(ServerLevel level, Vec3 pos, Entity source, float power) {
 		broadcast(level, pos, Warhead.BOMBLET);
-		level.explode(source, pos.x, pos.y, pos.z, power, false, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, power, false, Level.ExplosionInteraction.TNT);
 		BlastPhysics.fragments(level, pos, source, (int) (power * 4) + 4, power * 4.0, 3.0F);
 		BlastPhysics.shatter(level, pos, 0.0, power * 2.5, 30, 0.8F);
 	}
@@ -529,7 +529,7 @@ public final class DetonationManager {
 	public static void meteorImpact(ServerLevel level, Vec3 pos, float size, @Nullable Entity source) {
 		broadcast(level, pos, Warhead.METEOR_IMPACT);
 		FlyingDebris.launch(level, pos, 3.0 + size * 2.0, (int) (10 + 14 * size), 1.3);
-		level.explode(source, pos.x, pos.y, pos.z, 3.5F + 3.0F * size, true, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, 3.5F + 3.0F * size, true, Level.ExplosionInteraction.TNT);
 		BlockPos center = BlockPos.containing(pos);
 		RandomSource random = level.getRandom();
 		int r = (int) (3 + 2 * size);
@@ -572,7 +572,7 @@ public final class DetonationManager {
 	/** Burning sub-munition: splashes fire around the point of impact. */
 	public static void detonateIncendiary(ServerLevel level, Vec3 pos, Entity source) {
 		broadcast(level, pos, Warhead.BOMBLET);
-		level.explode(source, pos.x, pos.y, pos.z, 1.2F, false, Level.ExplosionInteraction.NONE);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, 1.2F, false, Level.ExplosionInteraction.NONE);
 		RandomSource random = level.getRandom();
 		BlockPos center = BlockPos.containing(pos);
 		for (int i = 0; i < 14; i++) {
@@ -617,14 +617,14 @@ public final class DetonationManager {
 	private static void highExplosive(ServerLevel level, Vec3 pos, @Nullable Entity source, float power, int secondaries, int scorchRadius, double depthRatio) {
 		RandomSource random = level.getRandom();
 		// high explosive hardly ever sets things alight: the fireball is gone in a fraction of a second
-		level.explode(source, pos.x, pos.y, pos.z, power, false, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, power, false, Level.ExplosionInteraction.TNT);
 		BlastPhysics.highExplosive(level, pos, source, power);
 		// A few secondary blasts make the crater irregular and the boom feel heavier.
 		for (int i = 0; i < secondaries; i++) {
 			double ox = pos.x + random.nextGaussian() * power * 0.35;
 			double oy = pos.y + random.nextGaussian() * 1.5;
 			double oz = pos.z + random.nextGaussian() * power * 0.35;
-			level.explode(source, ox, oy, oz, power * 0.55F, false, Level.ExplosionInteraction.TNT);
+			Blasts.explode(level, source, ox, oy, oz, power * 0.55F, false, Level.ExplosionInteraction.TNT);
 		}
 		if (power >= 3.5F) {
 			// the explosion leaves a ragged hole: settle it into a real bowl with a thrown-up rim
@@ -641,7 +641,7 @@ public final class DetonationManager {
 			d = new Vec3(d.x, -0.4, d.z).normalize();
 		}
 		final int depth = 22;
-		level.explode(source, pos.x, pos.y, pos.z, 2.5F, false, Level.ExplosionInteraction.TNT);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, 2.5F, false, Level.ExplosionInteraction.TNT);
 		BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
 		Vec3 tip = pos;
 		for (int i = 0; i < depth * 2; i++) {
@@ -665,12 +665,12 @@ public final class DetonationManager {
 		schedule(level, 12, () -> {
 			level.playSound(null, deep.x, deep.y, deep.z, ModRegistry.EXPLOSION_BUNKER, SoundSource.BLOCKS, 20.0F, 1.0F);
 			FlyingDebris.launch(level, deep, 6.0, 45, 1.9);
-			level.explode(source, deep.x, deep.y, deep.z, 13.0F, false, Level.ExplosionInteraction.TNT);
+			Blasts.explode(level, source, deep.x, deep.y, deep.z, 13.0F, false, Level.ExplosionInteraction.TNT);
 			BlastPhysics.shatter(level, pos, 0.0, 40.0, 500, 1.0F);
 			BlastPhysics.overpressure(level, pos, source, 8.0F);
 			RandomSource random = level.getRandom();
 			for (int i = 0; i < 5; i++) {
-				level.explode(
+				Blasts.explode(level, 
 					source, deep.x + random.nextGaussian() * 4, deep.y + random.nextGaussian() * 3, deep.z + random.nextGaussian() * 4, 7.0F, false,
 					Level.ExplosionInteraction.TNT
 				);
@@ -695,7 +695,7 @@ public final class DetonationManager {
 			}
 		}
 		schedule(level, 6, () -> {
-			level.explode(source, pos.x, pos.y + 2, pos.z, 9.0F, true, Level.ExplosionInteraction.TNT);
+			Blasts.explode(level, source, pos.x, pos.y + 2, pos.z, 9.0F, true, Level.ExplosionInteraction.TNT);
 			BlastPhysics.shatter(level, pos, 0.0, 85.0, 1500, 1.0F); // the long, heavy pressure pulse of a fuel-air blast
 			for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box)) {
 				Vec3 out = e.position().subtract(pos);

@@ -67,7 +67,7 @@ public class BunkerBlock extends Block {
 	protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
 		level.removeBlock(pos, false);
 		build(level, pos.below(), state.getValue(FACING));
-		level.playSound(null, pos, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0F, 0.6F);
+		level.playSound(null, pos, de.rcm.ballistic.ModRegistry.DOOR_HEAVY_CLOSE, SoundSource.BLOCKS, 2.0F, 0.85F);
 		for (var player : level.players()) {
 			if (player.blockPosition().distSqr(pos) < 32 * 32) {
 				player.displayClientMessage(Component.translatable("message.ballisticmissiles.bunker_built").withStyle(ChatFormatting.GREEN), true);

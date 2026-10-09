@@ -231,7 +231,7 @@ public class CiwsBlockEntity extends BlockEntity {
 			Vec3 side = new Vec3(-dir.z, 0, dir.x).normalize();
 			Vec3 eject = Vec3.atBottomCenterOf(pos).add(0, MUZZLE_Y - 0.4, 0).add(side.scale(0.4));
 			for (int i = 0; i < 2; i++) {
-				level.addParticle(ParticleTypes.CRIT, eject.x, eject.y, eject.z, side.x * 0.15 + random.nextGaussian() * 0.03, 0.1, side.z * 0.15 + random.nextGaussian() * 0.03);
+				level.addParticle(new net.minecraft.core.particles.ItemParticleOption(ParticleTypes.ITEM, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET)), eject.x, eject.y, eject.z, side.x * 0.15 + random.nextGaussian() * 0.03, 0.1, side.z * 0.15 + random.nextGaussian() * 0.03);
 			}
 		}
 	}

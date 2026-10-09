@@ -217,7 +217,7 @@ final class GiantEffects {
 				playDistant(mc, ModRegistry.NUKE_SUB, this.pos, near, 0.6F);
 				playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, near, 0.45F);
 				playDistant(mc, this.distance < 600 ? ModRegistry.NUKE_NEAR : ModRegistry.NUKE_FAR, this.pos, near * 0.7F, 0.75F);
-				playDistant(mc, SoundEvents.GENERIC_SPLASH, this.pos, near, 0.3F);
+				playDistant(mc, de.rcm.ballistic.ModRegistry.WATER_SPLASH_HUGE, this.pos, near, 0.7F);
 				if (this.distance < 400) {
 					deafen(mc, (float) (1.0 - this.distance / 500.0), 140);
 				}
@@ -309,7 +309,7 @@ final class GiantEffects {
 					this.roared = true;
 					// the roar of the wall of water coming in
 					playDistant(mc, ModRegistry.NUKE_WIND, new Vec3(cx, s, cz), 1.0F, 0.55F);
-					playDistant(mc, SoundEvents.GENERIC_SPLASH, cam, 1.0F, 0.25F);
+					playDistant(mc, de.rcm.ballistic.ModRegistry.WATER_SPLASH_HUGE, cam, 1.0F, 0.65F);
 					addShake(1.5F);
 				}
 				if (Math.abs(toCam - front) < 6 && cam.y < s + h + 2) {

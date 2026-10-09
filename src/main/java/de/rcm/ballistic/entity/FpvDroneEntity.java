@@ -149,7 +149,7 @@ public class FpvDroneEntity extends Entity {
 		drone.yaw = owner.getYRot();
 		drone.entityData.set(DATA_LANDED, true);
 		level.addFreshEntity(drone);
-		level.playSound(null, at.x, at.y, at.z, net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC.value(), SoundSource.PLAYERS, 0.8F, 1.3F);
+		level.playSound(null, at.x, at.y, at.z, de.rcm.ballistic.ModRegistry.DRONE_PLACE, SoundSource.PLAYERS, 0.8F, 1.0F);
 		return drone;
 	}
 
@@ -349,7 +349,7 @@ public class FpvDroneEntity extends Entity {
 				if (!player.getAbilities().instabuild || !player.getInventory().contains(this.asItem())) {
 					player.getInventory().placeItemBackInInventory(this.asItem());
 				}
-				level.playSound(null, this.getX(), this.getY(), this.getZ(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.6F, 1.2F);
+				level.playSound(null, this.getX(), this.getY(), this.getZ(), de.rcm.ballistic.ModRegistry.GEAR_RUSTLE, SoundSource.PLAYERS, 0.6F, 1.1F);
 				this.discard();
 			} else if (flownBy(serverPlayer) == null) {
 				this.takeOff(level, serverPlayer, new Vec3(0.0, 0.3, 0.0));

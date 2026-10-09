@@ -87,7 +87,7 @@ public final class RpgClient {
 			return;
 		}
 		checkStart = mc.level.getGameTime();
-		de.rcm.ballistic.client.gun.GunAudio.play(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON.value(), player.getEyePosition(), 0.4F, 1.3F);
+		de.rcm.ballistic.client.gun.GunAudio.play(de.rcm.ballistic.ModRegistry.GEAR_RUSTLE, player.getEyePosition(), 0.5F, 1.0F);
 	}
 
 	public static boolean checking(Minecraft mc) {
@@ -106,8 +106,8 @@ public final class RpgClient {
 			mc.gui.setOverlayMessage(net.minecraft.network.chat.Component.translatable(
 				loaded ? "message.ballisticmissiles.rpg_check_loaded" : "message.ballisticmissiles.rpg_check_empty", spare), false);
 			// a knock of the knuckles on the warhead (or into the empty tube)
-			de.rcm.ballistic.client.gun.GunAudio.play(loaded ? net.minecraft.sounds.SoundEvents.CHAIN_STEP : net.minecraft.sounds.SoundEvents.LANTERN_HIT,
-				mc.player.getEyePosition(), 0.5F, loaded ? 1.4F : 0.8F);
+			de.rcm.ballistic.client.gun.GunAudio.play(de.rcm.ballistic.ModRegistry.RPG_KNOCK,
+				mc.player.getEyePosition(), 0.7F, loaded ? 1.05F : 0.7F);
 		}
 	}
 

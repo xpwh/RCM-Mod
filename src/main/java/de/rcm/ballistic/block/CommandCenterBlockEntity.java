@@ -283,7 +283,7 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 					return;
 				}
 				RemoteLaunch.fire(player, links, target);
-				level.playSound(null, this.worldPosition, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.BLOCKS, 1.0F, 0.6F);
+				level.playSound(null, this.worldPosition, ModRegistry.RADIO_CLICK, SoundSource.BLOCKS, 1.0F, 1.0F);
 			}
 			case CommandActionPayload.ABORT_LINKED -> RemoteLaunch.abort(player, links(player));
 			case CommandActionPayload.AIRSTRIKE -> {

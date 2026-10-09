@@ -170,7 +170,7 @@ public class BulletEntity extends Entity {
 		if (this.shooter instanceof net.minecraft.server.level.ServerPlayer shooterPlayer) {
 			// the shooter hears the hit land
 			shooterPlayer.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
-				net.minecraft.core.Holder.direct(net.minecraft.sounds.SoundEvents.ARROW_HIT_PLAYER), SoundSource.PLAYERS,
+				net.minecraft.core.Holder.direct(ModRegistry.BULLET_IMPACT_FLESH), SoundSource.PLAYERS,
 				shooterPlayer.getX(), shooterPlayer.getEyeY(), shooterPlayer.getZ(), head ? 0.5F : 0.3F, head ? 1.6F : 1.25F, this.random.nextLong()));
 		}
 		if (e.hurtServer(level, source, damage)) {
@@ -182,7 +182,7 @@ public class BulletEntity extends Entity {
 			level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.0F, 0.9F + this.random.nextFloat() * 0.2F);
 		} else {
 			// an airframe or a vehicle: sparks off the metal
-			level.sendParticles(ParticleTypes.ELECTRIC_SPARK, at.x, at.y, at.z, 8, 0.05, 0.05, 0.05, 0.25);
+			level.sendParticles(ModRegistry.SPARK, at.x, at.y, at.z, 8, 0.05, 0.05, 0.05, 0.25);
 			level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_METAL, SoundSource.PLAYERS, 1.2F, 0.9F + this.random.nextFloat() * 0.2F);
 		}
 		this.discard();
@@ -254,7 +254,7 @@ public class BulletEntity extends Entity {
 		level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), at.x, at.y, at.z, 8, 0.05, 0.05, 0.05, 0.25);
 		level.sendParticles(ParticleTypes.SMOKE, at.x + n.x * 0.1, at.y + n.y * 0.1, at.z + n.z * 0.1, 2, 0.05, 0.05, 0.05, 0.02);
 		if (hard) {
-			level.sendParticles(ParticleTypes.CRIT, at.x + n.x * 0.05, at.y + n.y * 0.05, at.z + n.z * 0.05, metal ? 6 : 3, 0.02, 0.02, 0.02, 0.4);
+			level.sendParticles(ModRegistry.SPARK, at.x + n.x * 0.05, at.y + n.y * 0.05, at.z + n.z * 0.05, metal ? 6 : 3, 0.02, 0.02, 0.02, 0.4);
 		}
 		SoundEvent impact = metal ? ModRegistry.BULLET_IMPACT_METAL
 			: hard ? ModRegistry.BULLET_IMPACT_STONE

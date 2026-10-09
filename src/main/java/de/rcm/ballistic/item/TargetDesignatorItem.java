@@ -90,7 +90,7 @@ public class TargetDesignatorItem extends Item {
 				.withStyle(removed ? ChatFormatting.GRAY : ChatFormatting.AQUA),
 			true
 		);
-		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.PLAYERS, 0.6F, removed ? 0.8F : 1.4F);
+		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.RADIO_CLICK, SoundSource.PLAYERS, 0.6F, removed ? 0.8F : 1.1F);
 	}
 
 	/** Called on the server when a client sends a target. */

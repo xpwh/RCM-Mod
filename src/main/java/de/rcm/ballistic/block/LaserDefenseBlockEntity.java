@@ -222,7 +222,7 @@ public class LaserDefenseBlockEntity extends BlockEntity {
 			Vec3 v = target.getDeltaMovement();
 			var random = level.getRandom();
 			for (int i = 0; i < 2 + (int) (laser.heat * 3); i++) {
-				level.addParticle(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, random.nextGaussian() * 0.2, random.nextGaussian() * 0.2, random.nextGaussian() * 0.2);
+				level.addParticle(ModRegistry.SPARK, p.x, p.y, p.z, random.nextGaussian() * 0.2, random.nextGaussian() * 0.2, random.nextGaussian() * 0.2);
 			}
 			if (random.nextFloat() < laser.heat) {
 				level.addParticle(ParticleTypes.LAVA, p.x, p.y, p.z, 0, 0, 0);

@@ -131,8 +131,8 @@ public class MissileSiloBlock extends Block implements EntityBlock {
 					if (!player.getAbilities().instabuild) {
 						stack.shrink(1);
 					}
-					level.playSound(null, pos, SoundEvents.NETHERITE_BLOCK_PLACE, SoundSource.BLOCKS, 1.5F, 0.5F);
-					level.playSound(null, pos, SoundEvents.PISTON_CONTRACT, SoundSource.BLOCKS, 1.0F, 0.5F);
+					level.playSound(null, pos, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 1.5F, 0.85F);
+					level.playSound(null, pos, ModRegistry.HYDRAULIC_RETRACT, SoundSource.BLOCKS, 1.2F, 0.9F);
 					player.displayClientMessage(silo.status(), true);
 				} else {
 					player.displayClientMessage(Component.translatable("message.ballisticmissiles.silo_full").withStyle(ChatFormatting.YELLOW), true);
@@ -174,7 +174,7 @@ public class MissileSiloBlock extends Block implements EntityBlock {
 			MissileType type = silo.unload();
 			if (type != null) {
 				player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModRegistry.missileItem(type)));
-				level.playSound(null, pos, SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 1.0F, 0.6F);
+				level.playSound(null, pos, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 1.2F, 0.95F);
 			}
 		}
 		player.displayClientMessage(silo.status(), true);

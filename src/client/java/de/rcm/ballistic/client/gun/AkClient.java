@@ -117,7 +117,7 @@ public final class AkClient {
 		long t = now - inspectStart;
 		Vec3 at = player.getEyePosition();
 		if (t == 1 || t == 40) {
-			GunAudio.play(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC.value(), at, 0.35F, 1.1F);
+			GunAudio.play(ModRegistry.GEAR_RUSTLE, at, 0.45F, 1.0F);
 		} else if (t == 29) {
 			GunAudio.play(ModRegistry.AK_SELECTOR, at, 0.45F, 0.75F);
 		} else if (t == 35) {

@@ -131,8 +131,8 @@ public class EarthPenetratorEntity extends Entity {
 		this.entityData.set(DATA_BURIED, true);
 		level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), at.x, at.y + 0.5, at.z, 120, 0.8, 0.6, 0.8, 0.4);
 		level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y + 1.0, at.z, 40, 1.0, 1.2, 1.0, 0.06);
-		level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y + 0.5, at.z, 2, 0.3, 0.3, 0.3, 0.0);
-		level.playSound(null, at.x, at.y, at.z, SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 8.0F, 0.3F);
+		level.sendParticles(ModRegistry.BURST, at.x, at.y + 0.5, at.z, 2, 0.3, 0.3, 0.3, 0.0);
+		level.playSound(null, at.x, at.y, at.z, ModRegistry.METAL_CRASH, SoundSource.BLOCKS, 8.0F, 0.6F);
 		level.playSound(null, at.x, at.y, at.z, ModRegistry.EXPLOSION_BUNKER, SoundSource.BLOCKS, 6.0F, 1.6F);
 		if (state.getBlock().getExplosionResistance() >= 1200.0F) {
 			this.fuse = 2; // hardened target: no way through, the fuze fires on contact

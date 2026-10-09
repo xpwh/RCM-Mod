@@ -44,8 +44,5 @@ public class GeneratorBlock extends Block {
 		if (random.nextInt(3) == 0) {
 			level.addParticle(ParticleTypes.SMOKE, pos.getX() + 0.5 + random.nextGaussian() * 0.1, pos.getY() + 1.05, pos.getZ() + 0.5, 0, 0.04, 0);
 		}
-		if (random.nextInt(30) == 0) {
-			level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, SoundEvents.MINECART_RIDING, SoundSource.BLOCKS, 0.25F, 0.5F, false);
-		}
 	}
 }

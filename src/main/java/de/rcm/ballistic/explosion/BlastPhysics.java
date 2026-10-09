@@ -138,7 +138,7 @@ public final class BlastPhysics {
 					level.destroyBlock(hit.getBlockPos(), false);
 				} else if (i % 3 == 0) {
 					Vec3 p = hit.getLocation();
-					level.sendParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 2, 0.05, 0.05, 0.05, 0.1);
+					level.sendParticles(de.rcm.ballistic.ModRegistry.SPARK, p.x, p.y, p.z, 2, 0.05, 0.05, 0.05, 0.1);
 				}
 			}
 		}

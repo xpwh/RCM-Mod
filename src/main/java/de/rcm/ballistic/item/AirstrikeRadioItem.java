@@ -86,7 +86,7 @@ public class AirstrikeRadioItem extends Item {
 		if (player.isShiftKeyDown()) {
 			mode = Mode.values()[(mode.ordinal() + 1) % Mode.values().length];
 			radio.set(ModRegistry.AIRSTRIKE_MODE, mode.ordinal());
-			level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.PLAYERS, 0.6F, 1.4F);
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.RADIO_CLICK, SoundSource.PLAYERS, 0.7F, 1.0F);
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.airstrike_mode", mode.displayName()).withStyle(ChatFormatting.AQUA), true);
 			return InteractionResult.SUCCESS;
 		}
@@ -158,7 +158,7 @@ public class AirstrikeRadioItem extends Item {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.airstrike_out_of_range", (int) JetEntity.MAX_RANGE).withStyle(ChatFormatting.RED), true);
 			return InteractionResult.FAIL;
 		}
-		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.8F, 0.6F);
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.RADIO_SQUELCH, SoundSource.PLAYERS, 0.8F, 1.0F);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.TARGET_LOCK, SoundSource.PLAYERS, 1.0F, 0.8F);
 		player.displayClientMessage(Component.literal("✈ ").append(mode.displayName()).append(" – ")
 			.append(Component.translatable("message.ballisticmissiles.airstrike_called", (int) target.x, (int) target.y, (int) target.z, (int) distance, jet.etaSeconds()))

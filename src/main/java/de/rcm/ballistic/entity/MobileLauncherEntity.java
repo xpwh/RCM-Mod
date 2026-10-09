@@ -214,7 +214,7 @@ public class MobileLauncherEntity extends Entity {
 				float erect = Math.min(1.0F, this.getErect() + 1.0F / ERECT_TICKS);
 				this.entityData.set(DATA_ERECT, erect);
 				if (this.phaseAge % 12 == 1) {
-					level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PISTON_EXTEND, SoundSource.NEUTRAL, 1.2F, 0.45F);
+					level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.HYDRAULIC_EXTEND, SoundSource.NEUTRAL, 2.0F, 0.9F);
 				}
 				if (erect >= 1.0F) {
 					this.handOver(level);
@@ -239,7 +239,7 @@ public class MobileLauncherEntity extends Entity {
 				float erect = Math.max(0.0F, this.getErect() - 1.0F / LOWER_TICKS);
 				this.entityData.set(DATA_ERECT, erect);
 				if (this.phaseAge % 12 == 1) {
-					level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PISTON_CONTRACT, SoundSource.NEUTRAL, 1.2F, 0.45F);
+					level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.HYDRAULIC_RETRACT, SoundSource.NEUTRAL, 2.0F, 0.9F);
 				}
 				if (erect <= 0.0F) {
 					this.setPhase(DRIVE);
@@ -353,7 +353,7 @@ public class MobileLauncherEntity extends Entity {
 					if (!player.getAbilities().instabuild) {
 						stack.shrink(1);
 					}
-					this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.NETHERITE_BLOCK_PLACE, SoundSource.NEUTRAL, 1.5F, 0.6F);
+					this.level().playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.METAL_THUD, SoundSource.NEUTRAL, 1.5F, 0.9F);
 					player.displayClientMessage(Component.translatable("message.ballisticmissiles.truck_loaded").withStyle(ChatFormatting.GRAY), true);
 				}
 			}
@@ -365,7 +365,7 @@ public class MobileLauncherEntity extends Entity {
 				if (!player.getAbilities().instabuild) {
 					stack.shrink(1);
 				}
-				this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ANVIL_USE, SoundSource.NEUTRAL, 0.7F, 1.2F);
+				this.level().playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.RPG_KNOCK, SoundSource.NEUTRAL, 1.0F, 0.7F);
 				player.displayClientMessage(this.healthMessage(), true);
 			}
 			return InteractionResult.SUCCESS;
@@ -451,7 +451,9 @@ public class MobileLauncherEntity extends Entity {
 			}
 		}
 		if (wreck) {
-			level.explode(this, this.getX(), this.getY() + 1.5, this.getZ(), 3.0F, true, Level.ExplosionInteraction.NONE);
+			de.rcm.ballistic.explosion.Blasts.explode(level, this, this.getX(), this.getY() + 1.5, this.getZ(), 3.0F, true, Level.ExplosionInteraction.NONE);
+			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.EXPLOSION_NEAR, SoundSource.NEUTRAL, 8.0F, 1.0F);
+			level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.METAL_CRASH, SoundSource.NEUTRAL, 4.0F, 1.0F);
 		}
 		this.ejectPassengers();
 		this.discard();

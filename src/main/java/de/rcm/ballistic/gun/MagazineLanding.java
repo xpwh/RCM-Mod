@@ -1,5 +1,6 @@
 package de.rcm.ballistic.gun;
 
+import de.rcm.ballistic.ModRegistry;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -62,8 +63,7 @@ public final class MagazineLanding {
 			if (e.isInWater()) {
 				if (!f.wasInWater) {
 					float v = (float) Math.min(1.0, 0.25 + Math.abs(f.lastVy) * 1.5);
-					play(level, e, SoundEvents.GENERIC_SPLASH, 0.35F * v, 1.5F);
-					play(level, e, SoundEvents.PLAYER_SPLASH_HIGH_SPEED, 0.12F * v, 1.9F);
+					play(level, e, ModRegistry.WATER_SPLASH_SMALL, 0.6F * v, 1.1F);
 				}
 				f.wasInWater = true;
 				f.knocks = 2; // sinks quietly from here
@@ -97,29 +97,27 @@ public final class MagazineLanding {
 		float jitter = 0.94F + r.nextFloat() * 0.12F;
 		if (METAL.contains(type)) {
 			// steel on steel: a bright clang
-			play(level, e, SoundEvents.ANVIL_LAND, 0.12F * loud, 1.9F * jitter);
-			play(level, e, SoundEvents.CHAIN_FALL, 0.9F * loud, 1.25F * jitter);
-			play(level, e, SoundEvents.LANTERN_FALL, 0.6F * loud, 1.6F);
+			play(level, e, ModRegistry.MAG_DROP, 1.0F * loud, 1.15F * jitter);
+			play(level, e, ModRegistry.BULLET_IMPACT_METAL, 0.12F * loud, 1.3F * jitter);
 		} else if (WOOD.contains(type)) {
 			// a hollow knock, the steel only rattles a little
 			play(level, e, type.getHitSound(), 0.9F * loud, 0.75F * jitter);
 			play(level, e, type.getStepSound(), 0.6F * loud, 0.9F * jitter);
-			play(level, e, SoundEvents.CHAIN_FALL, 0.3F * loud, 1.4F * jitter);
+			play(level, e, ModRegistry.MAG_DROP, 0.6F * loud, 0.9F * jitter);
 		} else if (SOFT.contains(type)) {
 			// a dull thud into the earth
 			play(level, e, type.getStepSound(), 0.85F * loud, 0.65F * jitter);
 			play(level, e, type.getHitSound(), 0.5F * loud, 0.6F);
-			play(level, e, SoundEvents.CHAIN_STEP, 0.12F * loud, 1.5F * jitter);
+			play(level, e, ModRegistry.MAG_DROP, 0.2F * loud, 0.7F * jitter);
 		} else if (GRAVEL.contains(type)) {
 			play(level, e, type.getStepSound(), 0.9F * loud, 0.8F * jitter);
-			play(level, e, SoundEvents.CHAIN_FALL, 0.4F * loud, 1.35F * jitter);
+			play(level, e, ModRegistry.MAG_DROP, 0.5F * loud, 0.95F * jitter);
 		} else if (type == SoundType.GLASS) {
 			play(level, e, SoundEvents.GLASS_HIT, 0.9F * loud, 1.3F * jitter);
-			play(level, e, SoundEvents.CHAIN_FALL, 0.6F * loud, 1.45F * jitter);
+			play(level, e, ModRegistry.MAG_DROP, 0.7F * loud, 1.05F * jitter);
 		} else {
 			// stone, deepslate, bricks, concrete and the like: hard, with the steel ringing out
-			play(level, e, SoundEvents.CHAIN_FALL, 0.9F * loud, 1.3F * jitter);
-			play(level, e, SoundEvents.LANTERN_FALL, 0.6F * loud, 1.5F);
+			play(level, e, ModRegistry.MAG_DROP, 1.0F * loud, 1.0F * jitter);
 			play(level, e, type.getHitSound(), 0.7F * loud, 1.1F * jitter);
 		}
 	}

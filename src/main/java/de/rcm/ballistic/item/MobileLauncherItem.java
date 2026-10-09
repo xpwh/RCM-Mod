@@ -42,7 +42,7 @@ public class MobileLauncherItem extends Item {
 			return InteractionResult.FAIL;
 		}
 		level.addFreshEntity(truck);
-		level.playSound(null, pos, SoundEvents.NETHERITE_BLOCK_PLACE, SoundSource.NEUTRAL, 1.5F, 0.5F);
+		level.playSound(null, pos, ModRegistry.METAL_THUD, SoundSource.NEUTRAL, 1.5F, 0.85F);
 		if (player == null || !player.getAbilities().instabuild) {
 			context.getItemInHand().shrink(1);
 		}

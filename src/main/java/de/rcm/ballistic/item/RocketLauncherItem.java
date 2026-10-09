@@ -107,7 +107,7 @@ public class RocketLauncherItem extends Item {
 		ServerLevel level = player.level();
 		if (!isLoaded(stack)) {
 			if (!player.getCooldowns().isOnCooldown(stack)) {
-				level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
+				level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_DRY, SoundSource.PLAYERS, 0.7F, 0.8F);
 				if (!hasAmmo(player)) {
 					player.displayClientMessage(Component.translatable("message.ballisticmissiles.rpg_no_ammo").withStyle(ChatFormatting.YELLOW), true);
 				}
@@ -145,7 +145,7 @@ public class RocketLauncherItem extends Item {
 				level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z, 5, spread * 0.6, spread * 0.6, spread * 0.6, 0.05);
 			}
 		}
-		level.sendParticles(ParticleTypes.POOF, player.getX(), player.getY() + 0.1, player.getZ(), 20, 0.8, 0.05, 0.8, 0.06);
+		level.sendParticles(ModRegistry.DUST, player.getX(), player.getY() + 0.1, player.getZ(), 20, 0.8, 0.05, 0.8, 0.06);
 		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(shoulder, shoulder).inflate(5.0), e -> e != player && e.isAlive())) {
 			Vec3 to = e.getBoundingBox().getCenter().subtract(shoulder);
 			double dist = to.length();
@@ -201,8 +201,7 @@ public class RocketLauncherItem extends Item {
 		}
 		setLoaded(stack, true);
 		// the grenade slid into the muzzle until the stop clicks, the hammer cocked
-		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CROSSBOW_LOADING_END.value(), SoundSource.PLAYERS, 1.0F, 0.7F);
-		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ARMOR_EQUIP_IRON.value(), SoundSource.PLAYERS, 0.8F, 0.8F);
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.RPG_LOAD, SoundSource.PLAYERS, 1.0F, 0.95F + level.getRandom().nextFloat() * 0.1F);
 	}
 
 	private static ItemStack findAmmo(Player player) {

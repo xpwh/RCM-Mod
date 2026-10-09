@@ -337,9 +337,9 @@ public class DestroyerEntity extends Entity {
 		if (this.health <= 0.0F) {
 			// magazine fire and a broken back: the ship goes down
 			Vec3 p = this.position();
-			level.explode(this, p.x, p.y + 3, p.z, 6.0F, true, Level.ExplosionInteraction.NONE);
+			de.rcm.ballistic.explosion.Blasts.explode(level, this, p.x, p.y + 3, p.z, 6.0F, true, Level.ExplosionInteraction.NONE);
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, p.x, p.y + 4, p.z, 200, 6.0, 3.0, 6.0, 0.05);
-			level.playSound(null, p.x, p.y, p.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 8.0F, 0.6F);
+			level.playSound(null, p.x, p.y, p.z, ModRegistry.EXPLOSION_NEAR, SoundSource.BLOCKS, 10.0F, 0.85F);
 			this.discard();
 		}
 		return true;

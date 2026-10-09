@@ -104,8 +104,8 @@ public class PoseidonItem extends Item {
 		if (!player.getAbilities().instabuild) {
 			stack.shrink(1);
 		}
-		level.playSound(null, from.x, from.y, from.z, SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 3.0F, 0.4F);
-		level.playSound(null, from.x, from.y, from.z, SoundEvents.GENERIC_SPLASH, SoundSource.BLOCKS, 3.0F, 0.5F);
+		level.playSound(null, from.x, from.y, from.z, ModRegistry.AIR_LAUNCH, SoundSource.BLOCKS, 5.0F, 0.9F);
+		level.playSound(null, from.x, from.y, from.z, ModRegistry.WATER_SPLASH, SoundSource.BLOCKS, 3.0F, 0.8F);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.TARGET_LOCK, SoundSource.PLAYERS, 1.0F, 0.6F);
 		player.displayClientMessage(Component.literal("☢ ").append(Component.translatable("message.ballisticmissiles.poseidon_away", (int) aim.x, (int) aim.z, (int) range))
 			.withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), false);
