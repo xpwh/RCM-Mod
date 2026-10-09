@@ -15,7 +15,7 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 /** The FPV drones as held items: the full 3D drone, nose away from you, props still. */
-public final class FpvDroneItemRenderer implements SpecialModelRenderer<Boolean> {
+public final class FpvDroneItemRenderer implements SpecialModelRenderer<Integer> {
 	/** How big the drone is in the hand, relative to its model. */
 	public static final float HAND_SCALE = 0.7F;
 
@@ -24,13 +24,13 @@ public final class FpvDroneItemRenderer implements SpecialModelRenderer<Boolean>
 	}
 
 	@Override
-	public void submit(Boolean racer, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil,
+	public void submit(Integer kind, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil,
 		int outline) {
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.5F, 0.5F);
 		poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
 		poseStack.scale(HAND_SCALE, HAND_SCALE, HAND_SCALE);
-		FpvDroneRenderer.submitDrone(poseStack, collector, light, racer != null && racer, 0.0F, 0.0F);
+		FpvDroneRenderer.submitDrone(poseStack, collector, light, kind == null ? 0 : kind, 0.0F, 0.0F);
 		poseStack.popPose();
 	}
 
@@ -41,8 +41,9 @@ public final class FpvDroneItemRenderer implements SpecialModelRenderer<Boolean>
 	}
 
 	@Override
-	public Boolean extractArgument(ItemStack stack) {
-		return stack.is(ModRegistry.FPV_RACER_ITEM);
+	public Integer extractArgument(ItemStack stack) {
+		return stack.is(ModRegistry.FPV_RACER_ITEM) ? de.rcm.ballistic.entity.FpvDroneEntity.KIND_RACER
+			: stack.is(ModRegistry.FPV_FIBER_ITEM) ? de.rcm.ballistic.entity.FpvDroneEntity.KIND_FIBER : de.rcm.ballistic.entity.FpvDroneEntity.KIND_STANDARD;
 	}
 
 	public record Unbaked() implements SpecialModelRenderer.Unbaked {

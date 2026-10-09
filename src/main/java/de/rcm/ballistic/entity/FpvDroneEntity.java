@@ -62,13 +62,23 @@ public class FpvDroneEntity extends Entity {
 	private static final EntityDataAccessor<Float> DATA_ROLL = SynchedEntityData.defineId(FpvDroneEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Integer> DATA_KIND = SynchedEntityData.defineId(FpvDroneEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Boolean> DATA_LANDED = SynchedEntityData.defineId(FpvDroneEntity.class, EntityDataSerializers.BOOLEAN);
+	/** How hard a jammer is drowning out the link, 0..1. */
+	private static final EntityDataAccessor<Float> DATA_JAM = SynchedEntityData.defineId(FpvDroneEntity.class, EntityDataSerializers.FLOAT);
+	/** Fibre-optic drone: fibre paid out so far (blocks), and where its spool's free end is anchored. */
+	private static final EntityDataAccessor<Float> DATA_CABLE = SynchedEntityData.defineId(FpvDroneEntity.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<org.joml.Vector3fc> DATA_ANCHOR = SynchedEntityData.defineId(FpvDroneEntity.class,
+		EntityDataSerializers.VECTOR3);
 
 	public static final int KIND_STANDARD = 0;
 	public static final int KIND_RACER = 1;
+	/** Fibre-optic: steered down a glass fibre paid out from a spool - nothing to jam, but only as far as the fibre reaches. */
+	public static final int KIND_FIBER = 2;
 	/** Battery, ticks of flight, by kind. */
-	private static final int[] BATTERY = {1800, 1200};
-	private static final double[] THRUST = {0.085, 0.17};
-	private static final double[] BOOST_THRUST = {0.14, 0.3};
+	private static final int[] BATTERY = {1800, 1200, 2400};
+	private static final double[] THRUST = {0.085, 0.17, 0.075};
+	private static final double[] BOOST_THRUST = {0.14, 0.3, 0.125};
+	/** Fibre on the spool, blocks. */
+	public static final float FIBER_LENGTH = 1200.0F;
 	private static final double DRAG = 0.94;
 	/** Faster than this into anything and the warhead's fuse fires. */
 	private static final double FUSE_SPEED = 0.3;
@@ -153,6 +163,12 @@ public class FpvDroneEntity extends Entity {
 		this.pitch = pilot.getXRot();
 		this.velocity = kick;
 		this.lastInput = this.tickCount;
+		if (this.isFiber()) {
+			// the free end stays with the pilot: the fibre pays out from the drone's spool from here
+			Vec3 a = pilot.position().add(0.0, 0.9, 0.0);
+			this.entityData.set(DATA_ANCHOR, new org.joml.Vector3f((float) a.x, (float) a.y, (float) a.z));
+			this.entityData.set(DATA_CABLE, (float) a.distanceTo(this.position()));
+		}
 		PILOTED.put(pilot.getUUID(), this);
 		refreshView(pilot);
 		level.playSound(null, this.getX(), this.getY(), this.getZ(), ModRegistry.DRONE_ARM, SoundSource.PLAYERS, 1.0F, this.isRacer() ? 1.2F : 1.0F);
@@ -197,6 +213,9 @@ public class FpvDroneEntity extends Entity {
 		builder.define(DATA_ROLL, 0.0F);
 		builder.define(DATA_KIND, KIND_STANDARD);
 		builder.define(DATA_LANDED, false);
+		builder.define(DATA_JAM, 0.0F);
+		builder.define(DATA_CABLE, 0.0F);
+		builder.define(DATA_ANCHOR, new org.joml.Vector3f());
 	}
 
 	/** Entity id of the player flying it, or -1. */
@@ -235,13 +254,33 @@ public class FpvDroneEntity extends Entity {
 		return this.getKind() == KIND_RACER;
 	}
 
+	public boolean isFiber() {
+		return this.getKind() == KIND_FIBER;
+	}
+
+	/** Jamming of the radio link, 0..1 (always 0 for the fibre drone). */
+	public float getJam() {
+		return this.entityData.get(DATA_JAM);
+	}
+
+	/** Fibre paid out, blocks. */
+	public float getCableUsed() {
+		return this.entityData.get(DATA_CABLE);
+	}
+
+	/** Where the fibre starts (the pilot's end). */
+	public Vec3 getAnchor() {
+		org.joml.Vector3fc a = this.entityData.get(DATA_ANCHOR);
+		return new Vec3(a.x(), a.y(), a.z());
+	}
+
 	/** Set down on the ground, motors off. */
 	public boolean isLanded() {
 		return this.entityData.get(DATA_LANDED);
 	}
 
 	public ItemStack asItem() {
-		return new ItemStack(this.isRacer() ? ModRegistry.FPV_RACER_ITEM : ModRegistry.FPV_DRONE_ITEM);
+		return new ItemStack(this.isRacer() ? ModRegistry.FPV_RACER_ITEM : this.isFiber() ? ModRegistry.FPV_FIBER_ITEM : ModRegistry.FPV_DRONE_ITEM);
 	}
 
 	/** Server: the pilot's sticks this tick. */
@@ -350,8 +389,10 @@ public class FpvDroneEntity extends Entity {
 			} else {
 				float signal = this.signal(level, pilot);
 				this.entityData.set(DATA_SIGNAL, signal);
-				if (signal <= 0.0F) {
-					this.loseLink(level, "message.ballisticmissiles.drone_link_lost");
+				if (this.isFiber() && this.getCableUsed() >= FIBER_LENGTH) {
+					this.loseLink(level, "message.ballisticmissiles.drone_fiber_snapped");
+				} else if (signal <= 0.0F) {
+					this.loseLink(level, this.getJam() > 0.3F ? "message.ballisticmissiles.drone_jammed" : "message.ballisticmissiles.drone_link_lost");
 				}
 			}
 		}
@@ -411,6 +452,9 @@ public class FpvDroneEntity extends Entity {
 			this.discard();
 			return;
 		}
+		if (this.isFiber() && !this.dead) {
+			this.entityData.set(DATA_CABLE, this.getCableUsed() + (float) next.distanceTo(pos));
+		}
 		this.setPos(next);
 		this.setDeltaMovement(this.velocity);
 	}
@@ -435,6 +479,12 @@ public class FpvDroneEntity extends Entity {
 	private float signal(ServerLevel level, ServerPlayer pilot) {
 		Vec3 eye = pilot.getEyePosition();
 		Vec3 here = this.position();
+		if (this.isFiber()) {
+			// a glass fibre: a perfect picture, nothing to jam, until the spool runs out
+			return 1.0F;
+		}
+		float jam = de.rcm.ballistic.block.JammerBlockEntity.droneJamming(level, here, eye, pilot.getUUID());
+		this.entityData.set(DATA_JAM, Mth.lerp(0.3F, this.getJam(), jam));
 		double d = eye.distanceTo(here);
 		float s = (float) (1.0 - Math.pow(d / LINK_RANGE, 4.0));
 		if (this.tickCount % 10 == 0 || this.blockedCache < 0.0F) {
@@ -454,7 +504,7 @@ public class FpvDroneEntity extends Entity {
 			}
 			this.blockedCache = Math.min(0.65F, solid * 0.025F);
 		}
-		return Mth.clamp(s - this.blockedCache, 0.0F, 1.0F);
+		return Mth.clamp(s - this.blockedCache - this.getJam() * 1.15F, 0.0F, 1.0F);
 	}
 
 	private @Nullable Entity entityHit(ServerLevel level, Vec3 from, Vec3 to, @Nullable ServerPlayer pilot) {

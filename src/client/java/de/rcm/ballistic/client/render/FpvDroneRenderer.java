@@ -65,7 +65,10 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 	private static final float PROP_Y = 0.046F;
 	private static final float RACER_PROP_Y = 0.04F;
 
-	public static final BoxMesh BODY = body();
+	/** Where the fibre leaves the spool's guide (drone space). Declared before the meshes, which use it. */
+	public static final Vector3f FIBER_EXIT = new Vector3f(0.0F, 0.035F, -0.175F);
+	public static final BoxMesh BODY = body(false);
+	public static final BoxMesh FIBER = body(true);
 	public static final BoxMesh RACER = racer();
 	public static final BoxMesh PROP = prop(PROP_RADIUS, 0.024F, BLACK);
 	public static final BoxMesh RACER_PROP = prop(RACER_PROP_RADIUS, 0.02F, FLASH);
@@ -83,7 +86,7 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 		public float roll;
 		public float time;
 		public float throttle;
-		public boolean racer;
+		public int kind;
 		public boolean landed;
 	}
 
@@ -100,7 +103,7 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 		state.roll = drone.getRoll();
 		state.time = drone.tickCount + partialTick;
 		state.throttle = drone.getThrottle();
-		state.racer = drone.isRacer();
+		state.kind = drone.getKind();
 		state.landed = drone.isLanded();
 	}
 
@@ -111,7 +114,7 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 		poseStack.mulPose(Axis.YP.rotationDegrees(-state.yaw));
 		if (state.landed) {
 			// resting on its warhead (the racer on its grenade holder)
-			poseStack.translate(0.0F, (state.racer ? 0.048F : 0.098F) * SCALE, 0.0F);
+			poseStack.translate(0.0F, (state.kind == FpvDroneEntity.KIND_RACER ? 0.048F : 0.098F) * SCALE, 0.0F);
 		} else {
 			poseStack.translate(0.0F, 0.12F, 0.0F);
 			// it flies nose down to go forward: the camera is tilted up to make up for it
@@ -119,14 +122,15 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 			poseStack.mulPose(Axis.ZP.rotationDegrees(state.roll));
 		}
 		poseStack.scale(SCALE, SCALE, SCALE);
-		submitDrone(poseStack, collector, light, state.racer, state.time, state.landed ? 0.0F : state.throttle);
+		submitDrone(poseStack, collector, light, state.kind, state.time, state.landed ? 0.0F : state.throttle);
 		poseStack.popPose();
 		super.submit(state, poseStack, collector, camera);
 	}
 
 	/** The drone in its own space (also used for the one in your hand). */
-	public static void submitDrone(PoseStack poseStack, SubmitNodeCollector collector, int light, boolean racer, float time, float throttle) {
-		BoxMesh body = racer ? RACER : BODY;
+	public static void submitDrone(PoseStack poseStack, SubmitNodeCollector collector, int light, int kind, float time, float throttle) {
+		boolean racer = kind == FpvDroneEntity.KIND_RACER;
+		BoxMesh body = racer ? RACER : kind == FpvDroneEntity.KIND_FIBER ? FIBER : BODY;
 		BoxMesh prop = racer ? RACER_PROP : PROP;
 		BoxMesh blur = racer ? RACER_BLUR : BLUR;
 		float arm = racer ? RACER_ARM : ARM;
@@ -246,7 +250,11 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 
 	// ------------------------------------------------------------------ the 7-inch with the PG-7
 
-	private static BoxMesh body() {
+	/**
+	 * @param fiber the fibre-optic version: no radio antennas, instead a spool of glass fibre on the
+	 *              back of the frame, the fibre leaving it through a guide at the tail
+	 */
+	private static BoxMesh body(boolean fiber) {
 		BoxMesh.Builder b = new BoxMesh.Builder();
 		float a = ARM;
 		// four arms, 6 mm carbon, tapering from the body out to the motors
@@ -294,15 +302,38 @@ public class FpvDroneRenderer extends EntityRenderer<FpvDroneEntity, FpvDroneRen
 		b.revolve(GUNMETAL, v(0.0F, 0.022F, 0.074F).add(new Vector3f(lensAxis).mul(0.011F)), lensAxis,
 			new float[][] {{0.0F, 0.0085F}, {0.011F, 0.0085F}, {0.012F, 0.006F}}, 10);
 		b.revolve(LENS, v(0.0F, 0.022F, 0.074F).add(new Vector3f(lensAxis).mul(0.022F)), lensAxis, new float[][] {{0.0F, 0.006F}, {0.0012F, 0.0F}}, 10);
-		// video transmitter's lollipop antenna and the receiver's two whips at the back
-		b.beam(v(0.0F, 0.044F, -0.062F), v(0.0F, 0.075F, -0.1F), 0.004F, 0.004F, BLACK);
-		Vector3f lolly = v(0.0F, 0.075F, -0.1F);
-		b.revolve(RED, lolly, v(0.0F, 0.77F, -0.64F), new float[][] {{-0.005F, 0.0F}, {-0.005F, 0.011F}, {0.004F, 0.011F}, {0.006F, 0.0F}}, 12);
-		b.beam(v(-0.008F, 0.004F, -0.078F), v(-0.035F, 0.03F, -0.115F), 0.0025F, 0.0025F, WHITE);
-		b.beam(v(0.008F, 0.004F, -0.078F), v(0.035F, 0.03F, -0.115F), 0.0025F, 0.0025F, WHITE);
+		if (fiber) {
+			spool(b);
+		} else {
+			// video transmitter's lollipop antenna and the receiver's two whips at the back
+			b.beam(v(0.0F, 0.044F, -0.062F), v(0.0F, 0.075F, -0.1F), 0.004F, 0.004F, BLACK);
+			Vector3f lolly = v(0.0F, 0.075F, -0.1F);
+			b.revolve(RED, lolly, v(0.0F, 0.77F, -0.64F), new float[][] {{-0.005F, 0.0F}, {-0.005F, 0.011F}, {0.004F, 0.011F}, {0.006F, 0.0F}}, 12);
+			b.beam(v(-0.008F, 0.004F, -0.078F), v(-0.035F, 0.03F, -0.115F), 0.0025F, 0.0025F, WHITE);
+			b.beam(v(0.008F, 0.004F, -0.078F), v(0.035F, 0.03F, -0.115F), 0.0025F, 0.0025F, WHITE);
+		}
 		b.box(-0.004F, -0.003F, -0.084F, 0.004F, 0.002F, -0.08F, RED_LAMP); // tail LED
 		warhead(b);
 		return b.build();
+	}
+
+	/**
+	 * The fibre spool: a drum lying across the back of the frame on a printed bracket, wound full of
+	 * pale fibre between two black flanges, and the guide eye at the tail it pays out through.
+	 */
+	private static void spool(BoxMesh.Builder b) {
+		Vector3f c = v(0.0F, 0.05F, -0.125F);
+		Vector3f across = v(1, 0, 0);
+		b.box(-0.03F, 0.003F, -0.105F, 0.03F, 0.02F, -0.09F, CONCRETE_DARK); // bracket on the bottom plate
+		b.box(-0.006F, 0.003F, -0.15F, 0.006F, 0.02F, -0.1F, CONCRETE_DARK);
+		b.revolve(WHITE, new Vector3f(c).add(-0.028F, 0.0F, 0.0F), across, new float[][] {{0.0F, 0.03F}, {0.056F, 0.03F}}, 18); // wound fibre
+		b.revolve(BLACK, new Vector3f(c).add(-0.032F, 0.0F, 0.0F), across, new float[][] {{0.0F, 0.0F}, {0.0F, 0.04F}, {0.004F, 0.04F}, {0.004F, 0.0F}}, 18);
+		b.revolve(BLACK, new Vector3f(c).add(0.028F, 0.0F, 0.0F), across, new float[][] {{0.0F, 0.0F}, {0.0F, 0.04F}, {0.004F, 0.04F}, {0.004F, 0.0F}}, 18);
+		b.revolve(GUNMETAL, new Vector3f(c).add(-0.036F, 0.0F, 0.0F), across, new float[][] {{0.0F, 0.006F}, {0.072F, 0.006F}}, 8); // axle
+		// the guide arm and eye at the tail
+		b.beam(v(0.0F, 0.02F, -0.15F), new Vector3f(FIBER_EXIT), 0.004F, 0.004F, CONCRETE_DARK);
+		b.revolve(STEEL, new Vector3f(FIBER_EXIT).add(0.0F, 0.0F, -0.002F), v(0, 0, 1), new float[][] {{0.0F, 0.005F}, {0.004F, 0.005F}}, 8);
+		b.box(-0.004F, 0.042F, -0.07F, 0.004F, 0.047F, -0.062F, GREEN_LAMP); // media converter LED
 	}
 
 	/**

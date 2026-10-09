@@ -75,6 +75,8 @@ public final class DroneClient {
 			}
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(DroneClient::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(FiberCables::tick);
+		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(FiberCables::render);
 		HudElementRegistry.addLast(OSD, (graphics, tickCounter) -> hud(graphics, tickCounter.getGameTimeDeltaPartialTick(false)));
 		// while flying, the goggles show nothing of your own body's HUD
 		for (Identifier id : new Identifier[] {VanillaHudElements.HOTBAR, VanillaHudElements.HEALTH_BAR, VanillaHudElements.ARMOR_BAR,
@@ -99,6 +101,9 @@ public final class DroneClient {
 
 	/** Every drone in view: its buzz. */
 	private static void droneTick(FpvDroneEntity drone) {
+		if (drone.isFiber()) {
+			FiberCables.track(drone);
+		}
 		if (!drone.clientSoundStarted) {
 			drone.clientSoundStarted = true;
 			Minecraft.getInstance().getSoundManager().play(new DroneSound(drone, false));
@@ -201,6 +206,16 @@ public final class DroneClient {
 		}
 		float bad = 1.0F - signal;
 		noise(g, w, h, 0.12F + 0.88F * bad * bad, (int) (150 + 4500 * bad * bad));
+		float jam = drone.getJam();
+		if (jam > 0.05F) {
+			// a jammer on the band: rolling bars of interference across the picture
+			int bars = 1 + (int) (jam * 6);
+			for (int i = 0; i < bars; i++) {
+				int y = (int) ((mc.level.getGameTime() * (3 + i) * 7 + i * 97 + NOISE.nextInt(6)) % Math.max(1, h));
+				int bh = 2 + NOISE.nextInt(3 + (int) (jam * 10));
+				g.fill(0, y, w, Math.min(h, y + bh), (int) (40 + 120 * jam) << 24 | (NOISE.nextBoolean() ? 0xC0C0C0 : 0x202020));
+			}
+		}
 		if (signal < 0.35F && NOISE.nextFloat() < (0.35F - signal) * 1.5F) {
 			// a frame torn or blacked out
 			int y = NOISE.nextInt(h);
@@ -217,12 +232,21 @@ public final class DroneClient {
 		int batColor = charge < 0.2F ? (blink ? 0xFFFF4040 : 0x00000000) : white;
 		g.drawString(font, String.format("%.1fV", volts), 10, 10, batColor, true);
 		g.drawString(font, String.format("BAT %d%%", Math.round(charge * 100)), 10, 20, batColor, true);
-		int rssi = Math.round(signal * 99);
-		g.drawString(font, "RSSI " + rssi, w - 10 - font.width("RSSI 99"), 10, signal < 0.3F ? 0xFFFF6060 : white, true);
-		for (int i = 0; i < 5; i++) {
-			int bx = w - 46 + i * 7;
-			int bh = 3 + i * 2;
-			g.fill(bx, 32 - bh, bx + 5, 32, signal * 5 > i + 0.5F ? white : 0x50FFFFFF);
+		if (drone.isFiber()) {
+			// no radio: how much of the spool is gone instead
+			float used = drone.getCableUsed() / FpvDroneEntity.FIBER_LENGTH;
+			String fib = String.format("FIBER %d/%dm", Math.round(drone.getCableUsed()), Math.round(FpvDroneEntity.FIBER_LENGTH));
+			g.drawString(font, fib, w - 10 - font.width(fib), 10, used > 0.9F ? (blink ? 0xFFFF4040 : 0x00000000) : used > 0.75F ? 0xFFFFC040 : white, true);
+			g.fill(w - 70, 24, w - 10, 28, 0x60FFFFFF);
+			g.fill(w - 70, 24, w - 70 + Math.round(60 * (1.0F - Math.min(1.0F, used))), 28, used > 0.9F ? 0xFFFF4040 : white);
+		} else {
+			int rssi = Math.round(signal * 99);
+			g.drawString(font, "RSSI " + rssi, w - 10 - font.width("RSSI 99"), 10, signal < 0.3F ? 0xFFFF6060 : white, true);
+			for (int i = 0; i < 5; i++) {
+				int bx = w - 46 + i * 7;
+				int bh = 3 + i * 2;
+				g.fill(bx, 32 - bh, bx + 5, 32, signal * 5 > i + 0.5F ? white : 0x50FFFFFF);
+			}
 		}
 		Vec3 now = drone.position();
 		Vec3 before = new Vec3(drone.xo, drone.yo, drone.zo);
@@ -237,9 +261,14 @@ public final class DroneClient {
 		g.drawString(font, "ARMED", w - 10 - font.width("ARMED"), h - 30, 0xFFFF5050, true);
 		if (drone.isRacer()) {
 			g.drawString(font, "RACE", w - 10 - font.width("RACE"), h - 40, 0xFFFFC040, true);
+		} else if (drone.isFiber()) {
+			g.drawString(font, "FIBER", w - 10 - font.width("FIBER"), h - 40, 0xFF80E0FF, true);
 		}
 		// warnings
-		String warn = signal < 0.25F ? "screen.ballisticmissiles.drone_weak_signal" : charge < 0.15F ? "screen.ballisticmissiles.drone_low_battery" : null;
+		float fiberUsed = drone.isFiber() ? drone.getCableUsed() / FpvDroneEntity.FIBER_LENGTH : 0.0F;
+		String warn = drone.getJam() > 0.2F ? "screen.ballisticmissiles.drone_jammed"
+			: fiberUsed > 0.9F ? "screen.ballisticmissiles.drone_fiber_end"
+			: signal < 0.25F ? "screen.ballisticmissiles.drone_weak_signal" : charge < 0.15F ? "screen.ballisticmissiles.drone_low_battery" : null;
 		if (warn != null && blink) {
 			g.drawCenteredString(font, Component.translatable(warn), w / 2, 30, 0xFFFF4040);
 		}

@@ -70,7 +70,18 @@ def racer():
     return base.outline(img)
 
 
+def fiber():
+    img = drone()
+    d = ImageDraw.Draw(img)
+    # the spool on its back and the fibre trailing away
+    d.ellipse([11, 4, 21, 10], fill=(232, 232, 226, 255), outline=(20, 20, 22, 255))
+    d.line([(16, 7), (16, 7)], fill=(20, 20, 22, 255))
+    d.line([(21, 6), (26, 3), (31, 2)], fill=(235, 240, 245, 220))
+    return img
+
+
 def main():
+    fiber().save(os.path.join(OUT, "fpv_fiber.png"))
     racer().save(os.path.join(OUT, "fpv_racer.png"))
     drone().save(os.path.join(OUT, "fpv_drone.png"))
     pod().save(os.path.join(OUT, "tamir_pod.png"))

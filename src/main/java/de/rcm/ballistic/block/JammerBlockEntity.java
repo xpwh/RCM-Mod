@@ -92,6 +92,28 @@ public class JammerBlockEntity extends BlockEntity {
 		return !DefenseNetwork.find(level, DefenseNetwork.Kind.JAMMER, Vec3.atCenterOf(target), RADIUS).isEmpty();
 	}
 
+	/** FPV drones' radio links are drowned out within this radius. */
+	public static final double DRONE_RADIUS = 220.0;
+
+	/**
+	 * How hard someone else's jammers drown out a radio-controlled drone's link (0 none, 1 total):
+	 * strongest near a jammer, at either end of the link - the drone's receiver or the pilot's goggles.
+	 * A player's own jammers are tuned to leave their own drones alone.
+	 */
+	public static float droneJamming(Level level, Vec3 drone, Vec3 pilot, @Nullable UUID pilotId) {
+		float worst = 0.0F;
+		for (Vec3 end : new Vec3[] {drone, pilot}) {
+			for (BlockPos p : DefenseNetwork.find(level, DefenseNetwork.Kind.JAMMER, end, DRONE_RADIUS)) {
+				if (level.getBlockEntity(p) instanceof JammerBlockEntity jammer && jammer.isJamming()
+					&& (jammer.owner == null || !jammer.owner.equals(pilotId))) {
+					double d = Vec3.atCenterOf(p).distanceTo(end) / DRONE_RADIUS;
+					worst = Math.max(worst, (float) Math.min(1.0, 1.25 * (1.0 - d * d)));
+				}
+			}
+		}
+		return worst;
+	}
+
 	/** Is a radar owned by {@code radarOwner} at {@code radar} being jammed by someone else's jammer? */
 	public static boolean jamsRadar(Level level, BlockPos radar, @Nullable UUID radarOwner) {
 		for (BlockPos p : DefenseNetwork.find(level, DefenseNetwork.Kind.JAMMER, Vec3.atCenterOf(radar), RADAR_RADIUS)) {

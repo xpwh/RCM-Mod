@@ -64,6 +64,8 @@ public class FpvDroneItem extends Item {
 	public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
 		if (this.kind == FpvDroneEntity.KIND_RACER) {
 			tooltip.accept(Component.translatable("tooltip.ballisticmissiles.fpv_racer").withStyle(ChatFormatting.RED));
+		} else if (this.kind == FpvDroneEntity.KIND_FIBER) {
+			tooltip.accept(Component.translatable("tooltip.ballisticmissiles.fpv_fiber", (int) FpvDroneEntity.FIBER_LENGTH).withStyle(ChatFormatting.AQUA));
 		}
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.fpv_drone.1").withStyle(ChatFormatting.GRAY));
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.fpv_drone.2").withStyle(ChatFormatting.GRAY));

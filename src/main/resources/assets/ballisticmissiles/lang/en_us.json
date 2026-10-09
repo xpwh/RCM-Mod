@@ -291,7 +291,7 @@
 	"message.ballisticmissiles.laser_kill": "LASER: %s burnt through and destroyed",
 	"message.ballisticmissiles.laser_status": "Laser: ready | range %s | kills %s",
 	"message.ballisticmissiles.laser_no_power": "Laser: NO POWER – needs a redstone signal",
-	"message.ballisticmissiles.jammer_on": "⚡ Jammer ON – missiles aimed within %s blocks lose their GPS fix",
+	"message.ballisticmissiles.jammer_on": "⚡ Jammer ON – missiles aimed within %s blocks lose their GPS fix · other players' radio drones are jammed out to 220 blocks",
 	"message.ballisticmissiles.jammer_off": "Jammer off",
 	"message.ballisticmissiles.jammer_deflect": "JAMMER: %s lost its GPS fix and goes off course!",
 	"subtitles.ballisticmissiles.laser": "Laser burns",
@@ -557,5 +557,11 @@
 	"tooltip.ballisticmissiles.fpv_racer": "Extremely fast: up to ~360 km/h flat out · 60 s battery",
 	"tooltip.ballisticmissiles.fpv_racer.3": "Left-click: detonate · right-click: cut the link · VOG fragmentation grenade",
 	"tooltip.ballisticmissiles.fpv_drone.4": "Sneak + right-click the ground: set down · right-click it: launch · sneak + right-click it: pick up",
-	"message.ballisticmissiles.drone_landed": "Drone landed - right-click it to launch, sneak + right-click to pick it up"
+	"message.ballisticmissiles.drone_landed": "Drone landed - right-click it to launch, sneak + right-click to pick it up",
+	"item.ballisticmissiles.fpv_fiber": "Fibre-Optic FPV Drone",
+	"tooltip.ballisticmissiles.fpv_fiber": "Steered down a glass fibre: cannot be jammed · %s m of fibre on the spool",
+	"message.ballisticmissiles.drone_jammed": "Radio link jammed - drone lost!",
+	"message.ballisticmissiles.drone_fiber_snapped": "Out of fibre - it snapped, drone lost!",
+	"screen.ballisticmissiles.drone_jammed": "JAMMED",
+	"screen.ballisticmissiles.drone_fiber_end": "FIBRE NEARLY OUT"
 }

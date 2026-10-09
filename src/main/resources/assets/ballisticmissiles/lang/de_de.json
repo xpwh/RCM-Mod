@@ -291,7 +291,7 @@
 	"message.ballisticmissiles.laser_kill": "LASER: %s durchgebrannt und zerstört",
 	"message.ballisticmissiles.laser_status": "Laser: bereit | Reichweite %s | Abschüsse %s",
 	"message.ballisticmissiles.laser_no_power": "Laser: KEIN STROM – braucht ein Redstone-Signal",
-	"message.ballisticmissiles.jammer_on": "⚡ Störsender AN – Raketen mit Ziel im Umkreis von %s Blöcken verlieren ihr GPS",
+	"message.ballisticmissiles.jammer_on": "⚡ Störsender AN – Raketen mit Ziel im Umkreis von %s Blöcken verlieren ihr GPS · fremde Funk-Drohnen werden bis 220 Blöcke gestört",
 	"message.ballisticmissiles.jammer_off": "Störsender aus",
 	"message.ballisticmissiles.jammer_deflect": "STÖRSENDER: %s hat das GPS verloren und fliegt daneben!",
 	"subtitles.ballisticmissiles.laser": "Laser brennt",
@@ -557,5 +557,11 @@
 	"tooltip.ballisticmissiles.fpv_racer": "Extrem schnell: bis ~360 km/h mit Vollgas · 60 s Akku",
 	"tooltip.ballisticmissiles.fpv_racer.3": "Linksklick: zünden · Rechtsklick: Verbindung trennen · VOG-Splittergranate",
 	"tooltip.ballisticmissiles.fpv_drone.4": "Schleichen + Rechtsklick auf Boden: ablegen · Rechtsklick drauf: starten · Schleichen + Rechtsklick drauf: aufheben",
-	"message.ballisticmissiles.drone_landed": "Drohne gelandet – Rechtsklick drauf zum Starten, Schleichen + Rechtsklick zum Aufheben"
+	"message.ballisticmissiles.drone_landed": "Drohne gelandet – Rechtsklick drauf zum Starten, Schleichen + Rechtsklick zum Aufheben",
+	"item.ballisticmissiles.fpv_fiber": "Glasfaser-FPV-Drohne",
+	"tooltip.ballisticmissiles.fpv_fiber": "Über Glasfaser gesteuert: nicht störbar · %s m Kabel auf der Spule",
+	"message.ballisticmissiles.drone_jammed": "Funkverbindung gestört – Drohne verloren!",
+	"message.ballisticmissiles.drone_fiber_snapped": "Glasfaser zu Ende – Kabel gerissen, Drohne verloren!",
+	"screen.ballisticmissiles.drone_jammed": "STÖRSENDER",
+	"screen.ballisticmissiles.drone_fiber_end": "KABEL FAST ZU ENDE"
 }

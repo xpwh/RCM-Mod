@@ -528,6 +528,11 @@ public final class ModRegistry {
 		"fpv_racer", props -> new de.rcm.ballistic.item.FpvDroneItem(props, de.rcm.ballistic.entity.FpvDroneEntity.KIND_RACER),
 		new Item.Properties().stacksTo(4).rarity(Rarity.EPIC)
 	);
+	/** Fibre-optic FPV: unjammable, range limited by its spool. */
+	public static final Item FPV_FIBER_ITEM = registerItem(
+		"fpv_fiber", props -> new de.rcm.ballistic.item.FpvDroneItem(props, de.rcm.ballistic.entity.FpvDroneEntity.KIND_FIBER),
+		new Item.Properties().stacksTo(4).rarity(Rarity.EPIC)
+	);
 	/** A full 20-round Tamir launcher pod for the Iron Dome (brought up by its reload truck). */
 	public static final Item TAMIR_POD = registerItem(
 		"tamir_pod", props -> new de.rcm.ballistic.item.InfoItem(props, "tamir_pod", 2), new Item.Properties().stacksTo(4).rarity(Rarity.UNCOMMON)
@@ -658,6 +663,7 @@ public final class ModRegistry {
 		output.accept(RPG_ROCKET);
 		output.accept(FPV_DRONE_ITEM);
 		output.accept(FPV_RACER_ITEM);
+		output.accept(FPV_FIBER_ITEM);
 		output.accept(TARGET_DESIGNATOR);
 		output.accept(COMMAND_CENTER_ITEM);
 		output.accept(AIRSTRIKE_RADIO);
