@@ -17,6 +17,26 @@ public abstract class AvatarRenderStateMixin implements LostLeg {
 	private float ballisticmissiles$collapseT = -1.0F;
 	@Unique
 	private int ballisticmissiles$fallDir;
+	@Unique
+	private int ballisticmissiles$torsoWounds;
+	@Unique
+	private int ballisticmissiles$woundSeed;
+
+	@Override
+	public int ballisticmissiles$torso() {
+		return this.ballisticmissiles$torsoWounds;
+	}
+
+	@Override
+	public int ballisticmissiles$seed() {
+		return this.ballisticmissiles$woundSeed;
+	}
+
+	@Override
+	public void ballisticmissiles$setTorso(int torso, int seed) {
+		this.ballisticmissiles$torsoWounds = torso;
+		this.ballisticmissiles$woundSeed = seed;
+	}
 
 	@Override
 	public float ballisticmissiles$collapse() {

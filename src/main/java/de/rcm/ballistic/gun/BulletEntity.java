@@ -286,6 +286,10 @@ public class BulletEntity extends Entity {
 		if (head && e instanceof net.minecraft.server.level.ServerPlayer victim) {
 			de.rcm.ballistic.injury.Injuries.afterHeadHit(victim, source);
 		}
+		if (e instanceof LivingEntity living && !(e instanceof net.minecraft.world.entity.player.Player)) {
+			// the wound where it went in, on the animal (players have their own)
+			de.rcm.ballistic.injury.Blood.wound(living, at, 0.2, this.pellet, head);
+		}
 		if (e instanceof LivingEntity living) {
 			if (de.rcm.ballistic.injury.Blood.bleeds(living)) {
 				// blood blown out along the round's path, more from the head

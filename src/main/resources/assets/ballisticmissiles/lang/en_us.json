@@ -695,9 +695,9 @@
 	"options.ballisticmissiles.gore": "Gore (dismemberment)",
 	"options.ballisticmissiles.gore.tooltip": "Show arms and legs shot off with the stump, bone and blood, and head wounds (graze, skull blown open). Off: the body looks whole.",
 	"options.ballisticmissiles.gore_warning": "18+ warning at start",
-	"gore_warning.ballisticmissiles.title": "Content warning – 18+",
-	"gore_warning.ballisticmissiles.text": "Ballistic Missiles contains realistic, graphic violence: blood, gunshot wounds, severed limbs with exposed bone and bleeding to death. This mod is meant for adults only.\n\nYou can turn gore off here or later in the mod settings.",
-	"gore_warning.ballisticmissiles.dont_show": "Don't show again",
+	"gore_warning.ballisticmissiles.title": "WARNING – ADULTS ONLY",
+	"gore_warning.ballisticmissiles.text": "Ballistic Missiles shows extreme, highly realistic and disturbing violence: open gunshot wounds, arms and legs torn off with bone exposed, skulls blown open with brain matter, people and animals torn to pieces by explosions, organs lying about, slowly bleeding out and dying.\n\nThis content is intended for adults aged 18 and over only. It can be upsetting or shocking - for adults too. If you are under 18, find this kind of thing distressing or are unsure, turn gore off now. The game works without it.\n\nGore can be switched on and off at any time in the mod settings.",
+	"gore_warning.ballisticmissiles.dont_show": "Don't show this warning again",
 	"gore_warning.ballisticmissiles.continue": "I am 18+ – continue",
 	"gore_warning.ballisticmissiles.disable": "Turn gore off",
 	"subtitles.ballisticmissiles.shotgun_hull": "Empty hull drops",
@@ -713,5 +713,8 @@
 	"hud.ballisticmissiles.lost_arm_2": "RIGHT ARM GONE",
 	"hud.ballisticmissiles.lost_arm_3": "BOTH ARMS GONE",
 	"hud.ballisticmissiles.head_1": "HEAD GRAZE",
-	"hud.ballisticmissiles.head_2": "HEAD SHOT"
+	"hud.ballisticmissiles.head_2": "HEAD SHOT",
+	"gore_warning.ballisticmissiles.subtitle": "This warning is meant seriously. Please read all of it.",
+	"gore_warning.ballisticmissiles.adult": "I am at least 18 years old and want to see this content",
+	"gore_warning.ballisticmissiles.continue_wait": "Please read … (%s)"
 }

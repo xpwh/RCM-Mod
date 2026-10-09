@@ -23,4 +23,11 @@ public interface LostLeg {
 	int ballisticmissiles$fall();
 
 	void ballisticmissiles$setCollapse(float t, int fall);
+
+	/** Rounds in the body (0..3) and the seed picking each wound's version. */
+	int ballisticmissiles$torso();
+
+	int ballisticmissiles$seed();
+
+	void ballisticmissiles$setTorso(int torso, int seed);
 }

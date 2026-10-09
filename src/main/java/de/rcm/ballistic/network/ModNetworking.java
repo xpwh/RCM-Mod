@@ -492,6 +492,55 @@ public final class ModNetworking {
 		}
 	}
 
+	/**
+	 * A round went into a creature: where (relative to its position, in the world's directions), the way the
+	 * surface it struck faces, how big a wound, which version of it.
+	 */
+	public record WoundPayload(int entity, float rx, float ry, float rz, float nx, float ny, float nz, float size, int variant) implements CustomPacketPayload {
+		public static final Type<WoundPayload> TYPE = new Type<>(BallisticMissiles.id("wound"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, WoundPayload> CODEC = StreamCodec.of((buf, p) -> {
+			buf.writeVarInt(p.entity());
+			buf.writeFloat(p.rx());
+			buf.writeFloat(p.ry());
+			buf.writeFloat(p.rz());
+			buf.writeFloat(p.nx());
+			buf.writeFloat(p.ny());
+			buf.writeFloat(p.nz());
+			buf.writeFloat(p.size());
+			buf.writeVarInt(p.variant());
+		}, buf -> new WoundPayload(buf.readVarInt(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+			buf.readFloat(), buf.readVarInt()));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** A body torn apart by a blast: whose, its size, which way the blast threw it and how hard. */
+	public record GibPayload(int entity, double x, double y, double z, float width, float height, float dx, float dy, float dz, float force)
+		implements CustomPacketPayload {
+		public static final Type<GibPayload> TYPE = new Type<>(BallisticMissiles.id("gib"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, GibPayload> CODEC = StreamCodec.of((buf, p) -> {
+			buf.writeVarInt(p.entity());
+			buf.writeDouble(p.x());
+			buf.writeDouble(p.y());
+			buf.writeDouble(p.z());
+			buf.writeFloat(p.width());
+			buf.writeFloat(p.height());
+			buf.writeFloat(p.dx());
+			buf.writeFloat(p.dy());
+			buf.writeFloat(p.dz());
+			buf.writeFloat(p.force());
+		}, buf -> new GibPayload(buf.readVarInt(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+			buf.readFloat(), buf.readFloat(), buf.readFloat()));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** A round going past a player's head: where it came closest, how close, and whether it was still supersonic. */
 	public record BulletPassPayload(double x, double y, double z, float distance, boolean supersonic) implements CustomPacketPayload {
 		public static final Type<BulletPassPayload> TYPE = new Type<>(BallisticMissiles.id("bullet_pass"));
@@ -712,6 +761,8 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playS2C().register(GunActionPayload.TYPE, GunActionPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(BulletPassPayload.TYPE, BulletPassPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(BloodPayload.TYPE, BloodPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(WoundPayload.TYPE, WoundPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(GibPayload.TYPE, GibPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(FighterInputPayload.TYPE, FighterInputPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(FighterInputPayload.TYPE, (payload, context) -> {
 			if (context.player().level().getEntity(payload.jet()) instanceof de.rcm.ballistic.entity.FighterEntity jet) {

@@ -1,206 +1,186 @@
 package de.rcm.ballistic.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import de.rcm.ballistic.BallisticMissiles;
 import de.rcm.ballistic.injury.Wounds;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import org.joml.Vector3f;
 
 /**
- * The head wounds, drawn in the head's own space - not out of blocks but painted and modelled:
+ * The head wounds, in the head's own space (pixels: x -4..4 with +X the player's left, y -8 crown .. 0 jaw,
+ * z -4 face .. 4 back), each in three versions - and each of those mirrored or not - so no two are alike:
  * <ul>
- *   <li>every face of the head carries a 16x-resolution decal (textures/entity/gore_head.png, painted by
- *       tools/gen_gore_head.py from the same 3D fields, so a wound runs on round the edge): the torn skin,
- *       the fat under it, the raw flesh, the bone, blood running down the face, spatter;</li>
- *   <li>the skull blown open adds round, soft shapes: the brain bulging out of the crater (a smooth, lumpy
- *       dome lit vertex by vertex), splinters of skull standing up round the rim and flaps of scalp torn
- *       back and hanging, both cut out of the texture with ragged edges.</li>
+ *   <li>a graze: a furrow torn to the skull (across the side above the ear, over the crown onto the forehead,
+ *       or across the back of the head), blood running down from it - decals only;</li>
+ *   <li>the skull blown open: the entry hole in the forehead, the crater where it came out (back and to one
+ *       side, or the top), the brain bulging out of it in soft lumps, splinters of skull round the rim, flaps
+ *       of scalp hanging - the decals painted by tools/gen_gore.py from the same crater fields used here.</li>
  * </ul>
  */
 public final class GoreHead {
-	private static final float P = 1.0F / 16.0F;
-	private static final RenderType TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/entity/gore_head.png"));
-	/** Tiles of the 4 x 4 atlas. */
-	private static final int T_BRAIN = 9;
-	private static final int T_BONE = 10;
-	private static final int T_FLAP = 11;
-	/** The crater's centre on the head (as in gen_gore_head.py). */
-	private static final Vector3f CRATER = new Vector3f(-3.4F, -7.9F, 2.7F);
-	private static final Mesh GRAZED = grazed();
-	private static final Mesh SHATTERED = shattered();
+	/** Where each version's crater is (as in gen_gore.py). */
+	private static final Vector3f[] CRATERS = {new Vector3f(-3.4F, -7.9F, 2.7F), new Vector3f(3.2F, -7.6F, 3.0F), new Vector3f(-0.3F, -8.0F, 3.6F)};
+	private static final String[] FACES = {"front", "left", "right", "top", "back"};
+	private static final GoreMesh[] GRAZED = new GoreMesh[3];
+	private static final GoreMesh[] SHATTERED = new GoreMesh[3];
+
+	static {
+		for (int v = 0; v < 3; v++) {
+			GRAZED[v] = grazed(v);
+			SHATTERED[v] = shattered(v);
+		}
+	}
 
 	private GoreHead() {
 	}
 
-	public static void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, int head) {
-		Mesh mesh = head == Wounds.SHATTERED ? SHATTERED : GRAZED;
-		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> mesh.emit(pose, consumer, light));
+	/** {@code seed} picks the version and whether it is mirrored. */
+	public static void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, int head, int seed) {
+		int v = Math.floorMod(seed, 3);
+		GoreMesh mesh = head == Wounds.SHATTERED ? SHATTERED[v] : GRAZED[v];
+		boolean mirror = ((seed >> 2) & 1) != 0;
+		poseStack.pushPose();
+		if (mirror) {
+			poseStack.scale(-1.0F, 1.0F, 1.0F);
+		}
+		mesh.submit(poseStack, collector, light);
+		poseStack.popPose();
 	}
 
-	// ------------------------------------------------------------------ mesh
-
-	/** Quads with a normal per corner (smooth shading) and their own texture coordinates. */
-	static final class Mesh {
-		private final float[] data;
-
-		Mesh(float[] data) {
-			this.data = data;
-		}
-
-		void emit(PoseStack.Pose pose, VertexConsumer consumer, int light) {
-			float[] d = this.data;
-			for (int i = 0; i < d.length; i += 8) {
-				consumer.addVertex(pose, d[i], d[i + 1], d[i + 2]).setColor(-1).setUv(d[i + 3], d[i + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
-					.setLight(light).setNormal(pose, d[i + 5], d[i + 6], d[i + 7]);
-			}
-		}
-	}
-
-	private static final class Builder {
-		final FloatArrayList out = new FloatArrayList();
-
-		void vertex(Vector3f p, float u, float v, Vector3f n) {
-			this.out.add(p.x * P);
-			this.out.add(p.y * P);
-			this.out.add(p.z * P);
-			this.out.add(u);
-			this.out.add(v);
-			this.out.add(n.x);
-			this.out.add(n.y);
-			this.out.add(n.z);
-		}
-
-		/** A quad a, b, c, d (in pixels) with texture coordinates and normals per corner, wound to face along the normals. */
-		void quad(Vector3f[] p, float[][] uv, Vector3f[] n) {
-			Vector3f cross = new Vector3f(p[1]).sub(p[0]).cross(new Vector3f(p[2]).sub(p[0]));
-			Vector3f avg = new Vector3f(n[0]).add(n[1]).add(n[2]).add(n[3]);
-			int[] order = cross.dot(avg) >= 0 ? new int[] {0, 1, 2, 3} : new int[] {3, 2, 1, 0};
-			for (int i : order) {
-				this.vertex(p[i], uv[i][0], uv[i][1], n[i]);
-			}
-		}
-
-		Mesh build() {
-			return new Mesh(this.out.toFloatArray());
-		}
-	}
-
-	private static float tileU(int tile, float u) {
-		return ((tile % 4) + Mth.clamp(u, 0.004F, 0.996F)) / 4.0F;
-	}
-
-	private static float tileV(int tile, float v) {
-		return ((tile / 4) + Mth.clamp(v, 0.004F, 0.996F)) / 4.0F;
-	}
-
-	/** A decal over one whole face of the head, {@code out} pixels proud of it, mapped as gen_gore_head.py paints it. */
-	private static void face(Builder b, String face, int tile, float out) {
+	/** A decal over one whole face of the head, {@code out} pixels proud of it, mapped as gen_gore.py paints it. */
+	static void face(GoreMesh.Builder b, String face, int tile, float out) {
 		float o = 4.0F + out;
-		Vector3f[] p;
-		Vector3f n;
-		float[][] uv;
+		Vector3f origin;
+		Vector3f a;
+		Vector3f c;
 		switch (face) {
 			case "front" -> {
-				p = new Vector3f[] {new Vector3f(-4, -8, -o), new Vector3f(4, -8, -o), new Vector3f(4, 0, -o), new Vector3f(-4, 0, -o)};
-				uv = new float[][] {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-				n = new Vector3f(0, 0, -1);
+				origin = new Vector3f(-4, -8, -o);
+				a = new Vector3f(8, 0, 0);
+				c = new Vector3f(0, 8, 0);
 			}
 			case "back" -> {
-				p = new Vector3f[] {new Vector3f(-4, -8, o), new Vector3f(4, -8, o), new Vector3f(4, 0, o), new Vector3f(-4, 0, o)};
-				uv = new float[][] {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-				n = new Vector3f(0, 0, 1);
+				origin = new Vector3f(-4, -8, o);
+				a = new Vector3f(8, 0, 0);
+				c = new Vector3f(0, 8, 0);
 			}
 			case "left" -> {
-				p = new Vector3f[] {new Vector3f(o, -8, -4), new Vector3f(o, -8, 4), new Vector3f(o, 0, 4), new Vector3f(o, 0, -4)};
-				uv = new float[][] {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-				n = new Vector3f(1, 0, 0);
+				origin = new Vector3f(o, -8, -4);
+				a = new Vector3f(0, 0, 8);
+				c = new Vector3f(0, 8, 0);
 			}
 			case "right" -> {
-				p = new Vector3f[] {new Vector3f(-o, -8, -4), new Vector3f(-o, -8, 4), new Vector3f(-o, 0, 4), new Vector3f(-o, 0, -4)};
-				uv = new float[][] {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-				n = new Vector3f(-1, 0, 0);
+				origin = new Vector3f(-o, -8, -4);
+				a = new Vector3f(0, 0, 8);
+				c = new Vector3f(0, 8, 0);
 			}
 			default -> {
-				// top: (x, z)
-				float y = -4.0F - o;
-				p = new Vector3f[] {new Vector3f(-4, y, -4), new Vector3f(4, y, -4), new Vector3f(4, y, 4), new Vector3f(-4, y, 4)};
-				uv = new float[][] {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-				n = new Vector3f(0, -1, 0);
+				origin = new Vector3f(-4, -4.0F - o, -4);
+				a = new Vector3f(8, 0, 0);
+				c = new Vector3f(0, 0, 8);
 			}
 		}
-		float[][] t = new float[4][];
-		for (int i = 0; i < 4; i++) {
-			t[i] = new float[] {tileU(tile, uv[i][0]), tileV(tile, uv[i][1])};
-		}
-		b.quad(p, t, new Vector3f[] {n, n, n, n});
+		decal(b, origin, a, c, tile, outward(face));
+	}
+
+	static Vector3f outward(String face) {
+		return switch (face) {
+			case "front" -> new Vector3f(0, 0, -1);
+			case "back" -> new Vector3f(0, 0, 1);
+			case "left" -> new Vector3f(1, 0, 0);
+			case "right" -> new Vector3f(-1, 0, 0);
+			default -> new Vector3f(0, -1, 0);
+		};
+	}
+
+	/** A decal over the rectangle origin + a, + c, the tile's u along a and v along c, lit as facing {@code n}. */
+	static void decal(GoreMesh.Builder b, Vector3f o, Vector3f a, Vector3f c, int tile, Vector3f n) {
+		Vector3f[] p = {new Vector3f(o), new Vector3f(o).add(a), new Vector3f(o).add(a).add(c), new Vector3f(o).add(c)};
+		float[][] uv = {{GoreMesh.u(tile, 0), GoreMesh.v(tile, 0)}, {GoreMesh.u(tile, 1), GoreMesh.v(tile, 0)}, {GoreMesh.u(tile, 1), GoreMesh.v(tile, 1)},
+			{GoreMesh.u(tile, 0), GoreMesh.v(tile, 1)}};
+		b.quad(p, uv, new Vector3f[] {n, n, n, n});
 	}
 
 	/** The graze: decals only - the hat layer sits half a pixel out, so they go just beyond it. */
-	private static Mesh grazed() {
-		Builder b = new Builder();
-		face(b, "front", 0, 0.56F);
-		face(b, "left", 1, 0.56F);
-		face(b, "top", 2, 0.56F);
-		face(b, "back", 3, 0.56F);
+	private static GoreMesh grazed(int v) {
+		GoreMesh.Builder b = new GoreMesh.Builder();
+		for (int f = 0; f < 5; f++) {
+			face(b, FACES[f], v * 5 + f, 0.56F);
+		}
 		return b.build();
 	}
 
-	private static Mesh shattered() {
-		Builder b = new Builder();
+	private static GoreMesh shattered(int v) {
+		GoreMesh.Builder b = new GoreMesh.Builder();
 		// the hat layer is hidden with this wound: the decals lie right on the skin
-		face(b, "front", 4, 0.03F);
-		face(b, "right", 5, 0.03F);
-		face(b, "top", 6, 0.03F);
-		face(b, "back", 7, 0.03F);
-		face(b, "left", 8, 0.03F);
-		RandomSource r = RandomSource.create(1911L);
-		// the brain bulging out of the crater: over the crown, and out of the side
-		dome(b, new Vector3f(-2.6F, -8.0F, 2.4F), new Vector3f(0, -1, 0), new Vector3f(1, 0, 0), 1.35F, 1.25F, 0.55F, 31L);
-		dome(b, new Vector3f(-4.0F, -7.0F, 2.6F), new Vector3f(-1, 0, 0), new Vector3f(0, 0, 1), 1.0F, 0.85F, 0.45F, 32L);
-		dome(b, new Vector3f(-2.9F, -7.1F, 4.0F), new Vector3f(0, 0, 1), new Vector3f(1, 0, 0), 0.8F, 0.75F, 0.35F, 33L);
-		// splinters of skull standing out round the rim: around the crater, where it meets the surfaces
-		for (int i = 0; i < 16; i++) {
-			if (r.nextFloat() < 0.35F) {
-				continue; // the rim is broken unevenly: splinters here and there
+		for (int f = 0; f < 5; f++) {
+			face(b, FACES[f], 15 + v * 5 + f, 0.03F);
+		}
+		Vector3f crater = CRATERS[v];
+		RandomSource r = RandomSource.create(1911L + v * 77L);
+		// the brain bulging out wherever the crater lies on a face: bigger the nearer the face runs to its middle
+		for (int f = 0; f < 5; f++) {
+			Vector3f n = outward(FACES[f]);
+			// the point of this face nearest the crater, kept off its edges
+			Vector3f q = new Vector3f(Mth.clamp(crater.x, -3.2F, 3.2F), Mth.clamp(crater.y, -7.2F, -0.8F), Mth.clamp(crater.z, -3.2F, 3.2F));
+			if (n.x != 0) {
+				q.x = 4 * n.x;
+			} else if (n.y != 0) {
+				q.y = -8;
+			} else {
+				q.z = 4 * n.z;
 			}
-			float a = i / 16.0F * Mth.TWO_PI + r.nextFloat() * 0.3F;
-			// a direction round the crater centre, kept to the head's surface
-			Vector3f dir = new Vector3f(Mth.cos(a), Mth.sin(a) * 0.6F + 0.45F, Mth.sin(a) * 0.9F).normalize();
-			Vector3f rim = surface(new Vector3f(CRATER).add(new Vector3f(dir).mul(2.3F + r.nextFloat() * 0.4F)));
+			float dist = q.distance(crater);
+			if (dist > 1.7F) {
+				continue;
+			}
+			float size = 1.6F - dist * 0.55F;
+			Vector3f across = Math.abs(n.y) > 0.5F ? new Vector3f(1, 0, 0) : new Vector3f(0, 1, 0);
+			b.dome(q, n, across, size, size * (0.85F + r.nextFloat() * 0.2F), 0.3F + size * 0.25F, 31L + v * 7 + f, GoreMesh.T_BRAIN);
+		}
+		// splinters of skull standing out round the rim, here and there
+		int made = 0;
+		for (int i = 0; i < 80 && made < 11; i++) {
+			Vector3f d = new Vector3f(r.nextFloat() * 2 - 1, r.nextFloat() * 2 - 1, r.nextFloat() * 2 - 1);
+			if (d.lengthSquared() < 0.05F) {
+				continue;
+			}
+			d.normalize();
+			Vector3f rim = surface(new Vector3f(crater).add(new Vector3f(d).mul(2.35F + r.nextFloat() * 0.4F)));
 			if (rim == null) {
 				continue;
 			}
+			float dist = rim.distance(crater);
+			if (dist < 1.9F || dist > 2.9F) {
+				continue;
+			}
 			Vector3f normal = surfaceNormal(rim);
-			// leaning out of the hole, away from its centre
-			Vector3f away = new Vector3f(rim).sub(CRATER).normalize();
-			// mostly lying back along the surface, bent outward by the blast
+			Vector3f away = new Vector3f(rim).sub(crater).normalize();
 			Vector3f up = new Vector3f(normal).mul(0.45F + r.nextFloat() * 0.3F).add(new Vector3f(away).mul(0.9F)).normalize();
-			float len = 0.4F + r.nextFloat() * 0.6F;
-			float wid = 0.4F + r.nextFloat() * 0.45F;
-			shard(b, rim, up, away, len, wid, T_BONE);
+			b.shard(rim, up, away, 0.4F + r.nextFloat() * 0.6F, 0.4F + r.nextFloat() * 0.45F, r.nextBoolean() ? GoreMesh.T_BONE : GoreMesh.T_BONE_THIN, 0.1F);
+			made++;
 		}
-		// flaps of scalp torn back, hanging down the side and the back of the head
-		for (int i = 0; i < 4; i++) {
-			Vector3f rim = i < 2 ? new Vector3f(-4.05F, -5.7F + r.nextFloat() * 0.5F, 1.5F + i * 1.3F)
-				: new Vector3f(-3.6F + (i - 2) * 1.2F, -5.6F + r.nextFloat() * 0.5F, 4.05F);
+		// flaps of scalp torn back, hanging down the sides below the crater
+		made = 0;
+		for (int i = 0; i < 60 && made < 4; i++) {
+			float a = r.nextFloat() * Mth.TWO_PI;
+			Vector3f d = new Vector3f(Mth.cos(a), 0.6F + r.nextFloat() * 0.5F, Mth.sin(a)).normalize();
+			Vector3f rim = surface(new Vector3f(crater).add(new Vector3f(d).mul(2.3F)));
+			if (rim == null || rim.y < -7.9F) {
+				continue;
+			}
 			Vector3f normal = surfaceNormal(rim);
 			Vector3f down = new Vector3f(normal).mul(0.35F).add(0, 1, 0).normalize();
-			shard(b, rim, down, new Vector3f(0, 1, 0), 0.9F + r.nextFloat() * 0.7F, 0.8F + r.nextFloat() * 0.4F, T_FLAP);
+			b.shard(rim, down, new Vector3f(0, 1, 0), 0.9F + r.nextFloat() * 0.7F, 0.8F + r.nextFloat() * 0.4F, GoreMesh.T_FLAP, 0.15F);
+			made++;
 		}
 		return b.build();
 	}
 
-	/** Moves a point onto the head's surface (the 8 px cube), or null if it is not near one. */
+	/** Moves a point onto the head's surface (the 8 px cube), or null at the jaw. */
 	private static Vector3f surface(Vector3f p) {
 		Vector3f q = new Vector3f(Mth.clamp(p.x, -4, 4), Mth.clamp(p.y, -8, 0), Mth.clamp(p.z, -4, 4));
-		// push out to the nearest face
 		float dx = 4 - Math.abs(q.x);
 		float dy = Math.min(q.y + 8, -q.y);
 		float dz = 4 - Math.abs(q.z);
@@ -222,81 +202,5 @@ public final class GoreHead {
 			return new Vector3f(0, -1, 0);
 		}
 		return new Vector3f(0, 0, Math.signum(q.z));
-	}
-
-	/**
-	 * A soft, lumpy dome (brain spilling out): {@code centre} on a face, rising along {@code out}, an ellipse
-	 * {@code rx} by {@code ry} across, {@code h} high; its surface rippled and smooth-shaded.
-	 */
-	private static void dome(Builder b, Vector3f centre, Vector3f out, Vector3f across, float rx, float ry, float h, long seed) {
-		Vector3f side = new Vector3f(out).cross(across).normalize();
-		int rings = 9;
-		int segs = 22;
-		Vector3f[][] pos = new Vector3f[rings + 1][segs + 1];
-		float[][][] uv = new float[rings + 1][segs + 1][];
-		RandomSource r = RandomSource.create(seed);
-		float[] lump = new float[segs];
-		for (int s = 0; s < segs; s++) {
-			lump[s] = 0.85F + r.nextFloat() * 0.3F;
-		}
-		for (int i = 0; i <= rings; i++) {
-			float rr = i / (float) rings;
-			for (int s = 0; s <= segs; s++) {
-				float a = s / (float) segs * Mth.TWO_PI;
-				float l = lump[s % segs];
-				float rad = rr * l;
-				float x = Mth.cos(a) * rx * rad;
-				float y = Mth.sin(a) * ry * rad;
-				// a dome, its surface rippling in folds (gyri) - and sunk a little at the very edge, into the hole
-				float height = h * (float) Math.pow(Math.max(0.0F, 1.0F - rr * rr), 0.6) * (0.9F + 0.18F * Mth.sin(a * 5.0F + rr * 7.0F)) - 0.08F;
-				pos[i][s] = new Vector3f(centre).add(new Vector3f(across).mul(x)).add(new Vector3f(side).mul(y)).add(new Vector3f(out).mul(height));
-				uv[i][s] = new float[] {tileU(T_BRAIN, 0.5F + 0.45F * rr * Mth.cos(a)), tileV(T_BRAIN, 0.5F + 0.45F * rr * Mth.sin(a))};
-			}
-		}
-		// normals from the neighbours, for smooth light over the lumps
-		Vector3f[][] nrm = new Vector3f[rings + 1][segs + 1];
-		for (int i = 0; i <= rings; i++) {
-			for (int s = 0; s <= segs; s++) {
-				Vector3f du = new Vector3f(pos[Math.min(rings, i + 1)][s]).sub(pos[Math.max(0, i - 1)][s]);
-				Vector3f dv = new Vector3f(pos[i][(s + 1) % segs]).sub(pos[i][(s + segs - 1) % segs]);
-				Vector3f n = new Vector3f(du).cross(dv);
-				if (n.dot(out) < 0) {
-					n.negate();
-				}
-				nrm[i][s] = n.lengthSquared() < 1.0E-8F ? new Vector3f(out) : n.normalize();
-			}
-		}
-		for (int i = 0; i < rings; i++) {
-			for (int s = 0; s < segs; s++) {
-				b.quad(new Vector3f[] {pos[i][s], pos[i][s + 1], pos[i + 1][s + 1], pos[i + 1][s]},
-					new float[][] {uv[i][s], uv[i][s + 1], uv[i + 1][s + 1], uv[i + 1][s]},
-					new Vector3f[] {nrm[i][s], nrm[i][s + 1], nrm[i + 1][s + 1], nrm[i + 1][s]});
-			}
-		}
-	}
-
-	/**
-	 * A thin piece standing out of {@code base} along {@code dir}: a splinter of bone or a flap of scalp, its
-	 * outline cut ragged by the texture's alpha. Bent a little half way, so it is not a flat card.
-	 */
-	private static void shard(Builder b, Vector3f base, Vector3f dir, Vector3f hint, float length, float width, int tile) {
-		Vector3f w = new Vector3f(dir).cross(hint);
-		if (w.lengthSquared() < 1.0E-4F) {
-			w = new Vector3f(dir).cross(0, 0, 1);
-		}
-		w.normalize().mul(width * 0.5F);
-		Vector3f n = new Vector3f(w).cross(dir).normalize();
-		Vector3f mid = new Vector3f(base).add(new Vector3f(dir).mul(length * 0.5F)).add(new Vector3f(n).mul(length * 0.08F));
-		Vector3f tip = new Vector3f(base).add(new Vector3f(dir).mul(length)).add(new Vector3f(n).mul(length * 0.05F));
-		Vector3f[] row0 = {new Vector3f(base).sub(w), new Vector3f(base).add(w)};
-		Vector3f[] row1 = {new Vector3f(mid).sub(new Vector3f(w).mul(0.8F)), new Vector3f(mid).add(new Vector3f(w).mul(0.8F))};
-		Vector3f[] row2 = {new Vector3f(tip).sub(new Vector3f(w).mul(0.5F)), new Vector3f(tip).add(new Vector3f(w).mul(0.5F))};
-		// texture: base at v = 1, ragged tip at v = 0
-		b.quad(new Vector3f[] {row0[0], row0[1], row1[1], row1[0]},
-			new float[][] {{tileU(tile, 0), tileV(tile, 1)}, {tileU(tile, 1), tileV(tile, 1)}, {tileU(tile, 1), tileV(tile, 0.5F)}, {tileU(tile, 0), tileV(tile, 0.5F)}},
-			new Vector3f[] {n, n, n, n});
-		b.quad(new Vector3f[] {row1[0], row1[1], row2[1], row2[0]},
-			new float[][] {{tileU(tile, 0), tileV(tile, 0.5F)}, {tileU(tile, 1), tileV(tile, 0.5F)}, {tileU(tile, 1), tileV(tile, 0)}, {tileU(tile, 0), tileV(tile, 0)}},
-			new Vector3f[] {n, n, n, n});
 	}
 }

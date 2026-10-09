@@ -92,6 +92,17 @@ public final class Injuries {
 		net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) ->
 			handGone(player) ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS);
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+			Float blast = TORN_APART.remove(entity.getUUID());
+			if (blast != null) {
+				// blown to pieces: nothing left lying there but what the blast threw about
+				Blood.gib(entity, source.getSourcePosition(), blast);
+				if (entity instanceof ServerPlayer p) {
+					CLOCKS.remove(p.getUUID());
+				} else {
+					entity.discard();
+				}
+				return;
+			}
 			if (entity.level() instanceof ServerLevel level && Blood.bleeds(entity)) {
 				// a pool spreading under the body
 				Blood.send(level, entity.position().add(0, 0.2, 0), Vec3.ZERO, Math.round(entity.getBbWidth() * entity.getBbHeight() * 10.0F), Blood.POOL);
@@ -106,6 +117,7 @@ public final class Injuries {
 
 	public static void clear() {
 		CLOCKS.clear();
+		TORN_APART.clear();
 	}
 
 	/** Back in the game with the wounds they left with: the limp again. */
@@ -125,6 +137,10 @@ public final class Injuries {
 
 	public static void set(ServerPlayer p, Wounds w) {
 		Wounds old = get(p);
+		if (w.any() && w.seed() == 0) {
+			// which version of each wound this player gets: their own, kept until they are whole again
+			w = w.withSeed(old.seed() != 0 ? old.seed() : 1 + p.getRandom().nextInt(Integer.MAX_VALUE - 1));
+		}
 		if (w.equals(old)) {
 			return;
 		}
@@ -348,7 +364,26 @@ public final class Injuries {
 	 * move, the world fading for some seconds - then black. Only what kills outright (a blast that tears
 	 * you apart, the void, /kill) skips the dying.
 	 */
+	/** Bodies a blast is tearing apart (on their way to dying), and how hard it hit. */
+	private static final Map<UUID, Float> TORN_APART = new HashMap<>();
+
+	/** A blast right by them or under them: not a body that dies, but one torn to pieces. */
+	private static boolean tornApart(LivingEntity entity, DamageSource source, float amount) {
+		if (!source.is(DamageTypeTags.IS_EXPLOSION) || !Blood.bleeds(entity)) {
+			return false;
+		}
+		if (entity instanceof net.minecraft.world.entity.player.Player p && (p.isCreative() || p.isSpectator())) {
+			return false;
+		}
+		float need = entity instanceof net.minecraft.world.entity.player.Player ? 14.0F : Math.max(8.0F, entity.getMaxHealth() * 0.5F);
+		return amount >= need;
+	}
+
 	private static boolean allowDeath(LivingEntity entity, DamageSource source, float amount) {
+		if (tornApart(entity, source, amount)) {
+			TORN_APART.put(entity.getUUID(), Math.min(2.5F, amount / 20.0F));
+			return true;
+		}
 		if (!(entity instanceof ServerPlayer p) || p.isCreative() || p.isSpectator()) {
 			return true;
 		}
@@ -440,7 +475,8 @@ public final class Injuries {
 				w = w.withArm(w.arm() + 1).withBleed(Math.max(w.bleed(), r.nextFloat() < 0.15F ? Wounds.ARTERIAL : damage > 5.0F ? 2 : 1));
 				message(p, "message.ballisticmissiles.wound_arm");
 			} else {
-				w = w.withBleed(Math.max(w.bleed(), 2));
+				// in the body: another hole in the shirt
+				w = w.withBleed(Math.max(w.bleed(), 2)).withTorso(w.torso() + 1);
 			}
 		}
 		set(p, w);

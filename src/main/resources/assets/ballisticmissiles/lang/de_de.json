@@ -695,9 +695,9 @@
 	"options.ballisticmissiles.gore": "Gore (Verstümmelung)",
 	"options.ballisticmissiles.gore.tooltip": "Abgeschossene Arme und Beine mit Stumpf, Knochen und Blut sowie Kopfwunden (Streifschuss, offener Schädel) zeigen. Aus: Körper bleibt optisch ganz.",
 	"options.ballisticmissiles.gore_warning": "18+-Warnung beim Start",
-	"gore_warning.ballisticmissiles.title": "Inhaltswarnung – ab 18",
-	"gore_warning.ballisticmissiles.text": "Ballistic Missiles enthält realistische, drastische Gewaltdarstellung: Blut, Schusswunden, abgetrennte Gliedmaßen mit sichtbaren Knochen und Verbluten. Dieser Mod ist nur für Erwachsene gedacht.\n\nDu kannst Gore hier oder später in den Mod-Einstellungen ausschalten.",
-	"gore_warning.ballisticmissiles.dont_show": "Nicht mehr anzeigen",
+	"gore_warning.ballisticmissiles.title": "WARNUNG – NUR FÜR ERWACHSENE",
+	"gore_warning.ballisticmissiles.text": "Ballistic Missiles zeigt extreme, sehr realistische und verstörende Gewalt: offene Schusswunden, abgerissene Arme und Beine mit freiliegenden Knochen, aufgesprengte Schädel mit Gehirnmasse, Menschen und Tiere, die von Explosionen in Stücke gerissen werden, herumliegende Organe, langsames Verbluten und Sterben.\n\nDiese Inhalte sind ausschließlich für Erwachsene ab 18 Jahren bestimmt. Sie können belastend oder schockierend sein – auch für Erwachsene. Wenn du jünger als 18 bist, dich so etwas belastet oder du dir unsicher bist, schalte Gore jetzt aus. Das Spiel funktioniert auch ohne.\n\nGore kann jederzeit in den Mod-Einstellungen ein- und ausgeschaltet werden.",
+	"gore_warning.ballisticmissiles.dont_show": "Diese Warnung nicht mehr anzeigen",
 	"gore_warning.ballisticmissiles.continue": "Ich bin 18+ – weiter",
 	"gore_warning.ballisticmissiles.disable": "Gore ausschalten",
 	"subtitles.ballisticmissiles.shotgun_hull": "Leere Hülse fällt",
@@ -713,5 +713,8 @@
 	"hud.ballisticmissiles.lost_arm_2": "RECHTER ARM AB",
 	"hud.ballisticmissiles.lost_arm_3": "BEIDE ARME AB",
 	"hud.ballisticmissiles.head_1": "KOPF-STREIFSCHUSS",
-	"hud.ballisticmissiles.head_2": "KOPFSCHUSS"
+	"hud.ballisticmissiles.head_2": "KOPFSCHUSS",
+	"gore_warning.ballisticmissiles.subtitle": "Diese Warnung ist ernst gemeint. Bitte vollständig lesen.",
+	"gore_warning.ballisticmissiles.adult": "Ich bin mindestens 18 Jahre alt und will diese Inhalte sehen",
+	"gore_warning.ballisticmissiles.continue_wait": "Bitte lesen … (%s)"
 }

@@ -115,6 +115,26 @@ public final class BloodClient {
 		}
 	}
 
+	/** A drop of blood flying from {@code at} (for pieces of a body thrown through the air). */
+	public static void drop(Vec3 at, Vec3 vel, float size) {
+		if (ModConfig.blood) {
+			spawn(at, vel, size);
+		}
+	}
+
+	/** A splash of blood on whatever lies under {@code at} (a piece of a body landing). */
+	public static void splat(Vec3 at, float size) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level == null || !ModConfig.blood) {
+			return;
+		}
+		BlockHitResult hit = mc.level.clip(new ClipContext(at.add(0, 0.3, 0), at.add(0, -1.5, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+			CollisionContext.empty()));
+		if (hit.getType() == HitResult.Type.BLOCK) {
+			stain(mc, hit.getLocation(), hit.getDirection(), size, Vec3.ZERO, 30);
+		}
+	}
+
 	private static Vec3 gauss(double s) {
 		return new Vec3(RANDOM.nextGaussian() * s, RANDOM.nextGaussian() * s, RANDOM.nextGaussian() * s);
 	}

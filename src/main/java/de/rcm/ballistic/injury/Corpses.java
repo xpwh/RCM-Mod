@@ -98,7 +98,7 @@ public final class Corpses {
 		// the wounds go with the body; it lies as it fell: crawling, on its face; shot, as the collapse went; else either way
 		Wounds w = Injuries.get(p);
 		int fall = w.fall() > 0 ? w.fall() : w.down() ? Wounds.FORWARD : p.getRandom().nextBoolean() ? Wounds.FORWARD : Wounds.BACKWARD;
-		Wounds body = new Wounds(w.leg(), w.arm(), 0, w.lost(), 0, w.armsLost(), w.head(), 0, fall);
+		Wounds body = new Wounds(w.leg(), w.arm(), 0, w.lost(), 0, w.armsLost(), w.head(), 0, fall, w.torso(), w.seed());
 		m.setAttached(Injuries.WOUNDS, body);
 		m.setAttached(UNTIL, level.getGameTime() + LIFETIME);
 		level.addFreshEntity(m);
