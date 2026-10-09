@@ -358,10 +358,6 @@ public class FpvDroneEntity extends Entity {
 			return InteractionResult.PASS;
 		}
 		if (this.level() instanceof ServerLevel level && player instanceof ServerPlayer serverPlayer) {
-			if (!de.rcm.ballistic.network.ModNetworking.mayUse(serverPlayer, this.owner)) {
-				serverPlayer.displayClientMessage(Component.translatable("message.ballisticmissiles.not_yours").withStyle(net.minecraft.ChatFormatting.RED), true);
-				return InteractionResult.SUCCESS;
-			}
 			if (player.isSecondaryUseActive()) {
 				// picked up again
 				if (!player.getAbilities().instabuild || !player.getInventory().contains(this.asItem())) {
@@ -369,6 +365,10 @@ public class FpvDroneEntity extends Entity {
 				}
 				level.playSound(null, this.getX(), this.getY(), this.getZ(), de.rcm.ballistic.ModRegistry.GEAR_RUSTLE, SoundSource.PLAYERS, 0.6F, 1.1F);
 				this.discard();
+			} else if (!de.rcm.ballistic.network.ModNetworking.mayUse(serverPlayer, this.owner)) {
+				// anyone can pick a drone up off the ground, but it is paired with its owner's controller and goggles:
+				// to fly it you have to take it and set it down again yourself (that pairs it with yours)
+				serverPlayer.displayClientMessage(Component.translatable("message.ballisticmissiles.drone_not_paired").withStyle(net.minecraft.ChatFormatting.YELLOW), true);
 			} else if (flownBy(serverPlayer) == null) {
 				this.takeOff(level, serverPlayer, new Vec3(0.0, 0.3, 0.0));
 			}

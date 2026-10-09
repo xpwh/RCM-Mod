@@ -109,6 +109,7 @@
 	"message.ballisticmissiles.ad_status": "Flugabwehr: %s/%s Raketen | %s, Reichweite %s | Abschüsse %s, Fehlschüsse %s",
 	"message.ballisticmissiles.ad_linked": "mit Radar gekoppelt",
 	"message.ballisticmissiles.ad_autonomous": "autonom (kein Radar in 96 Blöcken)",
+	"message.ballisticmissiles.drone_not_paired": "Diese Drohne ist mit einer fremden Fernsteuerung gekoppelt – aufheben und selbst ablegen, um sie zu koppeln",
 	"message.ballisticmissiles.not_yours": "Gehört dir nicht – nur der Besitzer kann das bedienen",
 	"message.ballisticmissiles.jammed": "⚡ ELEKTRONIK AUSGEFALLEN (EMP) – noch %s s",
 	"message.ballisticmissiles.radar_track": "RADAR %s %s aus %s – %s Blöcke, Höhe %s, Einschlag ≈ %s / %s (±%s) in %s s",
