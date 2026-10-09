@@ -107,7 +107,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 			ClientEffects.detonation(payload.warhead(), new Vec3(payload.x(), payload.y(), payload.z()))
 		);
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.ServerConfigPayload.TYPE, (payload, context) ->
-			de.rcm.ballistic.config.ServerConfig.misfireChance = payload.misfireChance());
+			ModConfig.serverMisfireChance = payload.misfireChance()); // only a mirror for the screen: never the server's own value
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.JammerPayload.TYPE, (payload, context) ->
 			context.client().setScreen(new de.rcm.ballistic.client.screen.JammerScreen(payload)));
 		ClientPlayNetworking.registerGlobalReceiver(RadarDataPayload.TYPE, (payload, context) -> {

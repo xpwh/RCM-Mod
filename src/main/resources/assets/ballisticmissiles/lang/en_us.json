@@ -109,6 +109,7 @@
 	"message.ballisticmissiles.ad_status": "Air defense: %s/%s missiles | %s, range %s | kills %s, misses %s",
 	"message.ballisticmissiles.ad_linked": "linked to radar",
 	"message.ballisticmissiles.ad_autonomous": "autonomous (no radar within 96 blocks)",
+	"message.ballisticmissiles.not_yours": "Not yours – only its owner can work this",
 	"message.ballisticmissiles.jammed": "⚡ ELECTRONICS DEAD (EMP) – %s s left",
 	"message.ballisticmissiles.radar_track": "RADAR %s %s from the %s – %s blocks, altitude %s, impact ≈ %s / %s (±%s) in %s s",
 	"message.ballisticmissiles.radar_more": " (+%s more)",

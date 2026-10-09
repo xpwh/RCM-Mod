@@ -77,6 +77,9 @@ public class OrbitalUplinkBlock extends Block implements EntityBlock {
 			return InteractionResult.SUCCESS;
 		}
 		if (stack.is(ModRegistry.TARGET_DESIGNATOR)) {
+			if (player instanceof ServerPlayer sp && de.rcm.ballistic.launch.Ownership.refuse(sp, uplink)) {
+				return InteractionResult.SUCCESS;
+			}
 			if (player instanceof ServerPlayer sp) {
 				if (player.isShiftKeyDown()) {
 					TargetDesignatorItem.toggleLink(sp, stack, LauncherLink.uplink(pos));

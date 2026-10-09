@@ -92,6 +92,11 @@ public class FpvDroneEntity extends Entity {
 	/** Server: who is flying which drone (their view of the world follows it). */
 	private static final Map<UUID, FpvDroneEntity> PILOTED = new HashMap<>();
 
+	/** The server stopped: forget everything from that world. */
+	public static void clearPilots() {
+		PILOTED.clear();
+	}
+
 	// the pilot's sticks, as last sent
 	private float forward;
 	private float strafe;
@@ -105,6 +110,8 @@ public class FpvDroneEntity extends Entity {
 	private boolean dead;
 	private int deadAge;
 	private @Nullable UUID pilotUuid;
+	/** Whose drone it is: only they (or an operator) can pick it up or fly it off the ground. */
+	private @Nullable UUID owner;
 	private long lastChunk = Long.MIN_VALUE;
 	private float blockedCache = -1.0F;
 	public boolean clientSoundStarted;
@@ -148,6 +155,7 @@ public class FpvDroneEntity extends Entity {
 		drone.setYRot(owner.getYRot());
 		drone.yaw = owner.getYRot();
 		drone.entityData.set(DATA_LANDED, true);
+		drone.owner = owner.getUUID();
 		level.addFreshEntity(drone);
 		level.playSound(null, at.x, at.y, at.z, de.rcm.ballistic.ModRegistry.DRONE_PLACE, SoundSource.PLAYERS, 0.8F, 1.0F);
 		return drone;
@@ -157,6 +165,9 @@ public class FpvDroneEntity extends Entity {
 		this.entityData.set(DATA_LANDED, false);
 		this.entityData.set(DATA_PILOT, pilot.getId());
 		this.pilotUuid = pilot.getUUID();
+		if (this.owner == null) {
+			this.owner = pilot.getUUID();
+		}
 		this.dead = false;
 		this.deadAge = 0;
 		this.yaw = pilot.getYRot();
@@ -288,11 +299,14 @@ public class FpvDroneEntity extends Entity {
 		if (player.getId() != this.getPilotId() || this.dead || this.isLanded()) {
 			return;
 		}
+		if (!Float.isFinite(forward) || !Float.isFinite(strafe) || !Float.isFinite(lift) || !Float.isFinite(yaw) || !Float.isFinite(pitch)) {
+			return; // a broken (or forged) packet must not throw the drone to NaN
+		}
 		this.forward = Mth.clamp(forward, -1.0F, 1.0F);
 		this.strafe = Mth.clamp(strafe, -1.0F, 1.0F);
 		this.lift = Mth.clamp(lift, -1.0F, 1.0F);
 		this.boost = boost;
-		this.yaw = yaw;
+		this.yaw = Mth.wrapDegrees(yaw);
 		this.pitch = Mth.clamp(pitch, -90.0F, 90.0F);
 		this.lastInput = this.tickCount;
 		ServerLevel level = (ServerLevel) this.level();
@@ -344,6 +358,10 @@ public class FpvDroneEntity extends Entity {
 			return InteractionResult.PASS;
 		}
 		if (this.level() instanceof ServerLevel level && player instanceof ServerPlayer serverPlayer) {
+			if (!de.rcm.ballistic.network.ModNetworking.mayUse(serverPlayer, this.owner)) {
+				serverPlayer.displayClientMessage(Component.translatable("message.ballisticmissiles.not_yours").withStyle(net.minecraft.ChatFormatting.RED), true);
+				return InteractionResult.SUCCESS;
+			}
 			if (player.isSecondaryUseActive()) {
 				// picked up again
 				if (!player.getAbilities().instabuild || !player.getInventory().contains(this.asItem())) {
@@ -564,12 +582,18 @@ public class FpvDroneEntity extends Entity {
 	/** The pilot's camera looks where the pilot looks (no lag through the server). */
 	@Override
 	public float getViewYRot(float partialTick) {
+		if (!this.level().isClientSide()) {
+			return super.getViewYRot(partialTick);
+		}
 		Float v = de.rcm.ballistic.ClientHooks.droneView.view(this, partialTick, false);
 		return v != null ? v : super.getViewYRot(partialTick);
 	}
 
 	@Override
 	public float getViewXRot(float partialTick) {
+		if (!this.level().isClientSide()) {
+			return super.getViewXRot(partialTick);
+		}
 		Float v = de.rcm.ballistic.ClientHooks.droneView.view(this, partialTick, true);
 		return v != null ? v : super.getViewXRot(partialTick);
 	}
@@ -613,6 +637,9 @@ public class FpvDroneEntity extends Entity {
 		output.putInt("Kind", this.getKind());
 		output.putBoolean("Landed", this.isLanded());
 		output.putInt("Battery", this.getBattery());
+		if (this.owner != null) {
+			output.store("Owner", net.minecraft.core.UUIDUtil.CODEC, this.owner);
+		}
 	}
 
 	@Override
@@ -620,5 +647,6 @@ public class FpvDroneEntity extends Entity {
 		this.entityData.set(DATA_KIND, Mth.clamp(input.getIntOr("Kind", KIND_STANDARD), 0, BATTERY.length - 1));
 		this.entityData.set(DATA_LANDED, input.getBooleanOr("Landed", false));
 		this.entityData.set(DATA_BATTERY, BATTERY[this.getKind()]);
+		this.owner = input.read("Owner", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
 	}
 }

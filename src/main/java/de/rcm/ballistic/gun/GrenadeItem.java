@@ -36,6 +36,15 @@ public class GrenadeItem extends Item {
 	/** Server: players who have let the lever fly, and the game time they did. */
 	private static final java.util.Map<java.util.UUID, Long> COOKING = new java.util.HashMap<>();
 
+	/** A player left (or, with {@code null}, the server stopped): no grenade stays cooking in a hand that is gone. */
+	public static void forget(java.util.@org.jspecify.annotations.Nullable UUID player) {
+		if (player == null) {
+			COOKING.clear();
+		} else {
+			COOKING.remove(player);
+		}
+	}
+
 	public GrenadeItem(Properties properties) {
 		super(properties);
 	}

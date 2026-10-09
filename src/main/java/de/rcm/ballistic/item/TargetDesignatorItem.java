@@ -150,7 +150,12 @@ public class TargetDesignatorItem extends Item {
 					player.displayClientMessage(Component.translatable("message.ballisticmissiles.player_unknown", text).withStyle(ChatFormatting.YELLOW), true);
 					return;
 				}
-				applyTarget(player, hand, other.blockPosition(), false);
+				// a fix on a person is only as good as the intelligence: somewhere within some 25 blocks of them
+				// (and so no handing out anyone's exact coordinates)
+				var random = player.getRandom();
+				double a = random.nextDouble() * Math.PI * 2.0;
+				double r = 8.0 + random.nextDouble() * 17.0;
+				applyTarget(player, hand, other.blockPosition().offset((int) Math.round(Math.cos(a) * r), 0, (int) Math.round(Math.sin(a) * r)), false);
 			}
 			case DesignatorActionPayload.UNLINK -> {
 				if (index >= 0 && index < links.size()) {

@@ -13,6 +13,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 
 public final class ModNetworking {
@@ -438,6 +439,64 @@ public final class ModNetworking {
 		}
 	}
 
+	/** A round going past a player's head: where it came closest, how close, and whether it was still supersonic. */
+	public record BulletPassPayload(double x, double y, double z, float distance, boolean supersonic) implements CustomPacketPayload {
+		public static final Type<BulletPassPayload> TYPE = new Type<>(BallisticMissiles.id("bullet_pass"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BulletPassPayload> CODEC = StreamCodec.composite(
+			ByteBufCodecs.DOUBLE, BulletPassPayload::x,
+			ByteBufCodecs.DOUBLE, BulletPassPayload::y,
+			ByteBufCodecs.DOUBLE, BulletPassPayload::z,
+			ByteBufCodecs.FLOAT, BulletPassPayload::distance,
+			ByteBufCodecs.BOOL, BulletPassPayload::supersonic, BulletPassPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/**
+	 * Someone nearby handling their weapon - a magazine check, looking the rifle over, checking the
+	 * RPG's round - so the players round them hear it too ({@code action} is a {@link GunInputPayload} action).
+	 */
+	public record GunActionPayload(int player, int action) implements CustomPacketPayload {
+		public static final Type<GunActionPayload> TYPE = new Type<>(BallisticMissiles.id("gun_action"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, GunActionPayload> CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_INT, GunActionPayload::player,
+			ByteBufCodecs.VAR_INT, GunActionPayload::action, GunActionPayload::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Tells the players near {@code player} (not {@code player}, who acts it out locally) what they are doing with their weapon. */
+	private static final java.util.Map<java.util.UUID, Long> LAST_GUN_ACTION = new java.util.HashMap<>();
+
+	private static void shareGunAction(ServerPlayer player, int action) {
+		long now = player.level().getGameTime();
+		Long last = LAST_GUN_ACTION.get(player.getUUID());
+		if (last != null && now - last >= 0 && now - last < 20) {
+			return; // a check takes longer than a second: no flooding the players around with it
+		}
+		if (LAST_GUN_ACTION.size() > 256) {
+			LAST_GUN_ACTION.clear();
+		}
+		LAST_GUN_ACTION.put(player.getUUID(), now);
+		boolean ak = player.getMainHandItem().getItem() instanceof de.rcm.ballistic.gun.AkItem;
+		boolean rpg = player.getMainHandItem().getItem() instanceof de.rcm.ballistic.item.RocketLauncherItem;
+		if (action == GunInputPayload.RPG_CHECK ? !rpg : !ak) {
+			return;
+		}
+		GunActionPayload payload = new GunActionPayload(player.getId(), action);
+		for (ServerPlayer other : player.level().players()) {
+			if (other != player && other.distanceToSqr(player) < 48.0 * 48.0) {
+				ServerPlayNetworking.send(other, payload);
+			}
+		}
+	}
+
 	/** Gun keys: {@link #RELOAD}, {@link #RELOAD_SWITCH} (other ammunition), {@link #SELECTOR}. */
 	public record GunInputPayload(int action) implements CustomPacketPayload {
 		public static final int RELOAD = 0;
@@ -448,6 +507,8 @@ public final class ModNetworking {
 		public static final int TRIGGER_UP = 5;
 		public static final int GRENADE_COOK = 6;
 		public static final int AK_INSPECT = 7;
+		public static final int AK_CHECK = 8;
+		public static final int RPG_CHECK = 9;
 		public static final Type<GunInputPayload> TYPE = new Type<>(BallisticMissiles.id("gun_input"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunInputPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunInputPayload::action, GunInputPayload::new);
@@ -536,6 +597,11 @@ public final class ModNetworking {
 			|| player.level().getServer().isSingleplayerOwner(player.nameAndId());
 	}
 
+	/** Whether {@code player} may work a device that belongs to {@code owner}: their own, an ownerless one, or as an operator. */
+	public static boolean mayUse(net.minecraft.server.level.ServerPlayer player, java.util.@org.jspecify.annotations.Nullable UUID owner) {
+		return owner == null || owner.equals(player.getUUID()) || mayConfigure(player);
+	}
+
 	/** Sends the current world settings to everyone. */
 	public static void broadcastServerConfig(net.minecraft.server.MinecraftServer server) {
 		ServerConfigPayload payload = new ServerConfigPayload(de.rcm.ballistic.config.ServerConfig.misfireChance);
@@ -588,6 +654,8 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playS2C().register(GunshotPayload.TYPE, GunshotPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(BulletHolePayload.TYPE, BulletHolePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(GunInputPayload.TYPE, GunInputPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(GunActionPayload.TYPE, GunActionPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(BulletPassPayload.TYPE, BulletPassPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(GunInputPayload.TYPE, (payload, context) -> {
 			switch (payload.action()) {
 				case GunInputPayload.RELOAD -> de.rcm.ballistic.gun.AkItem.requestReload(context.player(), false);
@@ -597,6 +665,7 @@ public final class ModNetworking {
 				case GunInputPayload.TRIGGER_UP -> de.rcm.ballistic.gun.AkItem.trigger(context.player(), false);
 				case GunInputPayload.GRENADE_COOK -> de.rcm.ballistic.gun.GrenadeItem.cook(context.player());
 				case GunInputPayload.RPG_FIRE -> de.rcm.ballistic.item.RocketLauncherItem.serverTrigger(context.player());
+				case GunInputPayload.AK_INSPECT, GunInputPayload.AK_CHECK, GunInputPayload.RPG_CHECK -> shareGunAction(context.player(), payload.action());
 				default -> {
 				}
 			}

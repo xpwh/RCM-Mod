@@ -124,9 +124,18 @@ public final class GrenadeRenderers {
 
 		@Override
 		public Integer extractArgument(ItemStack stack) {
-			var player = Minecraft.getInstance().player;
+			Minecraft mc = Minecraft.getInstance();
+			var player = mc.player;
 			if (player != null && player.isUsingItem() && player.getUseItem() == stack && player.getTicksUsingItem() >= 5) {
 				return de.rcm.ballistic.client.gun.GrenadeClient.isCooking() ? 2 : 1;
+			}
+			// someone else winding up a throw: their pin is out too
+			if (mc.level != null) {
+				for (var other : mc.level.players()) {
+					if (other != player && other.isUsingItem() && other.getUseItem() == stack && other.getTicksUsingItem() >= 5) {
+						return 1;
+					}
+				}
 			}
 			return 0;
 		}

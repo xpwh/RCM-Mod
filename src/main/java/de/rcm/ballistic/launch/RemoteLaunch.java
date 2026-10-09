@@ -115,6 +115,9 @@ public final class RemoteLaunch {
 				if (!(level.getBlockEntity(pos) instanceof MissileSiloBlockEntity silo)) {
 					return Component.translatable("message.ballisticmissiles.remote_gone").withStyle(ChatFormatting.RED);
 				}
+				if (!Ownership.allows(level, order.player, silo)) {
+					return Ownership.notYours();
+				}
 				if (order.target == null) {
 					return silo.abort() ? aborted() : nothingToAbort();
 				}
@@ -127,6 +130,9 @@ public final class RemoteLaunch {
 				if (!(level.getBlockEntity(pos) instanceof de.rcm.ballistic.block.OrbitalUplinkBlockEntity uplink)) {
 					return Component.translatable("message.ballisticmissiles.remote_gone").withStyle(ChatFormatting.RED);
 				}
+				if (!Ownership.allows(level, order.player, uplink)) {
+					return Ownership.notYours();
+				}
 				if (order.target == null) {
 					return nothingToAbort();
 				}
@@ -136,6 +142,9 @@ public final class RemoteLaunch {
 				Entity e = level.getEntity(link.entity().orElseThrow());
 				if (!(e instanceof MobileLauncherEntity truck)) {
 					return null;
+				}
+				if (!Ownership.allows(level, order.player, truck)) {
+					return Ownership.notYours();
 				}
 				if (order.target == null) {
 					return truck.abort() ? aborted() : nothingToAbort();
@@ -151,6 +160,9 @@ public final class RemoteLaunch {
 					return Component.translatable("message.ballisticmissiles.remote_empty").withStyle(ChatFormatting.YELLOW);
 				}
 				MissileEntity missile = missiles.get(0);
+				if (!Ownership.allows(level, order.player, missile)) {
+					return Ownership.notYours();
+				}
 				if (order.target == null) {
 					return missile.abort() ? aborted() : nothingToAbort();
 				}

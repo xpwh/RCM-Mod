@@ -87,7 +87,17 @@ public final class RpgClient {
 			return;
 		}
 		checkStart = mc.level.getGameTime();
-		de.rcm.ballistic.client.gun.GunAudio.play(de.rcm.ballistic.ModRegistry.GEAR_RUSTLE, player.getEyePosition(), 0.5F, 1.0F);
+		checkSound(0, player.getEyePosition(), RocketLauncherItem.isLoaded(player.getMainHandItem()));
+		ClientPlayNetworking.send(new GunInputPayload(GunInputPayload.RPG_CHECK));
+	}
+
+	/** The sounds of checking the round, {@code t} ticks in: the launcher shifted, a knock on the warhead or into the empty tube. */
+	public static void checkSound(long t, net.minecraft.world.phys.Vec3 at, boolean loaded) {
+		if (t == 0) {
+			de.rcm.ballistic.client.gun.GunAudio.play(de.rcm.ballistic.ModRegistry.GEAR_RUSTLE, at, 0.5F, 1.0F);
+		} else if (t == 12) {
+			de.rcm.ballistic.client.gun.GunAudio.play(de.rcm.ballistic.ModRegistry.RPG_KNOCK, at, 0.7F, loaded ? 1.05F : 0.7F);
+		}
 	}
 
 	public static boolean checking(Minecraft mc) {
@@ -106,8 +116,7 @@ public final class RpgClient {
 			mc.gui.setOverlayMessage(net.minecraft.network.chat.Component.translatable(
 				loaded ? "message.ballisticmissiles.rpg_check_loaded" : "message.ballisticmissiles.rpg_check_empty", spare), false);
 			// a knock of the knuckles on the warhead (or into the empty tube)
-			de.rcm.ballistic.client.gun.GunAudio.play(de.rcm.ballistic.ModRegistry.RPG_KNOCK,
-				mc.player.getEyePosition(), 0.7F, loaded ? 1.05F : 0.7F);
+			checkSound(t, mc.player.getEyePosition(), loaded);
 		}
 	}
 

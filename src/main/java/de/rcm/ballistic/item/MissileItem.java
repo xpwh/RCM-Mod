@@ -61,6 +61,9 @@ public class MissileItem extends Item {
 				return InteractionResult.FAIL;
 			}
 			missile.setPos(x, y, z);
+			if (player != null) {
+				missile.setOwner(player.getUUID());
+			}
 			serverLevel.addFreshEntity(missile);
 			serverLevel.playSound(null, x, y, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 1.5F, 0.9F);
 			serverLevel.playSound(null, x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 1.2F, 1.0F);

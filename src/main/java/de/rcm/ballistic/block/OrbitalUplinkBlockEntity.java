@@ -33,7 +33,21 @@ import org.jspecify.annotations.Nullable;
  * rod go, which comes down on the target some seconds later. The platform carries a few rods; more
  * are sent up from here.
  */
-public class OrbitalUplinkBlockEntity extends BlockEntity {
+public class OrbitalUplinkBlockEntity extends BlockEntity implements de.rcm.ballistic.launch.Ownership.Owned {
+	/** Whose it is (see {@link de.rcm.ballistic.launch.Ownership}). */
+	private java.util.@org.jspecify.annotations.Nullable UUID owner;
+
+	@Override
+	public java.util.@org.jspecify.annotations.Nullable UUID getOwner() {
+		return this.owner;
+	}
+
+	@Override
+	public void setOwner(java.util.@org.jspecify.annotations.Nullable UUID owner) {
+		this.owner = owner;
+		this.setChanged();
+	}
+
 	public static final int CAPACITY = 6;
 	private static final int ACQUIRE_TICKS = 50;
 	private static final int COOLDOWN_TICKS = 160;
@@ -186,6 +200,9 @@ public class OrbitalUplinkBlockEntity extends BlockEntity {
 	@Override
 	protected void saveAdditional(ValueOutput output) {
 		super.saveAdditional(output);
+		if (this.owner != null) {
+			output.store("Owner", net.minecraft.core.UUIDUtil.CODEC, this.owner);
+		}
 		output.putInt("Rods", this.rods);
 		output.putInt("Phase", this.phase);
 		output.putInt("Timer", this.timer);
@@ -199,6 +216,7 @@ public class OrbitalUplinkBlockEntity extends BlockEntity {
 	@Override
 	protected void loadAdditional(ValueInput input) {
 		super.loadAdditional(input);
+		this.owner = input.read("Owner", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
 		this.rods = input.getIntOr("Rods", 3);
 		this.phase = input.getIntOr("Phase", IDLE);
 		this.timer = input.getIntOr("Timer", 0);

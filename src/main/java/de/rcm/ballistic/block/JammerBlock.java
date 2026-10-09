@@ -29,6 +29,11 @@ public class JammerBlock extends Block implements EntityBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof JammerBlockEntity jammer) {
+			if (player instanceof net.minecraft.server.level.ServerPlayer sp && !de.rcm.ballistic.network.ModNetworking.mayUse(sp, jammer.getOwner())) {
+				// someone else's: you can see whether it is on, but not touch it or read its settings
+				player.displayClientMessage(jammer.status(), true);
+				return InteractionResult.SUCCESS;
+			}
 			if (player.isSecondaryUseActive()) {
 				// sneak + right-click: just switch it on or off
 				jammer.toggle();

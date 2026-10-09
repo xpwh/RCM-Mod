@@ -55,6 +55,14 @@ public final class DetonationManager {
 	private static final List<AntimatterDetonation> ANNIHILATIONS = new ArrayList<>();
 	private static final List<Tsunami> TSUNAMIS = new ArrayList<>();
 
+	/** The server stopped: forget everything from that world. */
+	public static void clear() {
+		NUKES.clear();
+		SCHEDULED.clear();
+		ANNIHILATIONS.clear();
+		TSUNAMIS.clear();
+	}
+
 	private record Scheduled(ServerLevel level, int[] delay, Runnable action) {
 	}
 

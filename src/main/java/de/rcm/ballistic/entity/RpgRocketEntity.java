@@ -56,16 +56,29 @@ public class RpgRocketEntity extends Entity {
 		}
 		rocket.shooter = shooter;
 		rocket.setPos(from);
+		rocket.entityData.set(DATA_FIRED, level.getGameTime());
 		rocket.setDeltaMovement(dir.normalize().scale(MUZZLE_SPEED).add(shooter.getDeltaMovement().scale(0.5)));
 		level.addFreshEntity(rocket);
 	}
 
+	/** When it was fired (server game time): a client that only starts seeing it mid-flight still knows its age. */
+	private static final net.minecraft.network.syncher.EntityDataAccessor<Long> DATA_FIRED =
+		SynchedEntityData.defineId(RpgRocketEntity.class, net.minecraft.network.syncher.EntityDataSerializers.LONG);
+
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		builder.define(DATA_FIRED, -1L);
+	}
+
+	/** Ticks since it left the tube - from the synced firing time on clients, so late arrivals agree. */
+	private int age() {
+		long fired = this.entityData.get(DATA_FIRED);
+		return fired < 0 ? this.tickCount : (int) Math.max(0L, this.level().getGameTime() - fired);
 	}
 
 	public boolean sustainerBurning() {
-		return this.tickCount >= SUSTAINER_IGNITION && this.tickCount < SUSTAINER_BURNOUT;
+		int age = this.age();
+		return age >= SUSTAINER_IGNITION && age < SUSTAINER_BURNOUT;
 	}
 
 	@Override
@@ -150,7 +163,9 @@ public class RpgRocketEntity extends Entity {
 		Level level = this.level();
 		Vec3 dir = vel.lengthSqr() > 1.0E-6 ? vel.normalize() : new Vec3(0, 0, 1);
 		Vec3 tail = pos.subtract(dir.scale(0.7));
-		if (this.tickCount == 1) {
+		int age = this.age();
+		// a client that starts seeing the rocket mid-flight joins in where it is: no second launch
+		if (this.tickCount == 1 && age <= 2) {
 			// the launch: a cloud from the muzzle, and the back-blast roaring out behind the shooter
 			Vec3 launcher = pos.subtract(dir.scale(1.1));
 			de.rcm.ballistic.ClientHooks.lightFlash.flash(launcher, 0xFFB060, 1.0F, 16.0F, 160.0F);
@@ -158,7 +173,7 @@ public class RpgRocketEntity extends Entity {
 			de.rcm.ballistic.ClientHooks.smokeCloud.emit(launcher, dir.scale(0.15), 4, 0.9F);
 			de.rcm.ballistic.ClientHooks.smokeCloud.emit(launcher.subtract(dir.scale(2.4)), dir.scale(-0.6), 10, 1.4F);
 		}
-		if (this.tickCount < SUSTAINER_IGNITION) {
+		if (age < SUSTAINER_IGNITION) {
 			// only a thin wisp from the booster that burnt out in the tube
 			level.addParticle(ParticleTypes.SMOKE, tail.x, tail.y, tail.z, 0, 0.01, 0);
 			return;
@@ -175,7 +190,7 @@ public class RpgRocketEntity extends Entity {
 					level.addParticle(ParticleTypes.FLAME, p.x, p.y, p.z, -dir.x * 0.08, -dir.y * 0.08, -dir.z * 0.08);
 				}
 			}
-			if (this.tickCount == SUSTAINER_IGNITION) {
+			if (age == SUSTAINER_IGNITION && this.tickCount >= age - 1) {
 				// the sustainer lighting off a few metres out: a bright puff and a bang
 				level.addParticle(net.minecraft.core.particles.ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFC870), tail.x, tail.y, tail.z, 0, 0, 0);
 				for (int i = 0; i < 8; i++) {

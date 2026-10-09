@@ -57,6 +57,8 @@ public class BallisticMissiles implements ModInitializer {
 		net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
 			(player, origin, destination) -> RadiationManager.sync(destination, player));
 		ServerLifecycleEvents.SERVER_STOPPING.register(RadiationManager::save);
+		// each world starts from the saved settings, not from what a server visited before left behind
+		ServerLifecycleEvents.SERVER_STARTING.register(server -> de.rcm.ballistic.config.ServerConfig.load());
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ThreatTracker.clear();
 			DefenseNetwork.clear();
@@ -65,6 +67,15 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.bunker.BunkerManager.clear();
 			de.rcm.ballistic.explosion.NuclearWinter.clear();
 			RemoteLaunch.clear();
+			de.rcm.ballistic.explosion.DetonationManager.clear();
+			de.rcm.ballistic.gun.MagazineLanding.clear();
+			de.rcm.ballistic.entity.FpvDroneEntity.clearPilots();
+			de.rcm.ballistic.gun.AkItem.release(null);
+			de.rcm.ballistic.gun.GrenadeItem.forget(null);
+		});
+		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			de.rcm.ballistic.gun.AkItem.release(handler.player.getUUID());
+			de.rcm.ballistic.gun.GrenadeItem.forget(handler.player.getUUID());
 		});
 		LOGGER.info("Ballistic Missiles geladen - Startrampen bereit.");
 	}

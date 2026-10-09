@@ -267,6 +267,11 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 			this.viewers.remove(player.getUUID());
 			return;
 		}
+		if (!de.rcm.ballistic.network.ModNetworking.mayUse(player, this.owner)) {
+			// someone else's command post: you may look at the map, not give its orders
+			player.displayClientMessage(Component.translatable("message.ballisticmissiles.not_yours").withStyle(ChatFormatting.RED), true);
+			return;
+		}
 		int x = action.x();
 		int z = action.z();
 		if (Math.hypot(x - this.worldPosition.getX(), z - this.worldPosition.getZ()) > RANGE * 3) {
@@ -294,8 +299,14 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 				}
 				AirstrikeRadioItem.Mode[] modes = AirstrikeRadioItem.Mode.values();
 				AirstrikeRadioItem.Mode mode = modes[Mth.clamp(action.mode(), 0, modes.length - 1)];
+				if (de.rcm.ballistic.defense.EmpManager.isJammed(level, this.worldPosition)) {
+					player.displayClientMessage(Component.translatable("message.ballisticmissiles.jammed",
+						de.rcm.ballistic.defense.EmpManager.jammedTicks(level, this.worldPosition) / 20).withStyle(ChatFormatting.DARK_PURPLE), true);
+					return;
+				}
 				if (AirstrikeRadioItem.callMission(level, player, mode, Vec3.atBottomCenterOf(target.pos())) == net.minecraft.world.InteractionResult.SUCCESS) {
-					this.cooldown = STRIKE_COOLDOWN;
+					// the aircraft have to come back and rearm, as they would for a radio call
+					this.cooldown = Math.max(STRIKE_COOLDOWN, mode.cooldownSeconds * 20);
 				}
 			}
 			default -> {

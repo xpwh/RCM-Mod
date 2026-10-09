@@ -38,6 +38,9 @@ public class MobileLauncherItem extends Item {
 		Player player = context.getPlayer();
 		float yaw = player != null ? player.getYRot() : 0.0F;
 		truck.snapTo(new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5), yaw, 0.0F);
+		if (player != null) {
+			truck.setOwner(player.getUUID());
+		}
 		if (!level.noCollision(truck, truck.getBoundingBox())) {
 			return InteractionResult.FAIL;
 		}

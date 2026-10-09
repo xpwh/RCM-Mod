@@ -35,11 +35,59 @@ public final class Fatigue {
 		return Mth.lerp(partialTick, prevPhase, phase);
 	}
 
+	/** Other players near you: how winded they are and where in their breath, so you hear them panting too. */
+	private static final java.util.Map<Integer, float[]> OTHERS = new java.util.HashMap<>();
+
+	/**
+	 * The same model for the players around you, worked out from what you can see of them: running,
+	 * jumping, standing about. Their panting comes from where they stand.
+	 */
+	private static void othersTick(Minecraft mc, LocalPlayer self) {
+		java.util.Set<Integer> seen = new java.util.HashSet<>();
+		for (net.minecraft.client.player.AbstractClientPlayer p : mc.level.players()) {
+			if (p == self || p.isSpectator() || p.distanceToSqr(self) > 24.0 * 24.0) {
+				continue;
+			}
+			seen.add(p.getId());
+			// {winded, phase, last x, last z, was on ground}
+			float[] s = OTHERS.computeIfAbsent(p.getId(), id -> new float[] {0.0F, (float) Math.random() * Mth.TWO_PI, (float) p.getX(), (float) p.getZ(), 1.0F});
+			double moved = Mth.square(p.getX() - s[2]) + Mth.square(p.getZ() - s[3]);
+			s[2] = (float) p.getX();
+			s[3] = (float) p.getZ();
+			if (p.isSprinting()) {
+				s[0] += 0.0075F;
+			} else if (moved > 0.002) {
+				s[0] -= 0.0035F;
+			} else {
+				s[0] -= p.isCrouching() ? 0.008F : 0.006F;
+			}
+			if (s[4] > 0.5F && !p.onGround() && p.getY() > p.yo + 0.15) {
+				s[0] += 0.025F;
+			}
+			s[4] = p.onGround() ? 1.0F : 0.0F;
+			if (p.isCreative()) {
+				s[0] = 0.0F;
+			}
+			s[0] = Mth.clamp(s[0], 0.0F, 1.0F);
+			float before = s[1];
+			s[1] += Mth.TWO_PI * (0.25F + 0.75F * s[0]) / 20.0F;
+			if (s[0] > 0.22F && (int) (s[1] / Mth.TWO_PI) != (int) (before / Mth.TWO_PI)) {
+				GunAudio.play(ModRegistry.PLAYER_BREATH, p.getEyePosition(), 0.12F + 0.55F * s[0], 0.94F + (float) Math.random() * 0.12F);
+			}
+			if (s[1] > Mth.TWO_PI * 64.0F) {
+				s[1] -= Mth.TWO_PI * 64.0F;
+			}
+		}
+		OTHERS.keySet().retainAll(seen);
+	}
+
 	static void tick(Minecraft mc) {
 		LocalPlayer player = mc.player;
 		if (player == null || mc.level == null || mc.isPaused()) {
+			OTHERS.clear();
 			return;
 		}
+		othersTick(mc, player);
 		age++;
 		// winded by running and jumping, recovering at rest
 		if (player.isSprinting()) {

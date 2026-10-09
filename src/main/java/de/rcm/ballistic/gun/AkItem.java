@@ -105,11 +105,23 @@ public class AkItem extends Item {
 
 	private static final java.util.Map<java.util.UUID, long[]> TRIGGERS = new java.util.HashMap<>();
 
+	/** A player left or the server stopped: nobody's finger stays on the trigger. */
+	public static void release(java.util.@org.jspecify.annotations.Nullable UUID player) {
+		if (player == null) {
+			TRIGGERS.clear();
+		} else {
+			TRIGGERS.remove(player);
+		}
+	}
+
 	/** The trigger pressed or let go (from the client). */
 	public static void trigger(ServerPlayer player, boolean down) {
 		if (!down) {
 			TRIGGERS.remove(player.getUUID());
 			return;
+		}
+		if (TRIGGERS.containsKey(player.getUUID())) {
+			return; // still held: a repeated "pressed" must not restart the burst (that would fire every tick)
 		}
 		ItemStack stack = player.getMainHandItem();
 		if (!(stack.getItem() instanceof AkItem)) {
@@ -148,6 +160,9 @@ public class AkItem extends Item {
 		}
 		if (!drop) {
 			return;
+		}
+		if (level.getGameTime() - state.lastShot() < CYCLE) {
+			return; // the bolt has not come back yet: no faster than the rifle can cycle, however the trigger is worked
 		}
 		if (state.rounds() <= 0) {
 			// the hammer falls on an empty chamber

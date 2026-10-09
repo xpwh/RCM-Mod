@@ -24,6 +24,11 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class MagazineLanding {
 	private static final List<Falling> FALLING = new ArrayList<>();
 
+	/** The server stopped: forget everything from that world. */
+	public static void clear() {
+		FALLING.clear();
+	}
+
 	private static final Set<SoundType> METAL = Set.of(SoundType.METAL, SoundType.ANVIL, SoundType.CHAIN, SoundType.LANTERN, SoundType.COPPER,
 		SoundType.COPPER_BULB, SoundType.COPPER_GRATE, SoundType.IRON, SoundType.NETHERITE_BLOCK, SoundType.HEAVY_CORE, SoundType.LODESTONE,
 		SoundType.VAULT, SoundType.TRIAL_SPAWNER, SoundType.SPAWNER);

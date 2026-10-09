@@ -72,7 +72,7 @@ public class SettingsScreen extends Screen {
 		y += GAP;
 		// a world setting: changed on the server (operators only), shown as the server has it
 		Integer[] steps = java.util.Arrays.stream(de.rcm.ballistic.config.ServerConfig.MISFIRE_STEPS).boxed().toArray(Integer[]::new);
-		int current = de.rcm.ballistic.config.ServerConfig.misfireChance;
+		int current = ModConfig.serverMisfireChance;
 		int nearest = steps[0];
 		for (int st : steps) {
 			if (Math.abs(st - current) < Math.abs(nearest - current)) {

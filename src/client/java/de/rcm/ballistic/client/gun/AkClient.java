@@ -81,8 +81,9 @@ public final class AkClient {
 		ClientTickEvents.END_CLIENT_TICK.register(TracerFx::tick);
 		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(TracerFx::render);
 		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_ENTITIES.register(ShellCasings::render);
-		ClientHooks.bulletClientTick = AkClient::bulletTick;
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.BulletPassPayload.TYPE, (payload, context) -> bulletPass(payload));
 		ClientPlayNetworking.registerGlobalReceiver(GunshotPayload.TYPE, (payload, context) -> remoteShot(payload));
+		RemoteGunActions.init();
 		HudElementRegistry.addLast(BallisticMissiles.id("ammo"), (graphics, tickCounter) -> hud(graphics));
 		// looking through the sights (AK or RPG) there is no crosshair: the sights are the aim
 		HudElementRegistry.replaceElement(net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.CROSSHAIR, crosshair -> (graphics, tickCounter) -> {
@@ -115,21 +116,36 @@ public final class AkClient {
 	/** Sounds of looking the rifle over: the sling and the rifle shifting, the press check, the slap on the magazine. */
 	private static void inspectTick(LocalPlayer player, GunState state, long now) {
 		long t = now - inspectStart;
-		Vec3 at = player.getEyePosition();
-		if (t == 1 || t == 40) {
-			GunAudio.play(ModRegistry.GEAR_RUSTLE, at, 0.45F, 1.0F);
-		} else if (t == 29) {
-			GunAudio.play(ModRegistry.AK_SELECTOR, at, 0.45F, 0.75F);
-		} else if (t == 35) {
-			GunAudio.play(ModRegistry.AK_SELECTOR, at, 0.55F, 1.15F);
+		inspectSound(t, player.getEyePosition(), state.hasMag());
+		if (t == 35) {
 			if (state.rounds() > 0) {
 				// brass in the chamber, seen: say so
 				Minecraft.getInstance().gui.setOverlayMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.ak_chamber_loaded"), false);
 			} else {
 				Minecraft.getInstance().gui.setOverlayMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.ak_chamber_empty"), false);
 			}
-		} else if (t == 50 && state.hasMag()) {
+		}
+	}
+
+	/** The sounds of looking the rifle over, {@code t} ticks in - for the local player and, relayed, for others. */
+	static void inspectSound(long t, Vec3 at, boolean hasMag) {
+		if (t == 1 || t == 40) {
+			GunAudio.play(ModRegistry.GEAR_RUSTLE, at, 0.45F, 1.0F);
+		} else if (t == 29) {
+			GunAudio.play(ModRegistry.AK_SELECTOR, at, 0.45F, 0.75F);
+		} else if (t == 35) {
+			GunAudio.play(ModRegistry.AK_SELECTOR, at, 0.55F, 1.15F);
+		} else if (t == 50 && hasMag) {
 			GunAudio.play(ModRegistry.AK_MAG_IN, at, 0.3F, 1.25F);
+		}
+	}
+
+	/** The sounds of a magazine check, {@code t} ticks in. */
+	static void magCheckSound(long t, Vec3 at) {
+		if (t == 11) {
+			GunAudio.play(ModRegistry.AK_MAG_OUT, at, 0.5F, 1.0F);
+		} else if (t == 27) {
+			GunAudio.play(ModRegistry.AK_MAG_IN, at, 0.6F, 1.0F);
 		}
 	}
 
@@ -144,14 +160,11 @@ public final class AkClient {
 			checkStart = -1000L;
 			return;
 		}
-		if (t == 11) {
-			GunAudio.play(ModRegistry.AK_MAG_OUT, player.getEyePosition(), 0.5F, 1.0F);
-		} else if (t == 17) {
+		magCheckSound(t, player.getEyePosition());
+		if (t == 17) {
 			int r = state.rounds();
 			String key = r <= 0 ? "empty" : r < 8 ? "low" : r < 15 ? "half" : r < 25 ? "most" : "full";
 			mc.gui.setOverlayMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.mag_check_" + key), false);
-		} else if (t == 27) {
-			GunAudio.play(ModRegistry.AK_MAG_IN, player.getEyePosition(), 0.6F, 1.0F);
 		}
 	}
 
@@ -186,12 +199,14 @@ public final class AkClient {
 				if (state != null && !state.reloading() && !checking && state.hasMag()) {
 					checkStart = now;
 					checking = true;
+					ClientPlayNetworking.send(new GunInputPayload(GunInputPayload.AK_CHECK));
 				}
 			}
 			magCheckTick(mc, player, state, now);
 			while (inspect.consumeClick()) {
 				if (state != null && !state.reloading() && !checking && aim <= 0.0F && inspectTime(now) < 0.0F && !triggerDown) {
 					inspectStart = now;
+					ClientPlayNetworking.send(new GunInputPayload(GunInputPayload.AK_INSPECT));
 				}
 			}
 			// anything else you do with the rifle breaks off looking it over
@@ -339,29 +354,17 @@ public final class AkClient {
 
 	// ------------------------------------------------------------------ bullets going past
 
-	private static void bulletTick(BulletEntity bullet) {
+	/** A round the server saw go past this player's head (they may never see the bullet itself). */
+	private static void bulletPass(de.rcm.ballistic.network.ModNetworking.BulletPassPayload p) {
 		Minecraft mc = Minecraft.getInstance();
-		if (bullet.crackPlayed || mc.player == null || bullet.shooterId() == mc.player.getId()) {
+		if (mc.player == null) {
 			return;
 		}
-		Vec3 ear = mc.gameRenderer.getMainCamera().position();
-		Vec3 a = bullet.clientPrev;
-		Vec3 v = bullet.getDeltaMovement();
-		double len2 = v.lengthSqr();
-		if (len2 < 1.0E-6) {
-			return;
-		}
-		double t = Mth.clamp(ear.subtract(a).dot(v) / len2, 0.0, 1.0);
-		Vec3 closest = a.add(v.scale(t));
-		double d = closest.distanceTo(ear);
-		if (d > 6.0) {
-			return;
-		}
-		bullet.crackPlayed = true;
-		float near = (float) (1.0 - d / 6.0);
+		Vec3 closest = new Vec3(p.x(), p.y(), p.z());
+		float near = (float) Mth.clamp(1.0 - p.distance() / 6.0, 0.0, 1.0);
 		// under fire: the picture closes in and the hands start to shake
 		de.rcm.ballistic.client.effect.BlastShader.suppress(0.18F + 0.45F * near * near);
-		if (Math.sqrt(len2) > 17.5) {
+		if (p.supersonic()) {
 			// supersonic: the sharp snap of its shock wave going past your ear
 			GunAudio.play(ModRegistry.BULLET_CRACK, closest, 0.45F + 0.55F * near, 0.92F + ClientEffects.rand() * 0.16F);
 			ClientEffects.addShake(0.25F * near);

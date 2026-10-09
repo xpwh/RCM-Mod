@@ -124,6 +124,10 @@ public class MissileSiloBlock extends Block implements EntityBlock {
 		if (!(level.getBlockEntity(pos) instanceof MissileSiloBlockEntity silo)) {
 			return InteractionResult.TRY_WITH_EMPTY_HAND;
 		}
+		if ((stack.getItem() instanceof MissileItem || stack.is(ModRegistry.TARGET_DESIGNATOR)) && player instanceof ServerPlayer owner
+			&& de.rcm.ballistic.launch.Ownership.refuse(owner, silo)) {
+			return InteractionResult.SUCCESS; // someone else's silo
+		}
 		if (stack.getItem() instanceof MissileItem missileItem) {
 			if (!level.isClientSide()) {
 				MissileType type = missileItem.getMissileType();
@@ -171,6 +175,9 @@ public class MissileSiloBlock extends Block implements EntityBlock {
 			return InteractionResult.SUCCESS;
 		}
 		if (player.isShiftKeyDown() && player.getMainHandItem().isEmpty() && silo.getMissile() != null) {
+			if (player instanceof ServerPlayer owner && de.rcm.ballistic.launch.Ownership.refuse(owner, silo)) {
+				return InteractionResult.SUCCESS;
+			}
 			MissileType type = silo.unload();
 			if (type != null) {
 				player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModRegistry.missileItem(type)));

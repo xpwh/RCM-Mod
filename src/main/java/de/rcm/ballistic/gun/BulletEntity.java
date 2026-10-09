@@ -10,6 +10,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -121,6 +122,7 @@ public class BulletEntity extends Entity {
 		Vec3 next = pos.add(vel);
 		BlockHitResult hit = server.clip(new ClipContext(pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.WATER, CollisionContext.empty()));
 		Vec3 end = hit.getType() == HitResult.Type.MISS ? next : hit.getLocation();
+		this.nearMisses(server, pos, end, vel);
 		Entity struck = this.firstHit(server, pos, end);
 		if (struck != null) {
 			this.hitEntity(server, struck, pos, end);
@@ -136,6 +138,36 @@ public class BulletEntity extends Entity {
 		}
 		if (this.tickCount > 80 || this.getY() < server.getMinY() - 16 || vel.lengthSqr() < 1.0) {
 			this.discard();
+		}
+	}
+
+	/** Players this round has already gone past (each hears its crack once). */
+	private final java.util.Set<Integer> passed = new java.util.HashSet<>();
+
+	/**
+	 * Everyone (but the shooter) the round passes within a few metres of hears it snap or whiz past.
+	 * Worked out here on the server, on the true flight path: a round that hits something in the same
+	 * tick it was fired is never seen by any client, but the people it flew past still heard it.
+	 */
+	private void nearMisses(ServerLevel level, Vec3 a, Vec3 b, Vec3 vel) {
+		Vec3 ab = b.subtract(a);
+		double len2 = ab.lengthSqr();
+		if (len2 < 1.0E-6) {
+			return;
+		}
+		for (net.minecraft.server.level.ServerPlayer p : level.players()) {
+			if (p == this.shooter || p.isSpectator() || this.passed.contains(p.getId())) {
+				continue;
+			}
+			Vec3 ear = p.getEyePosition();
+			double t = Mth.clamp(ear.subtract(a).dot(ab) / len2, 0.0, 1.0);
+			Vec3 closest = a.add(ab.scale(t));
+			double d = closest.distanceTo(ear);
+			if (d <= 6.0) {
+				this.passed.add(p.getId());
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new de.rcm.ballistic.network.ModNetworking.BulletPassPayload(
+					closest.x, closest.y, closest.z, (float) d, vel.length() > 17.5));
+			}
 		}
 	}
 

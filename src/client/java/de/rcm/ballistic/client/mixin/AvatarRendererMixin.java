@@ -23,7 +23,8 @@ public abstract class AvatarRendererMixin {
 		if (stack.is(ModRegistry.ROCKET_LAUNCHER) || stack.is(ModRegistry.AK47)) {
 			cir.setReturnValue(HumanoidModel.ArmPose.CROSSBOW_HOLD);
 		} else if (stack.is(ModRegistry.GRENADE) && avatar.isUsingItem() && avatar.getUsedItemHand() == hand) {
-			cir.setReturnValue(HumanoidModel.ArmPose.THROW_TRIDENT); // arm drawn back to throw
+			// arm drawn back to throw - or, crouching, kept low for the underhand lob
+			cir.setReturnValue(avatar.isCrouching() ? HumanoidModel.ArmPose.ITEM : HumanoidModel.ArmPose.THROW_TRIDENT);
 		}
 	}
 }

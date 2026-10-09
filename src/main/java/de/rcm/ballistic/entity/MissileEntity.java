@@ -49,7 +49,20 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-public class MissileEntity extends Entity implements AirThreat {
+public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic.launch.Ownership.Owned {
+	/** Whose it is (see {@link de.rcm.ballistic.launch.Ownership}). */
+	private java.util.@org.jspecify.annotations.Nullable UUID owner;
+
+	@Override
+	public java.util.@org.jspecify.annotations.Nullable UUID getOwner() {
+		return this.owner;
+	}
+
+	@Override
+	public void setOwner(java.util.@org.jspecify.annotations.Nullable UUID owner) {
+		this.owner = owner;
+	}
+
 	public static final int IDLE = 0;
 	public static final int COUNTDOWN = 1;
 	public static final int IGNITION = 2;
@@ -1101,6 +1114,10 @@ public class MissileEntity extends Entity implements AirThreat {
 	public InteractionResult interact(Player player, InteractionHand hand) {
 		ItemStack stack = player.getItemInHand(hand);
 		int state = this.getState();
+		if (player instanceof ServerPlayer owner && (stack.is(ModRegistry.TARGET_DESIGNATOR) || stack.isEmpty() && player.isShiftKeyDown())
+			&& de.rcm.ballistic.launch.Ownership.refuse(owner, this)) {
+			return InteractionResult.SUCCESS; // someone else's missile: no arming, aborting or taking it
+		}
 		if (stack.is(ModRegistry.TARGET_DESIGNATOR)) {
 			if (!(player instanceof ServerPlayer serverPlayer)) {
 				return InteractionResult.SUCCESS;
@@ -1177,6 +1194,9 @@ public class MissileEntity extends Entity implements AirThreat {
 
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
+		if (this.owner != null) {
+			output.store("Owner", net.minecraft.core.UUIDUtil.CODEC, this.owner);
+		}
 		output.putInt("MissileState", this.getState());
 		output.putInt("StateAge", this.stateAge);
 		output.store("Target", BlockPos.CODEC, this.getTarget());
@@ -1193,6 +1213,7 @@ public class MissileEntity extends Entity implements AirThreat {
 
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
+		this.owner = input.read("Owner", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
 		this.entityData.set(DATA_STATE, input.getIntOr("MissileState", IDLE));
 		this.stateAge = input.getIntOr("StateAge", 0);
 		this.entityData.set(DATA_AGE, this.stateAge);

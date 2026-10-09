@@ -46,7 +46,20 @@ import org.jspecify.annotations.Nullable;
  * designator: the crew dismounts, the jacks go down, the erector raises the missile to vertical and
  * it launches from the back of the truck. Afterwards the erector folds down and you can drive off.
  */
-public class MobileLauncherEntity extends Entity {
+public class MobileLauncherEntity extends Entity implements de.rcm.ballistic.launch.Ownership.Owned {
+	/** Whose it is (see {@link de.rcm.ballistic.launch.Ownership}). */
+	private java.util.@org.jspecify.annotations.Nullable UUID owner;
+
+	@Override
+	public java.util.@org.jspecify.annotations.Nullable UUID getOwner() {
+		return this.owner;
+	}
+
+	@Override
+	public void setOwner(java.util.@org.jspecify.annotations.Nullable UUID owner) {
+		this.owner = owner;
+	}
+
 	private static final EntityDataAccessor<Integer> DATA_MISSILE = SynchedEntityData.defineId(MobileLauncherEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Float> DATA_ERECT = SynchedEntityData.defineId(MobileLauncherEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Integer> DATA_PHASE = SynchedEntityData.defineId(MobileLauncherEntity.class, EntityDataSerializers.INT);
@@ -323,6 +336,9 @@ public class MobileLauncherEntity extends Entity {
 	public InteractionResult interact(Player player, InteractionHand hand) {
 		ItemStack stack = player.getItemInHand(hand);
 		if (stack.is(ModRegistry.TARGET_DESIGNATOR)) {
+			if (player instanceof ServerPlayer serverPlayer && de.rcm.ballistic.launch.Ownership.refuse(serverPlayer, this)) {
+				return InteractionResult.SUCCESS;
+			}
 			if (player instanceof ServerPlayer serverPlayer) {
 				if (player.isShiftKeyDown()) {
 					TargetDesignatorItem.toggleLink(serverPlayer, stack, LauncherLink.truck(this.getUUID(), this.blockPosition()));
@@ -488,6 +504,9 @@ public class MobileLauncherEntity extends Entity {
 
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
+		if (this.owner != null) {
+			output.store("Owner", net.minecraft.core.UUIDUtil.CODEC, this.owner);
+		}
 		MissileType type = this.getMissile();
 		if (type != null) {
 			output.putString("Missile", type.id);
@@ -502,6 +521,7 @@ public class MobileLauncherEntity extends Entity {
 
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
+		this.owner = input.read("Owner", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
 		this.setMissile(input.getString("Missile").map(MissileType::byId).orElse(null));
 		this.pendingTarget = input.read("Target", TargetData.CODEC).orElse(null);
 		int phase = input.getIntOr("Phase", DRIVE);

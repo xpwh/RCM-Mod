@@ -37,7 +37,21 @@ import org.jspecify.annotations.Nullable;
  * Underground launch silo. Holds one missile of any size. On launch the hatch opens and the missile
  * is ejected cold by a gas generator; its engine only lights once it is clear of the shaft.
  */
-public class MissileSiloBlockEntity extends BlockEntity {
+public class MissileSiloBlockEntity extends BlockEntity implements de.rcm.ballistic.launch.Ownership.Owned {
+	/** Whose it is (see {@link de.rcm.ballistic.launch.Ownership}). */
+	private java.util.@org.jspecify.annotations.Nullable UUID owner;
+
+	@Override
+	public java.util.@org.jspecify.annotations.Nullable UUID getOwner() {
+		return this.owner;
+	}
+
+	@Override
+	public void setOwner(java.util.@org.jspecify.annotations.Nullable UUID owner) {
+		this.owner = owner;
+		this.setChanged();
+	}
+
 	private static final int HATCH_OPEN_BEFORE = 70;
 
 	private @Nullable MissileType missile;
@@ -271,6 +285,9 @@ public class MissileSiloBlockEntity extends BlockEntity {
 	@Override
 	protected void saveAdditional(ValueOutput output) {
 		super.saveAdditional(output);
+		if (this.owner != null) {
+			output.store("Owner", net.minecraft.core.UUIDUtil.CODEC, this.owner);
+		}
 		if (this.missile != null) {
 			output.putString("Missile", this.missile.id);
 		}
@@ -286,6 +303,7 @@ public class MissileSiloBlockEntity extends BlockEntity {
 	@Override
 	protected void loadAdditional(ValueInput input) {
 		super.loadAdditional(input);
+		this.owner = input.read("Owner", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
 		this.missile = input.getString("Missile").map(MissileType::byId).orElse(null);
 		this.counting = input.getBooleanOr("Counting", false);
 		this.shaftDug = input.getBooleanOr("ShaftDug", false);

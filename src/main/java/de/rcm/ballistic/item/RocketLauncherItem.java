@@ -132,20 +132,20 @@ public class RocketLauncherItem extends Item {
 
 	private void muzzleAndBackblast(ServerLevel level, Player player, Vec3 shoulder, Vec3 look) {
 		Vec3 muzzle = shoulder.add(look.scale(1.0));
-		level.sendParticles(net.minecraft.core.particles.ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFD890), muzzle.x, muzzle.y, muzzle.z, 1, 0, 0, 0, 0);
-		level.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, 12, 0.1, 0.1, 0.1, 0.03);
+		level.sendParticles(net.minecraft.core.particles.ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFD890), true, true, muzzle.x, muzzle.y, muzzle.z, 1, 0, 0, 0, 0);
+		level.sendParticles(ParticleTypes.SMOKE, true, true, muzzle.x, muzzle.y, muzzle.z, 12, 0.1, 0.1, 0.1, 0.03);
 		// back-blast: the recoilless launch vents a jet of hot gas and burning powder backwards
 		Vec3 back = look.scale(-1);
 		for (int i = 0; i < 6; i++) {
 			Vec3 p = shoulder.add(back.scale(0.7 + i * 0.55));
 			double spread = 0.08 + i * 0.09;
-			level.sendParticles(ParticleTypes.CLOUD, p.x, p.y, p.z, 6, spread, spread, spread, 0.04);
-			level.sendParticles(ParticleTypes.LARGE_SMOKE, p.x, p.y, p.z, 4, spread, spread, spread, 0.03);
+			level.sendParticles(ParticleTypes.CLOUD, true, true, p.x, p.y, p.z, 6, spread, spread, spread, 0.04);
+			level.sendParticles(ParticleTypes.LARGE_SMOKE, true, true, p.x, p.y, p.z, 4, spread, spread, spread, 0.03);
 			if (i < 3) {
-				level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z, 5, spread * 0.6, spread * 0.6, spread * 0.6, 0.05);
+				level.sendParticles(ParticleTypes.FLAME, true, true, p.x, p.y, p.z, 5, spread * 0.6, spread * 0.6, spread * 0.6, 0.05);
 			}
 		}
-		level.sendParticles(ModRegistry.DUST, player.getX(), player.getY() + 0.1, player.getZ(), 20, 0.8, 0.05, 0.8, 0.06);
+		level.sendParticles(ModRegistry.DUST, true, true, player.getX(), player.getY() + 0.1, player.getZ(), 20, 0.8, 0.05, 0.8, 0.06);
 		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(shoulder, shoulder).inflate(5.0), e -> e != player && e.isAlive())) {
 			Vec3 to = e.getBoundingBox().getCenter().subtract(shoulder);
 			double dist = to.length();

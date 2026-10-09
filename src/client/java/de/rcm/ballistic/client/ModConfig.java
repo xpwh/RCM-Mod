@@ -58,6 +58,8 @@ public final class ModConfig {
 	public static boolean bulletHoles = true;
 	/** Muzzle flashes, rocket motors and explosions light up the world round them. */
 	public static boolean dynamicLights = true;
+	/** The connected server's misfire setting, as it last told us (shown in the settings, not saved here). */
+	public static int serverMisfireChance;
 
 	private ModConfig() {
 	}
