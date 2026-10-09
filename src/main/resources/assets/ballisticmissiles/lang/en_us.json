@@ -644,5 +644,7 @@
 	"message.ballisticmissiles.runway_built": "Runway finished",
 	"subtitles.ballisticmissiles.jet_startup": "Jet engine starts",
 	"subtitles.ballisticmissiles.jet_shutdown": "Jet engine winds down",
-	"subtitles.ballisticmissiles.jet_tyre": "Tyres screech on touchdown"
+	"subtitles.ballisticmissiles.jet_tyre": "Tyres screech on touchdown",
+	"tooltip.ballisticmissiles.alpha": "⚠ Still in development: may have bugs and may still change",
+	"hud.ballisticmissiles.alpha": "Jets are still in development"
 }

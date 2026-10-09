@@ -644,5 +644,7 @@
 	"message.ballisticmissiles.runway_built": "Startbahn fertig",
 	"subtitles.ballisticmissiles.jet_startup": "Jet-Triebwerk startet",
 	"subtitles.ballisticmissiles.jet_shutdown": "Jet-Triebwerk läuft aus",
-	"subtitles.ballisticmissiles.jet_tyre": "Reifen quietschen beim Aufsetzen"
+	"subtitles.ballisticmissiles.jet_tyre": "Reifen quietschen beim Aufsetzen",
+	"tooltip.ballisticmissiles.alpha": "⚠ Noch in Entwicklung: kann Fehler haben und sich noch ändern",
+	"hud.ballisticmissiles.alpha": "Jets sind noch in Entwicklung"
 }

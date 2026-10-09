@@ -443,6 +443,9 @@ public final class FighterClient {
 		String weapons = "GUN " + jet.ammo() + "   AIM-120 x" + jet.missiles() + "   FLR " + jet.flares();
 		g.drawString(font, weapons, cx - font.width(weapons) / 2, h - 58, HUD, true);
 		String name = type == FighterType.F22 ? "F-22A" : "F-35A";
+		// still in alpha: say so, top left, quietly
+		g.drawString(font, "ALPHA", 6, 6, 0xC0FFA030, true);
+		g.drawString(font, net.minecraft.network.chat.Component.translatable("hud.ballisticmissiles.alpha"), 6, 16, 0x90C8C8C8, true);
 		g.drawString(font, name + (jet.gearDown() ? "  GEAR DN" : "") + (jet.bayOpen() ? "  BAY" : ""), cx + 60, h - 70, HUD_DIM, true);
 		// warnings
 		boolean blink = (jet.tickCount / 5) % 2 == 0;
