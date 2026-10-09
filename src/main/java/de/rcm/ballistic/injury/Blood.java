@@ -40,7 +40,17 @@ public final class Blood {
 	 * A round went into a creature at {@code at} (on its hitbox grown by {@code grown}): tell those who can see
 	 * it, so the wound shows where it went in - on the face of the box it struck, moved in to the body.
 	 */
+	/** Kinds of wound on a creature: a hole; where a round came out; torn open, meat hanging out; the belly opened, gut spilling. */
+	public static final int HOLE = 0;
+	public static final int EXIT = 1;
+	public static final int GAPING = 2;
+	public static final int ENTRAILS = 3;
+
 	public static void wound(LivingEntity e, Vec3 at, double grown, boolean pellet, boolean head) {
+		wound(e, at, grown, pellet, head, HOLE);
+	}
+
+	public static void wound(LivingEntity e, Vec3 at, double grown, boolean pellet, boolean head, int kind) {
 		if (!(e.level() instanceof ServerLevel level) || !bleeds(e)) {
 			return;
 		}
@@ -62,9 +72,10 @@ public final class Blood {
 		};
 		Vec3 onBody = at.subtract(n.scale(grown));
 		Vec3 rel = onBody.subtract(e.position());
-		float size = (pellet ? 0.09F : 0.16F) * (head ? 1.4F : 1.0F) * (0.85F + level.getRandom().nextFloat() * 0.3F);
+		float size = (pellet ? 0.1F : 0.16F) * (head ? 1.4F : 1.0F) * (0.85F + level.getRandom().nextFloat() * 0.3F)
+			* (kind == EXIT ? 1.7F : kind == GAPING ? 1.9F : kind == ENTRAILS ? 1.8F : 1.0F);
 		var payload = new de.rcm.ballistic.network.ModNetworking.WoundPayload(e.getId(), (float) rel.x, (float) rel.y, (float) rel.z, (float) n.x,
-			(float) n.y, (float) n.z, size, level.getRandom().nextInt(4));
+			(float) n.y, (float) n.z, size, (kind == EXIT ? 3 : level.getRandom().nextInt(3)) | kind << 4);
 		for (ServerPlayer player : net.fabricmc.fabric.api.networking.v1.PlayerLookup.tracking(e)) {
 			ServerPlayNetworking.send(player, payload);
 		}

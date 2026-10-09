@@ -15,6 +15,7 @@
 		"GameRendererMixin",
 		"ItemInHandRendererMixin",
 		"KeyboardInputMixin",
+		"LivingEntityRendererMixin",
 		"LevelRendererMixin",
 		"MinecraftMixin",
 		"PlayerModelMixin",

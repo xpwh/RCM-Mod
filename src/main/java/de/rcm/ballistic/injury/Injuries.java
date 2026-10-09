@@ -83,6 +83,7 @@ public final class Injuries {
 
 	public static void init() {
 		ServerTickEvents.END_SERVER_TICK.register(Injuries::tick);
+		ServerTickEvents.END_SERVER_TICK.register(Injuries::tickCreatures);
 		ServerLivingEntityEvents.AFTER_DAMAGE.register(Injuries::afterDamage);
 		ServerLivingEntityEvents.ALLOW_DEATH.register(Injuries::allowDeath);
 		Corpses.init();
@@ -115,7 +116,39 @@ public final class Injuries {
 		});
 	}
 
+	/** Animals and monsters bleeding from their wounds, and for how many ticks more. */
+	private static final Map<LivingEntity, Integer> BLEEDING_CREATURES = new java.util.WeakHashMap<>();
+
+	/** A creature hit: it leaves a trail of blood for {@code ticks}. */
+	public static void bleedCreature(LivingEntity e, int ticks) {
+		BLEEDING_CREATURES.merge(e, ticks, Math::max);
+	}
+
+	private static void tickCreatures(MinecraftServer server) {
+		if (BLEEDING_CREATURES.isEmpty() || server.getTickCount() % 6 != 0) {
+			return;
+		}
+		var it = BLEEDING_CREATURES.entrySet().iterator();
+		while (it.hasNext()) {
+			var en = it.next();
+			LivingEntity e = en.getKey();
+			int left = en.getValue() - 6;
+			if (left <= 0 || e.isRemoved() || !(e.level() instanceof ServerLevel level)) {
+				it.remove();
+				continue;
+			}
+			en.setValue(left);
+			// drops falling from it as it runs; still, a pool spreading under the body
+			if (e.isAlive()) {
+				Blood.send(level, e.position().add(0, e.getBbHeight() * 0.45, 0), new Vec3(0, -0.2, 0), 2, Blood.DRIP);
+			} else if (left % 60 < 6) {
+				Blood.send(level, e.position().add(0, 0.3, 0), Vec3.ZERO, 6 + left / 60, Blood.POOL);
+			}
+		}
+	}
+
 	public static void clear() {
+		BLEEDING_CREATURES.clear();
 		CLOCKS.clear();
 		TORN_APART.clear();
 	}

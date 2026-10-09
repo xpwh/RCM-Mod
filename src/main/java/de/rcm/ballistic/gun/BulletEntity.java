@@ -226,7 +226,8 @@ public class BulletEntity extends Entity {
 	private @Nullable Entity firstHit(ServerLevel level, Vec3 from, Vec3 to) {
 		int lag = this.lagTicks();
 		List<Entity> list = level.getEntities(this, new AABB(from, to).inflate(0.4 + lag * 0.5),
-			e -> e.isPickable() && e.isAlive() && !e.isSpectator() && (e != this.shooter || this.tickCount > 3) && !(e instanceof BulletEntity)
+			e -> (e.isPickable() && e.isAlive() || e instanceof LivingEntity body && body.deathTime > 0 && !e.isRemoved()
+				&& !(e instanceof net.minecraft.world.entity.player.Player)) && !e.isSpectator() && (e != this.shooter || this.tickCount > 3) && !(e instanceof BulletEntity)
 				&& !(this.shooter != null && e == this.shooter.getVehicle())); // a jet's cannon does not hit the jet
 
 		Entity best = null;
@@ -247,6 +248,36 @@ public class BulletEntity extends Entity {
 			}
 		}
 		return best;
+	}
+
+	/**
+	 * Gore on an animal or monster: buckshot from close up tears the wound open, meat hanging out of it; a rifle
+	 * round to the head does the same; in the belly the gut may come spilling out; a rifle round tears a
+	 * bigger hole where it comes out the far side. It bleeds a trail for a while after.
+	 */
+	private void woundCreature(LivingEntity living, Vec3 at, Vec3 line, boolean head) {
+		var r = this.random;
+		double range = this.origin == null ? 10.0 : this.origin.distanceTo(at);
+		double h = (at.y - living.getY()) / Math.max(0.1, living.getBbHeight());
+		int kind = de.rcm.ballistic.injury.Blood.HOLE;
+		if (this.pellet ? range < 4.5 && r.nextFloat() < 0.45F : head && r.nextFloat() < 0.6F) {
+			kind = de.rcm.ballistic.injury.Blood.GAPING;
+		}
+		if (!head && h > 0.3 && h < 0.7 && living.getBbHeight() > 0.6 && r.nextFloat() < (this.pellet ? (range < 5 ? 0.22F : 0.0F) : 0.14F)) {
+			kind = de.rcm.ballistic.injury.Blood.ENTRAILS;
+		}
+		de.rcm.ballistic.injury.Blood.wound(living, at, 0.2, this.pellet, head, kind);
+		if (!this.pellet) {
+			// out the other side: where the line leaves the body's box
+			AABB box = living.getBoundingBox().inflate(0.2);
+			Vec3 far = at.add(line.scale(box.getXsize() + box.getYsize() + box.getZsize()));
+			var out = box.clip(far, at);
+			if (out.isPresent() && out.get().distanceTo(at) > 0.25) {
+				de.rcm.ballistic.injury.Blood.wound(living, out.get(), 0.2, false, head, de.rcm.ballistic.injury.Blood.EXIT);
+				de.rcm.ballistic.injury.Blood.send((ServerLevel) living.level(), out.get(), line, head ? 30 : 18, de.rcm.ballistic.injury.Blood.SPRAY);
+			}
+		}
+		de.rcm.ballistic.injury.Injuries.bleedCreature(living, kind == de.rcm.ballistic.injury.Blood.HOLE ? 200 : 500);
 	}
 
 	private void hitEntity(ServerLevel level, Entity e, Vec3 from, Vec3 to) {
@@ -287,13 +318,14 @@ public class BulletEntity extends Entity {
 			de.rcm.ballistic.injury.Injuries.afterHeadHit(victim, source);
 		}
 		if (e instanceof LivingEntity living && !(e instanceof net.minecraft.world.entity.player.Player)) {
-			// the wound where it went in, on the animal (players have their own)
-			de.rcm.ballistic.injury.Blood.wound(living, at, 0.2, this.pellet, head);
+			// the wound where it went in, on the animal (players have their own) - and what it did
+			woundCreature(living, at, line, head);
 		}
 		if (e instanceof LivingEntity living) {
 			if (de.rcm.ballistic.injury.Blood.bleeds(living)) {
 				// blood blown out along the round's path, more from the head
-				de.rcm.ballistic.injury.Blood.send(level, at, line, head ? 22 : 12, de.rcm.ballistic.injury.Blood.SPRAY);
+				de.rcm.ballistic.injury.Blood.send(level, at, line, (head ? 22 : 12) * (living instanceof net.minecraft.world.entity.player.Player ? 1 : 2),
+					de.rcm.ballistic.injury.Blood.SPRAY);
 			}
 			level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.0F, 0.9F + this.random.nextFloat() * 0.2F);
 		} else {

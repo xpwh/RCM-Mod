@@ -177,6 +177,33 @@ public final class GibClient {
 		}
 	}
 
+	/** Bits of meat torn out of a wound and thrown out along {@code dir} (a creature hit hard). */
+	public static void spray(Vec3 at, Vec3 dir, int n, float size) {
+		if (!ModConfig.gore) {
+			return;
+		}
+		for (int i = 0; i < n; i++) {
+			Piece g = new Piece();
+			g.mesh = RANDOM.nextInt(4) == 0 ? BONE[RANDOM.nextInt(BONE.length)] : MEAT[RANDOM.nextInt(MEAT.length)];
+			g.scale = size * (0.6F + RANDOM.nextFloat() * 0.6F);
+			g.radius = 0.08F * g.scale;
+			g.x = g.px = at.x;
+			g.y = g.py = at.y;
+			g.z = g.pz = at.z;
+			double speed = 0.15 + RANDOM.nextDouble() * 0.25;
+			g.vx = dir.x * speed + RANDOM.nextGaussian() * 0.06;
+			g.vy = dir.y * speed + 0.1 + RANDOM.nextDouble() * 0.15;
+			g.vz = dir.z * speed + RANDOM.nextGaussian() * 0.06;
+			g.spin.set(RANDOM.nextFloat() - 0.5F, RANDOM.nextFloat() - 0.5F, RANDOM.nextFloat() - 0.5F).normalize().mul(0.3F);
+			g.rot.rotationXYZ(RANDOM.nextFloat() * 6.28F, RANDOM.nextFloat() * 6.28F, RANDOM.nextFloat() * 6.28F);
+			g.prot.set(g.rot);
+			PIECES.add(g);
+		}
+		while (PIECES.size() > MAX) {
+			PIECES.remove(0);
+		}
+	}
+
 	/** Thrown from the blast: mostly up, out along its push, every which way a little. */
 	private static void launch(Piece g, Vec3 dir, float force) {
 		double up = (0.35 + RANDOM.nextDouble() * 0.5) * force;

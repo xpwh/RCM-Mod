@@ -9,6 +9,7 @@
 		"TrackedEntityMixin",
 		"PlayerPoseMixin",
 		"MannequinAccessor",
+		"LivingEntityCorpseMixin",
 		"VehicleMoveMixin"
 	],
 	"injectors": {
