@@ -48,6 +48,7 @@ public final class ModConfig {
 	public static Quality cloudQuality = Quality.HIGH;
 	public static boolean cloudShadows = true;
 	public static boolean lightShafts = true;
+	public static boolean realSky = true;
 	// ---- effects
 	/** The screen effects of blasts (flash, haze, god rays, shell shock...), percent. */
 	public static int screenEffects = 100;
@@ -84,6 +85,7 @@ public final class ModConfig {
 			cloudQuality = Quality.parse(p.getProperty("cloudQuality"), cloudQuality);
 			cloudShadows = bool(p, "cloudShadows", cloudShadows);
 			lightShafts = bool(p, "lightShafts", lightShafts);
+			realSky = bool(p, "realSky", realSky);
 			screenEffects = percent(p, "screenEffects", screenEffects);
 			smokeAmount = percent(p, "smokeAmount", smokeAmount);
 			explosionVolume = percent(p, "explosionVolume", explosionVolume);
@@ -102,6 +104,7 @@ public final class ModConfig {
 			p.setProperty("cloudQuality", cloudQuality.name().toLowerCase(java.util.Locale.ROOT));
 			p.setProperty("cloudShadows", Boolean.toString(cloudShadows));
 			p.setProperty("lightShafts", Boolean.toString(lightShafts));
+			p.setProperty("realSky", Boolean.toString(realSky));
 			p.setProperty("screenEffects", Integer.toString(screenEffects));
 			p.setProperty("smokeAmount", Integer.toString(smokeAmount));
 			p.setProperty("explosionVolume", Integer.toString(explosionVolume));

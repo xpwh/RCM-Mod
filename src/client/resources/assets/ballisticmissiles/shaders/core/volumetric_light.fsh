@@ -14,6 +14,7 @@
 //    except where the clouds overhead cut it off, so beams fan out through the gaps
 
 #moj_import <ballisticmissiles:clouds_common.glsl>
+#moj_import <ballisticmissiles:atmosphere.glsl>
 
 uniform sampler2D Sampler2; // world depth
 
@@ -36,7 +37,7 @@ void main() {
     cloudWind = vWind;
     float day = cloudInfo.g;
     float rain = cloudInfo.b;
-    int level = int(cloudInfo.a * 3.0 + 0.5);
+    int level = qualityLevel(cloudInfo.a);
     // only by day, with the sun up: shadows and shafts both need direct sunlight
     float sunUp = smoothstep(0.03, 0.15, sunDir.y) * day * (1.0 - 0.75 * clamp(0.6 * rain + 0.5 * storm, 0.0, 1.0));
     if (sunUp < 0.01) discard;
@@ -58,9 +59,23 @@ void main() {
     if (p.y >= bottom) discard;
     // looking down at the ground through the cloud layer from above: the clouds cover it anyway
     if (cam.y > bottom) discard;
-    int samples = level == 0 ? 2 : level == 1 ? 3 : level == 2 ? 4 : 6;
-    float od = cloudBetween(p, sunDir, samples);
-    float shade = 1.0 - exp(-od * 0.07);
+    // a soft-edged shadow: several rays towards the sun from points spread round this one, as wide as the
+    // penumbra a cloud this high casts (the sun is a disc, and the cloud's edges let light through), so
+    // the shadow's edge is a gentle gradient that glides over the land rather than a hard line
+    int samples = level <= 1 ? 2 : 3;
+    int rays = level == 0 ? 1 : level == 1 ? 3 : level == 2 ? 4 : 6;
+    vec3 side = normalize(cross(sunDir, abs(sunDir.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+    vec3 side2 = cross(sunDir, side);
+    float above = max(bottom - p.y, 0.0) / max(sunDir.y, 0.1);
+    float spread = clamp(above * 0.045, 3.0, 18.0);
+    float lightIn = 0.0;
+    for (int k = 0; k < 6; k++) {
+        if (k >= rays) break;
+        float a = 6.2831853 * (float(k) + 0.5) / float(rays);
+        vec3 off = rays == 1 ? vec3(0.0) : (side * cos(a) + side2 * sin(a)) * spread;
+        lightIn += exp(-cloudBetween(p + off, sunDir, samples) * 0.07);
+    }
+    float shade = 1.0 - lightIn / float(rays);
     // soft with distance: far off the shadows fade into the haze
     float fade = 1.0 - smoothstep(0.55, 1.0, sceneT / max(FogRenderDistanceEnd, 64.0));
     float shadow = shade * 0.5 * sunUp * fade;
@@ -88,7 +103,8 @@ void main() {
     float cosTheta = dot(rd, sunDir);
     float phase = henyeyGreenstein(cosTheta, 0.7) * 4.0 * 3.14159;
     float low = smoothstep(0.0, 0.35, sunDir.y);
-    vec3 sunCol = mix(vec3(1.2, 0.62, 0.3), vec3(1.05, 1.0, 0.92), low);
+    vec3 sunLight = atSunlight(sunDir, 1.0 + 5.0 * rain);
+    vec3 sunCol = sunLight / max(pow(dot(sunLight, vec3(0.2126, 0.7152, 0.0722)), 0.45), 0.02) * 1.05;
     float lightAmount = lit / 320.0;
     // what makes a shaft is the contrast with the shadowed air round it: strongest where the clouds break
     // the light up (part of the way lit, part in shadow), faint under a clear sky or a closed deck

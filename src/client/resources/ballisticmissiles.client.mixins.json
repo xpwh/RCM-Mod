@@ -8,6 +8,7 @@
 		"CameraMixin",
 		"CloudRendererMixin",
 		"EntityTurnMixin",
+		"FogRendererMixin",
 		"GameRendererAccessor",
 		"GameRendererMixin",
 		"ItemInHandRendererMixin",

@@ -32,7 +32,7 @@ public class SettingsScreen extends Screen {
 	protected void init() {
 		int left = this.width / 2 - W - 5;
 		int right = this.width / 2 + 5;
-		int top = Math.max(42, this.height / 2 - 92);
+		int top = Math.max(42, this.height / 2 - 104);
 
 		// ---- clouds
 		int y = top;
@@ -53,6 +53,10 @@ public class SettingsScreen extends Screen {
 		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.lightShafts)
 			.withTooltip(v -> net.minecraft.client.gui.components.Tooltip.create(Component.translatable("options.ballisticmissiles.light_shafts.tooltip")))
 			.create(left, y, W, H, Component.translatable("options.ballisticmissiles.light_shafts"), (b, v) -> ModConfig.lightShafts = v));
+		y += GAP;
+		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.realSky)
+			.withTooltip(v -> net.minecraft.client.gui.components.Tooltip.create(Component.translatable("options.ballisticmissiles.real_sky.tooltip")))
+			.create(left, y, W, H, Component.translatable("options.ballisticmissiles.real_sky"), (b, v) -> ModConfig.realSky = v));
 		y += GAP;
 		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.dynamicLights)
 			.withTooltip(v -> net.minecraft.client.gui.components.Tooltip.create(Component.translatable("options.ballisticmissiles.dynamic_lights.tooltip")))
@@ -92,13 +96,13 @@ public class SettingsScreen extends Screen {
 		this.addRenderableWidget(misfires);
 
 		this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> this.onClose())
-			.bounds(this.width / 2 - 100, top + GAP * 6 + 12, 200, H).build());
+			.bounds(this.width / 2 - 100, top + GAP * 7 + 12, 200, H).build());
 	}
 
 	@Override
 	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
 		super.render(graphics, mouseX, mouseY, partialTick);
-		int top = Math.max(42, this.height / 2 - 92);
+		int top = Math.max(42, this.height / 2 - 104);
 		graphics.drawCenteredString(this.font, this.title, this.width / 2, top - 30, 0xFFFFFFFF);
 		graphics.drawCenteredString(this.font, Component.translatable("options.ballisticmissiles.section.clouds"), this.width / 2 - W / 2 - 5, top - 13,
 			0xFFA0D0FF);

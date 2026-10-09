@@ -4,7 +4,7 @@
 // shape, from tiling 3D noise and the rocket disturbance map. The caller sets the globals below first.
 //
 // Vertex data of both passes (see VolumetricClouds):
-//  Color   r coverage, g daylight, b rain, a quality (0 low, 1/3 medium, 2/3 high, 1 ultra)
+//  Color   r coverage, g daylight, b rain, a quality (64 per level) + 32 when the moon lights them
 //  UV0     wind offset (blocks)
 //  UV1     x base height; y thickness (low 8 bits), bit 8 cloud shadows, bit 9 light shafts
 //  UV2     x how far out the cloud planes reach (blocks); y thunderstorm (low 7 bits), lightning (next 7)
@@ -112,6 +112,15 @@ float cloudBetween(vec3 p, vec3 toSun, int samples) {
         od += density(p + toSun * (tIn + seg * (float(i) + 0.5)), 0) * seg;
     }
     return od;
+}
+
+// the quality level (0-3) and whether the moon (not the sun) lights the clouds, packed in the alpha
+int qualityLevel(float a) {
+    return int(floor(a * 255.0 / 64.0 + 0.01));
+}
+
+bool isMoonlit(float a) {
+    return mod(floor(a * 255.0 + 0.5), 64.0) > 16.0;
 }
 
 float henyeyGreenstein(float c, float g) {

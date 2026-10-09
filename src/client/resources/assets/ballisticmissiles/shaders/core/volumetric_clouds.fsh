@@ -14,6 +14,7 @@
 // aside and piled up round the rims of the holes, A = rocket engines and fireballs lighting the cloud.
 
 #moj_import <ballisticmissiles:clouds_common.glsl>
+#moj_import <ballisticmissiles:atmosphere.glsl>
 
 in vec3 relPos;
 in vec4 cloudInfo;
@@ -60,7 +61,8 @@ void main() {
     t1 = min(t1, min(t0 + 1400.0, range));
 
     // quality: steps along the ray, how much detail, how many steps towards the sun
-    int level = int(cloudInfo.a * 3.0 + 0.5);
+    int level = qualityLevel(cloudInfo.a);
+    bool moonlit = isMoonlit(cloudInfo.a);
     int steps = level == 0 ? 24 : level == 1 ? 40 : level == 2 ? 56 : 84;
     int detail = level == 0 ? 0 : level == 1 ? 1 : 2;
     float len = t1 - t0;
@@ -71,7 +73,12 @@ void main() {
     float low = smoothstep(0.0, 0.35, sunDir.y);
     // rain and above all a thunderstorm: much less sun gets through, the undersides turn slate grey
     float gloom = clamp(0.5 * rain + 0.4 * storm, 0.0, 0.85);
-    vec3 sunCol = mix(vec3(0.16, 0.18, 0.26), mix(vec3(1.25, 0.62, 0.32), vec3(1.15, 1.1, 1.02), low), day) * (1.0 - 1.1 * gloom);
+    // the sunlight's colour from the same atmosphere as the sky: white at noon, deep orange-red low down,
+    // gone once the sun has set (the brightness range squeezed so a sunset still sets the clouds aglow)
+    vec3 sunLight = moonlit ? vec3(0.0) : atSunlight(sunDir, 1.0 + 5.0 * rain);
+    float sunLum = dot(sunLight, vec3(0.2126, 0.7152, 0.0722));
+    vec3 sunTint = sunLight / max(pow(sunLum, 0.45), 0.02) * 1.2 * smoothstep(0.0, 0.004, sunLum);
+    vec3 sunCol = (moonlit ? vec3(0.16, 0.18, 0.26) : mix(vec3(0.16, 0.18, 0.26), sunTint, smoothstep(0.0, 0.3, day + sunLum))) * (1.0 - 1.1 * gloom);
     vec3 skyTop = mix(vec3(0.035, 0.04, 0.065), vec3(0.62, 0.7, 0.84), day) * (1.0 - 0.9 * gloom);
     vec3 skyBottom = skyTop * mix(0.55, 0.32, storm) * mix(vec3(1.0), vec3(0.92, 0.95, 1.05), storm);
     // the flash of lightning inside the cloud

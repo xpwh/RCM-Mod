@@ -89,6 +89,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.render.BulletHoles.init();
 		ModConfig.load();
 		de.rcm.ballistic.client.effect.DynamicLights.init();
+		de.rcm.ballistic.client.effect.Sky.init();
 		de.rcm.ballistic.client.effect.VolumetricClouds.init();
 		de.rcm.ballistic.client.effect.VolCloudCommand.init();
 		de.rcm.ballistic.client.gui.SettingsCommand.init();

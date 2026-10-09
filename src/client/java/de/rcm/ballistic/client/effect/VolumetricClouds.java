@@ -557,7 +557,8 @@ public final class VolumetricClouds {
 		float sy = Mth.cos(angle);
 		// by night the moon lights the clouds, from the other side of the sky
 		float day = Mth.clamp((sy + 0.12F) / 0.3F, 0.0F, 1.0F);
-		if (sy < -0.05F) {
+		boolean moonlit = sy < -0.05F;
+		if (moonlit) {
 			sx = -sx;
 			sy = -sy;
 		}
@@ -581,7 +582,7 @@ public final class VolumetricClouds {
 		PoseStack.Pose pose = context.matrices().last();
 		// alpha: quality level (Minecraft's "fast" clouds: the lowest)
 		ModConfig.Quality quality = mc.options.getCloudsType() == CloudStatus.FAST ? ModConfig.Quality.LOW : ModConfig.cloudQuality;
-		int color = Math.round(quality.ordinal() * 85.0F) << 24 | Math.round(coverage * 255.0F) << 16 | Math.round(day * 255.0F) << 8
+		int color = (quality.ordinal() * 64 + (moonlit ? 32 : 0)) << 24 | Math.round(coverage * 255.0F) << 16 | Math.round(day * 255.0F) << 8
 			| Math.round(rain * 255.0F);
 		// thickness, and which parts of the light pass are wanted
 		boolean shadows = ModConfig.cloudShadows;

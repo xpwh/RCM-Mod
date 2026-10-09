@@ -646,5 +646,7 @@
 	"subtitles.ballisticmissiles.jet_shutdown": "Jet-Triebwerk läuft aus",
 	"subtitles.ballisticmissiles.jet_tyre": "Reifen quietschen beim Aufsetzen",
 	"tooltip.ballisticmissiles.alpha": "⚠ Noch in Entwicklung: kann Fehler haben und sich noch ändern",
-	"hud.ballisticmissiles.alpha": "Jets sind noch in Entwicklung"
+	"hud.ballisticmissiles.alpha": "Jets sind noch in Entwicklung",
+	"options.ballisticmissiles.real_sky": "Echter Himmel",
+	"options.ballisticmissiles.real_sky.tooltip": "Physikalisch berechneter Himmel: blauer Tag, Abendrot, Erdschatten in der Dämmerung. Der Nebel am Horizont passt sich an."
 }
