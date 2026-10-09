@@ -199,8 +199,8 @@ public class AkItem extends Item {
 		// and the tracer): a target right in front of you - closer than the barrel is long - is still hit
 		Vec3 aim = target.subtract(eye).normalize();
 		// spread: the first round of a burst goes true, then the barrel climbs and wanders a little
-		double spread = 0.0012 + Math.min(burst, 10) * 0.0009 + (player.isCrouching() ? -0.0005 : 0.0) + (player.onGround() ? 0.0 : 0.006);
-		spread *= isAiming(player) ? 0.35 : 1.3;
+		double spread = 0.0010 + Math.min(burst, 10) * 0.0006 + (player.isCrouching() ? -0.0004 : 0.0) + (player.onGround() ? 0.0 : 0.006);
+		spread *= isAiming(player) ? 0.35 : 1.15;
 		var random = level.getRandom();
 		Vec3 dir = aim.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
 		// a tracer magazine is loaded the way soldiers load them: every fourth round a tracer, and the

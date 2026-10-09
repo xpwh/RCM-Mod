@@ -73,9 +73,9 @@ public class BulletEntity extends Entity {
 		b.setPos(from);
 		b.setDeltaMovement(velocity);
 		level.addFreshEntity(b);
-		// fly the first tenth of a second (some 70 m) at once, in the same tick as the shot: what is
-		// that close is hit now, not a tick or two later
-		for (int i = 0; i < 2 && !b.isRemoved(); i++) {
+		// fly the first 200 m or so at once, in the same tick as the shot: anything within normal fighting
+		// range is hit the moment you fire, not ticks later (beyond that the round flies on in real time)
+		for (int i = 0; i < 6 && !b.isRemoved(); i++) {
 			b.flyServer(level);
 		}
 	}
@@ -192,13 +192,32 @@ public class BulletEntity extends Entity {
 		}
 	}
 
+	/**
+	 * Favour the shooter: a player aims at what is on their screen, which shows other entities a little
+	 * in the past (their ping, plus the smoothing of movement). A round from a player also counts if it
+	 * passes where the target was that long ago, so a pig trotting along or a running enemy is hit where
+	 * you saw it.
+	 */
+	private int lagTicks() {
+		if (this.shooter instanceof net.minecraft.server.level.ServerPlayer p && this.tickCount < 3) {
+			return Mth.clamp(Math.round(p.connection.latency() / 50.0F) + 2, 2, 7);
+		}
+		return 0;
+	}
+
 	private @Nullable Entity firstHit(ServerLevel level, Vec3 from, Vec3 to) {
-		List<Entity> list = level.getEntities(this, new AABB(from, to).inflate(0.4),
+		int lag = this.lagTicks();
+		List<Entity> list = level.getEntities(this, new AABB(from, to).inflate(0.4 + lag * 0.5),
 			e -> e.isPickable() && e.isAlive() && !e.isSpectator() && (e != this.shooter || this.tickCount > 3) && !(e instanceof BulletEntity));
 		Entity best = null;
 		double bestDist = Double.MAX_VALUE;
 		for (Entity e : list) {
-			var clip = e.getBoundingBox().inflate(0.2).clip(from, to);
+			AABB box = e.getBoundingBox().inflate(0.2);
+			if (lag > 0) {
+				// where it was lag ticks ago, back along its last movement
+				box = box.expandTowards(-(e.getX() - e.xo) * lag, -(e.getY() - e.yo) * lag, -(e.getZ() - e.zo) * lag);
+			}
+			var clip = box.clip(from, to);
 			if (clip.isPresent()) {
 				double d = clip.get().distanceToSqr(from);
 				if (d < bestDist) {
