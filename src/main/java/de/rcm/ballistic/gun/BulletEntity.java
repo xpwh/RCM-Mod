@@ -208,7 +208,9 @@ public class BulletEntity extends Entity {
 	private @Nullable Entity firstHit(ServerLevel level, Vec3 from, Vec3 to) {
 		int lag = this.lagTicks();
 		List<Entity> list = level.getEntities(this, new AABB(from, to).inflate(0.4 + lag * 0.5),
-			e -> e.isPickable() && e.isAlive() && !e.isSpectator() && (e != this.shooter || this.tickCount > 3) && !(e instanceof BulletEntity));
+			e -> e.isPickable() && e.isAlive() && !e.isSpectator() && (e != this.shooter || this.tickCount > 3) && !(e instanceof BulletEntity)
+				&& !(this.shooter != null && e == this.shooter.getVehicle())); // a jet's cannon does not hit the jet
+
 		Entity best = null;
 		double bestDist = Double.MAX_VALUE;
 		for (Entity e : list) {

@@ -18,6 +18,9 @@ public final class DefenseOwner {
 			// rockets fired by your own aircraft are not shot down by your own defenses
 			return owner != null && owner.equals(rocket.getOwnerUuid());
 		}
+		if (threat instanceof de.rcm.ballistic.entity.FighterEntity fighter) {
+			return owner == null || owner.equals(fighter.getOwner()) || owner.equals(fighter.side());
+		}
 		if (threat instanceof JetEntity jet) {
 			// defenses without a known builder (placed before 1.3) never shoot at aircraft
 			return owner == null || owner.equals(jet.getCaller());

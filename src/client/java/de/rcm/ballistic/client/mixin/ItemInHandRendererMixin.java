@@ -24,8 +24,8 @@ public abstract class ItemInHandRendererMixin {
 	@Inject(method = "renderArmWithItem", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$noHandsInGoggles(AbstractClientPlayer player, float partialTick, float pitch, InteractionHand hand, float swingProgress,
 		ItemStack stack, float equipProgress, PoseStack poseStack, SubmitNodeCollector collector, int light, CallbackInfo ci) {
-		if (de.rcm.ballistic.client.drone.DroneClient.isFlying()) {
-			ci.cancel();
+		if (de.rcm.ballistic.client.drone.DroneClient.isFlying() || de.rcm.ballistic.client.fighter.FighterClient.isFlying()) {
+			ci.cancel(); // goggles on, or hands on the stick and throttle
 		}
 	}
 

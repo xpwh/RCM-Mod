@@ -172,6 +172,16 @@ public final class ModRegistry {
 		EntityType.Builder.<de.rcm.ballistic.entity.DestroyerEntity>of(de.rcm.ballistic.entity.DestroyerEntity::new, MobCategory.MISC).sized(5.0F, 6.0F)
 			.clientTrackingRange(32).updateInterval(1).fireImmune()
 	);
+	public static final EntityType<de.rcm.ballistic.entity.FighterEntity> FIGHTER = registerEntity(
+		"fighter",
+		EntityType.Builder.<de.rcm.ballistic.entity.FighterEntity>of(de.rcm.ballistic.entity.FighterEntity::new, MobCategory.MISC).sized(3.6F, 3.2F)
+			.clientTrackingRange(64).updateInterval(1).noLootTable()
+	);
+	public static final EntityType<de.rcm.ballistic.entity.AirMissileEntity> AIR_MISSILE = registerEntity(
+		"air_missile",
+		EntityType.Builder.<de.rcm.ballistic.entity.AirMissileEntity>of(de.rcm.ballistic.entity.AirMissileEntity::new, MobCategory.MISC).sized(0.4F, 0.4F)
+			.clientTrackingRange(48).updateInterval(1).noLootTable()
+	);
 	public static final EntityType<de.rcm.ballistic.ai.SoldierEntity> SOLDIER = registerEntity(
 		"soldier",
 		EntityType.Builder.<de.rcm.ballistic.ai.SoldierEntity>of(de.rcm.ballistic.ai.SoldierEntity::new, MobCategory.MISC).sized(0.6F, 1.8F)
@@ -420,6 +430,10 @@ public final class ModRegistry {
 		}
 	}
 
+	public static final Item F35_ITEM = registerItem("f35", props -> new de.rcm.ballistic.item.FighterItem(de.rcm.ballistic.entity.FighterType.F35, props),
+		new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
+	public static final Item F22_ITEM = registerItem("f22", props -> new de.rcm.ballistic.item.FighterItem(de.rcm.ballistic.entity.FighterType.F22, props),
+		new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	/** Only from {@code /bmai werkzeug}: no recipe, not in the creative tab. */
 	public static final Item AI_TOOL = registerItem("ai_tool", de.rcm.ballistic.ai.AiToolItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item TARGET_DESIGNATOR = registerItem(
@@ -706,6 +720,8 @@ public final class ModRegistry {
 		output.accept(FPV_RACER_ITEM);
 		output.accept(FPV_FIBER_ITEM);
 		output.accept(TARGET_DESIGNATOR);
+		output.accept(F35_ITEM);
+		output.accept(F22_ITEM);
 		output.accept(COMMAND_CENTER_ITEM);
 		output.accept(AIRSTRIKE_RADIO);
 	});

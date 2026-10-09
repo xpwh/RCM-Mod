@@ -44,6 +44,28 @@ public abstract class MinecraftMixin {
 		}
 	}
 
+	/** In a fighter's cockpit the mouse buttons fire its weapons: no punching, mining or using items. */
+	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$fighterNoAttack(CallbackInfoReturnable<Boolean> cir) {
+		if (de.rcm.ballistic.client.fighter.FighterClient.isFlying()) {
+			cir.setReturnValue(false);
+		}
+	}
+
+	@Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$fighterNoUse(CallbackInfo ci) {
+		if (de.rcm.ballistic.client.fighter.FighterClient.isFlying()) {
+			ci.cancel();
+		}
+	}
+
+	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$fighterNoMining(boolean attacking, CallbackInfo ci) {
+		if (de.rcm.ballistic.client.fighter.FighterClient.isFlying()) {
+			ci.cancel();
+		}
+	}
+
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$rpgNoMining(boolean attacking, CallbackInfo ci) {
 		if (this.player != null && (this.player.getMainHandItem().getItem() instanceof RocketLauncherItem

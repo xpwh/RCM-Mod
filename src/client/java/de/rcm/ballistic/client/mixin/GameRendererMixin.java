@@ -37,6 +37,10 @@ public abstract class GameRendererMixin {
 			// the drone banks into its turns, and the picture with it
 			poseStack.mulPose(Axis.ZP.rotationDegrees(de.rcm.ballistic.client.drone.DroneClient.cameraRoll(partialTick)));
 		}
+		if (de.rcm.ballistic.client.fighter.FighterClient.isFlying()) {
+			// the horizon tilts with the jet's bank
+			poseStack.mulPose(Axis.ZP.rotationDegrees(de.rcm.ballistic.client.fighter.FighterClient.cameraRoll(partialTick)));
+		}
 		float shake = ClientEffects.shake(partialTick);
 		if (shake <= 0.001F) {
 			return;

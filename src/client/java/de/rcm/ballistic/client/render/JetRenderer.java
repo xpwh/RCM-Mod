@@ -28,8 +28,8 @@ import org.joml.Vector3f;
  */
 public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	private static final RenderType TYPE = RenderTypes.entityCutout(BallisticMissiles.id("textures/entity/strike_jet.png"));
-	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
-	private static final RenderType VAPOR_TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/entity/vapor.png"));
+	static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
+	static final RenderType VAPOR_TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/entity/vapor.png"));
 
 	private static final int GREY = 0;
 	private static final int DARK_GREY = 1;
@@ -455,7 +455,7 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	}
 
 	/** A bell of condensed vapour that starts behind the canopy and flares out past the wings. */
-	private static void vaporCone(PoseStack.Pose pose, VertexConsumer consumer, int alpha, float time) {
+	static void vaporCone(PoseStack.Pose pose, VertexConsumer consumer, int alpha, float time) {
 		final int segments = 24;
 		final int rings = 6;
 		for (int ring = 0; ring < rings; ring++) {
@@ -492,7 +492,7 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 
 	// ------------------------------------------------------------------ geometry
 
-	private static Vector3f v(float x, float y, float z) {
+	static Vector3f v(float x, float y, float z) {
 		return new Vector3f(x, y, z);
 	}
 
@@ -500,7 +500,7 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	 * Lofts a body through cross-sections {y, bottomHalfWidth, bottomZ, topHalfWidth, topZ}: each pair
 	 * of neighbouring sections becomes one six-sided solid with trapezoid ends.
 	 */
-	private static void loft(BoxMesh.Builder b, int patch, float[]... sections) {
+	static void loft(BoxMesh.Builder b, int patch, float[]... sections) {
 		for (int i = 0; i + 1 < sections.length; i++) {
 			float[] a = sections[i];
 			float[] c = sections[i + 1];
@@ -515,7 +515,7 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	 * {@code rl}, trailing edge {@code rt} (points at mid-thickness), thickness {@code rth} along
 	 * {@code up}; same for the tip.
 	 */
-	private static void surface(BoxMesh.Builder b, int patch, Vector3f rl, Vector3f rt, float rth, Vector3f tl, Vector3f tt, float tth, Vector3f up) {
+	static void surface(BoxMesh.Builder b, int patch, Vector3f rl, Vector3f rt, float rth, Vector3f tl, Vector3f tt, float tth, Vector3f up) {
 		Vector3f ru = new Vector3f(up).mul(rth * 0.5F);
 		Vector3f tu = new Vector3f(up).mul(tth * 0.5F);
 		b.hexa(patch,

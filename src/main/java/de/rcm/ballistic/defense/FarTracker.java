@@ -39,6 +39,9 @@ public final class FarTracker {
 			List<FarTrack> tracks = new ArrayList<>();
 			for (AirThreat t : threats) {
 				Entity e = t.asEntity();
+				if (t.radarCrossSection() < 0.01 && Math.hypot(e.getX() - player.getX(), e.getZ() - player.getZ()) > 120.0) {
+					continue; // stealthy: not seen from far off (only its contrail gives it away)
+				}
 				if (Math.hypot(e.getX() - player.getX(), e.getZ() - player.getZ()) > RANGE) {
 					continue;
 				}

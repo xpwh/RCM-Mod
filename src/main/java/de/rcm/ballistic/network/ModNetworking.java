@@ -439,6 +439,29 @@ public final class ModNetworking {
 		}
 	}
 
+	/** The fighter pilot's controls, every tick. */
+	public record FighterInputPayload(int jet, float throttle, boolean afterburner, float roll, float yaw, float pitch, boolean trigger, int action,
+		int lock) implements CustomPacketPayload {
+		public static final Type<FighterInputPayload> TYPE = new Type<>(BallisticMissiles.id("fighter_input"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, FighterInputPayload> CODEC = StreamCodec.of((buf, p) -> {
+			buf.writeVarInt(p.jet());
+			buf.writeFloat(p.throttle());
+			buf.writeBoolean(p.afterburner());
+			buf.writeFloat(p.roll());
+			buf.writeFloat(p.yaw());
+			buf.writeFloat(p.pitch());
+			buf.writeBoolean(p.trigger());
+			buf.writeVarInt(p.action());
+			buf.writeVarInt(p.lock() + 1);
+		}, buf -> new FighterInputPayload(buf.readVarInt(), buf.readFloat(), buf.readBoolean(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+			buf.readBoolean(), buf.readVarInt(), buf.readVarInt() - 1));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** A round going past a player's head: where it came closest, how close, and whether it was still supersonic. */
 	public record BulletPassPayload(double x, double y, double z, float distance, boolean supersonic) implements CustomPacketPayload {
 		public static final Type<BulletPassPayload> TYPE = new Type<>(BallisticMissiles.id("bullet_pass"));
@@ -656,6 +679,13 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playC2S().register(GunInputPayload.TYPE, GunInputPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(GunActionPayload.TYPE, GunActionPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(BulletPassPayload.TYPE, BulletPassPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(FighterInputPayload.TYPE, FighterInputPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(FighterInputPayload.TYPE, (payload, context) -> {
+			if (context.player().level().getEntity(payload.jet()) instanceof de.rcm.ballistic.entity.FighterEntity jet) {
+				jet.input(context.player(), payload.throttle(), payload.afterburner(), payload.roll(), payload.yaw(), payload.pitch(), payload.trigger(),
+					payload.action(), payload.lock());
+			}
+		});
 		PayloadTypeRegistry.playS2C().register(de.rcm.ballistic.ai.SoldierDebug.Payload.TYPE, de.rcm.ballistic.ai.SoldierDebug.Payload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(GunInputPayload.TYPE, (payload, context) -> {
 			switch (payload.action()) {
