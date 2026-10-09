@@ -47,6 +47,8 @@ public final class Injuries {
 	private static final Identifier DOWN = BallisticMissiles.id("dying");
 	/** How long you lie there before it goes black (ticks). */
 	public static final int DYING = 180;
+	/** Shot through the head: ticks swaying on your feet, falling and lying still before it is over. */
+	public static final int COLLAPSE = 50;
 	/** Buckshot balls in one leg in one shot, from close enough, that take it off. */
 	private static final int AMPUTATION_PELLETS = 3;
 	private static final double AMPUTATION_RANGE = 9.0;
@@ -201,7 +203,18 @@ public final class Injuries {
 		if (!lethal) {
 			return;
 		}
-		set(p, get(p).withHead(Wounds.SHATTERED));
+		Wounds w = get(p).withHead(Wounds.SHATTERED);
+		if (!w.incapacitated()) {
+			// still on your feet a moment - swaying, then down: away from the shot, mostly
+			Vec3 facing = Vec3.directionFromRotation(0.0F, p.getYRot());
+			boolean fromBehind = line.x * facing.x + line.z * facing.z > 0.0;
+			if (p.getRandom().nextFloat() < 0.2F) {
+				fromBehind = !fromBehind;
+			}
+			w = w.withCollapse(COLLAPSE, fromBehind ? Wounds.FORWARD : Wounds.BACKWARD);
+			p.stopUsingItem();
+		}
+		set(p, w);
 		ServerLevel level = p.level();
 		Vec3 head = p.getEyePosition();
 		// blown out the far side, in a spray of blood and bone
@@ -221,13 +234,18 @@ public final class Injuries {
 		}
 		Vec3 line = p.getLookAngle().scale(-1.0);
 		headHit(p, p.getEyePosition(), line, 1000.0F, false, 1.0);
-		DamageSource source = p.level().damageSources().genericKill();
-		p.invulnerableTime = 0;
-		p.hurtServer(p.level(), source, 1000.0F);
+		afterHeadHit(p, p.level().damageSources().genericKill());
 	}
 
 	/** After the hit: a blown-open skull is death, there and then, whatever the round's damage. */
 	public static void afterHeadHit(ServerPlayer p, DamageSource source) {
+		if (get(p).collapse() > 0) {
+			Clock c = clock(p);
+			if (c.cause == null) {
+				c.cause = source; // what it will have been, when the collapse is over
+			}
+			return;
+		}
 		if (p.isAlive() && get(p).head() == Wounds.SHATTERED && !p.isCreative()) {
 			p.invulnerableTime = 0;
 			p.hurtServer(p.level(), source, 1000.0F);
@@ -328,6 +346,14 @@ public final class Injuries {
 			return true;
 		}
 		Wounds w = get(p);
+		if (w.collapse() > 0 && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+			// already as good as dead, still on the way down
+			if (c.cause == null) {
+				c.cause = source;
+			}
+			p.setHealth(1.0F);
+			return false;
+		}
 		if (w.dying() > 0 || w.head() == Wounds.SHATTERED || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || amount >= 40.0F) {
 			return true; // hit again while down, or killed outright
 		}
@@ -367,8 +393,11 @@ public final class Injuries {
 		if (w.leg() > 0) {
 			speed.addTransientModifier(new AttributeModifier(LIMP, w.lost() == Wounds.BOTH ? -0.6 : w.lost() > 0 ? -0.3 : w.leg() == 1 ? -0.18 : -0.4, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
 		}
-		if (w.dying() > 0) {
+		if (w.collapse() > 0) {
 			speed.addTransientModifier(new AttributeModifier(DOWN, -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+		} else if (w.dying() > 0) {
+			// down, but still dragging yourself along a little
+			speed.addTransientModifier(new AttributeModifier(DOWN, -0.55, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
 		}
 	}
 
@@ -458,6 +487,23 @@ public final class Injuries {
 			if (w.leg() >= 2 && p.isSprinting()) {
 				p.setSprinting(false);
 			}
+			if (w.collapse() > 0) {
+				// shot through the head: swaying, falling, still - then it is over
+				p.setHealth(Math.max(1.0F, p.getHealth()));
+				p.setSprinting(false);
+				p.stopUsingItem();
+				int left = w.collapse() - 1;
+				if (left == COLLAPSE - 40) {
+					level.playSound(null, p.getX(), p.getY(), p.getZ(), net.minecraft.sounds.SoundEvents.PLAYER_BIG_FALL, SoundSource.PLAYERS, 1.0F, 0.8F);
+					Blood.send(level, p.position().add(0, 0.2, 0), Vec3.ZERO, 12, Blood.POOL);
+				}
+				if (left <= 0) {
+					die(p);
+				} else {
+					set(p, w.withCollapse(left, w.fall()));
+				}
+				continue;
+			}
 			if (w.dying() > 0) {
 				// lying there; the end comes when it comes
 				p.setHealth(1.0F);
@@ -499,7 +545,7 @@ public final class Injuries {
 	/** A first aid kit: dressings on the wounds - bleeding stops (all but an artery), a little health back, the wounds dressed. */
 	public static boolean dress(ServerPlayer p) {
 		Wounds w = get(p);
-		if (!w.any() && p.getHealth() >= p.getMaxHealth() || w.dying() > 0) {
+		if (!w.any() && p.getHealth() >= p.getMaxHealth() || w.incapacitated()) {
 			return false;
 		}
 		if (w.bleed() == Wounds.ARTERIAL) {
@@ -517,7 +563,7 @@ public final class Injuries {
 	/** A tourniquet: the bleeding stops at once, artery or not. */
 	public static boolean tourniquet(ServerPlayer p) {
 		Wounds w = get(p);
-		if (w.bleed() == 0 || w.dying() > 0) {
+		if (w.bleed() == 0 || w.incapacitated()) {
 			return false;
 		}
 		set(p, w.withBleed(0));

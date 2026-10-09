@@ -173,7 +173,7 @@ public final class ShotgunClient {
 	/** Left click with the shotgun in hand. */
 	public static void trigger(LocalPlayer player) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.level == null || Injuries.get(player).dying() > 0) {
+		if (mc.level == null || Injuries.get(player).incapacitated()) {
 			return;
 		}
 		long now = mc.level.getGameTime();

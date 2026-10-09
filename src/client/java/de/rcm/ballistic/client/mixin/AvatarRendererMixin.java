@@ -24,6 +24,27 @@ public abstract class AvatarRendererMixin {
 		gore.ballisticmissiles$setLostLeg(wounds.lost());
 		gore.ballisticmissiles$setLostArm(wounds.armsLost());
 		gore.ballisticmissiles$setHead(wounds.head());
+		gore.ballisticmissiles$setCollapse(de.rcm.ballistic.client.render.Collapse.time(wounds, partialTick), wounds.fall());
+		if (wounds.fall() > 0) {
+			state.deathTime = 0.0F; // fallen already: no keeling over sideways on top of it
+		}
+	}
+
+	/** Shot through the head: swaying on the spot, then falling flat on the face or the back - round the feet. */
+	@Inject(method = "setupRotations(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V",
+		at = @At("TAIL"))
+	private void ballisticmissiles$collapse(net.minecraft.client.renderer.entity.state.AvatarRenderState state, com.mojang.blaze3d.vertex.PoseStack poseStack,
+		float bodyRot, float scale, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+		var gore = (de.rcm.ballistic.client.render.LostLeg) state;
+		float t = gore.ballisticmissiles$collapse();
+		if (t < 0.0F) {
+			return;
+		}
+		int fall = gore.ballisticmissiles$fall();
+		// lying, the body's half thickness above the ground rather than in it
+		poseStack.translate(0.0F, 0.13F * de.rcm.ballistic.client.render.Collapse.down(t), 0.0F);
+		poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(de.rcm.ballistic.client.render.Collapse.roll(t)));
+		poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(de.rcm.ballistic.client.render.Collapse.pitch(t, fall)));
 	}
 
 	@Inject(

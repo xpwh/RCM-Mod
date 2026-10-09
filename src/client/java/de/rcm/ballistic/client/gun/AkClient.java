@@ -90,7 +90,7 @@ public final class AkClient {
 		HudElementRegistry.replaceElement(net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.CROSSHAIR, crosshair -> (graphics, tickCounter) -> {
 			Minecraft mc = Minecraft.getInstance();
 			if (mc.player != null && (AkItem.isAiming(mc.player) || de.rcm.ballistic.item.RocketLauncherItem.isAiming(mc.player)
-				|| ShotgunClient.aimProgress(1.0F) > 0.5F || de.rcm.ballistic.injury.Injuries.get(mc.player).dying() > 0)) {
+				|| ShotgunClient.aimProgress(1.0F) > 0.5F || de.rcm.ballistic.injury.Injuries.get(mc.player).incapacitated())) {
 				return;
 			}
 			crosshair.render(graphics, tickCounter);

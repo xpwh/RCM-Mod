@@ -46,8 +46,34 @@ public final class DyingOverlay {
 		waking = true;
 	}
 
+	/** Going down after a shot through the head, seen from inside: rocking, then the ground coming up. */
+	public static void collapseView(com.mojang.blaze3d.vertex.PoseStack poseStack, float partialTick) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player == null || !mc.options.getCameraType().isFirstPerson()) {
+			return;
+		}
+		de.rcm.ballistic.injury.Wounds w = Injuries.get(mc.player);
+		float t = w.collapse() > 0 ? de.rcm.ballistic.client.render.Collapse.time(w, partialTick) : -1.0F;
+		if (t < 0.0F) {
+			return;
+		}
+		float pitch = de.rcm.ballistic.client.render.Collapse.pitch(t, w.fall());
+		float down = de.rcm.ballistic.client.render.Collapse.down(t);
+		// the eyes swing on an arc round the feet: forward and back, then down to the ground
+		float rad = pitch * Mth.DEG_TO_RAD;
+		float eye = mc.player.getEyeHeight();
+		float drop = eye * (1.0F - Mth.cos(rad)) * 0.92F;
+		poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(de.rcm.ballistic.client.render.Collapse.roll(t) * 1.5F));
+		poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-pitch * 0.85F));
+		poseStack.translate(0.0F, drop, -eye * Mth.sin(rad) * 0.4F * (1.0F - down * 0.5F));
+	}
+
 	/** Lying there, the view rolls over onto its side a little. */
 	public static float cameraRoll(float partialTick) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player != null && Injuries.get(mc.player).collapse() > 0) {
+			return 0.0F; // the collapse moves the view itself
+		}
 		return 18.0F * Mth.lerp(partialTick, prevTunnel, tunnel) * (waking ? 0.0F : 1.0F);
 	}
 
@@ -74,7 +100,18 @@ public final class DyingOverlay {
 			}
 			return;
 		}
-		int dying = Injuries.get(player).dying();
+		de.rcm.ballistic.injury.Wounds wounds = Injuries.get(player);
+		if (wounds.collapse() > 0) {
+			// a round through the head: the world fades out at once, the last of it through a narrowing tunnel
+			float t = de.rcm.ballistic.client.render.Collapse.time(wounds, 0.0F);
+			tunnel = Math.max(tunnel, Mth.clamp(t / 18.0F, 0.0F, 1.0F));
+			black = Mth.clamp((float) Math.pow(Mth.clamp((t - 3.0F) / 40.0F, 0.0F, 1.0F), 1.3), 0.0F, 1.0F);
+			if (t > 44.0F) {
+				black = 1.0F;
+			}
+			return;
+		}
+		int dying = wounds.dying();
 		if (dying <= 0 && !player.isDeadOrDying()) {
 			black = Math.max(0.0F, black - 0.05F);
 			tunnel = Math.max(0.0F, tunnel - 0.05F);

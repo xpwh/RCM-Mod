@@ -29,9 +29,14 @@ public abstract class KeyboardInputMixin extends ClientInput {
 		}
 		if (player != null && !player.isCreative()) {
 			var w = de.rcm.ballistic.injury.Injuries.get(player);
-			if (w.dying() > 0) {
-				// bleeding out on the ground: not moving any more
+			if (w.collapse() > 0) {
+				// shot through the head: the legs are not yours any more
 				this.moveVector = Vec2.ZERO;
+				this.keyPresses = new Input(false, false, false, false, false, false, false);
+			} else if (w.dying() > 0) {
+				// bleeding out on the ground: still dragging yourself along, weaker and weaker
+				float strength = 0.25F + 0.75F * w.dying() / (float) de.rcm.ballistic.injury.Injuries.DYING;
+				this.moveVector = this.moveVector.scale(strength);
 				Input k = this.keyPresses;
 				this.keyPresses = new Input(k.forward(), k.backward(), k.left(), k.right(), false, false, false);
 			} else if (w.lost() > 0) {

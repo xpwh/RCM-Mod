@@ -37,14 +37,14 @@ public abstract class MinecraftMixin {
 	/** Bleeding out on the ground: too weak to fight, to use anything. */
 	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$downNoAttack(CallbackInfoReturnable<Boolean> cir) {
-		if (this.player != null && de.rcm.ballistic.injury.Injuries.get(this.player).dying() > 0) {
+		if (this.player != null && de.rcm.ballistic.injury.Injuries.get(this.player).incapacitated()) {
 			cir.setReturnValue(false);
 		}
 	}
 
 	@Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$downNoUse(CallbackInfo ci) {
-		if (this.player != null && de.rcm.ballistic.injury.Injuries.get(this.player).dying() > 0) {
+		if (this.player != null && de.rcm.ballistic.injury.Injuries.get(this.player).incapacitated()) {
 			ci.cancel();
 		}
 	}

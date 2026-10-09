@@ -721,6 +721,9 @@ public final class ModNetworking {
 		});
 		PayloadTypeRegistry.playS2C().register(de.rcm.ballistic.ai.SoldierDebug.Payload.TYPE, de.rcm.ballistic.ai.SoldierDebug.Payload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(GunInputPayload.TYPE, (payload, context) -> {
+			if (payload.action() != GunInputPayload.TRIGGER_UP && de.rcm.ballistic.injury.Injuries.get(context.player()).incapacitated()) {
+				return; // bleeding out or going down: the weapon is beyond you
+			}
 			switch (payload.action()) {
 				case GunInputPayload.RELOAD -> de.rcm.ballistic.gun.AkItem.requestReload(context.player(), false);
 				case GunInputPayload.RELOAD_SWITCH -> de.rcm.ballistic.gun.AkItem.requestReload(context.player(), true);
@@ -730,7 +733,7 @@ public final class ModNetworking {
 				case GunInputPayload.GRENADE_COOK -> de.rcm.ballistic.gun.GrenadeItem.cook(context.player());
 				case GunInputPayload.RPG_FIRE -> de.rcm.ballistic.item.RocketLauncherItem.serverTrigger(context.player());
 				case GunInputPayload.SHOTGUN_FIRE -> {
-					if (!de.rcm.ballistic.injury.Injuries.dying(context.player())) {
+					if (!de.rcm.ballistic.injury.Injuries.get(context.player()).incapacitated()) {
 						de.rcm.ballistic.gun.ShotgunItem.fire(context.player());
 					}
 				}

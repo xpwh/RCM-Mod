@@ -51,6 +51,8 @@ public abstract class GameRendererMixin {
 			// the horizon tilts with the jet's bank
 			poseStack.mulPose(Axis.ZP.rotationDegrees(de.rcm.ballistic.client.fighter.FighterClient.cameraRoll(partialTick)));
 		}
+		// shot through the head: the view rocks, then drops to the ground as you go down
+		de.rcm.ballistic.client.gui.DyingOverlay.collapseView(poseStack, partialTick);
 		// bleeding out: the view rolls over onto its side
 		float dyingRoll = de.rcm.ballistic.client.gui.DyingOverlay.cameraRoll(partialTick);
 		if (dyingRoll != 0.0F) {
