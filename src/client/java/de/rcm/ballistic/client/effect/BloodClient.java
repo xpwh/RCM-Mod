@@ -36,7 +36,12 @@ import org.joml.Vector3f;
  * spray all round, a body a pool that spreads beneath it. Switchable in the settings.
  */
 public final class BloodClient {
-	private static final RenderType TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/effect/blood.png"));
+	private static final RenderType TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/effect/blood_ground.png"));
+	/** Rows of textures/effect/blood_ground.png (tools/gen_blood_ground.py), four versions each. */
+	private static final int SPLAT = 0;
+	private static final int SPATTER = 1;
+	private static final int POOL_STAIN = 2;
+	private static final int RUN = 3;
 	private static final int MAX_DROPS = 900;
 	private static final int MAX_STAINS = 700;
 	private static final int LIFE = 2400;
@@ -57,7 +62,7 @@ public final class BloodClient {
 	}
 
 	private record Stain(Vec3 at, Direction face, float size, float angle, float stretch, int variant, long born, int grow, BlockPos block,
-		BlockState state, int index) {
+		BlockState state, int index, int kind) {
 	}
 
 	private static final List<Drop> DROPS = new ArrayList<>();
@@ -107,7 +112,7 @@ public final class BloodClient {
 				BlockHitResult hit = mc.level.clip(new ClipContext(at, at.add(0, -3.0, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
 					CollisionContext.empty()));
 				if (hit.getType() == HitResult.Type.BLOCK) {
-					stain(mc, hit.getLocation(), hit.getDirection(), Mth.clamp(0.35F + n * 0.04F, 0.4F, 1.4F), Vec3.ZERO, 80);
+					stain(mc, hit.getLocation(), hit.getDirection(), Mth.clamp(0.5F + n * 0.06F, 0.6F, 2.0F), Vec3.ZERO, 160, POOL_STAIN);
 				}
 			}
 			default -> {
@@ -131,7 +136,7 @@ public final class BloodClient {
 		BlockHitResult hit = mc.level.clip(new ClipContext(at.add(0, 0.3, 0), at.add(0, -1.5, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
 			CollisionContext.empty()));
 		if (hit.getType() == HitResult.Type.BLOCK) {
-			stain(mc, hit.getLocation(), hit.getDirection(), size, Vec3.ZERO, 30);
+			stain(mc, hit.getLocation(), hit.getDirection(), size, Vec3.ZERO, 30, size > 0.5F ? POOL_STAIN : SPLAT);
 		}
 	}
 
@@ -154,7 +159,7 @@ public final class BloodClient {
 		DROPS.add(d);
 	}
 
-	private static void stain(Minecraft mc, Vec3 at, Direction face, float size, Vec3 vel, int grow) {
+	private static void stain(Minecraft mc, Vec3 at, Direction face, float size, Vec3 vel, int grow, int kind) {
 		BlockPos block = BlockPos.containing(at.subtract(face.getStepX() * 0.05, face.getStepY() * 0.05, face.getStepZ() * 0.05));
 		BlockState state = mc.level.getBlockState(block);
 		if (state.isAir()) {
@@ -178,7 +183,14 @@ public final class BloodClient {
 				stretch = Mth.clamp(1.0F / Math.max(Math.abs(v.dot(n)), 0.3F), 1.0F, 2.6F);
 			}
 		}
-		STAINS.add(new Stain(at, face, size, angle, stretch, RANDOM.nextInt(4), mc.level.getGameTime(), grow, block, state, counter++ % 11));
+		if (kind == SPLAT && face.getAxis().isHorizontal()) {
+			// on a wall it runs down
+			kind = RUN;
+			grow = 50 + RANDOM.nextInt(60);
+		} else if (kind == SPLAT && stretch > 1.35F) {
+			kind = SPATTER;
+		}
+		STAINS.add(new Stain(at, face, size, angle, stretch, RANDOM.nextInt(4), mc.level.getGameTime(), grow, block, state, counter++ % 11, kind));
 	}
 
 	private static Vector3f[] axes(Vector3f n) {
@@ -214,7 +226,7 @@ public final class BloodClient {
 				if (mc.level.getFluidState(hit.getBlockPos()).isEmpty()) {
 					// big drops make big splashes; the faster, the wider it spreads
 					float speed = (float) Math.sqrt(d.vx * d.vx + d.vy * d.vy + d.vz * d.vz);
-					stain(mc, hit.getLocation(), hit.getDirection(), d.size * (2.2F + speed * 3.5F), new Vec3(d.vx, d.vy, d.vz), 0);
+					stain(mc, hit.getLocation(), hit.getDirection(), d.size * (2.2F + speed * 3.5F), new Vec3(d.vx, d.vy, d.vz), 0, SPLAT);
 				}
 				DROPS.remove(i);
 				continue;
@@ -257,10 +269,10 @@ public final class BloodClient {
 				int light = LevelRenderer.getLightColor(mc.level, BlockPos.containing(d.x, d.y, d.z));
 				float r = d.size;
 				// the middle of a splat, for a round, dark-red drop
-				float u0 = 0.2F;
-				float u1 = 0.3F;
-				float v0 = 0.2F;
-				float v1 = 0.3F;
+				float u0 = 0.11F;
+				float u1 = 0.14F;
+				float v0 = 0.11F;
+				float v1 = 0.14F;
 				float[][] q = {{-1, -1, u0, v1}, {1, -1, u1, v1}, {1, 1, u1, v0}, {-1, 1, u0, v0}};
 				for (float[] p : q) {
 					float px = (float) x + (left.x * p[0] + up.x * p[1]) * r;
@@ -275,25 +287,43 @@ public final class BloodClient {
 
 	private static void stainQuad(PoseStack.Pose pose, VertexConsumer consumer, Stain s, Vec3 cam, float alpha, float grow, Minecraft mc) {
 		Vector3f n = new Vector3f(s.face.getStepX(), s.face.getStepY(), s.face.getStepZ());
-		Vector3f[] axes = axes(n);
-		Vector3f u = axes[0];
-		Vector3f v = axes[1];
-		float size = s.size * 0.5F * grow;
-		Vector3f ru = new Vector3f(u).mul(Mth.cos(s.angle)).add(new Vector3f(v).mul(Mth.sin(s.angle))).mul(size * s.stretch);
-		Vector3f rv = new Vector3f(v).mul(Mth.cos(s.angle)).sub(new Vector3f(u).mul(Mth.sin(s.angle))).mul(size);
+		float size = s.size * 0.5F;
+		Vector3f ru;
+		Vector3f rv;
+		// texture rectangle of this stain's tile, and how far down it reaches (a run on a wall grows downwards)
+		float tu = s.variant * 0.25F;
+		float tv = s.kind * 0.25F;
+		float top = 1.0F;
+		float bottom = 1.0F;
+		if (s.kind == RUN) {
+			Vector3f up = new Vector3f(0, 1, 0);
+			ru = new Vector3f(up).cross(n).normalize().mul(size);
+			rv = new Vector3f(up).mul(size);
+			// the splat near the top of the tile (v 0.175); the runs reveal as they flow down
+			top = 0.35F;
+			bottom = 0.35F + 1.3F * grow;
+		} else {
+			Vector3f[] axes = axes(n);
+			float sz = size * (s.kind == POOL_STAIN ? grow : (float) Math.sqrt(grow)) * (s.kind == SPATTER ? 1.4F : 1.0F);
+			float stretch = s.kind == SPATTER ? 1.0F + (s.stretch - 1.0F) * 0.35F : 1.0F;
+			ru = new Vector3f(axes[0]).mul(Mth.cos(s.angle)).add(new Vector3f(axes[1]).mul(Mth.sin(s.angle))).mul(sz * stretch);
+			rv = new Vector3f(axes[1]).mul(Mth.cos(s.angle)).sub(new Vector3f(axes[0]).mul(Mth.sin(s.angle))).mul(sz);
+		}
 		float dist = (float) Math.sqrt(s.at.distanceToSqr(cam));
 		float lift = 0.005F + dist * 0.0009F + s.index * 0.0004F;
 		Vector3f c = new Vector3f((float) (s.at.x - cam.x), (float) (s.at.y - cam.y), (float) (s.at.z - cam.z)).add(new Vector3f(n).mul(lift));
 		int light = LevelRenderer.getLightColor(mc.level, s.block.relative(s.face));
-		// drying: darker and browner as it ages
-		float age = Mth.clamp((mc.level.getGameTime() - s.born) / (float) LIFE, 0.0F, 1.0F);
-		int r = (int) (255 * (1.0F - 0.35F * age));
-		int g = (int) (255 * (1.0F - 0.2F * age));
-		int b = (int) (255 * (1.0F - 0.3F * age));
+		// drying: fresh blood bright and wet, over a minute or two going dark, then brown-black
+		float age = Mth.clamp((mc.level.getGameTime() - s.born) / 1800.0F, 0.0F, 1.0F);
+		int r = (int) (255 * (1.0F - 0.5F * age));
+		int g = (int) (255 * (1.0F - 0.42F * age));
+		int b = (int) (255 * (1.0F - 0.5F * age));
 		int color = (int) (alpha * 255.0F) << 24 | r << 16 | g << 8 | b;
-		float u0 = (s.variant % 2) * 0.5F;
-		float v0 = (s.variant / 2) * 0.5F;
-		float[][] q = {{-1, -1, u0, v0 + 0.5F}, {1, -1, u0 + 0.5F, v0 + 0.5F}, {1, 1, u0 + 0.5F, v0}, {-1, 1, u0, v0}};
+		// corners: (across, along v) - for a run, along v goes from +top (up) to -bottom (down)
+		float[][] q = s.kind == RUN
+			? new float[][] {{-1, top, tu, tv}, {1, top, tu + 0.25F, tv}, {1, -bottom, tu + 0.25F, tv + 0.25F * (top + bottom) / 2.0F},
+				{-1, -bottom, tu, tv + 0.25F * (top + bottom) / 2.0F}}
+			: new float[][] {{-1, -1, tu, tv + 0.25F}, {1, -1, tu + 0.25F, tv + 0.25F}, {1, 1, tu + 0.25F, tv}, {-1, 1, tu, tv}};
 		for (float[] p : q) {
 			float x = c.x + ru.x * p[0] + rv.x * p[1];
 			float y = c.y + ru.y * p[0] + rv.y * p[1];
