@@ -663,7 +663,9 @@ public final class Injuries {
 				continue;
 			}
 			if (w.bleed() > 0) {
-				if (++c.bleed >= BLEED_EVERY[w.bleed()]) {
+				// a leg shot off: far more blood going out of the stump, the health with it
+				float stump = w.lost() == Wounds.BOTH ? 0.35F : w.lost() > 0 ? 0.55F : 1.0F;
+				if (++c.bleed >= Math.max(4, Math.round(BLEED_EVERY[w.bleed()] * stump))) {
 					c.bleed = 0;
 					p.hurtServer(level, new DamageSource(level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(BLEEDING)), 1.0F);
 				}
