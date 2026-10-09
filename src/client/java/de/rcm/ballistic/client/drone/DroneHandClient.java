@@ -19,7 +19,7 @@ import org.joml.Vector3f;
  */
 public final class DroneHandClient {
 	/** Where the drone sits in the hand space vanilla sets up for the main hand. */
-	private static final Vector3f HELD = new Vector3f(-0.1F, -0.011F, -0.1F);
+	private static final Vector3f HELD = new Vector3f(0.08F, 0.18F, -0.12F);
 	/**
 	 * The hand under it, in the drone item's space: the top of the slimmed arm is about 0.0625 above
 	 * its axis, the bottom of the warhead {@code 0.095 * scale} below the drone.
@@ -27,8 +27,8 @@ public final class DroneHandClient {
 	private static final Vector3f PALM = new Vector3f(0.0F, -0.095F * FpvDroneItemRenderer.HAND_SCALE - 0.06F, 0.03F);
 	/** Left hand: down by your side, out of view. */
 	private static final Vector3f LEFT_REST = new Vector3f(-0.55F, -0.75F, 0.25F);
-	/** Elbow out to the right and a little down and back: the forearm comes in nearly level under the drone. */
-	private static final Vector3f RIGHT_POLE = new Vector3f(1.0F, -0.15F, 0.25F);
+	/** Elbow out to the right and raised a little: the forearm comes in from low right, nearly level under the drone. */
+	private static final Vector3f RIGHT_POLE = new Vector3f(0.6F, 1.0F, 0.2F);
 	private static final Vector3f LEFT_POLE = new Vector3f(-0.65F, -1.0F, 0.2F);
 
 	private DroneHandClient() {

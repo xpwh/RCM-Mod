@@ -17,7 +17,7 @@ import org.joml.Vector3fc;
 /** The FPV drones as held items: the full 3D drone, nose away from you, props still. */
 public final class FpvDroneItemRenderer implements SpecialModelRenderer<Boolean> {
 	/** How big the drone is in the hand, relative to its model. */
-	public static final float HAND_SCALE = 0.8F;
+	public static final float HAND_SCALE = 0.7F;
 
 	public static void register() {
 		SpecialModelRenderers.ID_MAPPER.put(BallisticMissiles.id("fpv_drone"), Unbaked.MAP_CODEC);
