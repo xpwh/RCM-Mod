@@ -247,12 +247,19 @@ public class BulletEntity extends Entity {
 				net.minecraft.core.Holder.direct(ModRegistry.BULLET_IMPACT_FLESH), SoundSource.PLAYERS,
 				shooterPlayer.getX(), shooterPlayer.getEyeY(), shooterPlayer.getZ(), head ? 0.5F : 0.3F, head ? 1.6F : 1.25F, this.random.nextLong()));
 		}
+		Vec3 line = this.getDeltaMovement().normalize();
 		if (e.hurtServer(level, source, damage)) {
-			Vec3 push = this.getDeltaMovement().normalize().scale(0.12);
+			Vec3 push = line.scale(0.12);
 			e.push(push.x, 0.02, push.z);
+			if (e instanceof net.minecraft.server.level.ServerPlayer victim) {
+				de.rcm.ballistic.injury.Injuries.shot(victim, at, line, damage, head);
+			}
 		}
-		if (e instanceof LivingEntity) {
-			level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.REDSTONE_BLOCK.defaultBlockState()), at.x, at.y, at.z, 6, 0.08, 0.08, 0.08, 0.15);
+		if (e instanceof LivingEntity living) {
+			if (de.rcm.ballistic.injury.Blood.bleeds(living)) {
+				// blood blown out along the round's path, more from the head
+				de.rcm.ballistic.injury.Blood.send(level, at, line, head ? 22 : 12, de.rcm.ballistic.injury.Blood.SPRAY);
+			}
 			level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.0F, 0.9F + this.random.nextFloat() * 0.2F);
 		} else {
 			// an airframe or a vehicle: sparks off the metal

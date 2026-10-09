@@ -277,6 +277,12 @@ public final class AkFirstPerson {
 		float tired = Fatigue.level();
 		float breath = Fatigue.breathPhase(partialTick);
 		float steady = 1.0F - 0.8F * aim;
+		// a wounded arm: a tremor the hold cannot steady
+		int arm = mc.player == null ? 0 : de.rcm.ballistic.injury.Injuries.get(mc.player).arm();
+		if (arm > 0) {
+			poseStack.mulPose(Axis.XP.rotationDegrees((Mth.sin(now * 1.7F) * 0.35F + Mth.sin(now * 0.43F) * 0.6F) * arm));
+			poseStack.mulPose(Axis.YP.rotationDegrees((Mth.cos(now * 1.3F) * 0.3F + Mth.sin(now * 0.37F + 1.0F) * 0.55F) * arm));
+		}
 		poseStack.mulPose(Axis.XP.rotationDegrees((Mth.sin(now * 0.045F) * 0.35F + Mth.sin(breath) * 1.6F * tired) * steady));
 		poseStack.mulPose(Axis.YP.rotationDegrees((Mth.cos(now * 0.031F) * 0.3F + Mth.cos(breath * 0.5F) * 0.9F * tired) * steady));
 		poseStack.translate(0.0F, Mth.sin(breath) * 0.012F * tired * steady, 0.0F);

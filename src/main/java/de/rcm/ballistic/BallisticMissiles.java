@@ -37,6 +37,7 @@ public class BallisticMissiles implements ModInitializer {
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.gun.MagazineLanding::tick);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.ai.SoldierDebug::tick);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.runway.RunwayBuilder::tick);
+		de.rcm.ballistic.injury.Injuries.init();
 		net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry.register(ModRegistry.SOLDIER,
 			de.rcm.ballistic.ai.SoldierEntity.createAttributes());
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -59,6 +60,7 @@ public class BallisticMissiles implements ModInitializer {
 					de.rcm.ballistic.config.ServerConfig.misfireChance));
 				RadiationManager.sync(handler.player.level(), handler.player);
 				de.rcm.ballistic.explosion.NuclearWinter.sync(handler.player);
+				de.rcm.ballistic.injury.Injuries.rejoin(handler.player);
 			});
 		net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
 			(player, origin, destination) -> RadiationManager.sync(destination, player));
@@ -80,6 +82,7 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.gun.GrenadeItem.forget(null);
 			de.rcm.ballistic.ai.SoldierDebug.clear();
 			de.rcm.ballistic.runway.RunwayBuilder.clear();
+			de.rcm.ballistic.injury.Injuries.clear();
 			de.rcm.ballistic.ai.SoldierEntity.clearStatic();
 		});
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {

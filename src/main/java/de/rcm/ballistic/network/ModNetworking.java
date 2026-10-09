@@ -470,6 +470,27 @@ public final class ModNetworking {
 		}
 	}
 
+	/** Blood for the clients to draw: a spray along {@code d}, drops falling, a pool spreading, a burst (see Blood). */
+	public record BloodPayload(double x, double y, double z, float dx, float dy, float dz, int amount, int kind) implements CustomPacketPayload {
+		public static final Type<BloodPayload> TYPE = new Type<>(BallisticMissiles.id("blood"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BloodPayload> CODEC = StreamCodec.of((buf, p) -> {
+			buf.writeDouble(p.x());
+			buf.writeDouble(p.y());
+			buf.writeDouble(p.z());
+			buf.writeFloat(p.dx());
+			buf.writeFloat(p.dy());
+			buf.writeFloat(p.dz());
+			buf.writeVarInt(p.amount());
+			buf.writeVarInt(p.kind());
+		}, buf -> new BloodPayload(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+			buf.readVarInt(), buf.readVarInt()));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** A round going past a player's head: where it came closest, how close, and whether it was still supersonic. */
 	public record BulletPassPayload(double x, double y, double z, float distance, boolean supersonic) implements CustomPacketPayload {
 		public static final Type<BulletPassPayload> TYPE = new Type<>(BallisticMissiles.id("bullet_pass"));
@@ -687,6 +708,7 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playC2S().register(GunInputPayload.TYPE, GunInputPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(GunActionPayload.TYPE, GunActionPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(BulletPassPayload.TYPE, BulletPassPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(BloodPayload.TYPE, BloodPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(FighterInputPayload.TYPE, FighterInputPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(FighterInputPayload.TYPE, (payload, context) -> {
 			if (context.player().level().getEntity(payload.jet()) instanceof de.rcm.ballistic.entity.FighterEntity jet) {

@@ -506,6 +506,12 @@ public final class ModRegistry {
 	public static final Item RUNWAY_LIGHT_ITEM = registerItem(
 		"runway_light", props -> new BlockItem(RUNWAY_LIGHT, props), new Item.Properties().useBlockDescriptionPrefix()
 	);
+	public static final Item FIRST_AID_KIT = registerItem(
+		"first_aid_kit", props -> new de.rcm.ballistic.injury.MedicalItem(false, props), new Item.Properties().durability(4)
+	);
+	public static final Item TOURNIQUET = registerItem(
+		"tourniquet", props -> new de.rcm.ballistic.injury.MedicalItem(true, props), new Item.Properties().stacksTo(16)
+	);
 	public static final Item AIR_FILTER_ITEM = registerItem("air_filter", props -> new BlockItem(AIR_FILTER, props), new Item.Properties().useBlockDescriptionPrefix());
 	public static final Item EMERGENCY_GENERATOR_ITEM = registerItem(
 		"emergency_generator", props -> new BlockItem(EMERGENCY_GENERATOR, props), new Item.Properties().useBlockDescriptionPrefix()
@@ -781,6 +787,8 @@ public final class ModRegistry {
 	/** Shelter and radiation protection. */
 	public static final CreativeModeTab TAB_PROTECTION = tab("protection", () -> HAZMAT_HELMET, output -> {
 		output.accept(BUNKER_ITEM);
+		output.accept(FIRST_AID_KIT);
+		output.accept(TOURNIQUET);
 		output.accept(AIR_FILTER_ITEM);
 		output.accept(EMERGENCY_GENERATOR_ITEM);
 		output.accept(REINFORCED_CONCRETE_ITEM);

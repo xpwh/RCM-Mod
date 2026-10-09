@@ -201,6 +201,8 @@ public class AkItem extends Item {
 		// spread: the first round of a burst goes true, then the barrel climbs and wanders a little
 		double spread = 0.0010 + Math.min(burst, 10) * 0.0006 + (player.isCrouching() ? -0.0004 : 0.0) + (player.onGround() ? 0.0 : 0.006);
 		spread *= isAiming(player) ? 0.35 : 1.15;
+		// a wounded arm: the rifle will not hold still
+		spread *= 1.0 + 0.8 * de.rcm.ballistic.injury.Injuries.get(player).arm();
 		var random = level.getRandom();
 		Vec3 dir = aim.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
 		// a tracer magazine is loaded the way soldiers load them: every fourth round a tracer, and the

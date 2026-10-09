@@ -74,6 +74,10 @@ public class SettingsScreen extends Screen {
 		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.bulletHoles)
 			.create(right, y, W, H, Component.translatable("options.ballisticmissiles.bullet_holes"), (b, v) -> ModConfig.bulletHoles = v));
 		y += GAP;
+		this.addRenderableWidget(CycleButton.onOffBuilder(ModConfig.blood)
+			.withTooltip(v -> net.minecraft.client.gui.components.Tooltip.create(Component.translatable("options.ballisticmissiles.blood.tooltip")))
+			.create(right, y, W, H, Component.translatable("options.ballisticmissiles.blood"), (b, v) -> ModConfig.blood = v));
+		y += GAP;
 		// a world setting: changed on the server (operators only), shown as the server has it
 		Integer[] steps = java.util.Arrays.stream(de.rcm.ballistic.config.ServerConfig.MISFIRE_STEPS).boxed().toArray(Integer[]::new);
 		int current = ModConfig.serverMisfireChance;

@@ -50,6 +50,21 @@ public abstract class GameRendererMixin {
 			// the horizon tilts with the jet's bank
 			poseStack.mulPose(Axis.ZP.rotationDegrees(de.rcm.ballistic.client.fighter.FighterClient.cameraRoll(partialTick)));
 		}
+		// a wounded leg: a dip and a lurch on every step onto it
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player != null && mc.options.getCameraType().isFirstPerson()) {
+			int leg = de.rcm.ballistic.injury.Injuries.get(mc.player).leg();
+			if (leg > 0 && mc.player.onGround()) {
+				var avatar = mc.player.avatarState();
+				float moving = Mth.clamp(avatar.getInterpolatedBob(partialTick) * 12.0F, 0.0F, 1.0F);
+				float phase = avatar.getBackwardsInterpolatedWalkDistance(partialTick) * Mth.PI;
+				float step = Mth.sin(phase);
+				float dip = (float) Math.pow(Math.max(0.0F, step), 3.0F) * moving * leg;
+				poseStack.translate(0.0F, -0.045F * dip, 0.0F);
+				poseStack.mulPose(Axis.ZP.rotationDegrees(1.6F * dip));
+				poseStack.mulPose(Axis.XP.rotationDegrees(1.1F * dip));
+			}
+		}
 		float shake = ClientEffects.shake(partialTick);
 		if (shake <= 0.001F) {
 			return;

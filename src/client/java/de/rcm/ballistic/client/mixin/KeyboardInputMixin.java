@@ -22,6 +22,11 @@ public abstract class KeyboardInputMixin extends ClientInput {
 		}
 		// aiming down the sights (AK-47 or RPG-7): a slow, careful walk, no sprinting
 		var player = net.minecraft.client.Minecraft.getInstance().player;
+		if (player != null && de.rcm.ballistic.injury.Injuries.get(player).leg() >= 2 && !player.isCreative()) {
+			// a badly wounded leg will not carry you at a run
+			Input k = this.keyPresses;
+			this.keyPresses = new Input(k.forward(), k.backward(), k.left(), k.right(), k.jump(), k.shift(), false);
+		}
 		if (player != null && (de.rcm.ballistic.gun.AkItem.isAiming(player) || de.rcm.ballistic.item.RocketLauncherItem.isAiming(player))) {
 			this.moveVector = this.moveVector.scale(0.42F);
 			Input k = this.keyPresses;

@@ -49,6 +49,7 @@ public final class ModConfig {
 	public static boolean cloudShadows = true;
 	public static boolean lightShafts = true;
 	public static boolean realSky = true;
+	public static boolean blood = true;
 	// ---- effects
 	/** The screen effects of blasts (flash, haze, god rays, shell shock...), percent. */
 	public static int screenEffects = 100;
@@ -86,6 +87,7 @@ public final class ModConfig {
 			cloudShadows = bool(p, "cloudShadows", cloudShadows);
 			lightShafts = bool(p, "lightShafts", lightShafts);
 			realSky = bool(p, "realSky", realSky);
+			blood = bool(p, "blood", blood);
 			screenEffects = percent(p, "screenEffects", screenEffects);
 			smokeAmount = percent(p, "smokeAmount", smokeAmount);
 			explosionVolume = percent(p, "explosionVolume", explosionVolume);
@@ -105,6 +107,7 @@ public final class ModConfig {
 			p.setProperty("cloudShadows", Boolean.toString(cloudShadows));
 			p.setProperty("lightShafts", Boolean.toString(lightShafts));
 			p.setProperty("realSky", Boolean.toString(realSky));
+			p.setProperty("blood", Boolean.toString(blood));
 			p.setProperty("screenEffects", Integer.toString(screenEffects));
 			p.setProperty("smokeAmount", Integer.toString(smokeAmount));
 			p.setProperty("explosionVolume", Integer.toString(explosionVolume));
