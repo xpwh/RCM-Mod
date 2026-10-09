@@ -64,6 +64,7 @@ public class SoldierEntity extends PathfinderMob {
 	public static final int COMBAT = 2;
 	public static final int SEARCH = 3;
 	public static final int COVER = 4;
+	public static final int SUPPRESS = 5;
 
 	public static final double VIEW_RANGE = 96.0;
 	private static final double COS_SHARP = Math.cos(Math.toRadians(60.0));
@@ -108,6 +109,28 @@ public class SoldierEntity extends PathfinderMob {
 	private int lookAroundTimer;
 	private boolean crouch;
 	private String reason = "";
+
+	// the squad: soldiers of the same side within 32 blocks; the lowest id leads
+	private int squadSize = 1;
+	private int squadIndex;
+	private int leaderId;
+	/** Gives covering fire (the leader and every third man) rather than working round the flank. */
+	private boolean support = true;
+	private float flankSide = 1.0F;
+	private @Nullable Vec3 flank;
+	private long flankAt;
+	// radio: reports sent and received (reporter id, game time)
+	private long lastReport = -1000L;
+	private final List<long[]> radioIn = new ArrayList<>();
+	// grenades: his own, and other people's he has to get away from
+	private int grenades = 2;
+	private long grenadeReady;
+	private @Nullable Vec3 grenadeTarget;
+	private long grenadeThrown = -1000L;
+	private long fleeUntil;
+	private @Nullable Vec3 fleeFrom;
+	/** Rounds fired in the current burst: each one climbs a little further off the aim. */
+	private int burstShots;
 
 	public SoldierEntity(EntityType<? extends SoldierEntity> type, Level level) {
 		super(type, level);
@@ -206,6 +229,13 @@ public class SoldierEntity extends PathfinderMob {
 		if (this.shotTimer > 0) {
 			this.shotTimer--;
 		}
+		if (this.tickCount % 20 == 0) {
+			this.organiseSquad(level);
+		}
+		if (this.tickCount % 4 == 0) {
+			this.watchForGrenades(level, now);
+		}
+		this.radioIn.removeIf(r -> now - r[1] > 60);
 
 		LivingEntity t = this.target;
 		if (t != null && (!t.isAlive() || t.isRemoved() || !this.isEnemy(t) || t.level() != level || t.distanceTo(this) > VIEW_RANGE * 1.4)) {
@@ -215,7 +245,9 @@ public class SoldierEntity extends PathfinderMob {
 		}
 		boolean inSight = t != null && now - this.lastSeen < 6;
 		this.crouch = false;
-		if (inSight) {
+		if (now < this.fleeUntil && this.fleeFrom != null) {
+			this.flee(level, now);
+		} else if (inSight) {
 			this.combat(level, t, now);
 		} else if (t != null && now - this.lastSeen < 400) {
 			this.search(level, now);
@@ -318,6 +350,9 @@ public class SoldierEntity extends PathfinderMob {
 		this.target = pick;
 		this.lastSeen = now;
 		this.lastKnown = pick.position();
+		if (now - this.lastReport > 40) {
+			this.report(level, pick, now);
+		}
 	}
 
 	// ------------------------------------------------------------------ hearing
@@ -400,6 +435,7 @@ public class SoldierEntity extends PathfinderMob {
 			this.cover = this.findCover(level, t.getEyePosition());
 			this.coverUntil = now + 80;
 		}
+		boolean firing = true;
 		if (wantsCover && this.cover != null) {
 			this.setState(COVER, this.reload > 0 ? "lädt nach" : this.suppression > 0.6F ? "unter Beschuss" : "verwundet");
 			if (this.position().distanceToSqr(this.cover) > 1.0) {
@@ -408,8 +444,21 @@ public class SoldierEntity extends PathfinderMob {
 				this.getNavigation().stop();
 				this.crouch = true;
 			}
+		} else if (this.squadSize > 1 && !this.support && d > 10.0 && this.movePhase(now)) {
+			// fire and movement: while the others keep his head down, this one works round the side
+			if (this.flank == null || now - this.flankAt > 40) {
+				this.flank = this.flankPoint(t.position());
+				this.flankAt = now;
+			}
+			this.setState(COMBAT, this.flankSide > 0 ? "flankiert rechts" : "flankiert links");
+			if (this.position().distanceToSqr(this.flank) > 9.0) {
+				this.getNavigation().moveTo(this.flank.x, this.flank.y, this.flank.z, 1.2);
+				firing = d < 14.0; // on the move he only fires when it is close
+			} else {
+				this.getNavigation().stop();
+			}
 		} else {
-			this.setState(COMBAT, "Ziel in Sicht");
+			this.setState(COMBAT, this.squadSize > 1 && this.support ? "gibt Feuerschutz" : "Ziel in Sicht");
 			if (d > 45.0) {
 				this.getNavigation().moveTo(t, 1.0);
 			} else if (d < 7.0) {
@@ -428,32 +477,212 @@ public class SoldierEntity extends PathfinderMob {
 				}
 			}
 		}
-		// fire: after a moment to react, in bursts, only with a clear line and nobody friendly in the way
 		if (this.reload == 0 && this.rounds <= 0) {
 			this.startReload(level);
 			return;
 		}
-		if (this.reload > 0 || this.shotTimer > 0 || now - this.acquired < 10 || !this.clearShot(level, t)) {
+		// fire: after a moment to react, in bursts, only with a clear line and nobody friendly in the way
+		Vec3 aim = t.getBoundingBox().getCenter().add(0.0, 0.15, 0.0);
+		if (!firing || this.reload > 0 || this.shotTimer > 0 || now - this.acquired < 12 || !this.clearShot(level, aim)) {
 			return;
 		}
+		Vec3 vel = new Vec3(t.getX() - t.xo, 0.0, t.getZ() - t.zo);
+		double targetSpeed = vel.length();
+		this.fireBurst(level, aim.add(vel.scale(d / AkItem.MUZZLE_VELOCITY)), d, Math.min(0.025, targetSpeed * 0.1), false);
+	}
+
+	/** Bounding: flankers move in one phase and shoot in the next, staggered across the squad. */
+	private boolean movePhase(long now) {
+		return ((now / 70L) + this.squadIndex) % 2L == 0L;
+	}
+
+	/** A point off to his side of the enemy, about 16 blocks out, from where he can fire into the flank. */
+	private Vec3 flankPoint(Vec3 enemy) {
+		Vec3 v = this.position().subtract(enemy);
+		v = new Vec3(v.x, 0.0, v.z);
+		v = v.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : v.normalize();
+		Vec3 perp = new Vec3(-v.z, 0.0, v.x).scale(this.flankSide);
+		Vec3 dir = v.scale(0.5).add(perp).normalize();
+		return enemy.add(dir.scale(16.0));
+	}
+
+	private void fireBurst(ServerLevel level, Vec3 aim, double d, double extraSpread, boolean suppressive) {
 		if (this.burst <= 0) {
-			this.burst = 3 + this.getRandom().nextInt(3);
+			this.burst = suppressive ? 2 + this.getRandom().nextInt(3) : 3 + this.getRandom().nextInt(3);
+			this.burstShots = 0;
 		}
-		this.shoot(level, t, d);
+		this.shoot(level, aim, d, extraSpread);
 		this.burst--;
-		this.shotTimer = this.burst > 0 ? AkItem.CYCLE : 12 + this.getRandom().nextInt(16);
+		this.burstShots++;
+		this.shotTimer = this.burst > 0 ? AkItem.CYCLE : suppressive ? 18 + this.getRandom().nextInt(22) : 14 + this.getRandom().nextInt(18);
 	}
 
 	private void search(ServerLevel level, long now) {
-		this.setState(SEARCH, "sucht letzte Position");
-		if (this.position().distanceToSqr(this.lastKnown) > 4.0) {
-			this.getNavigation().moveTo(this.lastKnown.x, this.lastKnown.y, this.lastKnown.z, 0.95);
-			Vec3 l = this.lastKnown;
-			this.getLookControl().setLookAt(l.x, l.y + 1.5, l.z, 30.0F, 30.0F);
+		long lost = now - this.lastSeen;
+		double d = this.position().distanceTo(this.lastKnown);
+		Vec3 spot = this.lastKnown.add(0.0, 1.0, 0.0);
+		// gone to ground behind something: a grenade over it
+		if (this.grenades > 0 && now >= this.grenadeReady && lost > 30 && lost < 300 && d > 6.0 && d < 28.0 && !this.sees(level, spot)
+			&& this.noFriendNear(level, this.lastKnown, 7.0) && this.reload == 0) {
+			this.throwGrenade(level, this.lastKnown, now);
+			return;
+		}
+		// keep his head down: fire at where he was (the support men, or a man on his own)
+		if (lost < 120 && this.rounds > 4 && this.reload == 0 && (this.squadSize == 1 || this.support)) {
+			Vec3 at = this.suppressPoint(level, spot);
+			if (at != null) {
+				this.setState(SUPPRESS, "Unterdrückungsfeuer");
+				this.getNavigation().stop();
+				this.crouch = true;
+				this.getLookControl().setLookAt(at.x, at.y, at.z, 40.0F, 40.0F);
+				if (this.shotTimer <= 0 && now - this.acquired > 12 && this.clearShot(level, at)) {
+					this.fireBurst(level, at, d, 0.035, true);
+				}
+				return;
+			}
+		}
+		if (this.reload == 0 && this.rounds <= 0) {
+			this.startReload(level);
+		}
+		this.setState(SEARCH, this.squadSize > 1 && !this.support ? "rückt von der Seite vor" : "sucht letzte Position");
+		// the flankers close in from the side, the others go straight for it
+		Vec3 goal = this.squadSize > 1 && !this.support && d > 10.0 ? this.flankPoint(this.lastKnown) : this.lastKnown;
+		if (this.position().distanceToSqr(goal) > 4.0) {
+			this.getNavigation().moveTo(goal.x, goal.y, goal.z, 0.95);
+			this.getLookControl().setLookAt(spot.x, spot.y + 0.5, spot.z, 30.0F, 30.0F);
 		} else {
 			this.getNavigation().stop();
 			this.lookAround();
 		}
+	}
+
+	private boolean sees(ServerLevel level, Vec3 spot) {
+		HitResult hit = level.clip(new ClipContext(this.getEyePosition(), spot, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+		return hit.getType() == HitResult.Type.MISS || hit.getLocation().distanceToSqr(spot) < 1.0;
+	}
+
+	/** Where to fire to keep someone at {@code spot} down: the spot, or the cover in front of it; null if his own view is blocked well short. */
+	private @Nullable Vec3 suppressPoint(ServerLevel level, Vec3 spot) {
+		HitResult hit = level.clip(new ClipContext(this.getEyePosition(), spot, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+		if (hit.getType() == HitResult.Type.MISS) {
+			return spot;
+		}
+		return hit.getLocation().distanceTo(spot) < 4.0 ? hit.getLocation() : null;
+	}
+
+	private boolean noFriendNear(ServerLevel level, Vec3 at, double r) {
+		return level.getEntitiesOfClass(SoldierEntity.class, new AABB(at, at).inflate(r), s -> s.team() == this.team()).isEmpty();
+	}
+
+	/** Lobs a grenade at {@code at}: the arc worked out for its gravity and drag, a second cooked off. */
+	private void throwGrenade(ServerLevel level, Vec3 at, long now) {
+		var r = this.getRandom();
+		Vec3 to = at.add((r.nextDouble() - 0.5) * 3.0, 0.0, (r.nextDouble() - 0.5) * 3.0);
+		Vec3 from = this.getEyePosition().add(this.viewDir().scale(0.4));
+		double dx = to.x - from.x;
+		double dz = to.z - from.z;
+		double dy = to.y + 0.2 - from.y;
+		double horiz = Math.sqrt(dx * dx + dz * dz);
+		int ticks = Mth.clamp((int) (horiz * 1.2) + 12, 16, 45);
+		// positions are linear in the initial velocity: sum of the drag factors, and the drop gravity alone causes
+		double sum = 0.0;
+		double drop = 0.0;
+		double vyg = 0.0;
+		double k = 1.0;
+		for (int i = 0; i < ticks; i++) {
+			sum += k;
+			vyg = (vyg - 0.04);
+			drop += vyg;
+			vyg *= 0.99;
+			k *= 0.99;
+		}
+		Vec3 vel = new Vec3(dx / sum, (dy - drop) / sum, dz / sum);
+		this.getLookControl().setLookAt(to.x, to.y, to.z, 60.0F, 60.0F);
+		this.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+		de.rcm.ballistic.gun.GrenadeEntity.throwFrom(level, this, from, vel, de.rcm.ballistic.gun.GrenadeItem.FUSE - 20);
+		level.playSound(null, from.x, from.y, from.z, ModRegistry.GRENADE_PIN, SoundSource.HOSTILE, 0.8F, 1.0F);
+		level.playSound(null, from.x, from.y, from.z, ModRegistry.GRENADE_SPOON, SoundSource.HOSTILE, 0.7F, 1.0F);
+		this.grenades--;
+		this.grenadeReady = now + 160;
+		this.grenadeTarget = to;
+		this.grenadeThrown = now;
+		this.setState(COMBAT, "wirft Granate");
+	}
+
+	/** A live grenade near him: get away from it. */
+	private void watchForGrenades(ServerLevel level, long now) {
+		var near = level.getEntitiesOfClass(de.rcm.ballistic.gun.GrenadeEntity.class, this.getBoundingBox().inflate(7.0));
+		if (near.isEmpty()) {
+			return;
+		}
+		var g = near.get(0);
+		if (now >= this.fleeUntil || this.fleeFrom == null || this.fleeFrom.distanceToSqr(g.position()) > 4.0) {
+			this.fleeFrom = g.position();
+			this.fleeUntil = now + 50;
+			this.getNavigation().stop();
+		}
+	}
+
+	private void flee(ServerLevel level, long now) {
+		this.setState(COVER, "flieht vor Granate");
+		Vec3 away = this.position().subtract(this.fleeFrom);
+		away = new Vec3(away.x, 0.0, away.z);
+		if (away.lengthSqr() < 1.0E-3) {
+			away = new Vec3(this.getRandom().nextDouble() - 0.5, 0.0, this.getRandom().nextDouble() - 0.5);
+		}
+		Vec3 dest = this.position().add(away.normalize().scale(10.0));
+		if (this.tickCount % 10 == 0 || this.getNavigation().isDone()) {
+			this.getNavigation().moveTo(dest.x, dest.y, dest.z, 1.45);
+		}
+	}
+
+	// ------------------------------------------------------------------ squad and radio
+
+	private void organiseSquad(ServerLevel level) {
+		List<SoldierEntity> mates = level.getEntitiesOfClass(SoldierEntity.class, this.getBoundingBox().inflate(32.0),
+			s -> s.team() == this.team() && s.isAlive());
+		mates.sort(java.util.Comparator.comparingInt(net.minecraft.world.entity.Entity::getId));
+		this.squadSize = Math.max(1, mates.size());
+		this.squadIndex = Math.max(0, mates.indexOf(this));
+		this.leaderId = mates.isEmpty() ? this.getId() : mates.get(0).getId();
+		this.support = this.squadSize == 1 || this.squadIndex == 0 || this.squadIndex % 3 == 0;
+		this.flankSide = this.squadIndex % 2 == 1 ? 1.0F : -1.0F;
+	}
+
+	/** On the radio: "contact, there" - to everyone on his side within 64 blocks. */
+	private void report(ServerLevel level, LivingEntity enemy, long now) {
+		this.lastReport = now;
+		boolean heard = false;
+		for (SoldierEntity m : level.getEntitiesOfClass(SoldierEntity.class, this.getBoundingBox().inflate(64.0),
+			s -> s != this && s.team() == this.team() && s.isAlive())) {
+			m.radioReport(this, enemy, now);
+			heard = true;
+		}
+		if (heard) {
+			level.playSound(null, this.getX(), this.getEyeY(), this.getZ(), ModRegistry.RADIO_CLICK, SoundSource.HOSTILE, 0.5F, 1.0F);
+		}
+	}
+
+	/** A comrade's report: he now knows roughly where the enemy is, without seeing him. */
+	void radioReport(SoldierEntity reporter, LivingEntity enemy, long now) {
+		this.radioIn.add(new long[] {reporter.getId(), now});
+		while (this.radioIn.size() > 4) {
+			this.radioIn.remove(0);
+		}
+		if (this.target == enemy && now - this.lastSeen < 6) {
+			return; // sees him himself
+		}
+		var r = this.getRandom();
+		if (this.target != enemy) {
+			this.acquired = now;
+		}
+		this.target = enemy;
+		this.lastKnown = enemy.position().add((r.nextDouble() - 0.5) * 5.0, 0.0, (r.nextDouble() - 0.5) * 5.0);
+		if (now - this.lastSeen > 7) {
+			this.lastSeen = now - 7;
+		}
+		this.awareness.merge(enemy.getId(), 0.6F, (a, b) -> Math.min(0.95F, Math.max(a, b)));
+		this.level().playSound(null, this.getX(), this.getEyeY(), this.getZ(), ModRegistry.RADIO_SQUELCH, SoundSource.HOSTILE, 0.45F, 1.05F);
 	}
 
 	private void investigate(ServerLevel level, long now) {
@@ -535,9 +764,8 @@ public class SoldierEntity extends PathfinderMob {
 
 	// ------------------------------------------------------------------ the rifle
 
-	private boolean clearShot(ServerLevel level, LivingEntity t) {
+	private boolean clearShot(ServerLevel level, Vec3 aim) {
 		Vec3 eye = this.getEyePosition();
-		Vec3 aim = t.getBoundingBox().getCenter();
 		HitResult hit = level.clip(new ClipContext(eye, aim, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
 		if (hit.getType() != HitResult.Type.MISS && hit.getLocation().distanceToSqr(aim) > 1.0) {
 			return false;
@@ -555,24 +783,25 @@ public class SoldierEntity extends PathfinderMob {
 		return true;
 	}
 
-	private void shoot(ServerLevel level, LivingEntity t, double d) {
+	private void shoot(ServerLevel level, Vec3 aimPoint, double d, double extraSpread) {
+		Vec3 eye = this.getEyePosition();
 		Vec3 look = this.viewDir();
 		Vec3 right = look.cross(new Vec3(0, 1, 0));
 		right = right.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : right.normalize();
-		Vec3 muzzle = this.getEyePosition().add(look.scale(0.8)).add(right.scale(0.12)).add(0, -0.12, 0);
-		// lead a moving target a little, aim at the chest
-		Vec3 vel = new Vec3(t.getX() - t.xo, 0.0, t.getZ() - t.zo);
-		Vec3 aim = t.getBoundingBox().getCenter().add(0.0, 0.15, 0.0).add(vel.scale(d / AkItem.MUZZLE_VELOCITY));
-		Vec3 dir = aim.subtract(muzzle).normalize();
+		Vec3 muzzle = eye.add(look.scale(0.8)).add(right.scale(0.12)).add(0, -0.12, 0);
+		Vec3 dir = aimPoint.subtract(eye).normalize();
+		// a man with a rifle in a fight is no marksman: distance, his own movement, being shot at,
+		// the climb of the burst and the first moments on a new target all throw the round off
 		double moving = Math.sqrt(Mth.square(this.getX() - this.xo) + Mth.square(this.getZ() - this.zo));
-		double spread = 0.004 + d * 0.00022 + this.suppression * 0.03 + Math.min(0.03, moving * 0.12) + (this.crouch ? -0.0015 : 0.0)
-			+ (6 - Math.min(6, (int) ((level.getGameTime() - this.acquired) / 10))) * 0.002; // settles onto the target
+		double settle = 6 - Math.min(6, (int) ((level.getGameTime() - this.acquired) / 10));
+		double spread = 0.016 + d * 0.0005 + this.suppression * 0.05 + Math.min(0.04, moving * 0.15) + this.burstShots * 0.005 + settle * 0.004
+			+ extraSpread + (this.crouch ? -0.003 : 0.0);
 		var r = this.getRandom();
 		dir = dir.add(r.nextGaussian() * spread, r.nextGaussian() * spread, r.nextGaussian() * spread).normalize();
 		this.rounds--;
 		// soldiers load like players do: every fourth a tracer, the last three tracers
 		boolean tracer = this.rounds % 4 == 0 || this.rounds < 3;
-		AkItem.shoot(level, this, muzzle, dir, tracer, this.rounds == 0);
+		AkItem.shoot(level, this, eye, muzzle, dir, tracer, this.rounds == 0);
 		// the rifle in his hands kicks, flashes and cycles its bolt (the model reads the shot from the stack)
 		ItemStack rifle = this.getMainHandItem();
 		if (rifle.getItem() instanceof AkItem) {
@@ -623,10 +852,17 @@ public class SoldierEntity extends PathfinderMob {
 		}
 		String targetName = this.target == null ? "" : this.target.getName().getString();
 		double targetDist = this.target == null ? 0.0 : this.distanceTo(this.target);
-		return new SoldierDebug.Entry(this.getId(), this.aiState(), this.team(), best, this.reason, targetName, (float) targetDist,
+		String role = this.squadSize <= 1 ? "allein" : (this.getId() == this.leaderId ? "Truppführer" : this.support ? "Feuerschutz" : "Flanke")
+			+ " " + (this.squadIndex + 1) + "/" + this.squadSize;
+		List<double[]> radio = new ArrayList<>();
+		for (long[] r : this.radioIn) {
+			radio.add(new double[] {r[0], now - r[1]});
+		}
+		return new SoldierDebug.Entry(this.getId(), this.aiState(), this.team(), best, this.reason, role, targetName, (float) targetDist,
 			this.target == null ? -1 : this.target.getId(), this.target != null && now - this.lastSeen < 6,
 			this.target == null ? null : this.lastKnown, this.investigate != null && now < this.investigateUntil ? this.investigate : null,
-			this.cover, this.rounds, this.reload > 0, this.suppression, this.getYHeadRot(), noises, path);
+			this.cover, this.flank, now - this.grenadeThrown < 80 ? this.grenadeTarget : null, this.grenades, this.rounds, this.reload > 0, this.suppression,
+			this.getYHeadRot(), noises, path, radio);
 	}
 
 	// ------------------------------------------------------------------ saving
@@ -658,9 +894,12 @@ public class SoldierEntity extends PathfinderMob {
 	public List<String> report(ServerLevel level) {
 		long now = level.getGameTime();
 		List<String> out = new ArrayList<>();
-		String[] states = {"PATROUILLE", "UNTERSUCHT", "KAMPF", "SUCHE", "DECKUNG"};
+		String[] states = {"PATROUILLE", "UNTERSUCHT", "KAMPF", "SUCHE", "DECKUNG", "UNTERDRÜCKT"};
 		out.add("§6Soldat #" + this.getId() + " §7(" + (this.team() == TEAM_HOSTILE ? "§cfeindlich" : "§afreundlich") + "§7) – §f"
-			+ states[Mth.clamp(this.aiState(), 0, 4)] + " §7(" + this.reason + ")");
+			+ states[Mth.clamp(this.aiState(), 0, 5)] + " §7(" + this.reason + ")");
+		out.add("§7Trupp: §f" + (this.squadSize <= 1 ? "allein" : (this.squadIndex + 1) + " von " + this.squadSize + ", "
+			+ (this.getId() == this.leaderId ? "Truppführer" : this.support ? "Feuerschutz" : "Flanke " + (this.flankSide > 0 ? "rechts" : "links")))
+			+ " §7· Granaten §f" + this.grenades);
 		out.add("§7Munition §f" + this.rounds + "/" + MAGAZINE + (this.reload > 0 ? " §e(lädt)" : "") + " §7· Unterdrückung §f" + Math.round(this.suppression * 100)
 			+ "% §7· Leben §f" + Math.round(this.getHealth()) + "/" + Math.round(this.getMaxHealth()));
 		if (this.target != null) {

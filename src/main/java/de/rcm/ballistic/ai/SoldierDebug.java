@@ -65,9 +65,11 @@ public final class SoldierDebug {
 	}
 
 	/** One soldier's state of mind. Noises: {x, y, z, kind, age ticks, loudness}; path: {x, y, z}. */
-	public record Entry(int id, int state, int team, float awareness, String reason, String targetName, float targetDistance, int targetId,
-		boolean targetVisible, @Nullable Vec3 lastKnown, @Nullable Vec3 investigate, @Nullable Vec3 cover, int rounds, boolean reloading,
-		float suppression, float headYaw, List<double[]> noises, List<double[]> path) {
+	/** ... radio: {reporter id, age ticks}. */
+	public record Entry(int id, int state, int team, float awareness, String reason, String role, String targetName, float targetDistance,
+		int targetId, boolean targetVisible, @Nullable Vec3 lastKnown, @Nullable Vec3 investigate, @Nullable Vec3 cover, @Nullable Vec3 flank,
+		@Nullable Vec3 grenade, int grenades, int rounds, boolean reloading, float suppression, float headYaw, List<double[]> noises,
+		List<double[]> path, List<double[]> radio) {
 	}
 
 	public record Payload(List<Entry> entries) implements CustomPacketPayload {
@@ -80,6 +82,7 @@ public final class SoldierDebug {
 				buf.writeVarInt(e.team());
 				buf.writeFloat(e.awareness());
 				buf.writeUtf(e.reason(), 64);
+				buf.writeUtf(e.role(), 64);
 				buf.writeUtf(e.targetName(), 64);
 				buf.writeFloat(e.targetDistance());
 				buf.writeVarInt(e.targetId());
@@ -87,20 +90,24 @@ public final class SoldierDebug {
 				writeVec(buf, e.lastKnown());
 				writeVec(buf, e.investigate());
 				writeVec(buf, e.cover());
+				writeVec(buf, e.flank());
+				writeVec(buf, e.grenade());
+				buf.writeVarInt(e.grenades());
 				buf.writeVarInt(e.rounds());
 				buf.writeBoolean(e.reloading());
 				buf.writeFloat(e.suppression());
 				buf.writeFloat(e.headYaw());
 				writeRows(buf, e.noises(), 6);
 				writeRows(buf, e.path(), 3);
+				writeRows(buf, e.radio(), 2);
 			}
 		}, buf -> {
 			int n = Math.min(64, buf.readVarInt());
 			List<Entry> list = new ArrayList<>();
 			for (int i = 0; i < n; i++) {
-				list.add(new Entry(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readFloat(), buf.readUtf(64), buf.readUtf(64), buf.readFloat(),
-					buf.readVarInt(), buf.readBoolean(), readVec(buf), readVec(buf), readVec(buf), buf.readVarInt(), buf.readBoolean(), buf.readFloat(),
-					buf.readFloat(), readRows(buf, 6), readRows(buf, 3)));
+				list.add(new Entry(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readFloat(), buf.readUtf(64), buf.readUtf(64), buf.readUtf(64),
+					buf.readFloat(), buf.readVarInt(), buf.readBoolean(), readVec(buf), readVec(buf), readVec(buf), readVec(buf), readVec(buf), buf.readVarInt(),
+					buf.readVarInt(), buf.readBoolean(), buf.readFloat(), buf.readFloat(), readRows(buf, 6), readRows(buf, 3), readRows(buf, 2)));
 			}
 			return new Payload(list);
 		});

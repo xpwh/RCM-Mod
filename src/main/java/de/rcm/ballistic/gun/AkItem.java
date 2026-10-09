@@ -195,7 +195,9 @@ public class AkItem extends Item {
 		if (target.distanceToSqr(eye) < 4.0) {
 			target = eye.add(look.scale(2.0));
 		}
-		Vec3 aim = target.subtract(muzzle).normalize();
+		// the round flies from the eye along the line the sights are on (the muzzle only gives the flash
+		// and the tracer): a target right in front of you - closer than the barrel is long - is still hit
+		Vec3 aim = target.subtract(eye).normalize();
 		// spread: the first round of a burst goes true, then the barrel climbs and wanders a little
 		double spread = 0.0012 + Math.min(burst, 10) * 0.0009 + (player.isCrouching() ? -0.0005 : 0.0) + (player.onGround() ? 0.0 : 0.006);
 		spread *= isAiming(player) ? 0.35 : 1.3;
@@ -205,7 +207,7 @@ public class AkItem extends Item {
 		// last three all tracers - so the stream shows where the fire goes, and the magazine running dry
 		// shows in the shooter's own fire before the hammer falls on nothing
 		boolean tracer = state.ammo() == GunState.TRACER && (state.rounds() % 4 == 0 || state.rounds() <= 3);
-		shoot(level, player, muzzle, dir, tracer, left == 0);
+		shoot(level, player, eye, muzzle, dir, tracer, left == 0);
 		if (left == 0) {
 			TRIGGERS.remove(player.getUUID()); // the bolt stays forward on an empty chamber: the next pull just clicks
 		}
@@ -215,8 +217,9 @@ public class AkItem extends Item {
 	 * One round leaving an AK's muzzle, whoever holds it (a player or a soldier): the bullet, the shot
 	 * everybody near hears and sees (sound, flash, tracer), and the noise soldiers react to.
 	 */
-	public static void shoot(ServerLevel level, net.minecraft.world.entity.LivingEntity shooter, Vec3 muzzle, Vec3 dir, boolean tracer, boolean last) {
-		BulletEntity.fire(level, shooter, muzzle, dir.scale(MUZZLE_VELOCITY), tracer);
+	public static void shoot(ServerLevel level, net.minecraft.world.entity.LivingEntity shooter, Vec3 origin, Vec3 muzzle, Vec3 dir, boolean tracer,
+		boolean last) {
+		BulletEntity.fire(level, shooter, origin, dir.scale(MUZZLE_VELOCITY), tracer);
 		// everybody near hears it; the shooter gets it too, for the tracer on the bullet's true line
 		GunshotPayload shot = new GunshotPayload(shooter.getId(), muzzle.x, muzzle.y, muzzle.z, (float) dir.x, (float) dir.y, (float) dir.z,
 			(last ? GunshotPayload.LAST : 0) | (tracer ? GunshotPayload.TRACER : 0));

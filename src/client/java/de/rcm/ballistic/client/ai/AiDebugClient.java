@@ -60,9 +60,9 @@ public final class AiDebugClient {
 		return !ENTRIES.isEmpty();
 	}
 
-	private static final String[] STATE = {"PATROUILLE", "UNTERSUCHT", "KAMPF", "SUCHE", "DECKUNG"};
-	private static final String[] STATE_COLOUR = {"§a", "§e", "§c", "§6", "§9"};
-	private static final int[] STATE_RGB = {0x55FF55, 0xFFE040, 0xFF4040, 0xFF9A30, 0x5090FF};
+	private static final String[] STATE = {"PATROUILLE", "UNTERSUCHT", "KAMPF", "SUCHE", "DECKUNG", "UNTERDRÜCKUNGSFEUER"};
+	private static final String[] STATE_COLOUR = {"§a", "§e", "§c", "§6", "§9", "§d"};
+	private static final int[] STATE_RGB = {0x55FF55, 0xFFE040, 0xFF4040, 0xFF9A30, 0x5090FF, 0xE060FF};
 
 	/** The line above his head, or null when the debug view is off. */
 	static @Nullable Component text(int id) {
@@ -73,15 +73,16 @@ public final class AiDebugClient {
 		if (e == null) {
 			return null;
 		}
-		int s = Mth.clamp(e.state(), 0, 4);
+		int s = Mth.clamp(e.state(), 0, 5);
 		StringBuilder b = new StringBuilder();
 		b.append(e.team() == SoldierEntity.TEAM_HOSTILE ? "§4■ " : "§2■ ").append(STATE_COLOUR[s]).append(STATE[s]).append(" §7(").append(e.reason()).append(")");
+		b.append(" §8| §b").append(e.role());
 		b.append(" §8| §7Erkennung §f").append(Math.round(e.awareness() * 100)).append('%');
 		if (!e.targetName().isEmpty()) {
 			b.append(" §8| §7Ziel §f").append(e.targetName()).append(' ').append(Math.round(e.targetDistance())).append("m ")
 				.append(e.targetVisible() ? "§asichtbar" : "§everdeckt");
 		}
-		b.append(" §8| §7Muni §f").append(e.rounds()).append("/30").append(e.reloading() ? " §elädt" : "");
+		b.append(" §8| §7Muni §f").append(e.rounds()).append("/30").append(e.reloading() ? " §elädt" : "").append(" §8| §7Gran. §f").append(e.grenades());
 		if (e.suppression() > 0.05F) {
 			b.append(" §8| §7Unterdrückt §c").append(Math.round(e.suppression() * 100)).append('%');
 		}
@@ -109,7 +110,7 @@ public final class AiDebugClient {
 
 	private static void draw(Minecraft mc, SoldierDebug.Entry e, Entity soldier, PoseStack.Pose pose, VertexConsumer c, Vec3 cam, float partial) {
 		Vec3 eye = soldier.getEyePosition(partial);
-		int rgb = STATE_RGB[Mth.clamp(e.state(), 0, 4)];
+		int rgb = STATE_RGB[Mth.clamp(e.state(), 0, 5)];
 		// the view cone
 		float yaw = e.headYaw();
 		Vec3 prevSharp = null;
@@ -146,6 +147,23 @@ public final class AiDebugClient {
 		if (e.cover() != null) {
 			post(pose, c, cam, e.cover(), 1.6, 0x5090FF, 0.9F);
 			ring(pose, c, cam, e.cover().add(0, 0.05, 0), 0.5, 0x5090FF, 0.9F);
+		}
+		// where he is working round to, and where his grenade is going
+		if (e.flank() != null) {
+			post(pose, c, cam, e.flank(), 2.0, 0xC060FF, 0.8F);
+			line(pose, c, cam, soldier.position().add(0, 0.2, 0), e.flank().add(0, 0.2, 0), 0xC060FF, 0.35F);
+		}
+		if (e.grenade() != null) {
+			ring(pose, c, cam, e.grenade().add(0, 0.1, 0), 5.0, 0xFF6020, 0.7F); // the burst radius
+			cross(pose, c, cam, e.grenade().add(0, 0.1, 0), 0.6, 0xFF6020, 0.9F);
+		}
+		// radio reports he received: a line from whoever reported
+		for (double[] r : e.radio()) {
+			Entity from = mc.level.getEntity((int) r[0]);
+			if (from != null) {
+				float fade = Mth.clamp(1.0F - (float) r[1] / 60.0F, 0.0F, 1.0F);
+				line(pose, c, cam, from.getEyePosition(partial).add(0, 0.3, 0), eye.add(0, 0.3, 0), 0x40E0FF, 0.8F * fade);
+			}
 		}
 		// what he heard
 		for (double[] n : e.noises()) {
