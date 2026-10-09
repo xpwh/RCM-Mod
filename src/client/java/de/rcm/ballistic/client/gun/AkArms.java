@@ -78,6 +78,12 @@ public final class AkArms {
 	 */
 	public static void draw(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, Vector3f rightHand,
 		Vector3f leftHand, Vector3f rightShoulderBase, Vector3f leftShoulderBase) {
+		draw(player, base, poseStack, collector, light, rightHand, leftHand, rightShoulderBase, leftShoulderBase, RIGHT_POLE, LEFT_POLE);
+	}
+
+	/** The same with the elbows pointing towards the given poles (base space). */
+	public static void draw(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, Vector3f rightHand,
+		Vector3f leftHand, Vector3f rightShoulderBase, Vector3f leftShoulderBase, Vector3f rightPole, Vector3f leftPole) {
 		Minecraft mc = Minecraft.getInstance();
 		PlayerModel model = mc.getEntityRenderDispatcher().getPlayerRenderer(player).getModel();
 		Identifier skin = player.getSkin().body().texturePath();
@@ -87,8 +93,8 @@ public final class AkArms {
 		float scale = toItem.transformDirection(new Vector3f(1.0F, 0.0F, 0.0F)).length();
 		Vector3f rightShoulder = toItem.transformPosition(rightShoulderBase, new Vector3f());
 		Vector3f leftShoulder = toItem.transformPosition(leftShoulderBase, new Vector3f());
-		Vector3f rightElbow = elbow(rightShoulder, rightHand, RIGHT_UPPER * scale, FOREARM * scale, toItem.transformDirection(new Vector3f(RIGHT_POLE)));
-		Vector3f leftElbow = elbow(leftShoulder, leftHand, LEFT_UPPER * scale, FOREARM * scale, toItem.transformDirection(new Vector3f(LEFT_POLE)));
+		Vector3f rightElbow = elbow(rightShoulder, rightHand, RIGHT_UPPER * scale, FOREARM * scale, toItem.transformDirection(new Vector3f(rightPole)));
+		Vector3f leftElbow = elbow(leftShoulder, leftHand, LEFT_UPPER * scale, FOREARM * scale, toItem.transformDirection(new Vector3f(leftPole)));
 		boolean rightSleeve = player.isModelPartShown(PlayerModelPart.RIGHT_SLEEVE);
 		boolean leftSleeve = player.isModelPartShown(PlayerModelPart.LEFT_SLEEVE);
 		float rightFist = slim ? -0.5F : -1.0F;

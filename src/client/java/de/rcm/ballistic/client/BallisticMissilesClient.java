@@ -78,6 +78,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.render.Rpg7ItemRenderer.register();
 		de.rcm.ballistic.client.render.AkItemRenderer.register();
 		de.rcm.ballistic.client.render.GrenadeRenderers.register();
+		de.rcm.ballistic.client.render.FpvDroneItemRenderer.register();
 		de.rcm.ballistic.client.render.SmokeDebug.init();
 		de.rcm.ballistic.client.render.BulletHoles.init();
 		ModConfig.load();

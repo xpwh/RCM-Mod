@@ -44,6 +44,13 @@ public abstract class ItemInHandRendererMixin {
 			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
 				RpgClient.renderArms(player, stack, base, poseStack, collector, light, partialTick);
 			}
+		} else if (stack.getItem() instanceof de.rcm.ballistic.item.FpvDroneItem) {
+			// the drone lying on your flat hand
+			Matrix4f base = new Matrix4f(poseStack.last().pose());
+			de.rcm.ballistic.client.drone.DroneHandClient.transform(poseStack, player, partialTick);
+			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
+				de.rcm.ballistic.client.drone.DroneHandClient.renderArms(player, base, poseStack, collector, light);
+			}
 		} else if (stack.is(ModRegistry.GRENADE)) {
 			Matrix4f base = new Matrix4f(poseStack.last().pose());
 			de.rcm.ballistic.client.gun.GrenadeClient.transform(poseStack, player, partialTick);

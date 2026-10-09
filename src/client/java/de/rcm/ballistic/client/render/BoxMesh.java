@@ -24,10 +24,15 @@ public final class BoxMesh {
 	}
 
 	public void emit(PoseStack.Pose pose, VertexConsumer consumer, int light) {
+		this.emit(pose, consumer, light, -1);
+	}
+
+	/** With a tint (ARGB): its alpha makes the mesh see-through in a translucent render type. */
+	public void emit(PoseStack.Pose pose, VertexConsumer consumer, int light, int argb) {
 		float[] d = this.data;
 		for (int i = 0; i < d.length; i += STRIDE) {
 			consumer.addVertex(pose, d[i], d[i + 1], d[i + 2])
-				.setColor(-1)
+				.setColor(argb)
 				.setUv(d[i + 3], d[i + 4])
 				.setOverlay(OverlayTexture.NO_OVERLAY)
 				.setLight(light)
