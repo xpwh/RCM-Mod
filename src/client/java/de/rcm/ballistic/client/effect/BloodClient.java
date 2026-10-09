@@ -102,6 +102,17 @@ public final class BloodClient {
 					spawn(at, d.scale(0.2 + RANDOM.nextDouble() * 0.45).add(dir.scale(0.2)), 0.04F + RANDOM.nextFloat() * 0.07F);
 				}
 			}
+			case Blood.JET -> {
+				// a spurt: drops along one arc, the first fastest, the jet breaking up at its end
+				double strength = dir.length();
+				Vec3 d = strength < 1.0E-4 ? new Vec3(0, 1, 0) : dir.scale(1.0 / strength);
+				for (int i = 0; i < n; i++) {
+					double f = i / (double) Math.max(1, n - 1);
+					double speed = (0.12 + 0.3 * (1.0 - f * 0.75)) * strength;
+					Vec3 v = d.scale(speed).add(gauss(0.012 + 0.03 * f));
+					spawn(at.add(d.scale(0.02 * i)), v, 0.03F + RANDOM.nextFloat() * 0.035F);
+				}
+			}
 			case Blood.DRIP -> {
 				for (int i = 0; i < n; i++) {
 					spawn(at.add(gauss(0.12)), dir.scale(0.3).add(gauss(0.01)), 0.03F + RANDOM.nextFloat() * 0.03F);

@@ -15,6 +15,8 @@ public final class Blood {
 	public static final int DRIP = 1;
 	public static final int POOL = 2;
 	public static final int BURST = 3;
+	/** A spurt from a cut artery: a jet thrown out along {@code dir}, as hard as {@code dir} is long. */
+	public static final int JET = 4;
 
 	private Blood() {
 	}

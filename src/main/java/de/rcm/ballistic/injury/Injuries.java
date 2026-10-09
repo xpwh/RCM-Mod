@@ -64,6 +64,8 @@ public final class Injuries {
 		int clot;
 		int heal;
 		int drip;
+		/** Ticks since the last spurt from a cut artery. */
+		int pulse;
 		/** Buckshot in a leg this tick: the tick, and the balls in the left and the right leg. */
 		long pelletTick;
 		int pelletsLeft;
@@ -116,6 +118,47 @@ public final class Injuries {
 		});
 	}
 
+	/**
+	 * One spurt from a cut artery: from where the wound is - the stump of a leg or an arm, a leg, an arm, the
+	 * body - out and away from it, as a jet that arcs to the ground. Lying down, from where the limbs lie.
+	 */
+	private static void spurt(ServerPlayer p, Wounds w, float strength) {
+		ServerLevel level = p.level();
+		double yaw = p.yBodyRot * Mth.DEG_TO_RAD;
+		Vec3 facing = new Vec3(-Math.sin(yaw), 0, Math.cos(yaw));
+		Vec3 left = new Vec3(Math.cos(yaw), 0, Math.sin(yaw));
+		boolean lying = w.down() || p.getPose() == net.minecraft.world.entity.Pose.SWIMMING;
+		int seedSide = (w.seed() & 1) == 0 ? 1 : -1;
+		Vec3 at;
+		Vec3 dir;
+		if (w.lost() > 0 || (w.armsLost() == 0 && w.leg() >= w.arm() && w.leg() > 0)) {
+			// a leg: the stump pours down and out, a wounded thigh squirts sideways
+			double s = w.lost() > 0 ? ((w.lost() & Wounds.LEFT) != 0 ? 1 : -1) : seedSide;
+			boolean stump = w.lost() > 0;
+			if (lying) {
+				at = p.position().add(facing.scale(-0.65)).add(left.scale(0.12 * s)).add(0, 0.15, 0);
+				dir = stump ? facing.scale(-0.7).add(0, 0.45, 0) : left.scale(0.6 * s).add(0, 0.7, 0);
+			} else {
+				at = p.position().add(left.scale(0.12 * s)).add(0, stump ? 0.38 : 0.5, 0);
+				dir = stump ? facing.scale(0.35).add(left.scale(0.25 * s)).add(0, -0.25, 0) : left.scale(0.65 * s).add(facing.scale(0.35)).add(0, 0.3, 0);
+			}
+		} else if (w.armsLost() > 0 || w.arm() > 0) {
+			double s = w.armsLost() > 0 ? ((w.armsLost() & Wounds.LEFT) != 0 ? 1 : -1) : seedSide;
+			boolean stump = w.armsLost() > 0;
+			if (lying) {
+				at = p.position().add(facing.scale(0.35)).add(left.scale(0.38 * s)).add(0, 0.15, 0);
+				dir = left.scale(0.5 * s).add(0, 0.75, 0);
+			} else {
+				at = p.position().add(left.scale(0.38 * s)).add(0, stump ? 0.95 : 1.1, 0);
+				dir = stump ? left.scale(0.35 * s).add(facing.scale(0.3)).add(0, -0.3, 0) : left.scale(0.6 * s).add(facing.scale(0.3)).add(0, 0.35, 0);
+			}
+		} else {
+			at = lying ? p.position().add(0, 0.25, 0) : p.position().add(facing.scale(0.2)).add(0, 1.2, 0);
+			dir = lying ? new Vec3(0, 0.8, 0).add(facing.scale(0.3)) : facing.scale(0.7).add(0, 0.25, 0);
+		}
+		Blood.send(level, at, dir.normalize().scale(strength), Math.round(10 + 8 * strength), Blood.JET);
+	}
+
 	/** Animals and monsters bleeding from their wounds, and for how many ticks more. */
 	private static final Map<LivingEntity, Integer> BLEEDING_CREATURES = new java.util.WeakHashMap<>();
 
@@ -141,6 +184,12 @@ public final class Injuries {
 			// drops falling from it as it runs; still, a pool spreading under the body
 			if (e.isAlive()) {
 				Blood.send(level, e.position().add(0, e.getBbHeight() * 0.45, 0), new Vec3(0, -0.2, 0), 2, Blood.DRIP);
+				if (left > 260 && left % 12 < 6) {
+					// a big wound: an artery pumping
+					double a = level.getRandom().nextDouble() * Math.PI * 2;
+					Blood.send(level, e.position().add(0, e.getBbHeight() * 0.55, 0), new Vec3(Math.cos(a) * 0.6, 0.45, Math.sin(a) * 0.6).scale(0.9), 12,
+						Blood.JET);
+				}
 			} else if (left % 60 < 6) {
 				Blood.send(level, e.position().add(0, 0.3, 0), Vec3.ZERO, 6 + left / 60, Blood.POOL);
 			}
@@ -592,6 +641,14 @@ public final class Injuries {
 				if (w.dying() % 30 == 0 && w.bleed() > 0) {
 					Blood.send(level, p.position().add(0, 0.2, 0), Vec3.ZERO, 2, Blood.DRIP);
 				}
+				if (w.bleed() == Wounds.ARTERIAL) {
+					// the heart failing: the spurts weaker and further apart
+					float left = w.dying() / (float) DYING;
+					if (++c.pulse >= 12 + Math.round((1.0F - left) * 14)) {
+						c.pulse = 0;
+						spurt(p, w, 0.35F + 0.5F * left);
+					}
+				}
 				if (w.dying() <= 1) {
 					die(p);
 				} else {
@@ -603,6 +660,14 @@ public final class Injuries {
 				if (++c.bleed >= BLEED_EVERY[w.bleed()]) {
 					c.bleed = 0;
 					p.hurtServer(level, new DamageSource(level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(BLEEDING)), 1.0F);
+				}
+				if (w.bleed() == Wounds.ARTERIAL) {
+					// a cut artery pumps it out with every beat: faster the more blood is gone
+					float health = p.getHealth() / Math.max(1.0F, p.getMaxHealth());
+					if (++c.pulse >= 9 + Math.round(health * 7)) {
+						c.pulse = 0;
+						spurt(p, w, 0.8F + 0.25F * health);
+					}
 				}
 				// the drops it leaves behind
 				int every = w.bleed() == Wounds.ARTERIAL ? 4 : w.bleed() == 2 ? 12 : 30;
