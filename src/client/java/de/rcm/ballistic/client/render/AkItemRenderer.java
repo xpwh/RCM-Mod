@@ -386,7 +386,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		b.box(-0.011F, 0.148F, -0.135F, 0.011F, 0.171F, -0.127F, AK_BLUED);
 		for (float sx : new float[] {-1.0F, 1.0F}) {
 			// the ears either side of the notch
-			b.box(sx > 0 ? 0.0035F : -0.012F, 0.173F, -0.13F, sx > 0 ? 0.012F : -0.0035F, 0.184F, -0.122F, AK_BLUED);
+			b.box(sx > 0 ? 0.0055F : -0.013F, 0.173F, -0.13F, sx > 0 ? 0.013F : -0.0055F, 0.184F, -0.122F, AK_BLUED);
 		}
 		b.box(-0.018F, 0.164F, -0.172F, 0.018F, 0.177F, -0.16F, AK_WORN); // range slider
 		b.box(0.018F, 0.166F, -0.17F, 0.023F, 0.174F, -0.162F, AK_WORN);  // slider catch
@@ -474,7 +474,8 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 				v(sx * 0.0125F, 0.108F, -0.628F), v(sx * 0.018F, 0.108F, -0.628F), v(sx * 0.016F, 0.19F, -0.636F), v(sx * 0.0125F, 0.19F, -0.636F),
 				v(sx * 0.0125F, 0.108F, -0.658F), v(sx * 0.018F, 0.108F, -0.658F), v(sx * 0.016F, 0.19F, -0.652F), v(sx * 0.0125F, 0.19F, -0.652F));
 		}
-		b.revolve(AK_WORN, v(0, 0.12F, -0.644F), v(0, 1, 0), new float[][] {{0.0F, 0.0034F}, {0.063F, 0.003F}, {0.066F, 0.0F}}, 6);
+		// the front post: a flat-topped blade, wide enough to pick up in the notch
+		b.box(-0.0042F, 0.12F, -0.647F, 0.0042F, 0.187F, -0.641F, AK_WORN);
 		b.box(-0.006F, 0.044F, -0.66F, 0.006F, 0.06F, -0.618F, AK_BLUED);
 		b.box(-0.004F, 0.04F, -0.656F, 0.004F, 0.044F, -0.645F, AK_BLUED);
 		// cleaning rod under the barrel, its notched head at the front

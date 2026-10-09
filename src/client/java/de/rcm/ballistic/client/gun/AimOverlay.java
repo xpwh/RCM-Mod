@@ -1,20 +1,18 @@
 package de.rcm.ballistic.client.gun;
 
 import de.rcm.ballistic.BallisticMissiles;
-import de.rcm.ballistic.client.ModConfig;
 import de.rcm.ballistic.client.item.RpgClient;
-import de.rcm.ballistic.gun.AkItem;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
 /**
- * What you see when you aim.
+ * What you see aiming the RPG-7 (the AK-47 has only its iron sights, see AkFirstPerson).
  * <ul>
- * <li><b>AK-47</b>: the iron sights come up to the eye; a small dot marks the exact point of aim in the
- * middle of the front sight post - where the bullet goes (it can be switched off in the settings).</li>
  * <li><b>RPG-7</b>: the eye goes to the PGO-7 optical sight, 2.7x: the dark tube round the picture and its
  * reticle - the aiming chevron, the chevrons below it for 100 to 400 m (each sits as far below the middle
  * as the rocket drops at that range, so you put the right one on the target), the lead scale either side
@@ -29,6 +27,7 @@ public final class AimOverlay {
 	private static final float[] DROP = {3.31F, 4.29F, 7.03F, 11.06F};
 	private static final int INK = 0xF0101010;
 	private static final int HALO = 0x50E8E0C8;
+	private static final Identifier TUBE = BallisticMissiles.id("textures/gui/pgo7_tube.png");
 
 	private AimOverlay() {
 	}
@@ -56,15 +55,6 @@ public final class AimOverlay {
 			scope(g, mc, w, h, scope);
 			return;
 		}
-		float ak = AkClient.aimProgress(partialTick);
-		if (ak > 0.6F && ModConfig.aimDot && AkItem.isAiming(mc.player)) {
-			// the point of aim: a small glowing dot with a dark rim, on the tip of the front sight post
-			int a = (int) (Mth.clamp((ak - 0.6F) / 0.4F, 0.0F, 1.0F) * 230.0F);
-			int cx = w / 2;
-			int cy = h / 2;
-			g.fill(cx - 1, cy - 1, cx + 2, cy + 2, (a * 3 / 4) << 24);
-			g.fill(cx, cy, cx + 1, cy + 1, a << 24 | 0xFF3A20);
-		}
 	}
 
 	/** Screen offset (GUI pixels) of a direction {@code deg} degrees off the middle of the view. */
@@ -80,30 +70,16 @@ public final class AimOverlay {
 		int cy = h / 2;
 		float r = h * 0.46F;
 		int alpha = (int) (amount * 255.0F);
-		// the tube: black round the field of view, its rim softening into the picture
-		for (int y = 0; y < h; y++) {
-			float dy = y + 0.5F - cy;
-			float span = r * r - dy * dy;
-			if (span <= 0.0F) {
-				g.fill(0, y, w, y + 1, alpha << 24);
-				continue;
-			}
-			int half = (int) Math.sqrt(span);
-			g.fill(0, y, cx - half, y + 1, alpha << 24);
-			g.fill(cx + half, y, w, y + 1, alpha << 24);
-			for (int ring = 1; ring <= 6; ring++) {
-				float ri = r - ring * 2.0F;
-				float s2 = ri * ri - dy * dy;
-				int inner = s2 > 0.0F ? (int) Math.sqrt(s2) : 0;
-				int a = (int) (alpha * 0.16F);
-				g.fill(cx - half, y, cx - inner, y + 1, a << 24);
-				g.fill(cx + inner, y, cx + half, y + 1, a << 24);
-				half = inner;
-				if (inner == 0) {
-					break;
-				}
-			}
-		}
+		// the tube: one texture (clear in the middle, darkening to its rim, black outside), black beyond it
+		int size = Math.round(r * 2.0F);
+		int tx = cx - size / 2;
+		int ty = cy - size / 2;
+		int black = alpha << 24;
+		g.blit(RenderPipelines.GUI_TEXTURED, TUBE, tx, ty, 0.0F, 0.0F, size, size, 512, 512, 512, 512, alpha << 24 | 0xFFFFFF);
+		g.fill(0, 0, w, ty, black);
+		g.fill(0, ty + size, w, h, black);
+		g.fill(0, ty, tx, ty + size, black);
+		g.fill(tx + size, ty, w, ty + size, black);
 		if (amount < 0.6F) {
 			return;
 		}
@@ -159,6 +135,15 @@ public final class AimOverlay {
 
 	/** A one-pixel line (Bresenham), over a faint light halo so it reads against dark ground too. */
 	private static void line(GuiGraphics g, int x0, int y0, int x1, int y1, int ink, int halo) {
+		if (x0 == x1 || y0 == y1) {
+			int ax = Math.min(x0, x1);
+			int bx = Math.max(x0, x1) + 1;
+			int ay = Math.min(y0, y1);
+			int by = Math.max(y0, y1) + 1;
+			g.fill(ax - 1, ay - 1, bx + 1, by + 1, halo);
+			g.fill(ax, ay, bx, by, ink);
+			return;
+		}
 		plot(g, x0, y0, x1, y1, halo, 1);
 		plot(g, x0, y0, x1, y1, ink, 0);
 	}
