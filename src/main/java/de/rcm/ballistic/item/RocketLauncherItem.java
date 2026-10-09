@@ -10,6 +10,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -155,9 +156,35 @@ public class RocketLauncherItem extends Item {
 				e.push(back.x * 0.8, 0.25, back.z * 0.8);
 			}
 		}
-		level.playSound(null, shoulder.x, shoulder.y, shoulder.z, ModRegistry.SAM_LAUNCH, SoundSource.PLAYERS, 3.0F, 1.55F);
-		level.playSound(null, shoulder.x, shoulder.y, shoulder.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.4F, 1.7F);
-		level.playSound(null, shoulder.x, shoulder.y, shoulder.z, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 2.0F, 0.5F);
+		shotSound(level, shoulder);
+	}
+
+	/**
+	 * The report of a real RPG-7 (recorded on a range): the booster's bang and the rocket tearing away.
+	 * Each listener gets the version for their distance - close by the full crack, a few hundred blocks
+	 * off only the low thump and its echo.
+	 */
+	private static void shotSound(ServerLevel level, Vec3 at) {
+		long seed = level.getRandom().nextLong();
+		float pitch = 0.96F + level.getRandom().nextFloat() * 0.08F;
+		for (ServerPlayer p : level.players()) {
+			double d = p.position().distanceTo(at);
+			SoundEvent sound;
+			float volume;
+			if (d < 90.0) {
+				sound = ModRegistry.RPG_SHOT;
+				volume = 7.0F; // heard at full strength beside the shooter, fading out over ~110 blocks
+			} else if (d < 700.0) {
+				sound = ModRegistry.RPG_SHOT_FAR;
+				// sized so it arrives at a gain sinking from ~0.6 to ~0.15 with distance
+				float gain = (float) Math.max(0.15, 0.65 - d / 1300.0);
+				volume = (float) (d / (16.0 * (1.0 - gain)));
+			} else {
+				continue;
+			}
+			p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(net.minecraft.core.Holder.direct(sound),
+				SoundSource.PLAYERS, at.x, at.y, at.z, volume, pitch, seed));
+		}
 	}
 
 	@Override

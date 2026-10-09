@@ -609,6 +609,9 @@ public final class ModRegistry {
 	public static final SoundEvent AK_SHOT = sound("ak.shot");
 	public static final SoundEvent AK_SHOT_MID = sound("ak.shot_mid");
 	public static final SoundEvent AK_SHOT_FAR = sound("ak.shot_far");
+	public static final SoundEvent RPG_SHOT = sound("rpg.shot");
+	public static final SoundEvent RPG_SHOT_FAR = sound("rpg.shot_far");
+	public static final SoundEvent RPG_MOTOR = sound("rpg.motor");
 	public static final SoundEvent AK_TAIL_OUTDOOR = sound("ak.tail_outdoor");
 	public static final SoundEvent AK_TAIL_INDOOR = sound("ak.tail_indoor");
 	public static final SoundEvent AK_TAIL_CAVE = sound("ak.tail_cave");

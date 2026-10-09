@@ -182,7 +182,7 @@ public class RpgRocketEntity extends Entity {
 					level.addParticle(ParticleTypes.LARGE_SMOKE, tail.x, tail.y, tail.z,
 						(this.random.nextDouble() - 0.5) * 0.15, (this.random.nextDouble() - 0.5) * 0.15, (this.random.nextDouble() - 0.5) * 0.15);
 				}
-				level.playLocalSound(tail.x, tail.y, tail.z, SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.NEUTRAL, 2.0F, 0.6F, false);
+				level.playLocalSound(tail.x, tail.y, tail.z, de.rcm.ballistic.ModRegistry.RPG_MOTOR, SoundSource.NEUTRAL, 4.0F, 0.95F + this.random.nextFloat() * 0.1F, true);
 			}
 		} else if (this.tickCount % 2 == 0) {
 			level.addParticle(ParticleTypes.SMOKE, tail.x, tail.y, tail.z, 0, 0.02, 0);

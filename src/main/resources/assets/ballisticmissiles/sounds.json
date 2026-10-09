@@ -757,6 +757,54 @@
 			}
 		]
 	},
+	"rpg.shot": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/shot1"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot2"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot3"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot4"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot5"
+			}
+		]
+	},
+	"rpg.shot_far": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_shot_far",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/shot_far1"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot_far2"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot_far3"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot_far4"
+			}
+		]
+	},
+	"rpg.motor": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_motor",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/motor1"
+			},
+			{
+				"name": "ballisticmissiles:rpg/motor2"
+			}
+		]
+	},
 	"ak.dry": {
 		"subtitle": "subtitles.ballisticmissiles.ak_click",
 		"sounds": [

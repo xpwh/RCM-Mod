@@ -18,6 +18,13 @@ Bullet impacts on earth, stone, wood and flesh use Minecraft's own sounds. Other
 | Bullet flyby | https://freesound.org/s/855248/ "Real Bullet Flyby Sound" | qubodup | CC0 1.0 |
 | Bullets hitting metal | https://freesound.org/s/116645/ "bullets hit EDIT" | Woodingp | CC0 1.0 |
 
+## RPG-7 (`tools/import_rpg_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Close shots, motor | https://freesound.org/s/249298/ "rpg launcher three shots" | klangfabrik | CC0 1.0 |
+| Close / far shots | https://freesound.org/s/184274/ "Launching Anti-Tank Missiles" (US Government video) | qubodup | CC0 1.0 |
+
 ## Explosions, grenade, breathing (`tools/import_explosion_sounds.py`)
 
 | Sound | Source | Author | License |
