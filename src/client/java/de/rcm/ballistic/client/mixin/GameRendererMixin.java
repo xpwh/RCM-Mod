@@ -31,6 +31,15 @@ public abstract class GameRendererMixin {
 		BlastShader.frame(Minecraft.getInstance(), deltaTracker.getGameTimeDeltaPartialTick(false));
 	}
 
+	/** Aiming down the sights the head and the weapon hardly bob as you walk: you steady them. */
+	@com.llamalad7.mixinextras.injector.ModifyExpressionValue(method = "bobView", at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/client/entity/ClientAvatarState;getInterpolatedBob(F)F"))
+	private float ballisticmissiles$steadyAim(float bob) {
+		float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+		float aim = Math.max(de.rcm.ballistic.client.gun.AkClient.aimProgress(partialTick), de.rcm.ballistic.client.item.RpgClient.aimProgress(partialTick));
+		return bob * (1.0F - 0.88F * aim);
+	}
+
 	@Inject(method = "bobHurt", at = @At("HEAD"))
 	private void ballisticmissiles$shake(PoseStack poseStack, float partialTick, CallbackInfo ci) {
 		if (de.rcm.ballistic.client.drone.DroneClient.isFlying()) {

@@ -269,7 +269,7 @@ public final class AkFirstPerson {
 		poseStack.translate(-LAG_YAW.x * 0.0022F, LAG_PITCH.x * 0.0018F, 0.0F);
 		poseStack.mulPose(Axis.YP.rotationDegrees(LAG_YAW.x * 0.5F));
 		poseStack.mulPose(Axis.XP.rotationDegrees(LAG_PITCH.x * 0.45F));
-		float lean = Mth.lerp(partialTick, prevStrafe, strafe) * (1.0F - 0.6F * aim);
+		float lean = Mth.lerp(partialTick, prevStrafe, strafe) * (1.0F - 0.9F * aim);
 		poseStack.mulPose(Axis.ZP.rotationDegrees(-3.5F * lean));
 		poseStack.translate(-0.008F * lean, 0.0F, 0.0F);
 
