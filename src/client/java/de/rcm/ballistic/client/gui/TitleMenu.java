@@ -14,8 +14,7 @@ import net.minecraft.util.Util;
  * The mod's title screen: real photographs of Minuteman III ICBM test launches from Vandenberg at night
  * (U.S. Air Force / Space Force, public domain) instead of the panorama, as a slow slideshow - each
  * picture drifts and zooms a little ("Ken Burns"), then dissolves into the next; the mouse adds a touch
- * of parallax. The Minecraft logo makes way for the mod's own, the splash for a radio call, and a small
- * caption says what the picture shows.
+ * of parallax. The Minecraft logo makes way for the mod's own, the splash for a radio call.
  */
 public final class TitleMenu {
 	private static final int TW = 1600;
@@ -24,11 +23,6 @@ public final class TitleMenu {
 		BallisticMissiles.id("textures/gui/title/launch1.png"),
 		BallisticMissiles.id("textures/gui/title/launch2.png"),
 		BallisticMissiles.id("textures/gui/title/launch3.png")
-	};
-	private static final String[] CAPTIONS = {
-		"Minuteman III ICBM operational test launch, Vandenberg SFB  -  U.S. Space Force photo",
-		"Unarmed Minuteman III test launch, Vandenberg  -  U.S. Air Force photo",
-		"Minuteman III launch, Vandenberg AFB, October 2019  -  U.S. Air Force photo"
 	};
 	/** Which way each picture drifts while it is shown (x, y; -1..1). */
 	private static final float[][] DRIFT = {{0.6F, -0.4F}, {-0.7F, 0.3F}, {0.4F, 0.5F}};
@@ -64,10 +58,6 @@ public final class TitleMenu {
 		g.fillGradient(0, 0, w, h / 3, 0xB0000000, 0x00000000);
 		g.fillGradient(0, h - h / 3, w, h, 0x00000000, 0xC0000000);
 		g.fillGradient(0, h / 3, w, h - h / 3, 0x20000000, 0x20000000);
-		// what the picture shows, small, above the version line
-		Font font = Minecraft.getInstance().font;
-		String caption = "Ballistic Missiles v" + version() + "   |   " + CAPTIONS[cur];
-		g.drawString(font, caption, 2, h - 20, 0x80B0B4BA, false);
 	}
 
 	/** One picture, cover-fitted, drifting and zooming with its age {@code age} seconds. */
