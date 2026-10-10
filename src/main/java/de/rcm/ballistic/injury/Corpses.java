@@ -29,8 +29,10 @@ public final class Corpses {
 	public static final int LIFETIME = 3600;
 	/** More bodies than this in the world, and the oldest goes. */
 	private static final int MAX = 24;
-	/** On a body: the game time it disappears. */
-	public static final AttachmentType<Long> UNTIL = AttachmentRegistry.create(BallisticMissiles.id("corpse_until"), b -> b.persistent(Codec.LONG));
+	/** On a body: the game time it disappears (known to the clients too: they show how long it has lain there). */
+	public static final AttachmentType<Long> UNTIL = AttachmentRegistry.create(BallisticMissiles.id("corpse_until"),
+		b -> b.persistent(Codec.LONG).syncWith(net.minecraft.network.codec.ByteBufCodecs.VAR_LONG.cast(),
+			net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all()));
 
 	private static final List<Mannequin> BODIES = new ArrayList<>();
 

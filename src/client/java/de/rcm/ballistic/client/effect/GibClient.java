@@ -352,6 +352,8 @@ public final class GibClient {
 				continue;
 			}
 			int light = LevelRenderer.getLightColor(mc.level, BlockPos.containing(x, y + 0.1, z));
+			// lying there, the blood on it goes dull and dark
+			GoreMesh.dryness((g.age - 200) / 2000.0F);
 			poseStack.pushPose();
 			poseStack.translate(x - cam.x, y - cam.y, z - cam.z);
 			poseStack.mulPose(new Quaternionf(g.prot).slerp(g.rot, partial));
@@ -390,5 +392,6 @@ public final class GibClient {
 			}
 			poseStack.popPose();
 		}
+		GoreMesh.dryness(0.0F);
 	}
 }

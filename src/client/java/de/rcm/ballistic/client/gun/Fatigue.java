@@ -70,9 +70,13 @@ public final class Fatigue {
 			}
 			s[0] = Mth.clamp(s[0], 0.0F, 1.0F);
 			float before = s[1];
-			s[1] += Mth.TWO_PI * (0.25F + 0.75F * s[0]) / 20.0F;
-			if (s[0] > 0.22F && (int) (s[1] / Mth.TWO_PI) != (int) (before / Mth.TWO_PI)) {
-				GunAudio.play(ModRegistry.PLAYER_BREATH, p.getEyePosition(), 0.12F + 0.55F * s[0], 0.94F + (float) Math.random() * 0.12F);
+			s[1] += Mth.TWO_PI * (0.25F + 0.55F * s[0]) / 20.0F;
+			if (s[0] > 0.3F && (int) (s[1] / Mth.TWO_PI) != (int) (before / Mth.TWO_PI)) {
+				// someone else panting is only heard close by
+				float near = 1.0F - (float) Math.sqrt(p.distanceToSqr(self)) / 10.0F;
+				if (near > 0.0F) {
+					GunAudio.play(ModRegistry.PLAYER_BREATH, p.getEyePosition(), (0.03F + 0.14F * s[0]) * near * near, 0.97F + (float) Math.random() * 0.06F);
+				}
 			}
 			if (s[1] > Mth.TWO_PI * 64.0F) {
 				s[1] -= Mth.TWO_PI * 64.0F;
@@ -106,17 +110,18 @@ public final class Fatigue {
 		}
 		level = Mth.clamp(level, 0.0F, 1.0F);
 
-		// breathing: about one breath in four seconds at rest, nearly one a second when winded
+		// breathing: about one breath in four seconds at rest, four in five seconds when winded (each sound a whole breath, in and out)
 		prevPhase = phase;
-		float rate = 0.25F + 0.75F * level;
+		float rate = 0.25F + 0.55F * level;
 		phase += Mth.TWO_PI * rate / 20.0F;
 		if (phase > Mth.TWO_PI * 64.0F) {
 			phase -= Mth.TWO_PI * 64.0F;
 			prevPhase -= Mth.TWO_PI * 64.0F;
 		}
-		if (level > 0.22F && (int) (phase / Mth.TWO_PI) != (int) (prevPhase / Mth.TWO_PI)) {
-			float volume = 0.12F + 0.55F * level;
-			GunAudio.play(ModRegistry.PLAYER_BREATH, player.getEyePosition(), volume, 0.94F + (float) Math.random() * 0.12F);
+		if (level > 0.3F && (int) (phase / Mth.TWO_PI) != (int) (prevPhase / Mth.TWO_PI)) {
+			// your own breath: there under everything else, not over it - quietest while you still run, the footsteps drowning it
+			float volume = (0.05F + 0.2F * (level - 0.3F) / 0.7F) * (player.isSprinting() ? 0.7F : 1.0F);
+			GunAudio.play(ModRegistry.PLAYER_BREATH, player.getEyePosition(), volume, 0.97F + (float) Math.random() * 0.06F);
 		}
 
 		// the weapon wandering with the breath and the pounding heart: it moves your aim

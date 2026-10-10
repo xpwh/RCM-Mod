@@ -22,6 +22,7 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
  */
 public final class StumpLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
 	private static final float P = GoreMesh.P;
+	private boolean dripping = true;
 
 	public StumpLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent) {
 		super(parent);
@@ -38,6 +39,10 @@ public final class StumpLayer extends RenderLayer<AvatarRenderState, PlayerModel
 			return;
 		}
 		int seed = gore.ballisticmissiles$seed();
+		// a body left lying: the wounds stop running and the blood on them dries dark and dull
+		float dead = ((CorpseAge) state).ballisticmissiles$corpseAge();
+		this.dripping = dead < 300.0F;
+		GoreMesh.dryness(dead < 0.0F ? 0.0F : (dead - 300.0F) / 2400.0F);
 		PlayerModel model = this.getParentModel();
 		float age = state.ageInTicks;
 		boolean slim = state.skin != null && state.skin.model() == net.minecraft.world.entity.player.PlayerModelType.SLIM;
@@ -72,9 +77,13 @@ public final class StumpLayer extends RenderLayer<AvatarRenderState, PlayerModel
 			this.drops(poseStack, collector, light, drips, age, 3);
 			poseStack.popPose();
 		}
+		GoreMesh.dryness(0.0F);
 	}
 
 	private void drops(PoseStack poseStack, SubmitNodeCollector collector, int light, float[][] at, float age, int seed) {
+		if (!this.dripping) {
+			return;
+		}
 		for (int i = 0; i < at.length; i++) {
 			float phase = ((age + seed * 7.3F + i * 6.1F) % 17.0F) / 17.0F;
 			if (phase > 0.85F) {

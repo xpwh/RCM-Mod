@@ -21,6 +21,8 @@ import org.joml.Vector3f;
  */
 public final class GoreMesh {
 	public static final RenderType TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/entity/gore.png"));
+	/** The wet shine over it (see {@link WetShine}): white, its alpha how wet each texel is. */
+	public static final RenderType GLOSS = RenderTypes.eyes(BallisticMissiles.id("textures/entity/gore_gloss.png"));
 	public static final float P = 1.0F / 16.0F;
 
 	// tiles (see gen_gore.py)
@@ -45,16 +47,50 @@ public final class GoreMesh {
 		this.data = data;
 	}
 
+	/** How far the gore drawn next has dried (0 fresh .. 1 old, dark and matt): set round the submits of an old body. */
+	private static float dryness;
+
+	public static void dryness(float dry) {
+		dryness = Mth.clamp(dry, 0.0F, 1.0F);
+	}
+
 	public void emit(PoseStack.Pose pose, VertexConsumer consumer, int light) {
+		this.emit(pose, consumer, light, 0.0F);
+	}
+
+	/** Drying, blood goes from bright, wet red to a dark, brownish crust. */
+	private void emit(PoseStack.Pose pose, VertexConsumer consumer, int light, float dry) {
+		int color = dry <= 0.0F ? -1
+			: 0xFF000000 | (int) (255 * (1.0F - 0.5F * dry)) << 16 | (int) (255 * (1.0F - 0.56F * dry)) << 8 | (int) (255 * (1.0F - 0.58F * dry));
 		float[] d = this.data;
 		for (int i = 0; i < d.length; i += 8) {
-			consumer.addVertex(pose, d[i], d[i + 1], d[i + 2]).setColor(-1).setUv(d[i + 3], d[i + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
+			consumer.addVertex(pose, d[i], d[i + 1], d[i + 2]).setColor(color).setUv(d[i + 3], d[i + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
+				.setLight(light).setNormal(pose, d[i + 5], d[i + 6], d[i + 7]);
+		}
+	}
+
+	/** The shine: per corner, the light reflected towards the eye times how wet it still is. */
+	private void emitGloss(PoseStack.Pose pose, VertexConsumer consumer, int light, float wet) {
+		float[] d = this.data;
+		Vector3f p = new Vector3f();
+		Vector3f n = new Vector3f();
+		for (int i = 0; i < d.length; i += 8) {
+			pose.pose().transformPosition(d[i], d[i + 1], d[i + 2], p);
+			pose.transformNormal(d[i + 5], d[i + 6], d[i + 7], n);
+			int a = (int) (255.0F * wet * WetShine.at(p, n, light));
+			consumer.addVertex(pose, d[i], d[i + 1], d[i + 2]).setColor(a << 24 | 0xFFFFFF).setUv(d[i + 3], d[i + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
 				.setLight(light).setNormal(pose, d[i + 5], d[i + 6], d[i + 7]);
 		}
 	}
 
 	public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light) {
-		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> this.emit(pose, consumer, light));
+		float dry = dryness;
+		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> this.emit(pose, consumer, light, dry));
+		float wet = 1.0F - dry * 1.15F;
+		if (wet > 0.02F) {
+			// after everything else, so it lies over the gore it shines on
+			collector.order(1).submitCustomGeometry(poseStack, GLOSS, (pose, consumer) -> this.emitGloss(pose, consumer, light, wet));
+		}
 	}
 
 	public static float u(int tile, float u) {

@@ -37,6 +37,8 @@ import org.joml.Vector3f;
  */
 public final class BloodClient {
 	private static final RenderType TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/effect/blood_ground.png"));
+	/** The wet shine on fresh blood (see {@link de.rcm.ballistic.client.render.WetShine}). */
+	private static final RenderType GLOSS = RenderTypes.eyes(BallisticMissiles.id("textures/effect/blood_ground_gloss.png"));
 	/** Rows of textures/effect/blood_ground.png (tools/gen_blood_ground.py), four versions each. */
 	private static final int SPLAT = 0;
 	private static final int SPATTER = 1;
@@ -267,7 +269,7 @@ public final class BloodClient {
 				if (s.at.distanceToSqr(cam) < 72.0 * 72.0) {
 					float alpha = Mth.clamp((LIFE - (now - s.born)) / (float) FADE, 0.0F, 1.0F);
 					float grow = s.grow <= 0 ? 1.0F : Mth.clamp((now - s.born + partial) / s.grow, 0.05F, 1.0F);
-					stainQuad(pose, consumer, s, cam, alpha, (float) Math.sqrt(grow), mc);
+					stainQuad(pose, consumer, s, cam, alpha, (float) Math.sqrt(grow), mc, false);
 				}
 			}
 			for (Drop d : DROPS) {
@@ -294,9 +296,28 @@ public final class BloodClient {
 				}
 			}
 		});
+		if (!STAINS.isEmpty()) {
+			// after everything else, over the stains it shines on
+			context.commandQueue().order(1).submitCustomGeometry(poseStack, GLOSS, (pose, consumer) -> {
+				for (Stain s : STAINS) {
+					if (s.at.distanceToSqr(cam) < 48.0 * 48.0 && wetness(s, now) > 0.01F) {
+						float alpha = Mth.clamp((LIFE - (now - s.born)) / (float) FADE, 0.0F, 1.0F);
+						float grow = s.grow <= 0 ? 1.0F : Mth.clamp((now - s.born + partial) / s.grow, 0.05F, 1.0F);
+						stainQuad(pose, consumer, s, cam, alpha, (float) Math.sqrt(grow), mc, true);
+					}
+				}
+			});
+		}
 	}
 
-	private static void stainQuad(PoseStack.Pose pose, VertexConsumer consumer, Stain s, Vec3 cam, float alpha, float grow, Minecraft mc) {
+	/** How wet a stain still is: a thick pool stays wet longest, a fine spatter dries in a minute. */
+	private static float wetness(Stain s, long now) {
+		float dries = s.kind == POOL_STAIN ? 3200.0F : s.kind == RUN ? 1200.0F : 1000.0F + 1200.0F * Math.min(1.0F, s.size);
+		float t = Mth.clamp((now - s.born) / dries, 0.0F, 1.0F);
+		return (1.0F - t) * (1.0F - t);
+	}
+
+	private static void stainQuad(PoseStack.Pose pose, VertexConsumer consumer, Stain s, Vec3 cam, float alpha, float grow, Minecraft mc, boolean gloss) {
 		Vector3f n = new Vector3f(s.face.getStepX(), s.face.getStepY(), s.face.getStepZ());
 		float size = s.size * 0.5F;
 		Vector3f ru;
@@ -324,12 +345,15 @@ public final class BloodClient {
 		float lift = 0.005F + dist * 0.0009F + s.index * 0.0004F;
 		Vector3f c = new Vector3f((float) (s.at.x - cam.x), (float) (s.at.y - cam.y), (float) (s.at.z - cam.z)).add(new Vector3f(n).mul(lift));
 		int light = LevelRenderer.getLightColor(mc.level, s.block.relative(s.face));
-		// drying: fresh blood bright and wet, over a minute or two going dark, then brown-black
-		float age = Mth.clamp((mc.level.getGameTime() - s.born) / 1800.0F, 0.0F, 1.0F);
-		int r = (int) (255 * (1.0F - 0.5F * age));
-		int g = (int) (255 * (1.0F - 0.42F * age));
-		int b = (int) (255 * (1.0F - 0.5F * age));
+		// drying: fresh blood bright and wet, over a minute or two going dark, clotting, then brown-black (a pool takes longer)
+		float age = Mth.clamp((mc.level.getGameTime() - s.born) / (s.kind == POOL_STAIN ? 2600.0F : 1800.0F), 0.0F, 1.0F);
+		age = age * age * (3.0F - 2.0F * age);
+		int r = (int) (255 * (1.0F - 0.55F * age));
+		int g = (int) (255 * (1.0F - 0.45F * age));
+		int b = (int) (255 * (1.0F - 0.52F * age));
 		int color = (int) (alpha * 255.0F) << 24 | r << 16 | g << 8 | b;
+		float wet = gloss ? wetness(s, mc.level.getGameTime()) * alpha : 0.0F;
+		Vector3f corner = new Vector3f();
 		// corners: (across, along v) - for a run, along v goes from +top (up) to -bottom (down)
 		float[][] q = s.kind == RUN
 			? new float[][] {{-1, top, tu, tv}, {1, top, tu + 0.25F, tv}, {1, -bottom, tu + 0.25F, tv + 0.25F * (top + bottom) / 2.0F},
@@ -339,6 +363,9 @@ public final class BloodClient {
 			float x = c.x + ru.x * p[0] + rv.x * p[1];
 			float y = c.y + ru.y * p[0] + rv.y * p[1];
 			float z = c.z + ru.z * p[0] + rv.z * p[1];
+			if (gloss) {
+				color = (int) (255.0F * wet * de.rcm.ballistic.client.render.WetShine.at(corner.set(x, y, z), n, light)) << 24 | 0xFFFFFF;
+			}
 			consumer.addVertex(pose, x, y, z).setColor(color).setUv(p[2], p[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
 				.setNormal(pose, n.x, n.y, n.z);
 		}

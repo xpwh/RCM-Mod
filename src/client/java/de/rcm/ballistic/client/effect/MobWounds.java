@@ -28,7 +28,7 @@ import org.joml.Vector3f;
  * Positions are kept in the body's own frame (turned with its body, as the renderer turns the model).
  */
 public final class MobWounds {
-	private record Wound(Vector3f at, Vector3f normal, float size, int variant, int kind, float spin) {
+	private record Wound(Vector3f at, Vector3f normal, float size, int variant, int kind, float spin, long born) {
 	}
 
 	private static final Int2ObjectOpenHashMap<List<Wound>> WOUNDS = new Int2ObjectOpenHashMap<>();
@@ -217,12 +217,12 @@ public final class MobWounds {
 			// the flank that lies up once it has fallen, torn open along the body
 			list.removeIf(w -> w.kind() == de.rcm.ballistic.injury.Blood.OPEN);
 			float h = e.getBbHeight();
-			list.add(new Wound(new Vector3f(e.getBbWidth() * 0.5F + 0.01F, h * 0.55F, 0), new Vector3f(1, 0, 0), p.size(), p.variant() & 3, kind, 0.0F));
+			list.add(new Wound(new Vector3f(e.getBbWidth() * 0.5F + 0.01F, h * 0.55F, 0), new Vector3f(1, 0, 0), p.size(), p.variant() & 3, kind, 0.0F, mc.level.getGameTime()));
 			Vec3 world = e.position().add(0, h * 0.5, 0);
 			GibClient.spray(world, new Vec3(0, 1, 0), 7 + (int) (Math.random() * 4), 0.35F + p.size());
 			return;
 		}
-		list.add(new Wound(at, n, p.size(), p.variant() & 3, kind, (float) (Math.random() * 30.0 - 15.0)));
+		list.add(new Wound(at, n, p.size(), p.variant() & 3, kind, (float) (Math.random() * 30.0 - 15.0), mc.level.getGameTime()));
 		if (kind != de.rcm.ballistic.injury.Blood.HOLE) {
 			// bits torn out of it, thrown out of the hole
 			Vec3 world = e.position().add(p.rx(), p.ry(), p.rz());
@@ -274,6 +274,8 @@ public final class MobWounds {
 				if (open && (e.deathTime <= 0 || !ModConfig.gore)) {
 					continue;
 				}
+				// a wound stays wet a while (longer on the living, still bleeding), then the blood on it dries dark
+				GoreMesh.dryness((mc.level.getGameTime() - w.born() - (e.isAlive() ? 1200 : 400)) / 2400.0F);
 				poseStack.pushPose();
 				poseStack.translate(w.at().x + w.normal().x * 0.004F, w.at().y + w.normal().y * 0.004F, w.at().z + w.normal().z * 0.004F);
 				// turn the decal (facing -Z, its run down -Y) to face out along the normal, the run down the creature's side
@@ -302,5 +304,6 @@ public final class MobWounds {
 			}
 			poseStack.popPose();
 		}
+		GoreMesh.dryness(0.0F);
 	}
 }

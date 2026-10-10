@@ -87,7 +87,7 @@ Bullet impacts on earth, stone, wood and flesh use Minecraft's own sounds. Other
 | Grenade lever | https://freesound.org/s/259553/ (small metal object falling) | nicktermer | CC0 1.0 |
 | Grenade landing | https://freesound.org/s/93839/ (grenade toss on cement) | CGEffex | CC BY 4.0 |
 | Grenade explosion | https://freesound.org/s/256300/, https://freesound.org/s/256295/ (hand grenade) | YleArkisto | CC BY 4.0 |
-| Breathing | https://freesound.org/s/395563/ (panting after a run) | SoundsForHim | CC0 1.0 |
+| Breathing (whole breaths, `tools/import_breath_sounds.py`) | https://freesound.org/s/395563/ (panting after a run) | SoundsForHim | CC0 1.0 |
 
 ## Aircraft, guns and siren (`tools/import_aircraft_sounds.py`)
 
