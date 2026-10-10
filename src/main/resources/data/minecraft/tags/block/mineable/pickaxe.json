@@ -1,0 +1,29 @@
+{
+	"values": [
+		"ballisticmissiles:launch_pad",
+		"ballisticmissiles:radar",
+		"ballisticmissiles:air_defense",
+		"ballisticmissiles:missile_silo",
+		"ballisticmissiles:ciws",
+		"ballisticmissiles:laser_defense",
+		"ballisticmissiles:jammer",
+		"ballisticmissiles:submarine",
+		"ballisticmissiles:reinforced_concrete",
+		"ballisticmissiles:blast_door",
+		"ballisticmissiles:iron_dome",
+		"ballisticmissiles:decoy_launcher",
+		"ballisticmissiles:sea_mine",
+		"ballisticmissiles:command_center",
+		"ballisticmissiles:crater_glass",
+		"ballisticmissiles:molten_rock",
+		"ballisticmissiles:trinitite",
+		"ballisticmissiles:bunker",
+		"ballisticmissiles:air_filter",
+		"ballisticmissiles:emergency_generator",
+		"ballisticmissiles:orbital_uplink",
+		"ballisticmissiles:runway_asphalt",
+		"ballisticmissiles:runway_marking",
+		"ballisticmissiles:runway_light",
+		"ballisticmissiles:runway"
+	]
+}

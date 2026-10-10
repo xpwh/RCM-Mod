@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		" I ",
+		"GRG",
+		" C "
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"G": "minecraft:gold_ingot",
+		"R": "minecraft:redstone",
+		"C": "minecraft:clock"
+	},
+	"result": {
+		"id": "ballisticmissiles:geiger_counter",
+		"count": 1
+	}
+}

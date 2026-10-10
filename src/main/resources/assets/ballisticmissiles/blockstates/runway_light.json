@@ -1,0 +1,13 @@
+{
+	"variants": {
+		"color=0": {
+			"model": "ballisticmissiles:block/runway_light_white"
+		},
+		"color=1": {
+			"model": "ballisticmissiles:block/runway_light_green"
+		},
+		"color=2": {
+			"model": "ballisticmissiles:block/runway_light_red"
+		}
+	}
+}

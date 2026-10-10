@@ -1,0 +1,6 @@
+{
+	"textures": {
+		"particle": "ballisticmissiles:block/decoy_launcher"
+	},
+	"elements": []
+}

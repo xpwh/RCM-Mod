@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		" B ",
+		"DMD",
+		" F "
+	],
+	"key": {
+		"B": "minecraft:blaze_rod",
+		"D": "minecraft:diamond",
+		"M": "ballisticmissiles:ballistic_missile",
+		"F": "minecraft:firework_rocket"
+	},
+	"result": {
+		"id": "ballisticmissiles:hypersonic_missile",
+		"count": 1
+	}
+}

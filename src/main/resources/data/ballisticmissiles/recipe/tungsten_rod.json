@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"S",
+		"I",
+		"I"
+	],
+	"key": {
+		"S": "minecraft:netherite_scrap",
+		"I": "minecraft:iron_block"
+	},
+	"result": {
+		"id": "ballisticmissiles:tungsten_rod",
+		"count": 1
+	}
+}
