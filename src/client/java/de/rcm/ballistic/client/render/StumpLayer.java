@@ -35,9 +35,11 @@ public final class StumpLayer extends RenderLayer<AvatarRenderState, PlayerModel
 		int arms = gore.ballisticmissiles$lostArm();
 		int head = gore.ballisticmissiles$head();
 		int torso = gore.ballisticmissiles$torso();
-		if ((legs | arms | head | torso) == 0 || !ModConfig.gore || state.isInvisible) {
+		int extra = gore.ballisticmissiles$extra();
+		if ((legs | arms | head | torso | extra) == 0 || !ModConfig.gore || state.isInvisible) {
 			return;
 		}
+		Wounds w = Wounds.NONE.withExtra(extra);
 		int seed = gore.ballisticmissiles$seed();
 		// a body left lying: the wounds stop running and the blood on them dries dark and dull
 		float dead = ((CorpseAge) state).ballisticmissiles$corpseAge();
@@ -60,16 +62,53 @@ public final class StumpLayer extends RenderLayer<AvatarRenderState, PlayerModel
 				this.stumpAt(poseStack, collector, light, arm, cx, 10.0F, slim ? 0.75F : 0.95F, GoreStump.arm(seed >> (shift + 4)), age, side + 2);
 			}
 		}
-		if (torso > 0) {
+		// the body's own skin, for what is drawn with a piece cut out of it
+		net.minecraft.client.renderer.rendertype.RenderType skin = state.skin == null ? null
+			: net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(state.skin.body().texturePath());
+		int overlay = net.minecraft.client.renderer.entity.LivingEntityRenderer.getOverlayCoords(state, 0.0F);
+		int tint = de.rcm.ballistic.client.effect.CorpseFx.tint(-1, de.rcm.ballistic.client.effect.CorpseFx.pallor(dead));
+		if (torso > 0 || w.holed()) {
 			poseStack.pushPose();
 			model.body.translateAndRotate(poseStack);
-			GoreTorso.submit(poseStack, collector, light, torso, seed);
+			GoreMesh.Cut hole = null;
+			if (w.holed() && skin != null) {
+				// right through: you can see through the body
+				hole = GoreHole.cut(w, seed);
+				HoledBox.submit(poseStack, collector, model.body, skin, light, overlay, tint, hole);
+				if (model.jacket.visible) {
+					poseStack.pushPose();
+					model.jacket.translateAndRotate(poseStack);
+					HoledBox.submit(poseStack, collector, model.jacket, skin, light, overlay, tint, hole);
+					poseStack.popPose();
+				}
+				GoreHole.submit(poseStack, collector, light, w, seed);
+			}
+			if (torso > 0) {
+				GoreTorso.submit(poseStack, collector, light, torso, seed, hole);
+			}
+			poseStack.popPose();
+		}
+		if (w.jaw() && skin != null) {
+			// the lower jaw shot away: cut out of the head, the mouth torn open
+			int jv = GoreJaw.version(seed);
+			poseStack.pushPose();
+			model.head.translateAndRotate(poseStack);
+			HoledBox.submit(poseStack, collector, model.head, skin, light, overlay, tint, GoreJaw.cut(jv));
+			if (model.hat.visible) {
+				poseStack.pushPose();
+				model.hat.translateAndRotate(poseStack);
+				HoledBox.submit(poseStack, collector, model.hat, skin, light, overlay, tint, GoreJaw.cut(jv));
+				poseStack.popPose();
+			}
+			GoreJaw.submit(poseStack, collector, light, jv);
+			// blood dripping off the tongue and the torn edge
+			this.drops(poseStack, collector, light, new float[][] {{0.5F, 3.6F, -3.4F}, {-2.0F, -1.4F, -4.2F}, {2.2F, -1.6F, -4.2F}}, age, 5);
 			poseStack.popPose();
 		}
 		if (head != 0) {
 			poseStack.pushPose();
 			model.head.translateAndRotate(poseStack);
-			GoreHead.submit(poseStack, collector, light, head, seed);
+			GoreHead.submit(poseStack, collector, light, head, seed, w.jaw() ? GoreJaw.cut(GoreJaw.version(seed)) : null);
 			// drops running off the chin (and, the skull open, out of it)
 			float[][] drips = head == Wounds.SHATTERED
 				? new float[][] {{1.2F, 0.4F, -3.4F}, {-1.5F, 0.4F, -3.0F}, {-3.0F, 0.2F, 2.2F}}

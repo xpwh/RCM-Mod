@@ -29,7 +29,7 @@ public final class GoreTorso {
 	private GoreTorso() {
 	}
 
-	public static void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, int level, int seed) {
+	public static void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, int level, int seed, GoreMesh.Cut cut) {
 		if (level <= 0) {
 			return;
 		}
@@ -38,7 +38,8 @@ public final class GoreTorso {
 		if (((seed >> 6) & 1) != 0) {
 			poseStack.scale(-1.0F, 1.0F, 1.0F);
 		}
-		MESHES[(Math.min(3, level) - 1) * 3 + v].submit(poseStack, collector, light);
+		boolean mirror = ((seed >> 6) & 1) != 0;
+		MESHES[(Math.min(3, level) - 1) * 3 + v].submit(poseStack, collector, light, cut == null || !mirror ? cut : (x, y, z) -> cut.test(-x, y, z));
 		poseStack.popPose();
 	}
 }

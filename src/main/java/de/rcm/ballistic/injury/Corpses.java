@@ -53,6 +53,11 @@ public final class Corpses {
 		BODIES.clear();
 	}
 
+	/** The bodies lying about now. */
+	public static List<Mannequin> bodies() {
+		return BODIES;
+	}
+
 	private static void tick(MinecraftServer server) {
 		if (server.getTickCount() % 20 != 0) {
 			return;
@@ -80,15 +85,11 @@ public final class Corpses {
 		if (m == null) {
 			return;
 		}
-		// on the ground below where they died
-		BlockPos.MutableBlockPos pos = p.blockPosition().mutable();
+		// where they died, moving as they were: the body falls, rolls and slides on from there (CorpsePhysics)
 		double y = p.getY();
-		for (int i = 0; i < 24 && level.getBlockState(pos.below()).getCollisionShape(level, pos.below()).isEmpty() && pos.getY() > level.getMinY(); i++) {
-			pos.move(0, -1, 0);
-			y = pos.getY();
-		}
 		m.snapTo(p.getX(), y, p.getZ(), p.getYRot(), 0.0F);
 		m.setYBodyRot(p.yBodyRot);
+		m.setDeltaMovement(p.getDeltaMovement().multiply(1.0, p.onGround() ? 0.0 : 1.0, 1.0));
 		m.setYHeadRot(p.yBodyRot);
 		MannequinAccessor acc = (MannequinAccessor) m;
 		acc.ballisticmissiles$setProfile(ResolvableProfile.createResolved(p.getGameProfile()));
@@ -100,7 +101,7 @@ public final class Corpses {
 		// the wounds go with the body; it lies as it fell: crawling, on its face; shot, as the collapse went; else either way
 		Wounds w = Injuries.get(p);
 		int fall = w.fall() > 0 ? w.fall() : w.down() ? Wounds.FORWARD : p.getRandom().nextBoolean() ? Wounds.FORWARD : Wounds.BACKWARD;
-		Wounds body = new Wounds(w.leg(), w.arm(), 0, w.lost(), 0, w.armsLost(), w.head(), 0, fall, w.torso(), w.seed());
+		Wounds body = new Wounds(w.leg(), w.arm(), 0, w.lost(), 0, w.armsLost(), w.head(), 0, fall, w.torso(), w.seed(), w.extra());
 		m.setAttached(Injuries.WOUNDS, body);
 		m.setAttached(UNTIL, level.getGameTime() + LIFETIME);
 		level.addFreshEntity(m);

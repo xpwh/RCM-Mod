@@ -89,6 +89,7 @@ public final class Injuries {
 		ServerLivingEntityEvents.AFTER_DAMAGE.register(Injuries::afterDamage);
 		ServerLivingEntityEvents.ALLOW_DEATH.register(Injuries::allowDeath);
 		Corpses.init();
+		CorpsePhysics.init();
 		// no hand on that arm: nothing to hit with, nothing to dig with
 		net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) ->
 			handGone(player) ? net.minecraft.world.InteractionResult.FAIL : net.minecraft.world.InteractionResult.PASS);
@@ -223,6 +224,18 @@ public final class Injuries {
 		return w == null ? Wounds.NONE : w;
 	}
 
+	/** The wounds on a body that is no player (one left lying): only what shows. */
+	public static void set(LivingEntity e, Wounds w) {
+		if (e instanceof ServerPlayer p) {
+			set(p, w);
+			return;
+		}
+		if (w.any() && w.seed() == 0) {
+			w = w.withSeed(1 + e.getRandom().nextInt(Integer.MAX_VALUE - 1));
+		}
+		e.setAttached(WOUNDS, w);
+	}
+
 	public static void set(ServerPlayer p, Wounds w) {
 		Wounds old = get(p);
 		if (w.any() && w.seed() == 0) {
@@ -308,6 +321,12 @@ public final class Injuries {
 		if (p.isCreative() || p.isSpectator() || get(p).head() == Wounds.SHATTERED) {
 			return;
 		}
+		Vec3 facing = Vec3.directionFromRotation(0.0F, p.getYRot());
+		if (at.y < p.getEyeY() - 0.08 && line.x * facing.x + line.z * facing.z < -0.3 && !get(p).jaw() && p.getRandom().nextFloat() < 0.8F) {
+			// low in the face from in front: the lower jaw torn away - a terrible wound, but not the end, not at once
+			jaw(p, line);
+			return;
+		}
 		boolean lethal = damage >= p.getHealth() + p.getAbsorptionAmount() || dying(p);
 		if (pellet) {
 			Clock c = clock(p);
@@ -322,7 +341,6 @@ public final class Injuries {
 		Wounds w = get(p).withHead(Wounds.SHATTERED);
 		if (!w.incapacitated()) {
 			// still on your feet a moment - swaying, then down: away from the shot, mostly
-			Vec3 facing = Vec3.directionFromRotation(0.0F, p.getYRot());
 			boolean fromBehind = line.x * facing.x + line.z * facing.z > 0.0;
 			if (p.getRandom().nextFloat() < 0.2F) {
 				fromBehind = !fromBehind;
@@ -336,8 +354,35 @@ public final class Injuries {
 		// blown out the far side, in a spray of blood and bone
 		Blood.send(level, head, line, 90, Blood.BURST);
 		Blood.send(level, head.add(line.scale(0.3)), line, 50, Blood.SPRAY);
+		if (!pellet) {
+			// through and out the back of the head, onto whatever is behind
+			Blood.send(level, head.add(line.scale(0.3)), line, 40, Blood.EXIT_SPATTER);
+		}
 		level.playSound(null, head.x, head.y, head.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 2.2F, 0.5F);
 		level.playSound(null, head.x, head.y, head.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.8F, 0.75F);
+	}
+
+	/** The lower jaw shot away: blood and teeth and bone blown out of the face. */
+	public static void jaw(ServerPlayer p, Vec3 line) {
+		set(p, get(p).withJaw());
+		message(p, "message.ballisticmissiles.wound_jaw");
+		ServerLevel level = p.level();
+		Vec3 mouth = p.getEyePosition().add(0, -0.2, 0).add(Vec3.directionFromRotation(0.0F, p.getYRot()).scale(0.25));
+		Blood.send(level, mouth, line, 50, Blood.SPRAY);
+		Blood.send(level, mouth, new Vec3(0, -0.2, 0), 30, Blood.BURST);
+		level.playSound(null, mouth.x, mouth.y, mouth.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 2.0F, 0.6F);
+	}
+
+	/** A round right through the trunk: a hole in and a bigger one out, the blood thrown out behind onto what is there. */
+	public static void through(ServerPlayer p, Vec3 at, Vec3 line) {
+		double h = (at.y - p.getY()) / Math.max(0.1, p.getBbHeight());
+		float y = (float) ((0.75 - h) / 0.375 * 12.0);
+		float yaw = p.yBodyRot * Mth.DEG_TO_RAD;
+		double side = (at.x - p.getX()) * Mth.cos(yaw) + (at.z - p.getZ()) * Mth.sin(yaw);
+		Vec3 facing = Vec3.directionFromRotation(0.0F, p.yBodyRot);
+		boolean fromBehind = line.x * facing.x + line.z * facing.z > 0.0;
+		set(p, get(p).through((float) side * 16.0F, y, fromBehind));
+		CorpseHits.exit(p.level(), p, at, line);
 	}
 
 	/** The operators' test: a graze across the scalp, or the skull blown open from in front. */
@@ -542,7 +587,7 @@ public final class Injuries {
 	 * A round struck a player at {@code at}, travelling along {@code dir}: which part of them it hit, and
 	 * what that does. (The head is the bullet's business: double damage, and a graze bleeds a little.)
 	 */
-	public static void shot(ServerPlayer p, Vec3 at, Vec3 dir, float damage, boolean head) {
+	public static void shot(ServerPlayer p, Vec3 at, Vec3 dir, float damage, boolean head, boolean pellet) {
 		Wounds w = get(p);
 		var r = p.getRandom();
 		double h = (at.y - p.getY()) / Math.max(0.1, p.getBbHeight());
@@ -565,6 +610,12 @@ public final class Injuries {
 			} else {
 				// in the body: another hole in the shirt
 				w = w.withBleed(Math.max(w.bleed(), 2)).withTorso(w.torso() + 1);
+				if (!pellet) {
+					// a rifle round goes right through
+					set(p, w);
+					through(p, at, dir);
+					return;
+				}
 			}
 		}
 		set(p, w);

@@ -35,8 +35,8 @@ public final class GoreHead {
 	private GoreHead() {
 	}
 
-	/** {@code seed} picks the version and whether it is mirrored. */
-	public static void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, int head, int seed) {
+	/** {@code seed} picks the version and whether it is mirrored; {@code cut}: what of the head is gone (null: none). */
+	public static void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, int head, int seed, GoreMesh.Cut cut) {
 		int v = Math.floorMod(seed, 3);
 		GoreMesh mesh = head == Wounds.SHATTERED ? SHATTERED[v] : GRAZED[v];
 		boolean mirror = ((seed >> 2) & 1) != 0;
@@ -44,7 +44,7 @@ public final class GoreHead {
 		if (mirror) {
 			poseStack.scale(-1.0F, 1.0F, 1.0F);
 		}
-		mesh.submit(poseStack, collector, light);
+		mesh.submit(poseStack, collector, light, cut == null || !mirror ? cut : (x, y, z) -> cut.test(-x, y, z));
 		poseStack.popPose();
 	}
 
@@ -96,10 +96,8 @@ public final class GoreHead {
 
 	/** A decal over the rectangle origin + a, + c, the tile's u along a and v along c, lit as facing {@code n}. */
 	static void decal(GoreMesh.Builder b, Vector3f o, Vector3f a, Vector3f c, int tile, Vector3f n) {
-		Vector3f[] p = {new Vector3f(o), new Vector3f(o).add(a), new Vector3f(o).add(a).add(c), new Vector3f(o).add(c)};
-		float[][] uv = {{GoreMesh.u(tile, 0), GoreMesh.v(tile, 0)}, {GoreMesh.u(tile, 1), GoreMesh.v(tile, 0)}, {GoreMesh.u(tile, 1), GoreMesh.v(tile, 1)},
-			{GoreMesh.u(tile, 0), GoreMesh.v(tile, 1)}};
-		b.quad(p, uv, new Vector3f[] {n, n, n, n});
+		// in half-pixel cells, so a wound cut right through the body (or the jaw torn off) can take them with it
+		b.decalGrid(o, a, c, tile, n, 0.5F);
 	}
 
 	/** The graze: decals only - the hat layer sits half a pixel out, so they go just beyond it. */

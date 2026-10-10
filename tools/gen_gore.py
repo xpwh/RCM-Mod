@@ -1,4 +1,4 @@
-"""9.15 gore: textures/entity/gore.png (1024 x 1024, an 8 x 8 grid of 128 x 128 tiles).
+"""9.15 gore: textures/entity/gore.png (1024 x 2048 since 9.21: an 8 x 16 grid of 128 x 128 tiles).
 
 Wound decals are painted from 3D: each texel is the point it covers on a body part (in that part's own
 space, in skin pixels, +y down), and the wounds are fields in that space - so a crater or a run of blood
@@ -16,6 +16,9 @@ Tiles (index = row * 8 + column):
   35 torn cloth  36 strand of blood  37 raw meat  38 intestine  39 liver  40 heart  41 lung
   42..59  torso wounds: 3 levels x 3 versions x (front, back)
   60..63  bullet wounds for animals, 4 versions
+  64 teeth  65 tongue  66 the palate, raw  67 the throat at the back of a torn-open mouth
+  68..76  the lower jaw shot away: the torn edge of what is left of the face, versions 0-2 x (front, left, right)
+          (the cut itself is geometry: jaw_y / jaw_back here are GoreJaw's jawY / back in the mod)
 """
 import os
 
@@ -519,8 +522,101 @@ def intestine_tile():
     return opaque(rgb)
 
 
+# ---------------------------------------------------------------- the jaw shot away (9.21)
+
+def jaw_y(x, v):
+    """Where the face is torn off across the front: below this (y down) the lower jaw is gone."""
+    return -2.75 + 0.35 * np.sin(1.3 * x + 2.1 * v) + 0.18 * np.sin(3.7 * x + 1.3 * v)
+
+
+def jaw_side_y(z, side, v):
+    return jaw_y(4.0 * side, v) + 0.25 * np.sin(2.7 * z + v)
+
+
+def jaw_back(y, v):
+    """How far back along the cheeks it is torn away (z, from the face at -4)."""
+    return -0.9 + 0.35 * np.sin(2.2 * y + 1.7 * v) + 0.2 * np.sin(4.1 * y + v)
+
+
+def jaw_rim_tile(v, face):
+    """What is left of the face round the tear: a raw, ragged edge, blood soaked up into the skin above it and
+    spattered over it, a few runs. Transparent where the face is gone (and away from the tear)."""
+    x, y, z = points(HEAD[face])
+    if face == "front":
+        d = jaw_y(x, v) - y  # > 0: still there, this far above the tear
+    else:
+        side = 1.0 if face == "left" else -1.0
+        dy = jaw_side_y(z, side, v) - y
+        dz = z - jaw_back(y, v)
+        # the distance to the torn-away corner (dy < 0 and dz < 0 inside it)
+        d = np.where((dy >= 0) & (dz >= 0), np.sqrt(dy * dy + dz * dz), np.where(dy >= 0, dy, np.where(dz >= 0, dz, -np.minimum(-dy, -dz))))
+    L = Layer()
+    n = fbm(x * 1.3 + v, y * 1.3, z * 1.3, 700 + v)
+    soak = smoothstep(1.3 + 0.6 * n, 0.15, d) * (d > -0.05)
+    L.paint(wet(BLOOD, x, y, z, 710 + v), soak * 0.85)
+    spat = smoothstep(0.8, 0.87, fbm(x * 3.5, y * 3.5, z * 3.5, 720 + v)) * smoothstep(3.5, 1.0, d) * (d > 0)
+    L.paint(wet(BLOOD_FRESH, x, y, z, 730 + v), spat)
+    raw = smoothstep(0.55 + 0.25 * n, 0.15, d) * (d > -0.05)
+    L.paint(FLESH * (0.75 + 0.4 * fbm(x * 5, y * 5, z * 5, 740 + v))[..., None], raw)
+    edge = smoothstep(0.18, 0.0, d) * (d > -0.05)
+    L.paint(BLOOD_DARK, edge * 0.8)
+    return L.image()
+
+
+def teeth_tile():
+    """Wrapped round a tooth (u round it, v from the gum down): gum at the top, then enamel, chipped and bloody."""
+    u, v = UV
+    enamel = np.array([232, 224, 200], float)[None, None] * (0.85 + 0.2 * fbm(u * 8, v * 4, 0, 760))[..., None]
+    enamel = enamel - smoothstep(0.6, 1.0, v)[..., None] * np.array([20, 24, 40])
+    gum = np.array([170, 60, 64], float)[None, None] * (0.8 + 0.3 * fbm(u * 6, v * 6, 1, 761))[..., None]
+    g_line = 0.22 + 0.06 * np.sin(u * 2 * np.pi * 2)
+    rgb = np.where((v < g_line)[..., None], gum, enamel)
+    blood = smoothstep(0.55, 0.7, fbm(u * 3, v * 3, 2, 762)) + smoothstep(0.1, 0.0, np.abs(v - g_line)) * 0.6
+    rgb = rgb * (1 - np.clip(blood, 0, 1)[..., None] * 0.7) + np.clip(blood, 0, 1)[..., None] * BLOOD_FRESH * 0.7
+    return opaque(rgb)
+
+
+def tongue_tile():
+    u, v = UV
+    base = np.array([186, 84, 92], float)
+    rgb = base[None, None] * (0.8 + 0.3 * fbm(u * 5, v * 5, 0, 770))[..., None]
+    pap = smoothstep(0.72, 0.8, fbm(u * 40, v * 40, 1, 771))
+    rgb = rgb + pap[..., None] * np.array([40, 30, 30])
+    groove = smoothstep(0.04, 0.0, np.abs(u - 0.5)) * 0.4
+    rgb = rgb * (1 - groove[..., None])
+    blood = smoothstep(0.5, 0.68, fbm(u * 2.5, v * 2.5, 2, 772))
+    rgb = rgb * (1 - blood[..., None] * 0.75) + blood[..., None] * BLOOD_FRESH * 0.75
+    return opaque(rgb)
+
+
+def palate_tile():
+    """The roof of the mouth, torn open: ridges across it, wet, bloody, bits of bone at the front."""
+    u, v = UV
+    ridges = 0.85 + 0.15 * np.sin(v * 2 * np.pi * 7 + np.sin(u * 9) * 1.5)
+    rgb = np.array([176, 70, 74], float)[None, None] * ridges[..., None] * (0.8 + 0.3 * fbm(u * 5, v * 5, 0, 780))[..., None]
+    blood = np.clip(smoothstep(0.45, 0.62, fbm(u * 3, v * 3, 1, 781)) + smoothstep(0.75, 1.0, v), 0, 1)
+    rgb = rgb * (1 - blood[..., None] * 0.8) + blood[..., None] * BLOOD * 0.8
+    bone = smoothstep(0.12, 0.02, v) * smoothstep(0.55, 0.7, fbm(u * 10, v * 3, 2, 782))
+    rgb = rgb * (1 - bone[..., None]) + bone[..., None] * BONE
+    return opaque(rgb)
+
+
+def throat_tile():
+    u, v = UV
+    x, y = u * 2 - 1, v * 2 - 1
+    r = np.sqrt(x * x + y * y * 1.6)
+    rgb = FLESH[None, None] * (0.6 + 0.4 * fbm(u * 6, v * 6, 0, 790))[..., None]
+    fib = 0.85 + 0.15 * np.sin(v * 60 + fbm(u * 3, v * 3, 1, 791) * 10)
+    rgb = rgb * fib[..., None]
+    hole = smoothstep(0.55, 0.15, r)
+    rgb = rgb * (1 - hole[..., None] * 0.85) + hole[..., None] * np.array([20, 2, 4])
+    blood = smoothstep(0.5, 0.65, fbm(u * 3, v * 3, 2, 792))
+    rgb = rgb * (1 - blood[..., None] * 0.6) + blood[..., None] * BLOOD_FRESH * 0.6
+    return opaque(rgb)
+
+
 def main():
-    atlas = np.zeros((8 * T, 8 * T, 4), np.uint8)
+    atlas = np.zeros((16 * T, 8 * T, 4), np.uint8)
 
     def put(i, img):
         r, c = divmod(i, 8)
@@ -548,6 +644,13 @@ def main():
                 put(42 + ((level - 1) * 3 + v) * 2 + s, torso_tile(level, v, side))
     for v in range(4):
         put(60 + v, mob_tile(v))
+    put(64, teeth_tile())
+    put(65, tongue_tile())
+    put(66, palate_tile())
+    put(67, throat_tile())
+    for v in range(3):
+        for f, name in enumerate(("front", "left", "right")):
+            put(68 + v * 3 + f, jaw_rim_tile(v, name))
     Image.fromarray(atlas, "RGBA").save(OUT, optimize=True)
 
 

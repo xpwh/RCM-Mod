@@ -30,4 +30,9 @@ public interface LostLeg {
 	int ballisticmissiles$seed();
 
 	void ballisticmissiles$setTorso(int torso, int seed);
+
+	/** {@code Wounds.extra}: the jaw shot away, a hole right through the body. */
+	int ballisticmissiles$extra();
+
+	void ballisticmissiles$setExtra(int extra);
 }

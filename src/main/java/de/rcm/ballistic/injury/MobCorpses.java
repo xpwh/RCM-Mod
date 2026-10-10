@@ -40,6 +40,11 @@ public final class MobCorpses {
 		return true;
 	}
 
+	/** The dead creatures lying about now. */
+	public static Set<LivingEntity> lying() {
+		return LYING;
+	}
+
 	public static void clear() {
 		LYING.clear();
 	}

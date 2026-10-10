@@ -15,7 +15,7 @@ import org.joml.Vector3f;
 /**
  * Soft, organic geometry for the gore, textured from textures/entity/gore.png (painted by tools/gen_gore.py,
  * an 8 x 8 grid of tiles): quads with a normal per corner, so lumps and folds shade smoothly. Positions are
- * built in skin pixels and stored in blocks. The pieces: decals over a face, lumpy domes (a stump's raw end,
+ * built in skin pixels and stored in blocks. (8 x 16 tiles since 9.21.) The pieces: decals over a face, lumpy domes (a stump's raw end,
  * brain), closed lumps (meat, organs), tubes (bones, gut), thin torn pieces cut out by the texture's ragged
  * alpha (splinters, flaps of skin, rags of cloth, strings of blood).
  */
@@ -40,6 +40,18 @@ public final class GoreMesh {
 	public static final int T_LUNG = 41;
 	public static final int T_TORSO = 42;
 	public static final int T_MOB = 60;
+	public static final int T_TEETH = 64;
+	public static final int T_TONGUE = 65;
+	public static final int T_PALATE = 66;
+	public static final int T_THROAT = 67;
+	/** The torn edge of the face round a jaw shot away: versions 0-2 x (front, left, right). */
+	public static final int T_JAW_RIM = 68;
+
+	/** A region cut out of the body (a hole right through, the jaw torn off), in a mesh's own pixels. */
+	@FunctionalInterface
+	public interface Cut {
+		boolean test(float x, float y, float z);
+	}
 
 	private final float[] data;
 
@@ -55,26 +67,42 @@ public final class GoreMesh {
 	}
 
 	public void emit(PoseStack.Pose pose, VertexConsumer consumer, int light) {
-		this.emit(pose, consumer, light, 0.0F);
+		this.emit(pose, consumer, light, 0.0F, null);
 	}
 
 	/** Drying, blood goes from bright, wet red to a dark, brownish crust. */
-	private void emit(PoseStack.Pose pose, VertexConsumer consumer, int light, float dry) {
+	private void emit(PoseStack.Pose pose, VertexConsumer consumer, int light, float dry, Cut cut) {
 		int color = dry <= 0.0F ? -1
 			: 0xFF000000 | (int) (255 * (1.0F - 0.5F * dry)) << 16 | (int) (255 * (1.0F - 0.56F * dry)) << 8 | (int) (255 * (1.0F - 0.58F * dry));
 		float[] d = this.data;
 		for (int i = 0; i < d.length; i += 8) {
+			if (cut != null && i % 32 == 0 && cut(d, i, cut)) {
+				i += 24;
+				continue;
+			}
 			consumer.addVertex(pose, d[i], d[i + 1], d[i + 2]).setColor(color).setUv(d[i + 3], d[i + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
 				.setLight(light).setNormal(pose, d[i + 5], d[i + 6], d[i + 7]);
 		}
 	}
 
+	/** Whether the quad starting at {@code i} lies in the cut-out region (its middle does). */
+	private static boolean cut(float[] d, int i, Cut cut) {
+		float x = (d[i] + d[i + 8] + d[i + 16] + d[i + 24]) * 0.25F / P;
+		float y = (d[i + 1] + d[i + 9] + d[i + 17] + d[i + 25]) * 0.25F / P;
+		float z = (d[i + 2] + d[i + 10] + d[i + 18] + d[i + 26]) * 0.25F / P;
+		return cut.test(x, y, z);
+	}
+
 	/** The shine: per corner, the light reflected towards the eye times how wet it still is. */
-	private void emitGloss(PoseStack.Pose pose, VertexConsumer consumer, int light, float wet) {
+	private void emitGloss(PoseStack.Pose pose, VertexConsumer consumer, int light, float wet, Cut cut) {
 		float[] d = this.data;
 		Vector3f p = new Vector3f();
 		Vector3f n = new Vector3f();
 		for (int i = 0; i < d.length; i += 8) {
+			if (cut != null && i % 32 == 0 && cut(d, i, cut)) {
+				i += 24;
+				continue;
+			}
 			pose.pose().transformPosition(d[i], d[i + 1], d[i + 2], p);
 			pose.transformNormal(d[i + 5], d[i + 6], d[i + 7], n);
 			int a = (int) (255.0F * wet * WetShine.at(p, n, light));
@@ -84,12 +112,17 @@ public final class GoreMesh {
 	}
 
 	public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light) {
+		this.submit(poseStack, collector, light, null);
+	}
+
+	/** Drawn but for what lies in {@code cut} (quads whose middle is in it; null: all of it). */
+	public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, Cut cut) {
 		float dry = dryness;
-		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> this.emit(pose, consumer, light, dry));
+		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> this.emit(pose, consumer, light, dry, cut));
 		float wet = 1.0F - dry * 1.15F;
 		if (wet > 0.02F) {
 			// after everything else, so it lies over the gore it shines on
-			collector.order(1).submitCustomGeometry(poseStack, GLOSS, (pose, consumer) -> this.emitGloss(pose, consumer, light, wet));
+			collector.order(1).submitCustomGeometry(poseStack, GLOSS, (pose, consumer) -> this.emitGloss(pose, consumer, light, wet, cut));
 		}
 	}
 
@@ -98,7 +131,7 @@ public final class GoreMesh {
 	}
 
 	public static float v(int tile, float v) {
-		return ((tile / 8) + Mth.clamp(v, 0.004F, 0.996F)) / 8.0F;
+		return ((tile / 8) + Mth.clamp(v, 0.004F, 0.996F)) / 16.0F;
 	}
 
 	public static final class Builder {
@@ -127,6 +160,32 @@ public final class GoreMesh {
 				this.vertex(p[i], uv[i][0], uv[i][1], n[i]);
 			}
 			return this;
+		}
+
+		/**
+		 * A decal cut into cells no bigger than {@code cell} pixels (so a hole can be cut out of it), facing
+		 * {@code n}: {@code o} a corner, {@code a} and {@code b} its sides, the tile's u along a, v along b.
+		 */
+		public Builder decalGrid(Vector3f o, Vector3f a, Vector3f b, int tile, Vector3f n, float cell) {
+			int nu = Math.max(1, (int) Math.ceil(a.length() / cell));
+			int nv = Math.max(1, (int) Math.ceil(b.length() / cell));
+			Vector3f[] ns = {n, n, n, n};
+			for (int i = 0; i < nu; i++) {
+				for (int j = 0; j < nv; j++) {
+					float u0 = i / (float) nu;
+					float u1 = (i + 1) / (float) nu;
+					float v0 = j / (float) nv;
+					float v1 = (j + 1) / (float) nv;
+					Vector3f[] p = {at(o, a, b, u0, v0), at(o, a, b, u1, v0), at(o, a, b, u1, v1), at(o, a, b, u0, v1)};
+					float[][] uv = {{u(tile, u0), v(tile, v0)}, {u(tile, u1), v(tile, v0)}, {u(tile, u1), v(tile, v1)}, {u(tile, u0), v(tile, v1)}};
+					this.quad(p, uv, ns);
+				}
+			}
+			return this;
+		}
+
+		private static Vector3f at(Vector3f o, Vector3f a, Vector3f b, float s, float t) {
+			return new Vector3f(o).add(new Vector3f(a).mul(s)).add(new Vector3f(b).mul(t));
 		}
 
 		/** A flat quad over a rectangle: {@code o} a corner, {@code a} and {@code b} its sides; the tile's u along a, v along b. */

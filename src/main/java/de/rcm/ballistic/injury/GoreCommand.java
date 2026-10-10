@@ -16,6 +16,8 @@ import net.minecraft.server.level.ServerPlayer;
  *   <li>{@code bein <spieler> links|rechts|beide} - the leg shot off below the knee</li>
  *   <li>{@code arm <spieler> links|rechts|beide} - the arm shot off below the elbow</li>
  *   <li>{@code kopf <spieler> streifschuss|toedlich} - a round across the scalp, or the skull blown open (dead)</li>
+ *   <li>{@code kiefer <spieler>} - the lower jaw shot away</li>
+ *   <li>{@code durchschuss <spieler>} - a rifle round right through the chest</li>
  *   <li>{@code sterben <spieler>} - down and bleeding out</li>
  *   <li>{@code heilen <spieler>} - every wound gone</li>
  * </ul>
@@ -40,6 +42,26 @@ public final class GoreCommand {
 				.then(Commands.argument("spieler", EntityArgument.players())
 					.then(Commands.literal("streifschuss").executes(ctx -> head(ctx, false)))
 					.then(Commands.literal("toedlich").executes(ctx -> head(ctx, true)))))
+			.then(Commands.literal("kiefer")
+				.then(Commands.argument("spieler", EntityArgument.players()).executes(ctx -> {
+					Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "spieler");
+					players.forEach(p -> Injuries.jaw(p, p.getLookAngle().scale(-1.0)));
+					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.gore.jaw", players.size()), true);
+					return players.size();
+				})))
+			.then(Commands.literal("durchschuss")
+				.then(Commands.argument("spieler", EntityArgument.players()).executes(ctx -> {
+					Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "spieler");
+					for (ServerPlayer p : players) {
+						// from in front, into the chest a little off the middle
+						net.minecraft.world.phys.Vec3 line = p.getLookAngle().multiply(1, 0, 1).normalize().scale(-1.0);
+						net.minecraft.world.phys.Vec3 at = p.position().add(0, p.getBbHeight() * 0.62, 0).subtract(line.scale(0.3));
+						Injuries.set(p, Injuries.get(p).withTorso(Injuries.get(p).torso() + 1).withBleed(Math.max(2, Injuries.get(p).bleed())));
+						Injuries.through(p, at, line);
+					}
+					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.gore.through", players.size()), true);
+					return players.size();
+				})))
 			.then(Commands.literal("sterben")
 				.then(Commands.argument("spieler", EntityArgument.players()).executes(ctx -> {
 					Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "spieler");

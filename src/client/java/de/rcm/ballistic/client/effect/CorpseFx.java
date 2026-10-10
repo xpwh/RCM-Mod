@@ -76,6 +76,25 @@ public final class CorpseFx {
 		float spin;
 	}
 
+	/** How a thrown body turns: degrees about the world's x and z now and a tick ago, how fast, how its limbs flop. */
+	private static final class Tumble {
+		float x;
+		float z;
+		float px;
+		float pz;
+		float rx;
+		float rz;
+		float flail;
+		float pflail;
+		double lx = Double.NaN;
+		double ly;
+		double lz;
+		int seen;
+	}
+
+	/** The height above a lying body's feet it turns about. */
+	public static final float TUMBLE_CENTRE = 0.3F;
+	private static final Int2ObjectOpenHashMap<Tumble> TUMBLES = new Int2ObjectOpenHashMap<>();
 	private static final Int2ObjectOpenHashMap<List<Fly>> FLIES = new Int2ObjectOpenHashMap<>();
 	private static final List<Wisp> WISPS = new ArrayList<>();
 
@@ -119,6 +138,85 @@ public final class CorpseFx {
 		return a << 24 | cr << 16 | cg << 8 | cb;
 	}
 
+	/**
+	 * A body thrown through the air turns over and over, the way it was flung; skidding along the ground it
+	 * slows its turning; at rest it settles flat again. Its limbs flop with how hard it is moving.
+	 */
+	private static void tumble(LivingEntity e, long now) {
+		Tumble t = TUMBLES.computeIfAbsent(e.getId(), k -> new Tumble());
+		t.seen = (int) now;
+		t.px = t.x;
+		t.pz = t.z;
+		t.pflail = t.flail;
+		if (Double.isNaN(t.lx)) {
+			t.lx = e.getX();
+			t.ly = e.getY();
+			t.lz = e.getZ();
+			return;
+		}
+		double vx = e.getX() - t.lx;
+		double vy = e.getY() - t.ly;
+		double vz = e.getZ() - t.lz;
+		t.lx = e.getX();
+		t.ly = e.getY();
+		t.lz = e.getZ();
+		double speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+		if (speed > 3.0) {
+			return; // moved by a teleport, not thrown
+		}
+		boolean flying = !e.onGround() && speed > 0.08;
+		if (flying) {
+			// it rolls over the way it flies: head over heels along its path
+			t.rx += (float) (vz * 9.0);
+			t.rz -= (float) (vx * 9.0);
+			t.rx *= 0.985F;
+			t.rz *= 0.985F;
+		} else {
+			t.rx *= 0.55F;
+			t.rz *= 0.55F;
+		}
+		t.rx = Mth.clamp(t.rx, -40.0F, 40.0F);
+		t.rz = Mth.clamp(t.rz, -40.0F, 40.0F);
+		t.x += t.rx;
+		t.z += t.rz;
+		if (!flying) {
+			// down again: it comes to rest lying as it lay
+			float tx = Math.round(t.x / 360.0F) * 360.0F;
+			float tz = Math.round(t.z / 360.0F) * 360.0F;
+			t.x += (tx - t.x) * 0.22F;
+			t.z += (tz - t.z) * 0.22F;
+			if (Math.abs(t.x - tx) < 0.5F && Math.abs(t.z - tz) < 0.5F) {
+				t.x = 0.0F;
+				t.z = 0.0F;
+				t.px = 0.0F;
+				t.pz = 0.0F;
+			}
+		}
+		float want = Mth.clamp((float) speed * 5.0F + (Math.abs(t.rx) + Math.abs(t.rz)) / 30.0F, 0.0F, 1.0F);
+		t.flail += (want - t.flail) * (want > t.flail ? 0.5F : 0.15F);
+	}
+
+	/** How the body {@code id} is tumbling just now: {x degrees, z degrees, flop 0..1}, or null if it is not. */
+	public static float[] tumble(int id, float partial) {
+		Tumble t = TUMBLES.get(id);
+		if (t == null) {
+			return null;
+		}
+		return new float[] {Mth.lerp(partial, t.px, t.x), Mth.lerp(partial, t.pz, t.z), Mth.lerp(partial, t.pflail, t.flail)};
+	}
+
+	/** The same turn on a pose stack set at the body's feet (for what is drawn stuck to the body). */
+	public static void applyTumble(PoseStack poseStack, int id, float partial) {
+		float[] t = tumble(id, partial);
+		if (t == null || t[0] == 0.0F && t[1] == 0.0F) {
+			return;
+		}
+		poseStack.translate(0.0F, TUMBLE_CENTRE, 0.0F);
+		poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(t[0]));
+		poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(t[1]));
+		poseStack.translate(0.0F, -TUMBLE_CENTRE, 0.0F);
+	}
+
 	/** The middle of a body lying on the ground, and how far it reaches. */
 	private static Vec3 centre(LivingEntity e) {
 		return e.position().add(0, Math.min(0.35, e.getBbHeight() * 0.3), 0);
@@ -132,6 +230,7 @@ public final class CorpseFx {
 		if (mc.level == null) {
 			FLIES.clear();
 			WISPS.clear();
+			TUMBLES.clear();
 			return;
 		}
 		if (mc.isPaused()) {
@@ -140,19 +239,22 @@ public final class CorpseFx {
 		Vec3 cam = mc.gameRenderer.getMainCamera().position();
 		boolean on = ModConfig.gore;
 		java.util.Set<Integer> bodies = new java.util.HashSet<>();
-		if (on) {
-			for (Entity en : mc.level.entitiesForRendering()) {
-				if (!(en instanceof LivingEntity e) || e.distanceToSqr(cam) > 48.0 * 48.0) {
-					continue;
-				}
-				float age = age(e, 0.0F);
-				if (age < FLIES_FROM) {
-					continue;
-				}
+		long now = mc.level.getGameTime();
+		for (Entity en : mc.level.entitiesForRendering()) {
+			if (!(en instanceof LivingEntity e) || e.distanceToSqr(cam) > 64.0 * 64.0) {
+				continue;
+			}
+			float age = age(e, 0.0F);
+			if (age < 0.0F) {
+				continue;
+			}
+			tumble(e, now);
+			if (on && age >= FLIES_FROM && e.distanceToSqr(cam) < 48.0 * 48.0) {
 				bodies.add(e.getId());
 				body(mc, e, age);
 			}
 		}
+		TUMBLES.int2ObjectEntrySet().removeIf(en -> en.getValue().seen != (int) now);
 		FLIES.int2ObjectEntrySet().removeIf(en -> !bodies.contains(en.getIntKey()));
 		for (int i = WISPS.size() - 1; i >= 0; i--) {
 			Wisp w = WISPS.get(i);

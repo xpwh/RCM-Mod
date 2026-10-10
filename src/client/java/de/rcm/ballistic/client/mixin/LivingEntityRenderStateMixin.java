@@ -9,6 +9,12 @@ import org.spongepowered.asm.mixin.Unique;
 public abstract class LivingEntityRenderStateMixin implements CorpseAge {
 	@Unique
 	private float ballisticmissiles$corpse = -1.0F;
+	@Unique
+	private float ballisticmissiles$tumbleX;
+	@Unique
+	private float ballisticmissiles$tumbleZ;
+	@Unique
+	private float ballisticmissiles$flail;
 
 	@Override
 	public float ballisticmissiles$corpseAge() {
@@ -18,5 +24,27 @@ public abstract class LivingEntityRenderStateMixin implements CorpseAge {
 	@Override
 	public void ballisticmissiles$setCorpseAge(float ticks) {
 		this.ballisticmissiles$corpse = ticks;
+	}
+
+	@Override
+	public float ballisticmissiles$tumbleX() {
+		return this.ballisticmissiles$tumbleX;
+	}
+
+	@Override
+	public float ballisticmissiles$tumbleZ() {
+		return this.ballisticmissiles$tumbleZ;
+	}
+
+	@Override
+	public float ballisticmissiles$flail() {
+		return this.ballisticmissiles$flail;
+	}
+
+	@Override
+	public void ballisticmissiles$setTumble(float x, float z, float flail) {
+		this.ballisticmissiles$tumbleX = x;
+		this.ballisticmissiles$tumbleZ = z;
+		this.ballisticmissiles$flail = flail;
 	}
 }

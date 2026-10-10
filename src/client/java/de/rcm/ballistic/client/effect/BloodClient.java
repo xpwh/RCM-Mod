@@ -115,6 +115,29 @@ public final class BloodClient {
 					spawn(at.add(d.scale(0.02 * i)), v, 0.03F + RANDOM.nextFloat() * 0.035F);
 				}
 			}
+			case Blood.EXIT_SPATTER -> {
+				// out of the exit wound: a fast cone of blood and bits, the bulk of it straight on along the round's line
+				Vec3 d = dir.lengthSqr() < 1.0E-4 ? new Vec3(0, 0, 1) : dir.normalize();
+				for (int i = 0; i < n; i++) {
+					double speed = 0.45 + RANDOM.nextDouble() * 0.5;
+					spawn(at, d.scale(speed).add(gauss(0.07 + 0.05 * RANDOM.nextDouble())), 0.025F + RANDOM.nextFloat() * 0.05F);
+				}
+				// what hits the wall behind hits it at once, as one big spatter with runs below it
+				BlockHitResult hit = mc.level.clip(new ClipContext(at, at.add(d.scale(5.0)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+					CollisionContext.empty()));
+				if (hit.getType() == HitResult.Type.BLOCK) {
+					double dist = hit.getLocation().distanceTo(at);
+					float size = (float) Mth.clamp(0.55 + dist * 0.22, 0.6, 1.6) * Mth.clamp(n / 26.0F, 0.6F, 1.4F);
+					Vec3 vel = d.scale(0.8);
+					stainDirect(mc, hit.getLocation(), hit.getDirection(), size, vel, SPLAT);
+					for (int i = 0; i < 3; i++) {
+						Vec3 off = gauss(0.18 + dist * 0.06);
+						Vec3 nrm = Vec3.atLowerCornerOf(hit.getDirection().getUnitVec3i());
+						off = off.subtract(nrm.scale(off.dot(nrm)));
+						stainDirect(mc, hit.getLocation().add(off), hit.getDirection(), size * (0.3F + RANDOM.nextFloat() * 0.3F), vel, SPLAT);
+					}
+				}
+			}
 			case Blood.DRIP -> {
 				for (int i = 0; i < n; i++) {
 					spawn(at.add(gauss(0.12)), dir.scale(0.3).add(gauss(0.01)), 0.03F + RANDOM.nextFloat() * 0.03F);
@@ -151,6 +174,15 @@ public final class BloodClient {
 		if (hit.getType() == HitResult.Type.BLOCK) {
 			stain(mc, hit.getLocation(), hit.getDirection(), size, Vec3.ZERO, 30, size > 0.5F ? POOL_STAIN : SPLAT);
 		}
+	}
+
+	/** A stain on the face of the block behind {@code at} (pulled back onto it), if it is a solid one. */
+	private static void stainDirect(Minecraft mc, Vec3 at, Direction face, float size, Vec3 vel, int kind) {
+		Vec3 onFace = at.subtract(face.getStepX() * 0.01, face.getStepY() * 0.01, face.getStepZ() * 0.01);
+		if (mc.level.getBlockState(BlockPos.containing(onFace)).isAir()) {
+			return;
+		}
+		stain(mc, at, face, size, vel, 0, kind);
 	}
 
 	private static Vec3 gauss(double s) {

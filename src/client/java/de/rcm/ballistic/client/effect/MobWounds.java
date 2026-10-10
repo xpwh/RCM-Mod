@@ -263,6 +263,7 @@ public final class MobWounds {
 			int light = LevelRenderer.getLightColor(mc.level, BlockPos.containing(pos.x, pos.y + e.getBbHeight() * 0.5, pos.z));
 			poseStack.pushPose();
 			poseStack.translate(pos.x - cam.x, pos.y - cam.y, pos.z - cam.z);
+			CorpseFx.applyTumble(poseStack, e.getId(), partial);
 			poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - Mth.rotLerp(partial, e.yBodyRotO, e.yBodyRot)));
 			if (e.deathTime > 0) {
 				// keeling over as it dies, as the model does

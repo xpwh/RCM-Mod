@@ -19,6 +19,7 @@
 		"LivingEntityRenderStateMixin",
 		"LevelRendererMixin",
 		"MinecraftMixin",
+		"ModelPartAccessor",
 		"PlayerModelMixin",
 		"SoundEngineMixin",
 		"TitleScreenMixin"

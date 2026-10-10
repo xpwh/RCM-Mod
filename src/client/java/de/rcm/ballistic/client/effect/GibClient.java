@@ -140,12 +140,13 @@ public final class GibClient {
 		float force = Mth.clamp(p.force(), 0.6F, 2.5F);
 		float volume = p.width() * p.width() * p.height();
 		float size = Mth.clamp((float) Math.cbrt(volume / 0.65F), 0.35F, 2.6F);
-		if (e instanceof AbstractClientPlayer player) {
-			// a person: their own head, arms, legs and trunk, torn from each other
-			PlayerModel model = mc.getEntityRenderDispatcher().getPlayerRenderer(player).getModel();
-			Identifier skin = player.getSkin().body().texturePath();
-			boolean slim = player.getSkin().model() == PlayerModelType.SLIM;
-			float yaw = player.yBodyRot;
+		if (e instanceof net.minecraft.client.entity.ClientAvatarEntity avatar && e instanceof net.minecraft.world.entity.LivingEntity person
+			&& mc.getEntityRenderDispatcher().getRenderer(e) instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> renderer) {
+			// a person (or the body one left): their own head, arms, legs and trunk, torn from each other
+			PlayerModel model = renderer.getModel();
+			Identifier skin = avatar.getSkin().body().texturePath();
+			boolean slim = avatar.getSkin().model() == PlayerModelType.SLIM;
+			float yaw = person.yBodyRot;
 			part(model.head, skin, new Vector3f(0, -4, 0), -8, 0, 2, false, base, 1.55, 0, yaw, dir, force);
 			part(model.body, skin, new Vector3f(0, 6, 0), 0, 12, 3, true, base, 1.1, 0, yaw, dir, force);
 			part(model.rightArm, skin, new Vector3f(slim ? -0.5F : -1, 4, 0), -2, 10, 1, false, base, 1.2, -0.35, yaw, dir, force);

@@ -225,7 +225,7 @@ public class BulletEntity extends Entity {
 
 	private @Nullable Entity firstHit(ServerLevel level, Vec3 from, Vec3 to) {
 		int lag = this.lagTicks();
-		List<Entity> list = level.getEntities(this, new AABB(from, to).inflate(0.4 + lag * 0.5),
+		List<Entity> list = level.getEntities(this, new AABB(from, to).inflate(2.2 + lag * 0.5),
 			e -> (e.isPickable() && e.isAlive() || e instanceof LivingEntity body && body.deathTime > 0 && !e.isRemoved()
 				&& !(e instanceof net.minecraft.world.entity.player.Player)) && !e.isSpectator() && (e != this.shooter || this.tickCount > 3) && !(e instanceof BulletEntity)
 				&& !(this.shooter != null && e == this.shooter.getVehicle())); // a jet's cannon does not hit the jet
@@ -233,7 +233,7 @@ public class BulletEntity extends Entity {
 		Entity best = null;
 		double bestDist = Double.MAX_VALUE;
 		for (Entity e : list) {
-			AABB box = e.getBoundingBox().inflate(0.2);
+			AABB box = de.rcm.ballistic.injury.CorpseHits.hitBox(e).inflate(0.2);
 			if (lag > 0) {
 				// where it was lag ticks ago, back along its last movement
 				box = box.expandTowards(-(e.getX() - e.xo) * lag, -(e.getY() - e.yo) * lag, -(e.getZ() - e.zo) * lag);
@@ -275,13 +275,15 @@ public class BulletEntity extends Entity {
 			if (out.isPresent() && out.get().distanceTo(at) > 0.25) {
 				de.rcm.ballistic.injury.Blood.wound(living, out.get(), 0.2, false, head, de.rcm.ballistic.injury.Blood.EXIT);
 				de.rcm.ballistic.injury.Blood.send((ServerLevel) living.level(), out.get(), line, head ? 30 : 18, de.rcm.ballistic.injury.Blood.SPRAY);
+				// and what it carried out with it, thrown onto whatever is behind
+				de.rcm.ballistic.injury.Blood.send((ServerLevel) living.level(), out.get(), line, head ? 34 : 24, de.rcm.ballistic.injury.Blood.EXIT_SPATTER);
 			}
 		}
 		de.rcm.ballistic.injury.Injuries.bleedCreature(living, kind == de.rcm.ballistic.injury.Blood.HOLE ? 200 : 500);
 	}
 
 	private void hitEntity(ServerLevel level, Entity e, Vec3 from, Vec3 to) {
-		Vec3 at = e.getBoundingBox().inflate(0.2).clip(from, to).orElse(e.position());
+		Vec3 at = de.rcm.ballistic.injury.CorpseHits.hitBox(e).inflate(0.2).clip(from, to).orElse(e.position());
 		float speed = (float) this.getDeltaMovement().length();
 		float damage = DAMAGE * Math.min(1.0F, 0.35F + speed / (float) AkItem.MUZZLE_VELOCITY) * (0.25F + 0.75F * this.power);
 		if (this.pellet) {
@@ -293,6 +295,14 @@ public class BulletEntity extends Entity {
 			damage *= 2.0F;
 		}
 		DamageSource source = level.damageSources().thrown(this, this.shooter);
+		if (de.rcm.ballistic.injury.CorpseHits.isCorpse(e) && e instanceof LivingEntity body) {
+			// a body already lying dead: torn further with every round
+			Vec3 dir = this.getDeltaMovement().normalize();
+			de.rcm.ballistic.injury.CorpseHits.hit(level, body, at, dir, this.pellet, this.origin == null ? 10.0 : this.origin.distanceTo(at));
+			level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.0F, 0.8F + this.random.nextFloat() * 0.2F);
+			this.discard();
+			return;
+		}
 		e.invulnerableTime = 0; // rounds of a burst all land
 		if (this.shooter instanceof net.minecraft.server.level.ServerPlayer shooterPlayer) {
 			// the shooter hears the hit land
@@ -308,7 +318,7 @@ public class BulletEntity extends Entity {
 			Vec3 push = line.scale(0.12);
 			e.push(push.x, 0.02, push.z);
 			if (e instanceof net.minecraft.server.level.ServerPlayer victim) {
-				de.rcm.ballistic.injury.Injuries.shot(victim, at, line, damage, head);
+				de.rcm.ballistic.injury.Injuries.shot(victim, at, line, damage, head, this.pellet);
 				if (this.pellet && !head) {
 					de.rcm.ballistic.injury.Injuries.pellet(victim, at, this.origin.distanceTo(at));
 				}

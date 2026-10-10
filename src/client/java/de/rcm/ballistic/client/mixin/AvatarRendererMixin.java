@@ -25,6 +25,7 @@ public abstract class AvatarRendererMixin {
 		gore.ballisticmissiles$setLostArm(wounds.armsLost());
 		gore.ballisticmissiles$setHead(wounds.head());
 		gore.ballisticmissiles$setTorso(wounds.torso(), wounds.seed());
+		gore.ballisticmissiles$setExtra(wounds.extra());
 		gore.ballisticmissiles$setCollapse(de.rcm.ballistic.client.render.Collapse.time(wounds, partialTick), wounds.fall());
 		if (wounds.fall() > 0) {
 			state.deathTime = 0.0F; // fallen already: no keeling over sideways on top of it

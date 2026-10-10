@@ -17,6 +17,8 @@ public final class Blood {
 	public static final int BURST = 3;
 	/** A spurt from a cut artery: a jet thrown out along {@code dir}, as hard as {@code dir} is long. */
 	public static final int JET = 4;
+	/** Out of an exit wound: a cone of blood and tissue thrown along {@code dir}, splashed over whatever is behind. */
+	public static final int EXIT_SPATTER = 5;
 
 	private Blood() {
 	}
