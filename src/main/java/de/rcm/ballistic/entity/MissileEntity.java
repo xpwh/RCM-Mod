@@ -234,7 +234,8 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 	public MissileTrajectory getTrajectory() {
 		if (this.trajectory == null) {
-			this.trajectory = new MissileTrajectory(this.getLaunchPos(), Vec3.atBottomCenterOf(this.getTarget()), this.missileType.apexScale, this.missileType.durationScale);
+			this.trajectory = new MissileTrajectory(this.getLaunchPos(), Vec3.atBottomCenterOf(this.getTarget()), this.missileType.apexScale, this.missileType.durationScale,
+				this.missileType.model == MissileType.Model.TACTICAL);
 		}
 		return this.trajectory;
 	}
