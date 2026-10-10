@@ -635,6 +635,15 @@ public final class Injuries {
 			Vec3 dir = from == null ? new Vec3(0, 0.4, 0) : mid.subtract(from).normalize();
 			boolean blast = source.is(DamageTypeTags.IS_EXPLOSION);
 			Blood.send(level, mid, dir, Math.min(60, Math.round(taken * (blast ? 4.0F : 2.0F))), blast ? Blood.BURST : Blood.SPRAY);
+			if (blast) {
+				// the blast throws it up: a fountain of blood, and from a bad hit, bits torn out of the body with it
+				Vec3 up = new Vec3(dir.x * 0.35, 1.0, dir.z * 0.35).normalize();
+				Blood.send(level, mid, up, Math.min(60, Math.round(taken * 5.0F)), Blood.BURST);
+				if (taken >= 4.0F) {
+					float force = Math.min(1.6F, 0.6F + taken / 12.0F);
+					Blood.send(level, mid, up.scale(force), Math.min(10, 1 + Math.round(taken / 3.0F)), Blood.CHUNKS);
+				}
+			}
 		}
 		if (!(entity instanceof ServerPlayer p)) {
 			return;

@@ -19,6 +19,8 @@ public final class Blood {
 	public static final int JET = 4;
 	/** Out of an exit wound: a cone of blood and tissue thrown along {@code dir}, splashed over whatever is behind. */
 	public static final int EXIT_SPATTER = 5;
+	/** Torn out by a blast: {@code amount} bits of flesh (and blood with them) flung up and out along {@code dir}, as hard as it is long. */
+	public static final int CHUNKS = 6;
 
 	private Blood() {
 	}

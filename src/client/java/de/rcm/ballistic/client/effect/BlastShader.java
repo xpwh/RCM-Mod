@@ -58,6 +58,13 @@ public final class BlastShader {
 	private static float suppression;
 	/** Negative afterimage burnt into the eye by a flash, fixed on screen (0-1). */
 	private static float afterimage;
+	/** Blood lost (0-1): it rises while you bleed, and comes back only slowly once it has stopped. */
+	private static float bloodLost;
+	/** How far shock and blood loss have taken hold of what you see (0-1), smoothed. */
+	private static float loss;
+	/** The heart's beat, for the screen to throb with when its sound is not heard (dying, collapsing). */
+	private static float ownBeat;
+	private static float beatPeriod = 20.0F;
 	private static float afterX = 0.5F;
 	private static float afterY = 0.5F;
 
@@ -131,6 +138,7 @@ public final class BlastShader {
 		drench = Math.max(0.0F, drench * 0.996F - 0.0008F);
 		suppression = Math.max(0.0F, suppression * 0.96F - 0.006F);
 		afterimage = Math.max(0.0F, afterimage * 0.991F - 0.0008F);
+		bloodLoss(mc);
 		GameRenderer renderer = mc.gameRenderer;
 		Identifier current = renderer.currentPostEffect();
 		boolean ours = EFFECT.equals(current);
@@ -139,7 +147,7 @@ public final class BlastShader {
 			return;
 		}
 		boolean wanted = mc.level != null && de.rcm.ballistic.client.ModConfig.screenEffects > 0 && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
-			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F || suppression > 0.01F);
+			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F || suppression > 0.01F || loss > 0.01F);
 		if (!wanted) {
 			if (ours) {
 				renderer.clearPostEffect();
@@ -156,6 +164,52 @@ public final class BlastShader {
 			((GameRendererAccessor) renderer).ballisticmissiles$setPostEffect(EFFECT);
 		}
 		active = true;
+	}
+
+	/**
+	 * Losing blood: the more is gone (and the lower your health), the more the world loses its colour, the edges
+	 * of the picture go black and throb with the heart, and the eyes stop holding it together - it doubles.
+	 */
+	private static void bloodLoss(Minecraft mc) {
+		var p = mc.player;
+		float target = 0.0F;
+		if (p != null && p.isAlive() && !p.isCreative() && !p.isSpectator()) {
+			de.rcm.ballistic.injury.Wounds w = de.rcm.ballistic.injury.Injuries.get(p);
+			if (w.bleed() > 0) {
+				bloodLost = Math.min(1.0F, bloodLost + w.bleed() * (w.bleed() == de.rcm.ballistic.injury.Wounds.ARTERIAL ? 0.0011F : 0.0006F));
+			} else if (p.getHealth() / Math.max(1.0F, p.getMaxHealth()) > 0.5F) {
+				bloodLost = Math.max(0.0F, bloodLost - 0.0005F);
+			}
+			float health = p.getHealth() / Math.max(1.0F, p.getMaxHealth());
+			float low = Mth.clamp((0.6F - health) / 0.5F, 0.0F, 1.0F);
+			target = Math.max(bloodLost, low * 0.75F);
+			if (w.dying() > 0) {
+				target = Math.max(target, 0.88F);
+			} else if (w.collapse() > 0) {
+				target = Math.max(target, 0.6F);
+			}
+		} else {
+			bloodLost = 0.0F;
+		}
+		loss += (target - loss) * (target > loss ? 0.03F : 0.01F);
+		if (loss < 0.002F) {
+			loss = 0.0F;
+		}
+		// the heart racing as the blood goes - slowing again at the very end
+		float bpm = loss > 0.85F ? 120.0F - (loss - 0.85F) * 300.0F : 64.0F + 90.0F * loss;
+		beatPeriod = 1200.0F / Math.max(30.0F, bpm);
+		ownBeat += 1.0F / beatPeriod;
+		if (ownBeat >= 1.0F) {
+			ownBeat -= 1.0F;
+		}
+	}
+
+	/** The throb of a heartbeat (lub-dub) at {@code phase} 0..1 of the beat. */
+	private static float throb(float phase) {
+		float t = phase * beatPeriod / 20.0F; // seconds into the beat
+		float lub = (float) Math.exp(-t * 14.0F);
+		float dub = t > 0.2F ? 0.65F * (float) Math.exp(-(t - 0.2F) * 14.0F) : 0.0F;
+		return Mth.clamp(lub + dub, 0.0F, 1.0F);
 	}
 
 	/** Every frame: writes the current values into the parameter texture. */
@@ -194,7 +248,9 @@ public final class BlastShader {
 		img.setPixel(4, 0, argb(byteOf(drench * k), suppression * k, 0.0F, quake * k));
 		img.setPixel(5, 0, byteOf(SmokeField.fog()) << 24 | (SmokeField.fogColor() & 0xFFFFFF)); // standing in thick smoke
 		img.setPixel(6, 0, argb(255, afterX, afterY, afterimage * k));
-		img.setPixel(7, 0, 0);
+		float heart = Heartbeat.phase();
+		float pulse = loss <= 0.0F ? 0.0F : throb(heart >= 0.0F ? heart : ownBeat);
+		img.setPixel(7, 0, argb(255, loss * k, pulse, Mth.clamp((loss - 0.35F) / 0.5F, 0.0F, 1.0F) * k));
 		params.upload();
 	}
 

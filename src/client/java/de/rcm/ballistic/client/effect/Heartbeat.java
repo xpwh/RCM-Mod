@@ -30,6 +30,14 @@ public final class Heartbeat {
 		ClientTickEvents.END_CLIENT_TICK.register(Heartbeat::tick);
 	}
 
+	/** How long the heart takes for a beat now (ticks), 0 while it is not heard. */
+	private static float period;
+
+	/** Where in its beat the heart is (0 the beat, towards 1 the next), or -1 while it is not heard. */
+	public static float phase() {
+		return period <= 0.0F ? -1.0F : Mth.clamp(sinceBeat / period, 0.0F, 1.0F);
+	}
+
 	/** How strongly the heart beats now (0..1), for anything that wants to pulse with it. */
 	public static float level() {
 		return level;
@@ -43,6 +51,7 @@ public final class Heartbeat {
 		if (p.isCreative() || p.isSpectator() || !p.isAlive()) {
 			level = 0.0F;
 			shock = 0.0F;
+			period = 0.0F;
 			return;
 		}
 		Wounds w = Injuries.get(p);
@@ -62,11 +71,13 @@ public final class Heartbeat {
 		if (w.incapacitated() || level < 0.18F) {
 			// silent - or the dying screen's own, slowing heart
 			sinceBeat = 0.0F;
+			period = 0.0F;
 			return;
 		}
 		// 70 beats a minute at rest, up to 175 at the worst
 		float bpm = 70.0F + 105.0F * level;
 		sinceBeat += 1.0F;
+		period = 1200.0F / bpm;
 		if (sinceBeat >= 1200.0F / bpm) {
 			sinceBeat = 0.0F;
 			float volume = 0.12F + 0.6F * level;

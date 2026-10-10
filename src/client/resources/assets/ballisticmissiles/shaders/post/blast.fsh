@@ -11,6 +11,8 @@
 //  * giant blasts: the earthquake rolling the picture, water running down the lens
 //  * standing inside thick smoke: the view fades into swirling grey after the tsunami's spray,
 //    and the negative afterimage a nuclear flash burns into the eye
+//  * shock and blood loss: the colour draining out of the world, the edges going black and throbbing
+//    with the heart, the picture doubling and swimming as the eyes stop holding it together
 // Expensive parts only run while they are visible; idle the shader is not even active.
 
 uniform sampler2D InSampler;
@@ -56,6 +58,7 @@ void main() {
     vec4 p4 = param(4);
     vec4 p5 = param(5);
     vec4 p6 = param(6);
+    vec4 p7 = param(7);
     float strength = p0.r;   // shock hitting the camera
     float exposure = p0.g;   // flash
     float shock = p0.b;      // shell shock / deafness
@@ -75,6 +78,9 @@ void main() {
     float onScreen = step(0.5, p3.b);
     float dust = p3.a;       // dust / smoke haze after the shock
     float winter = p2.a;     // nuclear winter: soot in the stratosphere
+    float bloodLoss = p7.r;  // shock and blood loss
+    float pulse = p7.g;      // the heartbeat's throb, 0..1
+    float doubled = p7.b;    // double vision
 
     float aspect = OutSize.x / max(OutSize.y, 1.0);
     vec2 px = 1.0 / OutSize;
@@ -298,6 +304,32 @@ void main() {
         col = mix(col, vec3(luma(col)), 0.3 * suppress);
         float tunnel = 1.0 - smoothstep(0.18, 0.85, length(c * vec2(aspect * 0.8, 1.0)));
         col *= mix(1.0, tunnel, 0.6 * suppress);
+    }
+
+    // ---- shock and blood loss: the picture doubles and swims, the colour drains away, the edges go
+    // black and close in, throbbing with every beat of the heart
+    if (bloodLoss > 0.0) {
+        if (doubled > 0.0) {
+            vec2 drift = vec2(sin(time * 0.9) + 0.4 * sin(time * 2.3), 0.6 * cos(time * 0.7)) * 0.016 * doubled;
+            vec3 ghost = texture(InSampler, uv + drift).rgb;
+            vec3 ghost2 = texture(InSampler, uv - drift * 0.45).rgb;
+            col = mix(col, (ghost + ghost2) * 0.5, 0.45 * doubled);
+            vec3 soft = vec3(0.0);
+            float r = 0.0045 * doubled;
+            for (int i = 0; i < 6; i++) {
+                float a = float(i) * 1.0472 + time * 0.2;
+                soft += texture(InSampler, uv + vec2(cos(a) / aspect, sin(a)) * r).rgb;
+            }
+            col = mix(col, soft / 6.0, 0.4 * doubled);
+        }
+        float l = luma(col);
+        col = mix(col, vec3(l) * vec3(0.95, 0.97, 1.03), clamp(bloodLoss * 1.05, 0.0, 0.95));
+        col *= 1.0 - 0.22 * bloodLoss;
+        float rr = length(c * vec2(aspect * 0.8, 1.0));
+        float inner = mix(0.95, 0.1, bloodLoss) - pulse * 0.1 * (0.4 + bloodLoss);
+        float edge = smoothstep(inner, inner + 0.45, rr);
+        col *= 1.0 - edge * clamp(0.55 + 0.45 * bloodLoss + pulse * 0.25, 0.0, 1.0);
+        col *= 1.0 - pulse * 0.12 * bloodLoss;
     }
 
     // ---- tunnel vision and grain

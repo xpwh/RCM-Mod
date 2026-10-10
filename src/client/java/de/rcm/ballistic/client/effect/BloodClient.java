@@ -138,6 +138,15 @@ public final class BloodClient {
 					}
 				}
 			}
+			case Blood.CHUNKS -> {
+				// bits torn out by a blast, flung up and raining blood as they fly
+				double force = Math.max(0.4, dir.length());
+				Vec3 d = dir.lengthSqr() < 1.0E-4 ? new Vec3(0, 1, 0) : dir.normalize();
+				GibClient.blown(at, d, p.amount(), 0.8F, (float) force);
+				for (int i = 0; i < p.amount() * 6; i++) {
+					spawn(at, d.scale((0.3 + RANDOM.nextDouble() * 0.5) * force).add(gauss(0.15)), 0.035F + RANDOM.nextFloat() * 0.05F);
+				}
+			}
 			case Blood.DRIP -> {
 				for (int i = 0; i < n; i++) {
 					spawn(at.add(gauss(0.12)), dir.scale(0.3).add(gauss(0.01)), 0.03F + RANDOM.nextFloat() * 0.03F);

@@ -206,6 +206,29 @@ public final class GibClient {
 	}
 
 	/** Thrown from the blast: mostly up, out along its push, every which way a little. */
+	/** Bits of a body torn out by a blast (it is not torn apart): flesh, gut, splinters of bone, flung up and out. */
+	public static void blown(Vec3 at, Vec3 dir, int n, float size, float force) {
+		if (!ModConfig.gore) {
+			return;
+		}
+		for (int i = 0; i < n; i++) {
+			int k = RANDOM.nextInt(10);
+			GoreMesh mesh = k < 6 ? MEAT[RANDOM.nextInt(MEAT.length)] : k < 8 ? BONE[RANDOM.nextInt(BONE.length)] : GUT[RANDOM.nextInt(GUT.length)];
+			Piece g = new Piece();
+			g.mesh = mesh;
+			g.scale = size * (0.5F + RANDOM.nextFloat() * 0.6F);
+			g.radius = 0.08F * g.scale;
+			g.x = g.px = at.x + RANDOM.nextGaussian() * 0.12;
+			g.y = g.py = at.y + RANDOM.nextGaussian() * 0.12;
+			g.z = g.pz = at.z + RANDOM.nextGaussian() * 0.12;
+			launch(g, dir, force);
+			PIECES.add(g);
+		}
+		while (PIECES.size() > MAX) {
+			PIECES.remove(0);
+		}
+	}
+
 	private static void launch(Piece g, Vec3 dir, float force) {
 		double up = (0.35 + RANDOM.nextDouble() * 0.5) * force;
 		double out = (0.15 + RANDOM.nextDouble() * 0.35) * force;
