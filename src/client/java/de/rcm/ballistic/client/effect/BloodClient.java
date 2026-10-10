@@ -304,6 +304,7 @@ public final class BloodClient {
 		long now = mc.level.getGameTime();
 		Vector3f up = new Vector3f(mc.gameRenderer.getMainCamera().upVector());
 		Vector3f left = new Vector3f(mc.gameRenderer.getMainCamera().leftVector()).negate(); // to the right: the quad faces the camera
+		Vector3f fwd = new Vector3f(mc.gameRenderer.getMainCamera().forwardVector());
 		PoseStack poseStack = context.matrices();
 		context.commandQueue().submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> {
 			for (Stain s : STAINS) {
@@ -321,17 +322,33 @@ public final class BloodClient {
 					continue;
 				}
 				int light = LevelRenderer.getLightColor(mc.level, BlockPos.containing(d.x, d.y, d.z));
-				float r = d.size;
-				// the middle of a splat, for a round, dark-red drop
+				// a drop in flight is drawn out by its speed into a short streak along the way it flies (as the
+				// eye sees it), small and dark - only a slow one looks round
+				float r = d.size * 0.55F;
+				Vector3f vel = new Vector3f((float) (d.x - d.px), (float) (d.y - d.py), (float) (d.z - d.pz));
+				vel.sub(new Vector3f(fwd).mul(vel.dot(fwd)));
+				float vl = vel.length();
+				Vector3f ax;
+				Vector3f ay;
+				if (vl > 0.02F) {
+					ax = new Vector3f(vel).div(vl);
+					ay = new Vector3f(fwd).cross(ax).normalize();
+				} else {
+					ax = left;
+					ay = up;
+				}
+				float along = r + Math.min(0.35F, vl * 0.45F);
+				float across = r * (vl > 0.02F ? 0.6F : 1.0F);
+				// the middle of a splat, for a dark-red drop
 				float u0 = 0.11F;
 				float u1 = 0.14F;
 				float v0 = 0.11F;
 				float v1 = 0.14F;
 				float[][] q = {{-1, -1, u0, v1}, {1, -1, u1, v1}, {1, 1, u1, v0}, {-1, 1, u0, v0}};
 				for (float[] p : q) {
-					float px = (float) x + (left.x * p[0] + up.x * p[1]) * r;
-					float py = (float) y + (left.y * p[0] + up.y * p[1]) * r;
-					float pz = (float) z + (left.z * p[0] + up.z * p[1]) * r;
+					float px = (float) x + ax.x * p[0] * along + ay.x * p[1] * across;
+					float py = (float) y + ax.y * p[0] * along + ay.y * p[1] * across;
+					float pz = (float) z + ax.z * p[0] * along + ay.z * p[1] * across;
 					consumer.addVertex(pose, px, py, pz).setColor(0xF0FFFFFF).setUv(p[2], p[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
 						.setNormal(pose, 0.0F, 1.0F, 0.0F);
 				}

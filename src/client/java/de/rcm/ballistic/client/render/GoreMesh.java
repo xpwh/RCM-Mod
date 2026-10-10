@@ -46,6 +46,10 @@ public final class GoreMesh {
 	public static final int T_THROAT = 67;
 	/** The torn edge of the face round a jaw shot away: versions 0-2 x (front, left, right). */
 	public static final int T_JAW_RIM = 68;
+	public static final int T_CAVITY = 77;
+	public static final int T_RIM = 78;
+	public static final int T_POOL = 79;
+	public static final int T_STOMACH = 80;
 
 	/** A region cut out of the body (a hole right through, the jaw torn off), in a mesh's own pixels. */
 	@FunctionalInterface

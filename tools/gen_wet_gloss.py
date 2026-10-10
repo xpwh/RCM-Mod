@@ -67,7 +67,7 @@ def gore_gloss():
     out = np.zeros_like(src)
     # how wet each kind of tile is all over (None: wherever it is bloody)
     wet = {30: 1.0, 31: 0.35, 32: 0.35, 33: 0.8, 34: 0.9, 35: None, 36: 1.0, 37: 0.85, 38: 1.0, 39: 1.0, 40: 0.95, 41: 0.75,
-           64: 0.6, 65: 1.0, 66: 1.0, 67: 1.0}
+           64: 0.6, 65: 1.0, 66: 1.0, 67: 1.0, 77: 1.0, 78: 0.85, 79: 1.0, 80: 0.9}
     for tile in range((src.shape[0] // T) * 8):
         r0, c0 = (tile // 8) * T, (tile % 8) * T
         t = src[r0:r0 + T, c0:c0 + T]

@@ -19,6 +19,8 @@ Tiles (index = row * 8 + column):
   64 teeth  65 tongue  66 the palate, raw  67 the throat at the back of a torn-open mouth
   68..76  the lower jaw shot away: the torn edge of what is left of the face, versions 0-2 x (front, left, right)
           (the cut itself is geometry: jaw_y / jaw_back here are GoreJaw's jawY / back in the mod)
+  77 the inside of a body torn open: deep, dark, wet  78 the torn edge of the hide (skin, fat, muscle in layers)
+  79 blood pooled in the body, clotting  80 a stomach
 """
 import os
 
@@ -615,6 +617,64 @@ def throat_tile():
     return opaque(rgb)
 
 
+# ---------------------------------------------------------------- a body torn open (9.23)
+
+def cavity_tile():
+    """Looking into an opened body: dark wet red, the far side lost in shadow, shiny membrane and fascia,
+    clots - darker towards the middle, where it is deepest."""
+    u, v = UV
+    x, y = u * 2 - 1, v * 2 - 1
+    r = np.sqrt(x * x + y * y)
+    base = FLESH[None, None] * (0.55 + 0.45 * fbm(u * 5, v * 5, 0, 800))[..., None]
+    fascia = smoothstep(0.035, 0.0, np.abs(np.sin(fbm(u * 2.2, v * 2.2, 1, 801) * 16)))
+    base = base * (1 - 0.35 * fascia[..., None]) + fascia[..., None] * np.array([210, 160, 160]) * 0.35
+    deep = smoothstep(1.0, 0.0, r) ** 1.4
+    rgb = base * (1 - 0.75 * deep[..., None]) + deep[..., None] * np.array([28, 2, 4])
+    clot = smoothstep(0.62, 0.74, fbm(u * 4, v * 4, 2, 802))
+    rgb = rgb * (1 - 0.6 * clot[..., None]) + clot[..., None] * BLOOD_DARK * 0.6
+    rgb = rgb + smoothstep(0.72, 0.85, fbm(u * 7, v * 7, 3, 803))[..., None] * np.array([60, 30, 30]) * (1 - deep)[..., None]
+    return opaque(rgb)
+
+
+def rim_tile():
+    """Wrapped round the torn edge of the hide (u round it): the skin, the yellow fat under it, then raw muscle -
+    ragged, bloody."""
+    u, v = UV
+    w = u + 0.04 * (fbm(u * 6, v * 9, 0, 810) - 0.5)
+    skin = DERMIS[None, None] * (0.7 + 0.35 * fbm(u * 8, v * 8, 1, 811))[..., None]
+    fat = FAT[None, None] * (0.8 + 0.25 * fbm(u * 10, v * 10, 2, 812))[..., None]
+    fib = 0.8 + 0.2 * np.sin(v * 50 + fbm(u * 3, v * 3, 3, 813) * 10)
+    muscle = FLESH[None, None] * fib[..., None] * (0.75 + 0.3 * fbm(u * 5, v * 5, 4, 814))[..., None]
+    rgb = np.where((w < 0.18)[..., None], skin, np.where((w < 0.32)[..., None], fat, muscle))
+    blood = np.clip(smoothstep(0.5, 0.65, fbm(u * 3, v * 3, 5, 815)) + smoothstep(0.75, 1.0, w) * 0.5, 0, 1)
+    rgb = rgb * (1 - 0.65 * blood[..., None]) + blood[..., None] * BLOOD * 0.65
+    return opaque(rgb)
+
+
+def pooled_blood_tile():
+    u, v = UV
+    x, y = u * 2 - 1, v * 2 - 1
+    a = np.arctan2(y, x)
+    r = np.sqrt(x * x + y * y)
+    edge = 0.8 * (0.85 + 0.25 * fbm(np.cos(a) * 2, np.sin(a) * 2, 0, 820))
+    depth = np.clip(1 - r / edge, 0, 1) ** 0.5
+    rgb = BLOOD_DARK[None, None] * (0.8 + 0.4 * fbm(u * 4, v * 4, 1, 821))[..., None] + (1 - depth)[..., None] * np.array([60, 8, 8])
+    clot = smoothstep(0.64, 0.72, fbm(u * 5, v * 5, 2, 822))
+    rgb = rgb * (1 - 0.4 * clot[..., None])
+    a = smoothstep(0.0, 0.12, depth)
+    return np.dstack([np.clip(rgb, 0, 255), a * 255]).astype(np.uint8)
+
+
+def stomach_tile():
+    u, v = UV
+    rgb = np.array([170, 120, 118], float)[None, None] * (0.8 + 0.3 * fbm(u * 4, v * 4, 0, 830))[..., None]
+    ves = smoothstep(0.03, 0.0, np.abs(fbm(u * 2.5, v * 2.5, 1, 831) - 0.5))
+    rgb = rgb * (1 - ves[..., None] * 0.5) + ves[..., None] * np.array([140, 40, 60]) * 0.5
+    blood = smoothstep(0.5, 0.66, fbm(u * 3, v * 3, 2, 832))
+    rgb = rgb * (1 - blood[..., None] * 0.7) + blood[..., None] * BLOOD_FRESH * 0.7
+    return opaque(rgb)
+
+
 def main():
     atlas = np.zeros((16 * T, 8 * T, 4), np.uint8)
 
@@ -651,6 +711,10 @@ def main():
     for v in range(3):
         for f, name in enumerate(("front", "left", "right")):
             put(68 + v * 3 + f, jaw_rim_tile(v, name))
+    put(77, cavity_tile())
+    put(78, rim_tile())
+    put(79, pooled_blood_tile())
+    put(80, stomach_tile())
     Image.fromarray(atlas, "RGBA").save(OUT, optimize=True)
 
 
