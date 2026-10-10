@@ -699,6 +699,7 @@
 	"options.ballisticmissiles.gore_warning": "18+-Warnung beim Start",
 	"gore_warning.ballisticmissiles.title": "WARNUNG – NUR FÜR ERWACHSENE",
 	"gore_warning.ballisticmissiles.text": "Ballistic Missiles zeigt extreme, sehr realistische und verstörende Gewalt: offene Schusswunden, abgerissene Arme und Beine mit freiliegenden Knochen, aufgesprengte Schädel mit Gehirnmasse, Menschen und Tiere, die von Explosionen in Stücke gerissen werden, herumliegende Organe, langsames Verbluten und Sterben.\n\nDiese Inhalte sind ausschließlich für Erwachsene ab 18 Jahren bestimmt. Sie können belastend oder schockierend sein – auch für Erwachsene. Wenn du jünger als 18 bist, dich so etwas belastet oder du dir unsicher bist, schalte Gore jetzt aus. Das Spiel funktioniert auch ohne.\n\nGore kann jederzeit in den Mod-Einstellungen ein- und ausgeschaltet werden.",
+	"gore_warning.ballisticmissiles.alpha": "⚠ ALPHA-VERSION: Dieser Mod ist noch SEHR, SEHR in Arbeit. Vieles ist unfertig, kann sich ändern oder fehlerhaft sein. Es kommen noch viele neue Updates!",
 	"gore_warning.ballisticmissiles.dont_show": "Diese Warnung nicht mehr anzeigen",
 	"gore_warning.ballisticmissiles.continue": "Ich bin 18+ – weiter",
 	"gore_warning.ballisticmissiles.disable": "Gore ausschalten",

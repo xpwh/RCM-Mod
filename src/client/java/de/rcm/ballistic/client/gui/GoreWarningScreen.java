@@ -42,6 +42,8 @@ public final class GoreWarningScreen extends Screen {
 
 	/** Ticks the warning must stay up before it can be passed: long enough to actually be read. */
 	private static final int READ_TICKS = 160;
+	/** The note that the mod is an early alpha, still very much being worked on. */
+	private MultiLineLabel alpha = MultiLineLabel.EMPTY;
 	private Checkbox adult;
 	private Button go;
 	private int shownFor;
@@ -50,8 +52,9 @@ public final class GoreWarningScreen extends Screen {
 	protected void init() {
 		int w = Math.min(this.width - 40, 420);
 		this.text = MultiLineLabel.create(this.font, Component.translatable("gore_warning.ballisticmissiles.text"), w);
+		this.alpha = MultiLineLabel.create(this.font, Component.translatable("gore_warning.ballisticmissiles.alpha").withColor(0xFFD040), w);
 		int textTop = Math.max(70, this.height / 2 - 120);
-		int y = Math.min(this.height - 86, textTop + this.text.getLineCount() * (this.font.lineHeight + 2) + 10);
+		int y = Math.min(this.height - 86, this.alphaTop(textTop) + this.alpha.getLineCount() * (this.font.lineHeight + 2) + 10);
 		this.adult = this.addRenderableWidget(Checkbox.builder(Component.translatable("gore_warning.ballisticmissiles.adult"), this.font)
 			.pos(this.width / 2 - 150, y).selected(false).build());
 		y += 22;
@@ -63,6 +66,11 @@ public final class GoreWarningScreen extends Screen {
 		this.addRenderableWidget(Button.builder(Component.translatable("gore_warning.ballisticmissiles.disable"), b -> this.close(false))
 			.bounds(this.width / 2 + 4, y, 150, 20).build());
 		this.updateGo();
+	}
+
+	/** Where the alpha note starts: just under the warning text. */
+	private int alphaTop(int textTop) {
+		return textTop + this.text.getLineCount() * (this.font.lineHeight + 2) + 8;
 	}
 
 	@Override
@@ -128,6 +136,11 @@ public final class GoreWarningScreen extends Screen {
 		g.pose().popMatrix();
 		g.drawCenteredString(this.font, Component.translatable("gore_warning.ballisticmissiles.subtitle"), cx, top - 12, 0xFFE0B0B0);
 		this.text.visitLines(net.minecraft.client.gui.TextAlignment.CENTER, cx, top, this.font.lineHeight + 2, g.textRenderer());
+		// the mod is an early alpha: said plainly, in its own colour, so it is not missed
+		int alphaTop = this.alphaTop(top);
+		int alphaLines = this.alpha.getLineCount();
+		g.fill(cx - 214, alphaTop - 4, cx + 214, alphaTop + alphaLines * (this.font.lineHeight + 2) + 2, 0x40FFC020);
+		this.alpha.visitLines(net.minecraft.client.gui.TextAlignment.CENTER, cx, alphaTop, this.font.lineHeight + 2, g.textRenderer());
 		super.render(g, mouseX, mouseY, partialTick);
 	}
 
