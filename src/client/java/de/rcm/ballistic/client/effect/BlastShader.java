@@ -65,6 +65,8 @@ public final class BlastShader {
 	/** The heart's beat, for the screen to throb with when its sound is not heard (dying, collapsing). */
 	private static float ownBeat;
 	private static float beatPeriod = 20.0F;
+	/** The player the blood loss belongs to: a new one (respawned, another world) starts whole. */
+	private static Object lossOwner;
 	private static float afterX = 0.5F;
 	private static float afterY = 0.5F;
 
@@ -173,12 +175,23 @@ public final class BlastShader {
 	private static void bloodLoss(Minecraft mc) {
 		var p = mc.player;
 		float target = 0.0F;
-		if (p != null && p.isAlive() && !p.isCreative() && !p.isSpectator()) {
+		if (p != lossOwner || p == null || !p.isAlive() || p.isCreative() || p.isSpectator()) {
+			// dead, respawned, or out of it: the picture is clear again at once
+			lossOwner = p;
+			bloodLost = 0.0F;
+			loss = 0.0F;
+			if (p == null || !p.isAlive()) {
+				return;
+			}
+		}
+		if (p.isAlive() && !p.isCreative() && !p.isSpectator()) {
 			de.rcm.ballistic.injury.Wounds w = de.rcm.ballistic.injury.Injuries.get(p);
 			if (w.bleed() > 0) {
 				bloodLost = Math.min(1.0F, bloodLost + w.bleed() * (w.bleed() == de.rcm.ballistic.injury.Wounds.ARTERIAL ? 0.0011F : 0.0006F));
-			} else if (p.getHealth() / Math.max(1.0F, p.getMaxHealth()) > 0.5F) {
-				bloodLost = Math.max(0.0F, bloodLost - 0.0005F);
+			} else {
+				// the bleeding stopped: it comes back, quicker the better you are
+				float hp = p.getHealth() / Math.max(1.0F, p.getMaxHealth());
+				bloodLost = Math.max(0.0F, bloodLost - (hp > 0.9F ? 0.004F : hp > 0.5F ? 0.0012F : 0.0004F));
 			}
 			float health = p.getHealth() / Math.max(1.0F, p.getMaxHealth());
 			float low = Mth.clamp((0.6F - health) / 0.5F, 0.0F, 1.0F);
@@ -191,7 +204,7 @@ public final class BlastShader {
 		} else {
 			bloodLost = 0.0F;
 		}
-		loss += (target - loss) * (target > loss ? 0.03F : 0.01F);
+		loss += (target - loss) * (target > loss ? 0.03F : 0.025F);
 		if (loss < 0.002F) {
 			loss = 0.0F;
 		}
