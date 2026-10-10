@@ -72,6 +72,11 @@ public final class Blood {
 	}
 
 	public static void wound(LivingEntity e, Vec3 at, double grown, boolean pellet, boolean head, int kind) {
+		wound(e, at, grown, pellet, head, kind, null);
+	}
+
+	/** {@code facing}: which way the struck surface faces (null: worked out from the creature's box). */
+	public static void wound(LivingEntity e, Vec3 at, double grown, boolean pellet, boolean head, int kind, Vec3 facing) {
 		if (!(e.level() instanceof ServerLevel level) || !bleeds(e)) {
 			return;
 		}
@@ -91,6 +96,10 @@ public final class Blood {
 			case 4 -> new Vec3(0, 0, -1);
 			default -> new Vec3(0, 0, 1);
 		};
+		if (facing != null) {
+			n = facing.normalize();
+			grown = 0.0;
+		}
 		Vec3 onBody = at.subtract(n.scale(grown));
 		Vec3 rel = onBody.subtract(e.position());
 		float size = (pellet ? 0.1F : 0.16F) * (head ? 1.4F : 1.0F) * (0.85F + level.getRandom().nextFloat() * 0.3F)

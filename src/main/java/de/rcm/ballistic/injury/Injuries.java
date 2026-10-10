@@ -89,6 +89,7 @@ public final class Injuries {
 		ServerLivingEntityEvents.AFTER_DAMAGE.register(Injuries::afterDamage);
 		ServerLivingEntityEvents.ALLOW_DEATH.register(Injuries::allowDeath);
 		Corpses.init();
+		CorpsePose.init();
 		CorpsePhysics.init();
 		// no hand on that arm: nothing to hit with, nothing to dig with
 		net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) ->

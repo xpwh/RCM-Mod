@@ -352,6 +352,16 @@ public final class MobWounds {
 		Quaternionf toBody = new Quaternionf().rotationY((180.0F - e.yBodyRot) * Mth.DEG_TO_RAD).conjugate();
 		Vector3f at = toBody.transform(new Vector3f(p.rx(), p.ry(), p.rz()));
 		Vector3f n = toBody.transform(new Vector3f(p.nx(), p.ny(), p.nz()));
+		if (e.deathTime >= 20 && de.rcm.ballistic.injury.CorpseHits.isCorpse(e)) {
+			// a body lying (turned, lifted, fallen on its side): where the round struck it, as it lies
+			Vector3f lying = de.rcm.ballistic.injury.CorpsePose.toBody(e, e.position().add(p.rx(), p.ry(), p.rz()));
+			Quaternionf back = new Quaternionf(de.rcm.ballistic.injury.CorpsePose.turn(e)).conjugate();
+			Vector3f ln = new Quaternionf(de.rcm.ballistic.injury.CorpsePose.facing(e)).conjugate().transform(back.transform(new Vector3f(p.nx(), p.ny(), p.nz())));
+			// and undo its fall onto its side
+			Quaternionf unfall = new Quaternionf().rotationZ(-90.0F * Mth.DEG_TO_RAD);
+			at = unfall.transform(lying);
+			n = unfall.transform(ln);
+		}
 		List<Wound> list = WOUNDS.computeIfAbsent(p.entity(), k -> new ArrayList<>());
 		if (list.size() >= MAX_PER) {
 			list.remove(0);
@@ -408,7 +418,10 @@ public final class MobWounds {
 			int light = LevelRenderer.getLightColor(mc.level, BlockPos.containing(pos.x, pos.y + e.getBbHeight() * 0.5, pos.z));
 			poseStack.pushPose();
 			poseStack.translate(pos.x - cam.x, pos.y - cam.y, pos.z - cam.z);
-			CorpseFx.applyTumble(poseStack, e.getId(), partial);
+			float[] lying = CorpseFx.pose(e, partial);
+			if (lying != null) {
+				CorpseFx.apply(poseStack, lying, 1.0F);
+			}
 			poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - Mth.rotLerp(partial, e.yBodyRotO, e.yBodyRot)));
 			if (e.deathTime > 0) {
 				// keeling over as it dies, as the model does

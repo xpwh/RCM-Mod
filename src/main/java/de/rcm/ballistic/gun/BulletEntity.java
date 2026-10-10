@@ -233,12 +233,15 @@ public class BulletEntity extends Entity {
 		Entity best = null;
 		double bestDist = Double.MAX_VALUE;
 		for (Entity e : list) {
-			AABB box = de.rcm.ballistic.injury.CorpseHits.hitBox(e).inflate(0.2);
-			if (lag > 0) {
-				// where it was lag ticks ago, back along its last movement
-				box = box.expandTowards(-(e.getX() - e.xo) * lag, -(e.getY() - e.yo) * lag, -(e.getZ() - e.zo) * lag);
+			var clip = de.rcm.ballistic.injury.CorpseHits.isCorpse(e) ? de.rcm.ballistic.injury.CorpseHits.clip(e, from, to, 0.05F) : java.util.Optional.<Vec3>empty();
+			if (!de.rcm.ballistic.injury.CorpseHits.isCorpse(e)) {
+				AABB box = e.getBoundingBox().inflate(0.2);
+				if (lag > 0) {
+					// where it was lag ticks ago, back along its last movement
+					box = box.expandTowards(-(e.getX() - e.xo) * lag, -(e.getY() - e.yo) * lag, -(e.getZ() - e.zo) * lag);
+				}
+				clip = box.clip(from, to);
 			}
-			var clip = box.clip(from, to);
 			if (clip.isPresent()) {
 				double d = clip.get().distanceToSqr(from);
 				if (d < bestDist) {
@@ -283,7 +286,7 @@ public class BulletEntity extends Entity {
 	}
 
 	private void hitEntity(ServerLevel level, Entity e, Vec3 from, Vec3 to) {
-		Vec3 at = de.rcm.ballistic.injury.CorpseHits.hitBox(e).inflate(0.2).clip(from, to).orElse(e.position());
+		Vec3 at = de.rcm.ballistic.injury.CorpseHits.clip(e, from, to, de.rcm.ballistic.injury.CorpseHits.isCorpse(e) ? 0.05F : 0.2F).orElse(e.position());
 		float speed = (float) this.getDeltaMovement().length();
 		float damage = DAMAGE * Math.min(1.0F, 0.35F + speed / (float) AkItem.MUZZLE_VELOCITY) * (0.25F + 0.75F * this.power);
 		if (this.pellet) {

@@ -43,6 +43,10 @@ public abstract class AvatarRendererMixin {
 			return;
 		}
 		int fall = gore.ballisticmissiles$fall();
+		if (((de.rcm.ballistic.client.render.CorpseAge) state).ballisticmissiles$corpseAge() >= 0.0F) {
+			// a body left lying stands by its middle: its feet are half its length back from there
+			poseStack.translate(0.0F, 0.0F, (fall == de.rcm.ballistic.injury.Wounds.BACKWARD ? -1.0F : 1.0F) * de.rcm.ballistic.injury.Corpses.HALF / Math.max(0.01F, scale));
+		}
 		// lying, the body's half thickness above the ground rather than in it
 		poseStack.translate(0.0F, 0.13F * de.rcm.ballistic.client.render.Collapse.down(t), 0.0F);
 		poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(de.rcm.ballistic.client.render.Collapse.roll(t)));

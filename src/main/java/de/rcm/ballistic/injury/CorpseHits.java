@@ -31,17 +31,15 @@ public final class CorpseHits {
 		return e instanceof LivingEntity l && !(e instanceof Player) && l.deathTime > 0 && !e.isRemoved();
 	}
 
-	/** Where a round meets the body: a person's body lies stretched out along the way it fell, not standing. */
-	public static net.minecraft.world.phys.AABB hitBox(Entity e) {
-		if (!(e instanceof Mannequin m) || !m.hasAttached(Corpses.UNTIL)) {
-			return e.getBoundingBox();
+	/**
+	 * Where the line from {@code from} to {@code to} meets the body, grown by {@code grow}: a body left lying is
+	 * hit where it really lies, however it has been turned ({@link CorpsePose}); anything else by its box.
+	 */
+	public static java.util.Optional<Vec3> clip(Entity e, Vec3 from, Vec3 to, float grow) {
+		if (isCorpse(e) && e instanceof LivingEntity body) {
+			return CorpsePose.clip(body, from, to, grow);
 		}
-		Wounds w = Injuries.get(m);
-		float yaw = m.yBodyRot * Mth.DEG_TO_RAD;
-		Vec3 forward = new Vec3(-Mth.sin(yaw), 0, Mth.cos(yaw)).scale(w.fall() == Wounds.BACKWARD ? -1.0 : 1.0);
-		Vec3 feet = m.position();
-		Vec3 head = feet.add(forward.scale(1.8));
-		return new net.minecraft.world.phys.AABB(feet.x, feet.y, feet.z, head.x, feet.y + 0.45, head.z).inflate(0.3, 0.0, 0.3);
+		return e.getBoundingBox().inflate(grow).clip(from, to);
 	}
 
 	/** How much a body can take before it comes apart. */
@@ -65,14 +63,17 @@ public final class CorpseHits {
 		if (body instanceof Mannequin m) {
 			person(level, m, at, line, pellet, range);
 		} else {
-			Blood.wound(body, at, 0.2, pellet, false, level.getRandom().nextFloat() < 0.3F ? Blood.ENTRAILS : Blood.GAPING);
+			// on the body as it lies, facing back at the shooter
+			Blood.wound(body, at, 0.0, pellet, false, level.getRandom().nextFloat() < 0.3F ? Blood.ENTRAILS : Blood.GAPING, line.scale(-1.0));
 			Injuries.bleedCreature(body, 400);
 		}
 		Blood.send(level, at, line, pellet ? 10 : 20, Blood.SPRAY);
 		Blood.send(level, at, new Vec3(0, 0.35, 0), pellet ? 4 : 8, Blood.BURST);
-		// knocked about by it
+		// knocked about by it - and, struck off its middle, turned
 		Vec3 push = line.scale(pellet ? 0.04 : 0.09);
 		body.push(push.x, 0.03, push.z);
+		body.hurtMarked = true;
+		CorpsePhysics.spin(body, at, push);
 		if (taken >= limit(body)) {
 			Blood.gib(body, at.subtract(line), 0.8F);
 			TAKEN.remove(body);
@@ -85,14 +86,11 @@ public final class CorpseHits {
 	/** A person's body: where on it, as it lies, and what that round does there. */
 	private static void person(ServerLevel level, Mannequin m, Vec3 at, Vec3 line, boolean pellet, double range) {
 		Wounds w = Injuries.get(m);
-		float yaw = m.yBodyRot * Mth.DEG_TO_RAD;
-		Vec3 forward = new Vec3(-Mth.sin(yaw), 0, Mth.cos(yaw));
-		Vec3 left = new Vec3(Mth.cos(yaw), 0, Mth.sin(yaw));
-		Vec3 rel = at.subtract(m.position());
+		// where on the body, as it lies (however it has been turned): along it from the feet, across it
+		org.joml.Vector3f local = CorpsePose.toBody(m, at);
 		boolean faceDown = w.fall() != Wounds.BACKWARD;
-		// lying, the head is out along the way it fell, the feet where it stood
-		double along = rel.dot(forward) * (faceDown ? 1.0 : -1.0);
-		double side = rel.dot(left);
+		double along = Corpses.HALF + (faceDown ? -local.z : local.z);
+		double side = -local.x; // the body frame is the model's mirrored: +x the right
 		var r = level.getRandom();
 		if (along > 1.3) {
 			// the head: the jaw torn away, or the skull blown open

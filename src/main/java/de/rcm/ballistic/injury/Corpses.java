@@ -25,6 +25,8 @@ import com.mojang.serialization.Codec;
  * head). It cannot be moved or hurt, and after {@link #LIFETIME} it is gone.
  */
 public final class Corpses {
+	/** Half a body's length (blocks): its middle, from the feet. */
+	public static final float HALF = 0.9F;
 	/** How long a body lies there (ticks): three minutes. */
 	public static final int LIFETIME = 3600;
 	/** More bodies than this in the world, and the oldest goes. */
@@ -43,6 +45,7 @@ public final class Corpses {
 		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
 			if (entity instanceof Mannequin m && m.hasAttached(UNTIL) && !BODIES.contains(m)) {
 				BODIES.add(m);
+				m.refreshDimensions();
 			}
 		});
 		ServerEntityEvents.ENTITY_UNLOAD.register((entity, level) -> BODIES.remove(entity));
@@ -85,9 +88,19 @@ public final class Corpses {
 		if (m == null) {
 			return;
 		}
-		// where they died, moving as they were: the body falls, rolls and slides on from there (CorpsePhysics)
-		double y = p.getY();
-		m.snapTo(p.getX(), y, p.getZ(), p.getYRot(), 0.0F);
+		// where they died, moving as they were: the body falls, rolls and slides on from there (CorpsePhysics).
+		// The body is placed by its middle - half its length out from the feet the way it falls - so it rests,
+		// slides and tips over edges as the whole body; the client draws it from there (AvatarRendererMixin).
+		Wounds w0 = Injuries.get(p);
+		boolean faceDown = w0.fall() != Wounds.BACKWARD;
+		net.minecraft.world.phys.Vec3 forward = net.minecraft.world.phys.Vec3.directionFromRotation(0.0F, p.yBodyRot).scale(faceDown ? HALF : -HALF);
+		net.minecraft.world.phys.Vec3 at = p.position().add(forward);
+		m.snapTo(at.x, at.y, at.z, p.getYRot(), 0.0F);
+		m.setAttached(UNTIL, level.getGameTime() + LIFETIME);
+		m.refreshDimensions();
+		if (!level.noCollision(m, m.getBoundingBox())) {
+			m.snapTo(p.getX(), p.getY(), p.getZ(), p.getYRot(), 0.0F);
+		}
 		m.setYBodyRot(p.yBodyRot);
 		m.setDeltaMovement(p.getDeltaMovement().multiply(1.0, p.onGround() ? 0.0 : 1.0, 1.0));
 		m.setYHeadRot(p.yBodyRot);
@@ -100,10 +113,11 @@ public final class Corpses {
 		m.setPose(Pose.STANDING);
 		// the wounds go with the body; it lies as it fell: crawling, on its face; shot, as the collapse went; else either way
 		Wounds w = Injuries.get(p);
-		int fall = w.fall() > 0 ? w.fall() : w.down() ? Wounds.FORWARD : p.getRandom().nextBoolean() ? Wounds.FORWARD : Wounds.BACKWARD;
+		int fall = w.fall() > 0 ? w.fall() : Wounds.FORWARD;
 		Wounds body = new Wounds(w.leg(), w.arm(), 0, w.lost(), 0, w.armsLost(), w.head(), 0, fall, w.torso(), w.seed(), w.extra());
 		m.setAttached(Injuries.WOUNDS, body);
 		m.setAttached(UNTIL, level.getGameTime() + LIFETIME);
+		m.refreshDimensions();
 		level.addFreshEntity(m);
 		BODIES.add(m);
 		while (BODIES.size() > MAX) {
