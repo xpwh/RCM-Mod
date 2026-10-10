@@ -77,8 +77,6 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		/** Night-time light dot seen from afar: strength (0..1) and distance to the camera. */
 		public float nightGlow;
 		public float distance;
-		/** How far up the thin air lets the exhaust spread (0 low .. 1 high up): the plume swells as the pressure falls. */
-		public float thinAir;
 		/** Stages separated so far, and warheads left on the MIRV bus (-1 = whole missile). */
 		public int dropped;
 		public int bus = -1;
@@ -132,7 +130,6 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			? plasmaIntensity(entity, partialTick) : 0.0F;
 		// at night a burning motor (or the re-entry glow) is seen from far away as an orange point
 		state.distance = (float) Math.sqrt(state.distanceToCameraSq);
-		state.thinAir = Mth.clamp((float) (entity.getY() - 140.0) / 500.0F, 0.0F, 1.0F);
 		float burning = state.engineOn ? 1.0F : state.plasma > 0.05F ? state.plasma * 0.9F : 0.0F;
 		state.nightGlow = burning * night(entity.level().getDayTime()) * smoothstep(25.0F, 90.0F, state.distance);
 		if (state.engineOn || state.jet) {
@@ -212,21 +209,15 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			for (float[] exit : exits) {
 				// turbofan: only a faint hot glow instead of a rocket plume
 				float nozzle = state.jet ? exit[2] * 0.7F : exit[2];
-				// high up, with less and less air to hold it in, the exhaust balloons out of the nozzle into a broad,
-				// long plume - the same motor that left a tight, bright flame at the launcher
-				float swell = state.jet || cruise ? 0.0F : state.thinAir;
 				float flameLength = state.jet
 					? 0.55F * flicker
-					: (state.ignition ? Math.min(1.0F, t / 30.0F) * 3.5F : 6.5F) * flicker * Mth.sqrt(exit[2] / 0.34F) * (exits.length > 1 ? 1.1F : 1.0F)
-						* (1.0F + 1.6F * swell);
-				float plumeWidth = nozzle;
+					: (state.ignition ? Math.min(1.0F, t / 30.0F) * 3.5F : 6.5F) * flicker * Mth.sqrt(exit[2] / 0.34F) * (exits.length > 1 ? 1.1F : 1.0F);
 				float phase = exit[0] * 13.0F + exit[1] * 7.0F;
 				poseStack.pushPose();
 				poseStack.translate(exit[0], exitY, exit[1]);
-				float outer = 1.0F - 0.45F * swell;
 				collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
-					flame(pose, consumer, plumeWidth, flameLength, t + phase, outer, swell);
-					flame(pose, consumer, nozzle * 0.55F, flameLength * 0.6F / (1.0F + 0.8F * swell), t + phase + 7.0F, 1.0F);
+					flame(pose, consumer, nozzle, flameLength, t + phase, 1.0F);
+					flame(pose, consumer, nozzle * 0.55F, flameLength * 0.6F, t + phase + 7.0F, 1.0F);
 				});
 				poseStack.popPose();
 			}
@@ -292,14 +283,6 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 
 	/** Exhaust plume: a bulging, flickering cone of revolution pointing down the -Y axis. */
 	static void flame(PoseStack.Pose pose, VertexConsumer consumer, float radius, float length, float time, float alpha) {
-		flame(pose, consumer, radius, length, time, alpha, 0.0F);
-	}
-
-	/**
-	 * {@code expand} 0..1: how far the thin air of high altitude lets the plume balloon out - instead of
-	 * tapering to a point it flares wider and wider behind the nozzle, its shock diamonds gone.
-	 */
-	static void flame(PoseStack.Pose pose, VertexConsumer consumer, float radius, float length, float time, float alpha, float expand) {
 		final int segments = 16;
 		final int rings = 7;
 		int fullBright = LightTexture.FULL_BRIGHT;
@@ -308,8 +291,8 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			float f1 = (float) (ring + 1) / rings;
 			float y0 = -f0 * length;
 			float y1 = -f1 * length;
-			float r0 = plumeRadius(radius, f0, time, expand);
-			float r1 = plumeRadius(radius, f1, time, expand);
+			float r0 = plumeRadius(radius, f0, time);
+			float r1 = plumeRadius(radius, f1, time);
 			for (int s = 0; s < segments; s++) {
 				float a0 = Mth.TWO_PI * s / segments;
 				float a1 = Mth.TWO_PI * (s + 1) / segments;
@@ -325,12 +308,11 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		}
 	}
 
-	private static float plumeRadius(float nozzle, float f, float time, float expand) {
-		// expands right after the nozzle (under-expanded exhaust), then tapers off
+	private static float plumeRadius(float nozzle, float f, float time) {
+		// Expands right after the nozzle (under-expanded exhaust), then tapers off.
 		float bulge = Mth.sin(Mth.PI * Math.min(1.0F, f * 1.6F)) * 0.6F;
-		// shock diamonds in the dense air low down; high up the plume is underexpanded and just flares out
-		float diamond = 0.08F * Mth.sin(f * 22.0F - time * 1.4F) * (1.0F - expand);
-		return nozzle * (1.0F + bulge + diamond) * (1.0F - f * 0.7F * (1.0F - expand) + f * 2.6F * expand * expand);
+		float diamond = 0.08F * Mth.sin(f * 22.0F - time * 1.4F);
+		return nozzle * (1.0F + bulge + diamond) * (1.0F - f * 0.7F);
 	}
 
 	private static int color(float f, float alpha) {

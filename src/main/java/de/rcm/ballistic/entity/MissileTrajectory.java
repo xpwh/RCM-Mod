@@ -15,11 +15,6 @@ import net.minecraft.world.phys.Vec3;
  *       ends exactly on the target.</li>
  * </ol>
  * Past the end of the path it keeps its final velocity until it hits something.
- * <p>
- * A short-range <b>tactical</b> missile (Iskander-style) flies otherwise: off the launcher fast, its solid motor
- * pushing hard from the first moment, it pitches over early and climbs on a flatter, much lower arc (some
- * 50 km up in reality, far below an ICBM's); in the last third it noses over into a steep, near-vertical dive
- * onto the target, weaving from side to side to throw off the defences.
  */
 public final class MissileTrajectory {
 	/** Fraction of the flight the motor burns. */
@@ -30,17 +25,8 @@ public final class MissileTrajectory {
 	 * the way down (about 2.6x at the end) instead of being fast from the start.
 	 */
 	private static final double COAST_SPEEDUP = 0.55;
-	/** Time easing of the boost: thrust builds up, the missile creeps off the pad (a solid tactical motor much less so). */
-	private final double ease;
-	/** Tactical profile: where the terminal dive begins (tick), its end velocity, how far it weaves. */
-	private final boolean tactical;
-	private double diveStart = Double.MAX_VALUE;
-	private Vec3 diveFrom = Vec3.ZERO;
-	private Vec3 diveFromVel = Vec3.ZERO;
-	private Vec3 diveTo = Vec3.ZERO;
-	private Vec3 diveToVel = Vec3.ZERO;
-	private Vec3 weaveSide = Vec3.ZERO;
-	private double weave;
+	/** Time easing of the boost: thrust builds up, the missile creeps off the pad. */
+	private static final double EASE = 1.5;
 
 	private final Vec3 start;
 	private final Vec3 burnout;
@@ -57,12 +43,6 @@ public final class MissileTrajectory {
 	private final Vec3 endVelocity;
 
 	public MissileTrajectory(Vec3 start, Vec3 target, double apexScale, double durationScale) {
-		this(start, target, apexScale, durationScale, false);
-	}
-
-	public MissileTrajectory(Vec3 start, Vec3 target, double apexScale, double durationScale, boolean tactical) {
-		this.tactical = tactical;
-		this.ease = tactical ? 1.15 : 1.5;
 		double dx = target.x - start.x;
 		double dz = target.z - start.z;
 		double horizontal = Math.sqrt(dx * dx + dz * dz);
@@ -70,9 +50,7 @@ public final class MissileTrajectory {
 		// point - whatever the range; the moon rocket leaves for space
 		double height = apexScale > 2.0
 			? Mth.clamp(150.0 + horizontal * 0.35, 180.0, 1200.0) * apexScale
-			: tactical
-				? Mth.clamp(260.0 + horizontal * 0.06, 260.0, 420.0) * Mth.clamp(apexScale, 0.8, 1.3)
-				: Mth.clamp(800.0 + horizontal * 0.04, 800.0, 950.0) * Mth.clamp(apexScale, 0.8, 1.2);
+			: Mth.clamp(800.0 + horizontal * 0.04, 800.0, 950.0) * Mth.clamp(apexScale, 0.8, 1.2);
 		double apexY = Math.max(start.y, target.y) + height * 1.15;
 		double nx = horizontal > 1.0E-3 ? dx / horizontal : 0.0;
 		double nz = horizontal > 1.0E-3 ? dz / horizontal : 0.0;
@@ -89,8 +67,8 @@ public final class MissileTrajectory {
 		this.coastTime = this.duration - this.boostTicks;
 
 		// burnout point: high above the pad, a little way downrange
-		double climb = Math.max(20.0, (apexY - start.y) * (tactical ? 0.45 : 0.32));
-		double downrange = tactical ? Math.min(horizontal * 0.16, climb * 0.9) : Math.min(horizontal * 0.1, climb * 0.6);
+		double climb = Math.max(20.0, (apexY - start.y) * 0.32);
+		double downrange = Math.min(horizontal * 0.1, climb * 0.6);
 		this.burnout = new Vec3(start.x + nx * downrange, start.y + climb, start.z + nz * downrange);
 
 		// free flight from burnout to the target in `coast` ticks under gravity g, reaching apexY:
@@ -105,21 +83,8 @@ public final class MissileTrajectory {
 
 		// boost tangents: straight up off the pad, matching the burnout velocity at the end
 		// (position is a function of s = (tick / boost)^EASE, so d/dtick = d/ds * EASE / boost at s = 1)
-		this.m0 = new Vec3(0, climb * (tactical ? 0.6 : 0.9), 0);
-		this.m1 = this.burnoutVelocity.scale(this.boostTicks / this.ease);
-		if (tactical) {
-			// the last third: from the arc into a near-vertical dive onto the target, weaving as it comes
-			this.diveStart = this.boostTicks + this.coastTime * 0.6;
-			this.diveFrom = this.arc(this.diveStart);
-			this.diveFromVel = this.arcVelocity(this.diveStart);
-			Vec3 horizontalDir = new Vec3(nx, 0, nz);
-			// it comes down faster and faster: at the end as fast as the plain arc would have, and then some
-			double speed = Math.max(this.arcVelocity(this.duration - 1.0E-4).length() * 1.15, this.diveFromVel.length() * 2.0);
-			this.diveTo = this.arc(this.duration - 1.0E-4);
-			this.diveToVel = horizontalDir.scale(speed * 0.12).add(0, -speed, 0);
-			this.weaveSide = new Vec3(-nz, 0, nx);
-			this.weave = Mth.clamp(horizontal * 0.012, 2.0, 7.0);
-		}
+		this.m0 = new Vec3(0, climb * 0.9, 0);
+		this.m1 = this.burnoutVelocity.scale(this.boostTicks / EASE);
 		this.endVelocity = this.velocity(this.duration - 0.001);
 	}
 
@@ -136,11 +101,8 @@ public final class MissileTrajectory {
 		if (tick >= this.duration) {
 			return this.position(this.duration - 0.001).add(this.endVelocity.scale(tick - this.duration));
 		}
-		if (tick >= this.diveStart) {
-			return this.dive(tick);
-		}
 		if (tick < this.boostTicks) {
-			double s = Math.pow(Math.max(0.0, tick) / this.boostTicks, this.ease);
+			double s = Math.pow(Math.max(0.0, tick) / this.boostTicks, EASE);
 			double s2 = s * s;
 			double s3 = s2 * s;
 			double h00 = 2 * s3 - 3 * s2 + 1;
@@ -149,32 +111,8 @@ public final class MissileTrajectory {
 			double h11 = s3 - s2;
 			return this.start.scale(h00).add(this.m0.scale(h10)).add(this.burnout.scale(h01)).add(this.m1.scale(h11));
 		}
-		return this.arc(tick);
-	}
-
-	/** The free-flight parabola at real time {@code tick} (past burnout). */
-	private Vec3 arc(double tick) {
 		double t = this.warp(tick - this.boostTicks);
 		return this.burnout.add(this.burnoutVelocity.scale(t)).add(0, -0.5 * this.gravity * t * t, 0);
-	}
-
-	private Vec3 arcVelocity(double tick) {
-		double real = tick - this.boostTicks;
-		double t = this.warp(real);
-		return this.burnoutVelocity.add(0, -this.gravity * t, 0).scale(this.warpRate(real));
-	}
-
-	/** The tactical terminal dive: a curve from the arc into a steep plunge onto the target, with a weave across it. */
-	private Vec3 dive(double tick) {
-		double span = this.duration - this.diveStart;
-		double s = Mth.clamp((tick - this.diveStart) / span, 0.0, 1.0);
-		double s2 = s * s;
-		double s3 = s2 * s;
-		Vec3 p = this.diveFrom.scale(2 * s3 - 3 * s2 + 1).add(this.diveFromVel.scale((s3 - 2 * s2 + s) * span))
-			.add(this.diveTo.scale(-2 * s3 + 3 * s2)).add(this.diveToVel.scale((s3 - s2) * span));
-		// evasive manoeuvres: a weave from side to side, gone again by the time it strikes
-		double w = this.weave * Math.sin(s * Math.PI * 3.0) * Math.sin(s * Math.PI);
-		return p.add(this.weaveSide.scale(w));
 	}
 
 	/**
@@ -197,17 +135,12 @@ public final class MissileTrajectory {
 	/** Velocity in blocks per tick. */
 	public Vec3 velocity(double tick) {
 		if (tick >= this.duration) {
-			return this.tactical ? this.diveToVel : this.endVelocity;
-		}
-		if (tick >= this.diveStart) {
-			double h = 0.25;
-			return this.dive(Math.min(this.duration, tick + h)).subtract(this.dive(Math.max(this.diveStart, tick - h)))
-				.scale(1.0 / (Math.min(this.duration, tick + h) - Math.max(this.diveStart, tick - h)));
+			return this.endVelocity;
 		}
 		if (tick < this.boostTicks) {
 			double f = Math.max(1.0E-4, tick / this.boostTicks);
-			double s = Math.pow(f, this.ease);
-			double dsdTick = this.ease * Math.pow(f, this.ease - 1.0) / this.boostTicks;
+			double s = Math.pow(f, EASE);
+			double dsdTick = EASE * Math.pow(f, EASE - 1.0) / this.boostTicks;
 			double s2 = s * s;
 			double d00 = 6 * s2 - 6 * s;
 			double d10 = 3 * s2 - 4 * s + 1;
@@ -215,7 +148,9 @@ public final class MissileTrajectory {
 			double d11 = 3 * s2 - 2 * s;
 			return this.start.scale(d00).add(this.m0.scale(d10)).add(this.burnout.scale(d01)).add(this.m1.scale(d11)).scale(dsdTick);
 		}
-		return this.arcVelocity(tick);
+		double real = tick - this.boostTicks;
+		double t = this.warp(real);
+		return this.burnoutVelocity.add(0, -this.gravity * t, 0).scale(this.warpRate(real));
 	}
 
 	/** Direction the nose points; straight up right at liftoff. */
