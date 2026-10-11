@@ -4,7 +4,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 
-/** {@code /bmconfig} (or {@code /bmeinstellungen}): opens the settings screen. */
+/** {@code /bmconfig} (or {@code /bm}, {@code /bmmenu}, {@code /bmeinstellungen}): opens the control panel. */
 public final class SettingsCommand {
 	/** Opened on the next tick: the chat closing after the command would close it again straight away. */
 	private static boolean pending;
@@ -14,7 +14,7 @@ public final class SettingsCommand {
 
 	public static void init() {
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			for (String name : new String[] {"bmconfig", "bmeinstellungen"}) {
+			for (String name : new String[] {"bmconfig", "bm", "bmmenu", "bmeinstellungen"}) {
 				dispatcher.register(ClientCommandManager.literal(name).executes(ctx -> {
 					pending = true;
 					return 1;

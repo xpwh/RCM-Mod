@@ -36,6 +36,11 @@ public final class SoldierDebug {
 		return false;
 	}
 
+	/** Whether this player has the debug view switched on (with {@code /bmai debug}). */
+	public static boolean viewing(UUID player) {
+		return VIEWERS.contains(player);
+	}
+
 	public static void clear() {
 		VIEWERS.clear();
 	}
