@@ -148,7 +148,7 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 			float phase = x * 11.0F;
 			poseStack.pushPose();
 			poseStack.translate(x, NOZZLE_EXIT, 0.0F);
-			collector.submitCustomGeometry(poseStack, JetExhaust.TYPE,
+			collector.submitCustomGeometry(poseStack, JetExhaust.type(),
 				(pose, consumer) -> JetExhaust.draw(pose, consumer, 0.36F, burner ? 1.0F : 0.7F, burner, 7.0F, t + phase));
 			poseStack.popPose();
 		}

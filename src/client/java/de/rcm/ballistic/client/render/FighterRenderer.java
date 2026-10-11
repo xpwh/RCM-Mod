@@ -195,7 +195,7 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 					// the Raptor's flat two-dimensional nozzles: a wide, flat exhaust
 					poseStack.scale(1.3F, 1.0F, 0.62F);
 				}
-				collector.submitCustomGeometry(poseStack, JetExhaust.TYPE,
+				collector.submitCustomGeometry(poseStack, JetExhaust.type(),
 					(pose, consumer) -> JetExhaust.draw(pose, consumer, radius, throttle, burner, length, t + phase));
 				poseStack.popPose();
 			}
