@@ -24,7 +24,9 @@ import net.minecraft.world.phys.shapes.CollisionContext;
  *   <li>the report travels at the speed of sound - a shot 300 blocks away is heard almost a second
  *       after the muzzle flash, after the bullet's crack if it came your way;</li>
  *   <li>close it is a hard, deafening crack with the rifle's mechanical clatter; further off it loses
- *       its top and becomes a flat bang, far away a dull pop and rumble;</li>
+ *       its top and becomes a flat bang, far away a dull pop and rumble - blended smoothly with distance,
+ *       getting quieter as a real report does (about -5 dB per doubling), lower and more of it the space
+ *       ringing the further off it is;</li>
  *   <li>the place it is fired in rings after it: a short, hard slap in a room, a long dense roar in a
  *       cave or a big hall, and out in the open the echoes thrown back by hills and buildings, each
  *       arriving after its own detour.</li>
@@ -123,33 +125,43 @@ public final class GunAudio {
 		int delay = (int) Math.round(d / SPEED_OF_SOUND);
 		float jitter = 0.95F + RANDOM.nextFloat() * 0.1F;
 		Acoustics room = survey(mc.level, muzzle);
-		if (d < 48.0) {
-			// the report itself: a real AK, recorded beside the shooter
-			later(close, muzzle, 1.0F, jitter, delay);
-		} else if (d < 260.0) {
-			float v = (float) (1.15 - d / 330.0);
-			later(mid, muzzle, v, jitter, delay);
-		} else {
-			later(far, muzzle, (float) (1.2 - d / 1000.0), jitter, delay);
-		}
-		// what the surroundings make of it
-		float tail = (float) Mth.clamp(1.0 - d / 700.0, 0.15, 1.0) * tailGain;
+		// how loud it is here: falling off with distance like a real report (about -5 dB each time the
+		// distance doubles past the first few blocks), never quite gone within earshot
+		float loud = (float) Math.pow(1.0 + d / 40.0, -0.75);
+		// the air takes the top off with distance: the crack fades into the flat bang, the bang into the
+		// dull far-off pop - blended smoothly, no step where one recording takes over from the other
+		double nearW = 1.0 - smooth(12.0, 75.0, d);
+		double farW = smooth(110.0, 420.0, d);
+		double midW = Math.max(0.0, 1.0 - nearW - farW);
+		// and a distant shot sounds a touch lower and duller
+		float pitch = jitter * (float) (1.0 - 0.05 * Math.min(1.0, d / 600.0));
+		later(close, muzzle, loud * (float) Math.sqrt(nearW), pitch, delay);
+		later(mid, muzzle, loud * 1.1F * (float) Math.sqrt(midW), pitch, delay);
+		later(far, muzzle, loud * 1.35F * (float) Math.sqrt(farW), pitch, delay);
+		// what the surroundings make of it: far off, more of what you hear is the space ringing than the shot
+		float tail = loud * (float) (0.55 + 0.6 * smooth(30.0, 300.0, d)) * tailGain;
 		switch (room.space()) {
-			case ROOM -> later(ModRegistry.AK_TAIL_INDOOR, muzzle, tail, jitter, delay);
-			case CAVE -> later(ModRegistry.AK_TAIL_CAVE, muzzle, tail, jitter, delay);
+			case ROOM -> later(ModRegistry.AK_TAIL_INDOOR, muzzle, loud * tailGain, pitch, delay);
+			case CAVE -> later(ModRegistry.AK_TAIL_CAVE, muzzle, loud * tailGain, pitch, delay);
 			default -> {
-				later(ModRegistry.AK_TAIL_OUTDOOR, muzzle, tail * 0.5F, jitter, delay);
+				later(ModRegistry.AK_TAIL_OUTDOOR, muzzle, tail * 0.6F, pitch, delay);
 				// echoes off hills and buildings: for whoever hears the shot from far off, not for the shooter
 				// or anyone standing by them (to them the real tail already carries the space)
 				for (int i = 0; i < (own || d < 48.0 ? 0 : room.echoes().length); i++) {
 					// the echo travels to the wall and from there to the listener
 					Vec3 wall = muzzle.add(room.echoDirs()[i].scale(room.echoes()[i]));
 					double path = room.echoes()[i] + wall.distanceTo(ear);
-					float v = (float) Mth.clamp(0.55 - path / 500.0, 0.05, 0.5);
-					later(far, wall, v, jitter * 0.95F, (int) Math.round(path / SPEED_OF_SOUND));
+					float v = (float) (Math.pow(1.0 + path / 40.0, -0.75) * 0.55);
+					later(far, wall, v, pitch * 0.95F, (int) Math.round(path / SPEED_OF_SOUND));
 				}
 			}
 		}
+	}
+
+	/** 0 below {@code a}, 1 above {@code b}, smoothly between. */
+	private static double smooth(double a, double b, double x) {
+		double t = Mth.clamp((x - a) / (b - a), 0.0, 1.0);
+		return t * t * (3.0 - 2.0 * t);
 	}
 
 	/** Plays {@code sound} from {@code at} after {@code delay} ticks. */
