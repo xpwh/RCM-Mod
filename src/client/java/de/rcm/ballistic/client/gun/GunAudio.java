@@ -130,16 +130,16 @@ public final class GunAudio {
 		float loud = (float) Math.pow(1.0 + d / 40.0, -0.75);
 		// the air takes the top off with distance: the crack fades into the flat bang, the bang into the
 		// dull far-off pop - blended smoothly, no step where one recording takes over from the other
-		double nearW = 1.0 - smooth(6.0, 32.0, d);
-		double farW = smooth(90.0, 280.0, d);
+		double nearW = 1.0 - smooth(12.0, 75.0, d);
+		double farW = smooth(110.0, 420.0, d);
 		double midW = Math.max(0.0, 1.0 - nearW - farW);
 		// and a distant shot sounds a touch lower and duller
 		float pitch = jitter * (float) (1.0 - 0.05 * Math.min(1.0, d / 600.0));
 		later(close, muzzle, loud * (float) Math.sqrt(nearW), pitch, delay);
-		later(mid, muzzle, loud * 1.25F * (float) Math.sqrt(midW), pitch, delay);
-		later(far, muzzle, loud * 1.5F * (float) Math.sqrt(farW), pitch, delay);
-		// what the surroundings make of it (the distant recordings carry their own long outdoor ring)
-		float tail = loud * (float) (0.55 - 0.3 * smooth(20.0, 120.0, d)) * tailGain;
+		later(mid, muzzle, loud * 1.1F * (float) Math.sqrt(midW), pitch, delay);
+		later(far, muzzle, loud * 1.35F * (float) Math.sqrt(farW), pitch, delay);
+		// what the surroundings make of it: far off, more of what you hear is the space ringing than the shot
+		float tail = loud * (float) (0.55 + 0.6 * smooth(30.0, 300.0, d)) * tailGain;
 		switch (room.space()) {
 			case ROOM -> later(ModRegistry.AK_TAIL_INDOOR, muzzle, loud * tailGain, pitch, delay);
 			case CAVE -> later(ModRegistry.AK_TAIL_CAVE, muzzle, loud * tailGain, pitch, delay);
