@@ -794,5 +794,8 @@
 	"commands.ballisticmissiles.gore.invulnerable_off": "%s Spieler wieder verwundbar",
 	"commands.ballisticmissiles.world.crater_info": "Gemerkte zerstörte Blöcke in dieser Dimension: %s",
 	"commands.ballisticmissiles.world.crater_none": "Im Umkreis von %s Blöcken gibt es nichts zu reparieren.",
-	"commands.ballisticmissiles.world.crater_repair": "Repariere %s Blöcke im Umkreis von %s Blöcken …"
+	"commands.ballisticmissiles.world.crater_repair": "Repariere %s Blöcke im Umkreis von %s Blöcken …",
+	"announce.ballisticmissiles.server_setting": "Server-Einstellung geändert",
+	"announce.ballisticmissiles.changed_by": "Geändert von %s",
+	"announce.ballisticmissiles.server": "Server"
 }

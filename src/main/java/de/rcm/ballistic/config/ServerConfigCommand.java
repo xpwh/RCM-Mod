@@ -46,18 +46,28 @@ public final class ServerConfigCommand {
 			.then(Commands.literal("schaden")
 				.executes(ctx -> report(ctx.getSource()))
 				.then(Commands.argument("prozent", IntegerArgumentType.integer(0, 1000)).executes(ctx -> {
-					ServerConfig.gunDamage = IntegerArgumentType.getInteger(ctx, "prozent");
+					int damage = IntegerArgumentType.getInteger(ctx, "prozent");
+					if (damage != ServerConfig.gunDamage) {
+						ServerConfig.gunDamage = damage;
+						announce(ctx.getSource(), "options.ballisticmissiles.gun_damage", Announcement.percent(damage, damage == 100));
+					}
 					return changed(ctx.getSource());
 				}))));
 	}
 
 	private static int gore(CommandSourceStack source, boolean on) {
-		ServerConfig.gore = on;
+		if (ServerConfig.gore != on) {
+			ServerConfig.gore = on;
+			announce(source, "options.ballisticmissiles.server_gore", Announcement.state(on, "options.ballisticmissiles.allowed", "options.ballisticmissiles.forbidden"));
+		}
 		return changed(source);
 	}
 
 	private static int nukes(CommandSourceStack source, boolean on) {
-		ServerConfig.nukes = on;
+		if (ServerConfig.nukes != on) {
+			ServerConfig.nukes = on;
+			announce(source, "options.ballisticmissiles.server_nukes", Announcement.state(on, "options.ballisticmissiles.allowed", "options.ballisticmissiles.forbidden"));
+		}
 		return changed(source);
 	}
 
@@ -75,7 +85,16 @@ public final class ServerConfigCommand {
 		return 1;
 	}
 
+	/** Everyone on the server is told, big on their screens. */
+	private static void announce(CommandSourceStack source, String settingKey, Component value) {
+		Announcement.setting(source.getServer(), Component.translatable(settingKey), value, source.getEntity() == null ? null : source.getTextName());
+	}
+
 	private static int set(CommandSourceStack source, int chance) {
+		if (chance != ServerConfig.misfireChance) {
+			announce(source, "options.ballisticmissiles.misfires", chance == 0
+				? Announcement.state(false, "options.on", "options.off") : Announcement.percent(chance, false));
+		}
 		ServerConfig.misfireChance = chance;
 		ServerConfig.save();
 		ModNetworking.broadcastServerConfig(source.getServer());

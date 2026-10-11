@@ -794,5 +794,8 @@
 	"commands.ballisticmissiles.gore.invulnerable_off": "%s player(s) vulnerable again",
 	"commands.ballisticmissiles.world.crater_info": "Destroyed blocks remembered in this dimension: %s",
 	"commands.ballisticmissiles.world.crater_none": "Nothing to repair within %s blocks.",
-	"commands.ballisticmissiles.world.crater_repair": "Repairing %s blocks within %s blocks …"
+	"commands.ballisticmissiles.world.crater_repair": "Repairing %s blocks within %s blocks …",
+	"announce.ballisticmissiles.server_setting": "Server setting changed",
+	"announce.ballisticmissiles.changed_by": "Changed by %s",
+	"announce.ballisticmissiles.server": "Server"
 }
