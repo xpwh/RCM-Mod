@@ -19,6 +19,12 @@ public final class ServerConfig {
 
 	/** Chance in percent that a launch goes wrong (0 = never). */
 	public static int misfireChance = 2;
+	/** Damage of the mod's guns (rounds, pellets), percent of normal. */
+	public static int gunDamage = 100;
+	/** Gore allowed on this server (off: nobody sees limbs torn off, gibs, open wounds - whatever they set). */
+	public static boolean gore = true;
+	/** Nuclear and antimatter weapons allowed (off: they fizzle, with a small conventional bang). */
+	public static boolean nukes = true;
 
 	private ServerConfig() {
 	}
@@ -31,6 +37,9 @@ public final class ServerConfig {
 					p.load(in);
 				}
 				misfireChance = Mth.clamp(Integer.parseInt(p.getProperty("misfireChance", "2").trim()), 0, 100);
+				gunDamage = Mth.clamp(Integer.parseInt(p.getProperty("gunDamage", "100").trim()), 0, 1000);
+				gore = Boolean.parseBoolean(p.getProperty("gore", "true").trim());
+				nukes = Boolean.parseBoolean(p.getProperty("nukes", "true").trim());
 			}
 		} catch (Exception e) {
 			BallisticMissiles.LOGGER.warn("Could not read {}: {}", FILE, e.toString());
@@ -41,6 +50,9 @@ public final class ServerConfig {
 		try {
 			Properties p = new Properties();
 			p.setProperty("misfireChance", Integer.toString(misfireChance));
+			p.setProperty("gunDamage", Integer.toString(gunDamage));
+			p.setProperty("gore", Boolean.toString(gore));
+			p.setProperty("nukes", Boolean.toString(nukes));
 			Files.createDirectories(FILE.getParent());
 			try (var out = Files.newOutputStream(FILE)) {
 				p.store(out, "Ballistic Missiles - world settings (settings screen for operators, /bmserver)");

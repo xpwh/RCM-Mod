@@ -12,6 +12,7 @@
 		"LivingEntityCorpseMixin",
 		"LivingEntityDimensionsMixin",
 		"ServerExplosionMixin",
+		"CraterLogMixin",
 		"VehicleMoveMixin"
 	],
 	"injectors": {

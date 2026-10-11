@@ -55,21 +55,21 @@ public class SmolderingBlock extends Block {
 			for (int i = 0; i < 3; i++) {
 				BlockPos p = pos.offset(random.nextInt(5) - 2, random.nextInt(3), random.nextInt(5) - 2);
 				if (level.isLoaded(p) && level.getBlockState(p).isAir() && touchesFlammable(level, p)) {
-					level.setBlockAndUpdate(p, BaseFireBlock.getState(level, p));
+					de.rcm.ballistic.explosion.CraterLog.set(level, p, BaseFireBlock.getState(level, p), net.minecraft.world.level.block.Block.UPDATE_ALL);
 					break;
 				}
 			}
 			BlockPos above = pos.above();
 			if (state.getValue(AGE) == 0 && random.nextInt(3) == 0 && level.getBlockState(above).isAir()) {
-				level.setBlockAndUpdate(above, BaseFireBlock.getState(level, above)); // a flame flaring up
+				de.rcm.ballistic.explosion.CraterLog.set(level, above, BaseFireBlock.getState(level, above), net.minecraft.world.level.block.Block.UPDATE_ALL); // a flame flaring up
 			}
 		}
 		int age = state.getValue(AGE);
 		if (rain || random.nextInt(3) == 0) {
 			if (age >= 3) {
-				level.setBlockAndUpdate(pos, ModRegistry.SCORCHED_EARTH.defaultBlockState());
+				de.rcm.ballistic.explosion.CraterLog.set(level, pos, ModRegistry.SCORCHED_EARTH.defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
 			} else {
-				level.setBlockAndUpdate(pos, state.setValue(AGE, age + 1));
+				de.rcm.ballistic.explosion.CraterLog.set(level, pos, state.setValue(AGE, age + 1), net.minecraft.world.level.block.Block.UPDATE_ALL);
 			}
 		}
 	}

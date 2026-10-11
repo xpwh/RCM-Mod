@@ -66,6 +66,15 @@ public final class ModConfig {
 	public static boolean dynamicLights = true;
 	/** The connected server's misfire setting, as it last told us (shown in the settings, not saved here). */
 	public static int serverMisfireChance;
+	/** The connected server's other world settings, as it last told us. */
+	public static int serverGunDamage = 100;
+	public static boolean serverGore = true;
+	public static boolean serverNukes = true;
+
+	/** Whether gore is shown: switched on here, and allowed by the server. */
+	public static boolean gore() {
+		return gore && serverGore;
+	}
 
 	private ModConfig() {
 	}

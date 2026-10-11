@@ -178,7 +178,7 @@ public final class Tsunami {
 		if (!old.isAir() && !old.canBeReplaced()) {
 			this.level.levelEvent(2001, pos.immutable(), Block.getId(old)); // splinters
 		}
-		this.level.setBlock(pos, Blocks.WATER.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
+		CraterLog.set(this.level, pos, Blocks.WATER.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
 		this.flooded.add(pos.asLong());
 		this.drainAt.add(this.age + 30L + this.random.nextInt(25));
 		return 1;
@@ -197,7 +197,7 @@ public final class Tsunami {
 			n++;
 			BlockState state = this.level.getBlockState(pos);
 			if (state.is(Blocks.WATER)) {
-				this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+				CraterLog.set(this.level, pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 			}
 		}
 	}

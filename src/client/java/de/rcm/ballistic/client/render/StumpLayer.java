@@ -36,7 +36,7 @@ public final class StumpLayer extends RenderLayer<AvatarRenderState, PlayerModel
 		int head = gore.ballisticmissiles$head();
 		int torso = gore.ballisticmissiles$torso();
 		int extra = gore.ballisticmissiles$extra();
-		if ((legs | arms | head | torso | extra) == 0 || !ModConfig.gore || state.isInvisible) {
+		if ((legs | arms | head | torso | extra) == 0 || !ModConfig.gore() || state.isInvisible) {
 			return;
 		}
 		Wounds w = Wounds.NONE.withExtra(extra);

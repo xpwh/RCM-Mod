@@ -1,0 +1,45 @@
+package de.rcm.ballistic.explosion;
+
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * {@code /bmworld} - the world after the blasts (operators only):
+ * <ul>
+ *   <li>{@code krater reparieren [radius]} - every block the explosions destroyed within the radius
+ *       (default 64) put back as it was ({@link CraterLog})</li>
+ *   <li>{@code krater info} - how many destroyed blocks are remembered here</li>
+ * </ul>
+ */
+public final class WorldCommand {
+	private WorldCommand() {
+	}
+
+	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+		dispatcher.register(Commands.literal("bmworld").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+			.then(Commands.literal("krater")
+				.then(Commands.literal("reparieren")
+					.executes(ctx -> repair(ctx.getSource(), 64))
+					.then(Commands.argument("radius", IntegerArgumentType.integer(1, 1024))
+						.executes(ctx -> repair(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "radius")))))
+				.then(Commands.literal("info").executes(ctx -> {
+					int n = CraterLog.remembered(ctx.getSource().getLevel());
+					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.world.crater_info", n), false);
+					return n;
+				}))));
+	}
+
+	private static int repair(CommandSourceStack source, int radius) {
+		ServerLevel level = source.getLevel();
+		Vec3 at = source.getPosition();
+		int n = CraterLog.repair(level, at.x, at.z, radius);
+		source.sendSuccess(() -> n == 0 ? Component.translatable("commands.ballisticmissiles.world.crater_none", radius)
+			: Component.translatable("commands.ballisticmissiles.world.crater_repair", n, radius), true);
+		return n;
+	}
+}

@@ -72,6 +72,10 @@ public final class DetonationManager {
 	// ------------------------------------------------------------------ entry points
 
 	public static void detonate(ServerLevel level, Vec3 pos, Vec3 dir, Warhead warhead, @Nullable Entity source) {
+		if (!de.rcm.ballistic.config.ServerConfig.nukes && nuclear(warhead)) {
+			fizzle(level, pos, source);
+			return;
+		}
 		broadcast(level, pos, warhead);
 		// ejecta first, before the blast and the crater remove the blocks
 		switch (warhead) {
@@ -108,6 +112,28 @@ public final class DetonationManager {
 			case DRONE -> highExplosive(level, pos, source, 6.5F, 2, 8); // ~50 kg warhead
 			case CLUSTER -> highExplosive(level, pos, source, 6.0F, 1, 8); // hit the ground before opening
 			default -> highExplosive(level, pos, source, 11.0F, 4, 18);
+		}
+	}
+
+	/** Nuclear, thermonuclear and antimatter warheads (what {@code /bmserver nukes verbieten} forbids). */
+	public static boolean nuclear(Warhead warhead) {
+		return switch (warhead) {
+			case NUCLEAR, MIRV, HYDROGEN, TSAR, ANTIMATTER, MIRV_WARHEAD, TACTICAL_NUKE, EARTH_PENETRATOR, POSEIDON -> true;
+			default -> false;
+		};
+	}
+
+	/**
+	 * A forbidden warhead coming down: the conventional charge that would have set it off goes bang, the
+	 * rest does nothing - and everyone near is told why.
+	 */
+	private static void fizzle(ServerLevel level, Vec3 pos, @Nullable Entity source) {
+		highExplosive(level, pos, source, 3.0F, 0, 0);
+		Component msg = Component.translatable("message.ballisticmissiles.nukes_forbidden").withStyle(ChatFormatting.RED);
+		for (var player : level.players()) {
+			if (player.distanceToSqr(pos) < 400.0 * 400.0) {
+				player.displayClientMessage(msg, false);
+			}
 		}
 	}
 
@@ -218,7 +244,7 @@ public final class DetonationManager {
 			}
 		}
 		for (BlockPos p : fried) {
-			level.destroyBlock(p, true);
+			CraterLog.destroy(level, p, true);
 			if (random.nextInt(4) == 0) {
 				level.sendParticles(de.rcm.ballistic.ModRegistry.SPARK, p.getX() + 0.5, p.getY() + 0.3, p.getZ() + 0.5, 6, 0.2, 0.2, 0.2, 0.3);
 			}
@@ -294,6 +320,10 @@ public final class DetonationManager {
 	 * an earthquake with fissures around it, a towering column of dirt and very dirty fallout.
 	 */
 	public static void detonateEarthPenetrator(ServerLevel level, Vec3 surface, Vec3 deep, @Nullable Entity source) {
+		if (!de.rcm.ballistic.config.ServerConfig.nukes) {
+			fizzle(level, surface, source);
+			return;
+		}
 		broadcast(level, surface, Warhead.EARTH_PENETRATOR);
 		FlyingDebris.launch(level, surface, 24.0, 300, 3.2);
 		NUKES.add(new NukeDetonation(level, surface, source, NukeDetonation.Yield.FISSION, NukeDetonation.Mode.UNDERGROUND));
@@ -305,6 +335,10 @@ public final class DetonationManager {
 	 * the land.
 	 */
 	public static void detonatePoseidon(ServerLevel level, Vec3 pos, @Nullable Entity source) {
+		if (!de.rcm.ballistic.config.ServerConfig.nukes) {
+			fizzle(level, pos, source);
+			return;
+		}
 		broadcast(level, pos, Warhead.POSEIDON);
 		BlockPos.MutableBlockPos m = BlockPos.containing(pos).mutable();
 		for (int i = 0; i < 64 && !level.getFluidState(m).isEmpty(); i++) {
@@ -355,7 +389,7 @@ public final class DetonationManager {
 					BlockState state = level.getBlockState(m);
 					if (!state.isAir() && state.getFluidState().isEmpty() && state.getDestroySpeed(level, m) >= 0.0F && state.getBlock().getExplosionResistance() < 1200) {
 						BlockState melt = random.nextFloat() < 0.45F ? ModRegistry.MOLTEN_ROCK.defaultBlockState() : ModRegistry.CRATER_GLASS.defaultBlockState();
-						level.setBlock(m, melt, Block.UPDATE_ALL);
+						CraterLog.set(level, m, melt, Block.UPDATE_ALL);
 					}
 				}
 			}
@@ -546,7 +580,7 @@ public final class DetonationManager {
 			BlockPos p = center.offset(random.nextInt(2 * r + 1) - r, -random.nextInt(3) - 1 - (int) (r * 0.4), random.nextInt(2 * r + 1) - r);
 			BlockState state = level.getBlockState(p);
 			if (!state.isAir() && state.getDestroySpeed(level, p) >= 0.0F && state.getBlock().getExplosionResistance() < 1200.0F && !state.hasBlockEntity()) {
-				level.setBlock(p, random.nextFloat() < 0.4F ? ModRegistry.MOLTEN_ROCK.defaultBlockState() : ModRegistry.CRATER_GLASS.defaultBlockState(), 3);
+				CraterLog.set(level, p, random.nextFloat() < 0.4F ? ModRegistry.MOLTEN_ROCK.defaultBlockState() : ModRegistry.CRATER_GLASS.defaultBlockState(), 3);
 			}
 		}
 		scorch(level, center, r + 6, random, 0.35F);
@@ -586,7 +620,7 @@ public final class DetonationManager {
 		for (int i = 0; i < 14; i++) {
 			BlockPos p = center.offset(random.nextInt(7) - 3, random.nextInt(3) - 1, random.nextInt(7) - 3);
 			if (level.isLoaded(p) && level.getBlockState(p).isAir() && !level.getBlockState(p.below()).isAir()) {
-				level.setBlock(p, BaseFireBlock.getState(level, p), 3);
+				CraterLog.set(level, p, BaseFireBlock.getState(level, p), 3);
 			}
 		}
 		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(center).inflate(3.5))) {
@@ -664,7 +698,7 @@ public final class DetonationManager {
 						m.set(Mth.floor(tip.x) + ox, Mth.floor(tip.y) + oy, Mth.floor(tip.z) + oz);
 						BlockState state = level.getBlockState(m);
 						if (!state.isAir() && state.getDestroySpeed(level, m) >= 0 && state.getBlock().getExplosionResistance() < 1200) {
-							level.setBlock(m, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+							CraterLog.set(level, m, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
 						}
 					}
 				}

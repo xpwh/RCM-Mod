@@ -20,6 +20,7 @@ import net.minecraft.server.level.ServerPlayer;
  *   <li>{@code durchschuss <spieler>} - a rifle round right through the chest</li>
  *   <li>{@code sterben <spieler>} - down and bleeding out</li>
  *   <li>{@code heilen <spieler>} - every wound gone</li>
+ *   <li>{@code unverwundbar [<spieler>] an|aus} - every wound still taken and shown, but no dying</li>
  * </ul>
  */
 public final class GoreCommand {
@@ -69,6 +70,12 @@ public final class GoreCommand {
 					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.gore.dying", players.size()), true);
 					return players.size();
 				})))
+			.then(Commands.literal("unverwundbar")
+				.then(Commands.literal("an").executes(ctx -> invulnerable(ctx, java.util.List.of(ctx.getSource().getPlayerOrException()), true)))
+				.then(Commands.literal("aus").executes(ctx -> invulnerable(ctx, java.util.List.of(ctx.getSource().getPlayerOrException()), false)))
+				.then(Commands.argument("spieler", EntityArgument.players())
+					.then(Commands.literal("an").executes(ctx -> invulnerable(ctx, EntityArgument.getPlayers(ctx, "spieler"), true)))
+					.then(Commands.literal("aus").executes(ctx -> invulnerable(ctx, EntityArgument.getPlayers(ctx, "spieler"), false)))))
 			.then(Commands.literal("heilen")
 				.then(Commands.argument("spieler", EntityArgument.players()).executes(ctx -> {
 					Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "spieler");
@@ -76,6 +83,13 @@ public final class GoreCommand {
 					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.gore.healed", players.size()), true);
 					return players.size();
 				}))));
+	}
+
+	private static int invulnerable(CommandContext<CommandSourceStack> ctx, Collection<ServerPlayer> players, boolean on) {
+		players.forEach(p -> Injuries.setInvulnerable(p, on));
+		ctx.getSource().sendSuccess(() -> Component.translatable(on ? "commands.ballisticmissiles.gore.invulnerable_on" : "commands.ballisticmissiles.gore.invulnerable_off",
+			players.size()), true);
+		return players.size();
 	}
 
 	private static int arm(CommandContext<CommandSourceStack> ctx, int side) throws CommandSyntaxException {

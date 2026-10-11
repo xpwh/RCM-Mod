@@ -30,6 +30,7 @@ public class BallisticMissiles implements ModInitializer {
 		// charred wood still burns, just not as eagerly as fresh logs
 		net.fabricmc.fabric.api.registry.FlammableBlockRegistry.getDefaultInstance().add(ModRegistry.CHARRED_LOG, 3, 4);
 		ServerTickEvents.END_WORLD_TICK.register(DetonationManager::tick);
+		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.CraterLog::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RemoteLaunch::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RadiationManager::tick);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.NuclearWinter::tick);
@@ -53,13 +54,14 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.ai.SoldierCommand.register(dispatcher));
 		net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) ->
 			de.rcm.ballistic.injury.GoreCommand.register(dispatcher));
+		net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) ->
+			de.rcm.ballistic.explosion.WorldCommand.register(dispatcher));
 		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.NuclearWinter::save);
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
 			(handler, sender, server) -> {
-				ServerPlayNetworking.send(handler.player, new de.rcm.ballistic.network.ModNetworking.ServerConfigPayload(
-					de.rcm.ballistic.config.ServerConfig.misfireChance));
+				ServerPlayNetworking.send(handler.player, de.rcm.ballistic.network.ModNetworking.ServerConfigPayload.current());
 				RadiationManager.sync(handler.player.level(), handler.player);
 				de.rcm.ballistic.explosion.NuclearWinter.sync(handler.player);
 				de.rcm.ballistic.injury.Injuries.rejoin(handler.player);
@@ -69,6 +71,7 @@ public class BallisticMissiles implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STOPPING.register(RadiationManager::save);
 		// each world starts from the saved settings, not from what a server visited before left behind
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> de.rcm.ballistic.config.ServerConfig.load());
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> de.rcm.ballistic.explosion.CraterLog.clear());
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ThreatTracker.clear();
 			DefenseNetwork.clear();

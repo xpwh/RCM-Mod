@@ -202,7 +202,7 @@ public final class CorpseFx {
 			return;
 		}
 		Vec3 cam = mc.gameRenderer.getMainCamera().position();
-		boolean on = ModConfig.gore;
+		boolean on = ModConfig.gore();
 		java.util.Set<Integer> bodies = new java.util.HashSet<>();
 		long now = mc.level.getGameTime();
 		for (Entity en : mc.level.entitiesForRendering()) {

@@ -76,7 +76,7 @@ public class AntimatterDetonation {
 						continue;
 					}
 					// water and lava inside the sphere vanish too; what flows back in afterwards is fine
-					this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), flags);
+					CraterLog.set(this.level, pos, Blocks.AIR.defaultBlockState(), flags);
 				}
 			}
 		}

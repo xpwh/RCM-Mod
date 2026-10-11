@@ -21,7 +21,7 @@ public abstract class PlayerModelMixin {
 		}
 		PlayerModel self = (PlayerModel) (Object) this;
 		// the jaw shot away, a hole right through: those parts are drawn by StumpLayer, with the piece cut out
-		int extra = de.rcm.ballistic.client.ModConfig.gore ? gore.ballisticmissiles$extra() : 0;
+		int extra = de.rcm.ballistic.client.ModConfig.gore() ? gore.ballisticmissiles$extra() : 0;
 		boolean jaw = (extra & Wounds.JAW) != 0;
 		boolean holed = Wounds.NONE.withExtra(extra).holed();
 		self.head.skipDraw = jaw;
@@ -30,7 +30,7 @@ public abstract class PlayerModelMixin {
 		self.jacket.skipDraw = holed;
 		int lost = gore.ballisticmissiles$lostLeg();
 		int arms = gore.ballisticmissiles$lostArm();
-		if ((lost == 0 && arms == 0 && gore.ballisticmissiles$head() == 0) || !de.rcm.ballistic.client.ModConfig.gore) {
+		if ((lost == 0 && arms == 0 && gore.ballisticmissiles$head() == 0) || !de.rcm.ballistic.client.ModConfig.gore()) {
 			return;
 		}
 		if ((lost & Wounds.LEFT) != 0) {

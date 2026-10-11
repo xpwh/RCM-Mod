@@ -30,7 +30,7 @@ public class MoltenRockBlock extends Block {
 	@Override
 	protected void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
 		if (level.isRainingAt(pos.above()) || random.nextInt(4) == 0) {
-			level.setBlockAndUpdate(pos, ModRegistry.CRATER_GLASS.defaultBlockState());
+			de.rcm.ballistic.explosion.CraterLog.set(level, pos, ModRegistry.CRATER_GLASS.defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
 			level.playSound(null, pos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.4F, 0.8F + random.nextFloat() * 0.4F);
 		}
 	}

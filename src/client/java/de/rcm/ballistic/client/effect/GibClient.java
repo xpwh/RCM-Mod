@@ -131,7 +131,7 @@ public final class GibClient {
 
 	private static void receive(GibPayload p) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.level == null || !ModConfig.gore) {
+		if (mc.level == null || !ModConfig.gore()) {
 			return;
 		}
 		Entity e = mc.level.getEntity(p.entity());
@@ -180,7 +180,7 @@ public final class GibClient {
 
 	/** Bits of meat torn out of a wound and thrown out along {@code dir} (a creature hit hard). */
 	public static void spray(Vec3 at, Vec3 dir, int n, float size) {
-		if (!ModConfig.gore) {
+		if (!ModConfig.gore()) {
 			return;
 		}
 		for (int i = 0; i < n; i++) {
@@ -208,7 +208,7 @@ public final class GibClient {
 	/** Thrown from the blast: mostly up, out along its push, every which way a little. */
 	/** Bits of a body torn out by a blast (it is not torn apart): flesh, gut, splinters of bone, flung up and out. */
 	public static void blown(Vec3 at, Vec3 dir, int n, float size, float force) {
-		if (!ModConfig.gore) {
+		if (!ModConfig.gore()) {
 			return;
 		}
 		for (int i = 0; i < n; i++) {

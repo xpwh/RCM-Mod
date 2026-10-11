@@ -129,8 +129,14 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(DetonationPayload.TYPE, (payload, context) ->
 			ClientEffects.detonation(payload.warhead(), new Vec3(payload.x(), payload.y(), payload.z()))
 		);
-		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.ServerConfigPayload.TYPE, (payload, context) ->
-			ModConfig.serverMisfireChance = payload.misfireChance()); // only a mirror for the screen: never the server's own value
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.ServerConfigPayload.TYPE, (payload, context) -> {
+			// only a mirror for the screen (and the server's gore rule): never the server's own values
+			ModConfig.serverMisfireChance = payload.misfireChance();
+			ModConfig.serverGunDamage = payload.gunDamage();
+			ModConfig.serverGore = payload.gore();
+			ModConfig.serverNukes = payload.nukes();
+		});
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ModConfig.serverGore = true);
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.JammerPayload.TYPE, (payload, context) ->
 			context.client().setScreen(new de.rcm.ballistic.client.screen.JammerScreen(payload)));
 		ClientPlayNetworking.registerGlobalReceiver(RadarDataPayload.TYPE, (payload, context) -> {

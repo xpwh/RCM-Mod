@@ -430,7 +430,7 @@ public final class MobWounds {
 			}
 			for (Wound w : en.getValue()) {
 				boolean open = w.kind() == de.rcm.ballistic.injury.Blood.OPEN;
-				if (open && (e.deathTime <= 0 || !ModConfig.gore)) {
+				if (open && (e.deathTime <= 0 || !ModConfig.gore())) {
 					continue;
 				}
 				// a wound stays wet a while (longer on the living, still bleeding), then the blood on it dries dark
@@ -453,7 +453,7 @@ public final class MobWounds {
 				float s = w.size() / (16.0F * GoreMesh.P);
 				poseStack.scale(s, s, s);
 				DECALS[w.variant() & 3].submit(poseStack, context.commandQueue(), light);
-				if (ModConfig.gore) {
+				if (ModConfig.gore()) {
 					if (w.kind() == de.rcm.ballistic.injury.Blood.GAPING) {
 						GAPING[w.variant() % 3].submit(poseStack, context.commandQueue(), light);
 					} else if (w.kind() == de.rcm.ballistic.injury.Blood.ENTRAILS) {

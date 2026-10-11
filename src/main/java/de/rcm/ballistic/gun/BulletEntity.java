@@ -297,6 +297,7 @@ public class BulletEntity extends Entity {
 		if (head) {
 			damage *= 2.0F;
 		}
+		damage *= de.rcm.ballistic.config.ServerConfig.gunDamage / 100.0F;
 		DamageSource source = level.damageSources().thrown(this, this.shooter);
 		if (de.rcm.ballistic.injury.CorpseHits.isCorpse(e) && e instanceof LivingEntity body) {
 			// a body already lying dead: torn further with every round

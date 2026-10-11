@@ -24,6 +24,16 @@ public abstract class ServerExplosionMixin {
 	@Final
 	private float radius;
 
+	@Inject(method = "explode", at = @At("HEAD"))
+	private void ballisticmissiles$startLog(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Integer> cir) {
+		de.rcm.ballistic.explosion.CraterLog.begin();
+	}
+
+	@Inject(method = "explode", at = @At("RETURN"))
+	private void ballisticmissiles$endLog(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Integer> cir) {
+		de.rcm.ballistic.explosion.CraterLog.end();
+	}
+
 	@Inject(method = "hurtEntities", at = @At("HEAD"))
 	private void ballisticmissiles$throwBodies(CallbackInfo ci) {
 		CorpsePhysics.blast(this.level, this.center, this.radius);

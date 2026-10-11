@@ -684,10 +684,17 @@ public final class ModNetworking {
 	 * World settings: server -> client to show them (on join and on every change), client -> server
 	 * when an operator changes them on the settings screen.
 	 */
-	public record ServerConfigPayload(int misfireChance) implements CustomPacketPayload {
+	public record ServerConfigPayload(int misfireChance, int gunDamage, boolean gore, boolean nukes) implements CustomPacketPayload {
 		public static final Type<ServerConfigPayload> TYPE = new Type<>(BallisticMissiles.id("server_config"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, ServerConfigPayload> CODEC = StreamCodec.composite(
-			ByteBufCodecs.VAR_INT, ServerConfigPayload::misfireChance, ServerConfigPayload::new);
+			ByteBufCodecs.VAR_INT, ServerConfigPayload::misfireChance, ByteBufCodecs.VAR_INT, ServerConfigPayload::gunDamage,
+			ByteBufCodecs.BOOL, ServerConfigPayload::gore, ByteBufCodecs.BOOL, ServerConfigPayload::nukes, ServerConfigPayload::new);
+
+		/** The world settings as they are now. */
+		public static ServerConfigPayload current() {
+			return new ServerConfigPayload(de.rcm.ballistic.config.ServerConfig.misfireChance, de.rcm.ballistic.config.ServerConfig.gunDamage,
+				de.rcm.ballistic.config.ServerConfig.gore, de.rcm.ballistic.config.ServerConfig.nukes);
+		}
 
 		@Override
 		public Type<? extends CustomPacketPayload> type() {
@@ -708,7 +715,7 @@ public final class ModNetworking {
 
 	/** Sends the current world settings to everyone. */
 	public static void broadcastServerConfig(net.minecraft.server.MinecraftServer server) {
-		ServerConfigPayload payload = new ServerConfigPayload(de.rcm.ballistic.config.ServerConfig.misfireChance);
+		ServerConfigPayload payload = ServerConfigPayload.current();
 		for (var player : server.getPlayerList().getPlayers()) {
 			ServerPlayNetworking.send(player, payload);
 		}
@@ -748,10 +755,13 @@ public final class ModNetworking {
 			if (!mayConfigure(player)) {
 				player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.server_config_denied")
 					.withStyle(net.minecraft.ChatFormatting.RED), false);
-				ServerPlayNetworking.send(player, new ServerConfigPayload(de.rcm.ballistic.config.ServerConfig.misfireChance));
+				ServerPlayNetworking.send(player, ServerConfigPayload.current());
 				return;
 			}
 			de.rcm.ballistic.config.ServerConfig.misfireChance = net.minecraft.util.Mth.clamp(payload.misfireChance(), 0, 100);
+			de.rcm.ballistic.config.ServerConfig.gunDamage = net.minecraft.util.Mth.clamp(payload.gunDamage(), 0, 1000);
+			de.rcm.ballistic.config.ServerConfig.gore = payload.gore();
+			de.rcm.ballistic.config.ServerConfig.nukes = payload.nukes();
 			de.rcm.ballistic.config.ServerConfig.save();
 			broadcastServerConfig(player.level().getServer());
 		});

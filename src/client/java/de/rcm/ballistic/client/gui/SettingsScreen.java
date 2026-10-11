@@ -70,6 +70,7 @@ public class SettingsScreen extends Screen {
 	private static int soldierCount = 3;
 	private static boolean soldierFriendly;
 	private static String lastSearch = "";
+	private static int craterRadius = 64;
 
 	private final Screen parent;
 	private final TabManager tabs = new TabManager(this::addRenderableWidget, this::removeWidget, this::selected, t -> {
@@ -235,6 +236,13 @@ public class SettingsScreen extends Screen {
 		this.list.row(action("gore.graze", "bmgore kopf @s streifschuss"), action("gore.headshot", "bmgore kopf @s toedlich"));
 		this.list.row(action("gore.jaw", "bmgore kiefer @s"), action("gore.through", "bmgore durchschuss @s"));
 		this.list.row(action("gore.dying", "bmgore sterben @s"), action("gore.heal", "bmgore heilen @s"));
+		var server = this.minecraft.getSingleplayerServer();
+		var me = server == null || this.minecraft.player == null ? null : server.getPlayerList().getPlayer(this.minecraft.player.getUUID());
+		boolean invulnerable = me != null && de.rcm.ballistic.injury.Injuries.invulnerable(me);
+		this.list.row(command(CycleButton.onOffBuilder(invulnerable)
+			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.invulnerable.tooltip")))
+			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.invulnerable"),
+				(b, v) -> this.run("bmgore unverwundbar " + (v ? "an" : "aus")))));
 	}
 
 	private void ai() {
@@ -293,24 +301,59 @@ public class SettingsScreen extends Screen {
 	private void server() {
 		this.list.header("options.ballisticmissiles.section.world_settings", 0xFFFFC080);
 		this.list.note("options.ballisticmissiles.server.note");
-		Integer[] steps = Arrays.stream(ServerConfig.MISFIRE_STEPS).boxed().toArray(Integer[]::new);
-		int nearest = steps[0];
-		for (int st : steps) {
-			if (Math.abs(st - ModConfig.serverMisfireChance) < Math.abs(nearest - ModConfig.serverMisfireChance)) {
-				nearest = st;
+		var misfires = CycleButton.builder((Integer c) -> c == 0 ? CommonComponents.OPTION_OFF : Component.translatable("options.ballisticmissiles.misfires.value", c),
+				nearest(ServerConfig.MISFIRE_STEPS, ModConfig.serverMisfireChance))
+			.withValues(boxed(ServerConfig.MISFIRE_STEPS))
+			.withTooltip(c -> Tooltip.create(Component.translatable("options.ballisticmissiles.misfires.tooltip")))
+			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.misfires"), (b, v) -> this.run("bmserver fehlstarts " + v));
+		int[] damage = {0, 25, 50, 75, 100, 150, 200, 300, 500};
+		var gunDamage = CycleButton.builder((Integer c) -> Component.translatable("options.ballisticmissiles.misfires.value", c),
+				nearest(damage, ModConfig.serverGunDamage))
+			.withValues(boxed(damage))
+			.withTooltip(c -> Tooltip.create(Component.translatable("options.ballisticmissiles.gun_damage.tooltip")))
+			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.gun_damage"), (b, v) -> this.run("bmgun schaden " + v));
+		this.list.row(command(misfires), command(gunDamage));
+		this.list.row(command(CycleButton.booleanBuilder(Component.translatable("options.ballisticmissiles.allowed").withStyle(ChatFormatting.GREEN),
+					Component.translatable("options.ballisticmissiles.forbidden").withStyle(ChatFormatting.RED), ModConfig.serverGore)
+				.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.server_gore.tooltip")))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.server_gore"), (b, v) -> this.run("bmserver gore " + (v ? "an" : "aus")))),
+			command(CycleButton.booleanBuilder(Component.translatable("options.ballisticmissiles.allowed").withStyle(ChatFormatting.GREEN),
+					Component.translatable("options.ballisticmissiles.forbidden").withStyle(ChatFormatting.RED), ModConfig.serverNukes)
+				.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.server_nukes.tooltip")))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.server_nukes"),
+					(b, v) -> this.run("bmserver nukes " + (v ? "erlauben" : "verbieten")))));
+
+		this.list.header("options.ballisticmissiles.section.repair", 0xFF90C0FF);
+		this.list.note("options.ballisticmissiles.repair.note");
+		var server = this.minecraft.getSingleplayerServer();
+		if (server != null && this.minecraft.level != null) {
+			var level = server.getLevel(this.minecraft.level.dimension());
+			if (level != null) {
+				this.list.text(Component.translatable("options.ballisticmissiles.repair.remembered",
+					String.format(Locale.ROOT, "%,d", de.rcm.ballistic.explosion.CraterLog.remembered(level)).replace(',', '.')));
 			}
 		}
-		var misfires = CycleButton.builder((Integer c) -> c == 0 ? CommonComponents.OPTION_OFF : Component.translatable("options.ballisticmissiles.misfires.value", c),
-				nearest)
-			.withValues(steps)
-			.withTooltip(c -> Tooltip.create(Component.translatable("options.ballisticmissiles.misfires.tooltip")))
-			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.misfires"), (b, v) -> {
-				if (this.minecraft.getConnection() != null) {
-					ClientPlayNetworking.send(new ModNetworking.ServerConfigPayload(v));
-					this.show(Component.translatable("options.ballisticmissiles.misfires").append(": ").append(b.getMessage()));
-				}
-			});
-		this.list.row(command(misfires));
+		int[] radii = {16, 32, 64, 128, 256, 512};
+		this.list.row(CycleButton.builder((Integer r) -> Component.translatable("options.ballisticmissiles.repair.blocks", r), nearest(radii, craterRadius))
+				.withValues(boxed(radii))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.repair.radius"), (b, v) -> craterRadius = v),
+			command(Button.builder(Component.translatable("options.ballisticmissiles.repair.button"), b -> this.run("bmworld krater reparieren " + craterRadius))
+				.tooltip(Tooltip.create(Component.translatable("options.ballisticmissiles.repair.tooltip"))).build()));
+	}
+
+	private static Integer[] boxed(int[] values) {
+		return Arrays.stream(values).boxed().toArray(Integer[]::new);
+	}
+
+	/** The step nearest to {@code value}. */
+	private static int nearest(int[] steps, int value) {
+		int best = steps[0];
+		for (int st : steps) {
+			if (Math.abs(st - value) < Math.abs(best - value)) {
+				best = st;
+			}
+		}
+		return best;
 	}
 
 	// ---------------------------------------------------------------- building blocks
@@ -407,6 +450,10 @@ public class SettingsScreen extends Screen {
 		void note(String key) {
 			var lines = SettingsScreen.this.font.split(Component.translatable(key).withStyle(ChatFormatting.GRAY), ROW);
 			this.addEntry(new Note(lines), lines.size() * 10 + 4);
+		}
+
+		void text(Component text) {
+			this.addEntry(new Note(List.of(text.getVisualOrderText())), 14);
 		}
 
 		void row(AbstractWidget... widgets) {

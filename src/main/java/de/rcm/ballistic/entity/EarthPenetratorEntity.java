@@ -151,7 +151,7 @@ public class EarthPenetratorEntity extends Entity {
 				this.fuse = 3;
 			} else {
 				if (!state.isAir() && state.getFluidState().isEmpty()) {
-					level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
+					de.rcm.ballistic.explosion.CraterLog.set(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
 				}
 				this.setPos(next);
 				this.depth += 1.1;

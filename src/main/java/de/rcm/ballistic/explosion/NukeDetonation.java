@@ -336,7 +336,7 @@ public class NukeDetonation {
 					hole = Blocks.WATER.defaultBlockState(); // the blown-out coast floods
 				}
 			}
-			this.level.setBlock(pos, hole, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
+			CraterLog.set(this.level, pos, hole, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
 		}
 
 		// Molten, glassy crater floor; sand fused into trinitite.
@@ -346,12 +346,12 @@ public class NukeDetonation {
 			if (!state.isAir() && breakable(state, pos) && !state.hasBlockEntity()) {
 				BlockState floor = this.mode == Mode.UNDERGROUND ? this.rubble(d / r, i)
 					: state.is(BlockTags.SAND) || state.is(Blocks.SANDSTONE) ? ModRegistry.TRINITITE.defaultBlockState() : this.floorBlock(d / r, i);
-				this.level.setBlock(pos, floor, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+				CraterLog.set(this.level, pos, floor, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
 			}
 		}
 		pos.set(x, floorY, z);
 		if (this.mode == Mode.SURFACE && this.random.nextFloat() < 0.07F && this.level.getBlockState(pos).isAir()) {
-			this.level.setBlock(pos, BaseFireBlock.getState(this.level, pos), Block.UPDATE_ALL);
+			CraterLog.set(this.level, pos, BaseFireBlock.getState(this.level, pos), Block.UPDATE_ALL);
 		}
 	}
 
@@ -422,7 +422,7 @@ public class NukeDetonation {
 					if (state.isAir() || !breakable(state, pos) || isBunker(state) || !state.getFluidState().isEmpty()) {
 						continue;
 					}
-					this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
+					CraterLog.set(this.level, pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
 				}
 				if (taper > 0.5 && this.random.nextFloat() < 0.3F) {
 					// the crack is wider close to the crater
@@ -431,7 +431,7 @@ public class NukeDetonation {
 					pos.set(sx, sy, z);
 					BlockState state = this.level.getBlockState(pos);
 					if (!state.isAir() && breakable(state, pos) && !isBunker(state) && state.getFluidState().isEmpty()) {
-						this.level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
+						CraterLog.set(this.level, pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
 					}
 				}
 			}
@@ -474,7 +474,7 @@ public class NukeDetonation {
 					into = Blocks.COARSE_DIRT.defaultBlockState();
 				}
 				if (into != null) {
-					this.level.setBlock(pos, into, Block.UPDATE_ALL);
+					CraterLog.set(this.level, pos, into, Block.UPDATE_ALL);
 					if (into.isAir()) {
 						this.level.levelEvent(2001, pos.immutable(), Block.getId(state));
 					}
@@ -519,7 +519,7 @@ public class NukeDetonation {
 			if (i == lip - 1 && this.random.nextFloat() < 0.15F) {
 				debris = ModRegistry.SMOLDERING_EARTH.defaultBlockState();
 			}
-			this.level.setBlock(pos, debris, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+			CraterLog.set(this.level, pos, debris, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
 		}
 	}
 
@@ -606,7 +606,7 @@ public class NukeDetonation {
 			}
 			BlockState fallout = ModRegistry.FALLOUT.defaultBlockState();
 			if (fallout.canSurvive(this.level, pos)) {
-				this.level.setBlock(pos, fallout, Block.UPDATE_CLIENTS);
+				CraterLog.set(this.level, pos, fallout, Block.UPDATE_CLIENTS);
 			}
 		}
 	}

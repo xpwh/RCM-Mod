@@ -513,7 +513,39 @@ public final class Injuries {
 		return amount >= need;
 	}
 
+	/** Players who take every wound but cannot die ({@code /bmgore unverwundbar}). */
+	private static final java.util.Set<UUID> INVULNERABLE = new java.util.HashSet<>();
+
+	public static void setInvulnerable(ServerPlayer p, boolean on) {
+		if (on) {
+			INVULNERABLE.add(p.getUUID());
+		} else {
+			INVULNERABLE.remove(p.getUUID());
+		}
+	}
+
+	public static boolean invulnerable(net.minecraft.world.entity.Entity e) {
+		return INVULNERABLE.contains(e.getUUID());
+	}
+
+	/** Kept alive: on their feet again, full health, the wounds still there to see. */
+	private static void spare(ServerPlayer p) {
+		Wounds w = get(p);
+		if (w.dying() > 0 || w.collapse() > 0) {
+			set(p, w.withDying(0).withCollapse(0, w.fall()));
+		}
+		Clock c = clock(p);
+		c.cause = null;
+		c.finishing = false;
+		p.setHealth(p.getMaxHealth());
+	}
+
 	private static boolean allowDeath(LivingEntity entity, DamageSource source, float amount) {
+		if (entity instanceof ServerPlayer sp && invulnerable(sp) && !source.is(net.minecraft.world.damagesource.DamageTypes.GENERIC_KILL)
+			&& !source.is(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD)) {
+			spare(sp);
+			return false;
+		}
 		if (tornApart(entity, source, amount)) {
 			TORN_APART.put(entity.getUUID(), Math.min(2.5F, amount / 20.0F));
 			return true;
@@ -550,6 +582,10 @@ public final class Injuries {
 	}
 
 	private static void die(ServerPlayer p) {
+		if (invulnerable(p)) {
+			spare(p);
+			return;
+		}
 		Clock c = clock(p);
 		DamageSource cause = c.cause != null ? c.cause : new DamageSource(p.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(BLEEDING));
 		c.cause = null;

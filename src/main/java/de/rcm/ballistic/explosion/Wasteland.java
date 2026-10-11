@@ -85,7 +85,7 @@ public final class Wasteland {
 			if (!editable(level, m, state)) {
 				return;
 			}
-			level.setBlock(m, Blocks.AIR.defaultBlockState(), QUIET);
+			CraterLog.set(level, m, Blocks.AIR.defaultBlockState(), QUIET);
 		}
 		// fill pockets the blast dug below the bowl, so the floor is one smooth slope
 		for (int y = floor; y > floor - 6; y--) {
@@ -97,17 +97,17 @@ public final class Wasteland {
 			if (!state.getFluidState().isEmpty()) {
 				return;
 			}
-			level.setBlock(m, loose(random, rel), FLAGS);
+			CraterLog.set(level, m, loose(random, rel), FLAGS);
 		}
 		// line the floor: broken, burnt rock and earth, still glowing in the middle
 		m.set(x, floor, z);
 		BlockState floorState = level.getBlockState(m);
 		if (editable(level, m, floorState) && !floorState.isAir()) {
 			BlockState lining = rel < 0.45 && random.nextFloat() < 0.3F ? ModRegistry.SMOLDERING_EARTH.defaultBlockState() : loose(random, rel);
-			level.setBlock(m, lining, FLAGS);
+			CraterLog.set(level, m, lining, FLAGS);
 			m.set(x, floor + 1, z);
 			if (rel < 0.7 && random.nextFloat() < 0.04F && level.getBlockState(m).isAir()) {
-				level.setBlock(m, BaseFireBlock.getState(level, m), Block.UPDATE_ALL);
+				CraterLog.set(level, m, BaseFireBlock.getState(level, m), Block.UPDATE_ALL);
 			}
 		}
 	}
@@ -143,7 +143,7 @@ public final class Wasteland {
 			if (!state.canBeReplaced() || !state.getFluidState().isEmpty()) {
 				break;
 			}
-			level.setBlock(m, ejecta(random, ground), FLAGS);
+			CraterLog.set(level, m, ejecta(random, ground), FLAGS);
 		}
 		if (layers <= 0 && random.nextFloat() < 0.5F) {
 			scorchGround(level, m.set(x, y - 1, z), ground, 0.6, false, random);
@@ -193,21 +193,21 @@ public final class Wasteland {
 			}
 			if (state.is(BlockTags.LEAVES)) {
 				if (random.nextDouble() < 0.5 + 0.5 * intensity) {
-					level.setBlock(pos, Blocks.AIR.defaultBlockState(), QUIET);
+					CraterLog.set(level, pos, Blocks.AIR.defaultBlockState(), QUIET);
 				} else if (random.nextDouble() < 0.15) {
-					level.setBlock(pos, BaseFireBlock.getState(level, pos), Block.UPDATE_ALL);
+					CraterLog.set(level, pos, BaseFireBlock.getState(level, pos), Block.UPDATE_ALL);
 				}
 				continue;
 			}
 			if (state.is(BlockTags.LOGS)) {
 				if (nuclear && random.nextDouble() < intensity * 0.7) {
-					level.setBlock(pos, Blocks.AIR.defaultBlockState(), QUIET); // blown down
+					CraterLog.set(level, pos, Blocks.AIR.defaultBlockState(), QUIET); // blown down
 				} else if (random.nextDouble() < 0.35 + 0.65 * intensity) {
 					BlockState charred = ModRegistry.CHARRED_LOG.defaultBlockState();
 					if (state.hasProperty(RotatedPillarBlock.AXIS)) {
 						charred = charred.setValue(RotatedPillarBlock.AXIS, state.getValue(RotatedPillarBlock.AXIS));
 					}
-					level.setBlock(pos, charred, FLAGS);
+					CraterLog.set(level, pos, charred, FLAGS);
 					if (random.nextDouble() < 0.2 * intensity) {
 						igniteNextTo(level, pos, random);
 					}
@@ -219,17 +219,17 @@ public final class Wasteland {
 					igniteNextTo(level, pos, random); // buildings catch fire
 				}
 				if (nuclear && random.nextDouble() < intensity * 0.5) {
-					level.setBlock(pos, Blocks.AIR.defaultBlockState(), QUIET);
+					CraterLog.set(level, pos, Blocks.AIR.defaultBlockState(), QUIET);
 				}
 				continue;
 			}
 			if (state.canBeReplaced() || state.is(BlockTags.FLOWERS) || state.is(Blocks.SNOW_BLOCK) || DustLayerBlock.isDust(state)) {
-				level.setBlock(pos, Blocks.AIR.defaultBlockState(), QUIET);
+				CraterLog.set(level, pos, Blocks.AIR.defaultBlockState(), QUIET);
 				continue;
 			}
 			if (state.is(BlockTags.IMPERMEABLE) || state.getBlock() instanceof IronBarsBlock) {
 				if (random.nextDouble() < 0.4 + 0.6 * intensity) {
-					level.setBlock(pos, Blocks.AIR.defaultBlockState(), QUIET); // shattered glass
+					CraterLog.set(level, pos, Blocks.AIR.defaultBlockState(), QUIET); // shattered glass
 				}
 				continue;
 			}
@@ -238,9 +238,9 @@ public final class Wasteland {
 			pos.set(x, y + 1, z);
 			if (level.getBlockState(pos).isAir()) {
 				if (random.nextDouble() < fireChance * (0.3 + 0.7 * intensity)) {
-					level.setBlock(pos, BaseFireBlock.getState(level, pos), Block.UPDATE_ALL);
+					CraterLog.set(level, pos, BaseFireBlock.getState(level, pos), Block.UPDATE_ALL);
 				} else if (random.nextDouble() < 0.12 + 0.2 * intensity) {
-					level.setBlock(pos, ModRegistry.ASH.defaultBlockState(), FLAGS);
+					CraterLog.set(level, pos, ModRegistry.ASH.defaultBlockState(), FLAGS);
 				}
 			}
 			return;
@@ -252,22 +252,22 @@ public final class Wasteland {
 			|| state.is(Blocks.ROOTED_DIRT) || state.is(Blocks.FARMLAND) || state.is(Blocks.DIRT_PATH) || state.is(Blocks.COARSE_DIRT)) {
 			if (random.nextDouble() < 0.45 + 0.55 * intensity) {
 				boolean embers = random.nextDouble() < 0.08 + 0.3 * intensity;
-				level.setBlock(pos, (embers ? ModRegistry.SMOLDERING_EARTH : ModRegistry.SCORCHED_EARTH).defaultBlockState(), FLAGS);
+				CraterLog.set(level, pos, (embers ? ModRegistry.SMOLDERING_EARTH : ModRegistry.SCORCHED_EARTH).defaultBlockState(), FLAGS);
 			}
 		} else if (state.is(BlockTags.SAND)) {
 			if (nuclear && random.nextDouble() < (intensity - 0.35) * 1.3) {
-				level.setBlock(pos, ModRegistry.TRINITITE.defaultBlockState(), FLAGS);
+				CraterLog.set(level, pos, ModRegistry.TRINITITE.defaultBlockState(), FLAGS);
 			}
 		} else if (nuclear && (state.is(Blocks.STONE) || state.is(Blocks.ANDESITE) || state.is(Blocks.GRANITE) || state.is(Blocks.DIORITE))
 			&& random.nextDouble() < (intensity - 0.5) * 1.2) {
-			level.setBlock(pos, ModRegistry.CRATER_GLASS.defaultBlockState(), FLAGS); // glazed rock surface
+			CraterLog.set(level, pos, ModRegistry.CRATER_GLASS.defaultBlockState(), FLAGS); // glazed rock surface
 		}
 	}
 
 	private static void igniteNextTo(ServerLevel level, BlockPos pos, RandomSource random) {
 		BlockPos p = pos.relative(net.minecraft.core.Direction.Plane.HORIZONTAL.getRandomDirection(random));
 		if (level.getBlockState(p).isAir()) {
-			level.setBlock(p, BaseFireBlock.getState(level, p), Block.UPDATE_ALL);
+			CraterLog.set(level, p, BaseFireBlock.getState(level, p), Block.UPDATE_ALL);
 		}
 	}
 

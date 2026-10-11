@@ -83,14 +83,14 @@ public final class BlastPhysics {
 				m.set(x, y, z);
 				BlockState state = level.getBlockState(m);
 				if (fragile(state) && random.nextDouble() < chance) {
-					level.setBlock(m, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+					CraterLog.set(level, m, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 					level.levelEvent(2001, m.immutable(), Block.getId(state));
 					if (random.nextInt(4) == 0) {
 						level.playSound(null, m, SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 1.0F, 0.8F + random.nextFloat() * 0.4F);
 					}
 					broken++;
 				} else if (state.is(BlockTags.LEAVES) && r < outer * 0.45 && random.nextDouble() < chance * 0.35) {
-					level.destroyBlock(m, false);
+					CraterLog.destroy(level, m, false);
 				}
 			}
 		}
@@ -135,7 +135,7 @@ public final class BlastPhysics {
 			if (hit.getType() == HitResult.Type.BLOCK) {
 				BlockState state = level.getBlockState(hit.getBlockPos());
 				if (fragile(state)) {
-					level.destroyBlock(hit.getBlockPos(), false);
+					CraterLog.destroy(level, hit.getBlockPos(), false);
 				} else if (i % 3 == 0) {
 					Vec3 p = hit.getLocation();
 					level.sendParticles(de.rcm.ballistic.ModRegistry.SPARK, p.x, p.y, p.z, 2, 0.05, 0.05, 0.05, 0.1);
