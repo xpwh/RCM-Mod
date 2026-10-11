@@ -141,19 +141,15 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 			}
 		}
 
-		// twin plumes: a dull glow in military power, long shock-diamond flames in afterburner
+		// twin engines: the nozzles glowing hot, and in afterburner long plumes with shock diamonds (JetExhaust)
 		float t = state.time;
-		float flicker = 0.85F + 0.15F * Mth.sin(t * 2.3F) * Mth.cos(t * 3.7F);
-		float radius = state.afterburner ? 0.36F : 0.26F;
-		float length = (state.afterburner ? 7.0F : 1.1F) * flicker;
+		boolean burner = state.afterburner;
 		for (float x : NOZZLES_X) {
 			float phase = x * 11.0F;
 			poseStack.pushPose();
 			poseStack.translate(x, NOZZLE_EXIT, 0.0F);
-			collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
-				MissileRenderer.flame(pose, consumer, radius, length, t + phase, state.afterburner ? 1.0F : 0.55F);
-				MissileRenderer.flame(pose, consumer, radius * 0.55F, length * 0.7F, t + phase + 5.0F, 1.0F);
-			});
+			collector.submitCustomGeometry(poseStack, JetExhaust.TYPE,
+				(pose, consumer) -> JetExhaust.draw(pose, consumer, 0.36F, burner ? 1.0F : 0.7F, burner, 7.0F, t + phase));
 			poseStack.popPose();
 		}
 

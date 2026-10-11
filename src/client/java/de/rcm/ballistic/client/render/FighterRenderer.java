@@ -178,23 +178,25 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 		int glass = state.ownCockpit ? 0x30FFFFFF : 0xA8FFFFFF;
 		collector.submitCustomGeometry(poseStack, GLASS_TYPE, (pose, consumer) -> canopy.emit(pose, consumer, light, glass));
 
-		// engine plumes: a faint heat glow in military power, long shock-diamond flames in afterburner
+		// engines: the nozzles glowing hot, and in afterburner a long plume with its shock diamonds (JetExhaust)
 		if (!state.crashing) {
 			float t = state.time;
-			float flicker = 0.85F + 0.15F * Mth.sin(t * 2.3F) * Mth.cos(t * 3.7F);
-			float radius = f22 ? (state.afterburner ? 0.4F : 0.28F) : state.afterburner ? 0.55F : 0.4F;
-			float length = (state.afterburner ? (f22 ? 7.5F : 8.5F) : 0.6F + state.throttle * 0.9F) * flicker;
-			float alpha = state.afterburner ? 1.0F : 0.25F + 0.35F * state.throttle;
+			float radius = f22 ? 0.42F : 0.5F;
+			float length = f22 ? 7.5F : 8.5F;
+			float throttle = state.throttle;
+			boolean burner = state.afterburner;
 			float[] xs = f22 ? new float[] {-0.62F, 0.62F} : new float[] {0.0F};
 			float exit = f22 ? -9.25F : -7.7F;
 			for (float x : xs) {
 				float phase = x * 11.0F;
 				poseStack.pushPose();
 				poseStack.translate(x, exit, 0.0F);
-				collector.submitCustomGeometry(poseStack, JetRenderer.FLAME_TYPE, (pose, consumer) -> {
-					MissileRenderer.flame(pose, consumer, radius, length, t + phase, alpha);
-					MissileRenderer.flame(pose, consumer, radius * 0.55F, length * 0.7F, t + phase + 5.0F, Math.min(1.0F, alpha * 1.4F));
-				});
+				if (f22) {
+					// the Raptor's flat two-dimensional nozzles: a wide, flat exhaust
+					poseStack.scale(1.3F, 1.0F, 0.62F);
+				}
+				collector.submitCustomGeometry(poseStack, JetExhaust.TYPE,
+					(pose, consumer) -> JetExhaust.draw(pose, consumer, radius, throttle, burner, length, t + phase));
 				poseStack.popPose();
 			}
 			// cannon muzzle flash at the gun port
