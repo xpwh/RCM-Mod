@@ -737,7 +737,7 @@
 	"options.ballisticmissiles.section.world": "World",
 	"options.ballisticmissiles.section.display": "Display",
 	"options.ballisticmissiles.section.gore_test": "Test injuries",
-	"options.ballisticmissiles.gore_test.note": "Applies to yourself (/bmgore … @s). The gore system is pre-alpha.",
+	"options.ballisticmissiles.gore_test.note": "Choose below who it hits (/bmgore … <player>). The gore system is pre-alpha.",
 	"options.ballisticmissiles.gore.leg_left": "Left leg off",
 	"options.ballisticmissiles.gore.leg_right": "Right leg off",
 	"options.ballisticmissiles.gore.leg_both": "Both legs off",
@@ -797,5 +797,9 @@
 	"commands.ballisticmissiles.world.crater_repair": "Repairing %s blocks within %s blocks …",
 	"announce.ballisticmissiles.server_setting": "Server setting changed",
 	"announce.ballisticmissiles.changed_by": "Changed by %s",
-	"announce.ballisticmissiles.server": "Server"
+	"announce.ballisticmissiles.server": "Server",
+	"options.ballisticmissiles.target": "Target",
+	"options.ballisticmissiles.target.self": "Me",
+	"options.ballisticmissiles.target.all": "All players",
+	"options.ballisticmissiles.target.tooltip": "Who the injuries and 'Invulnerable' apply to: yourself, every player, or one player who is online."
 }

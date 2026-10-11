@@ -71,6 +71,8 @@ public class SettingsScreen extends Screen {
 	private static boolean soldierFriendly;
 	private static String lastSearch = "";
 	private static int craterRadius = 64;
+	/** Who the gore tests are done on: "@s" (yourself), "@a" (everyone) or a player's name. */
+	private static String goreTarget = "@s";
 
 	private final Screen parent;
 	private final TabManager tabs = new TabManager(this::addRenderableWidget, this::removeWidget, this::selected, t -> {
@@ -229,20 +231,48 @@ public class SettingsScreen extends Screen {
 		this.list.row(toggle("gore_warning", ModConfig.goreWarning, null, v -> ModConfig.goreWarning = v));
 		this.list.header("options.ballisticmissiles.section.gore_test", 0xFFFF7070);
 		this.list.note("options.ballisticmissiles.gore_test.note");
-		this.list.row(action("gore.leg_left", "bmgore bein @s links"), action("gore.leg_right", "bmgore bein @s rechts"),
-			action("gore.leg_both", "bmgore bein @s beide"));
-		this.list.row(action("gore.arm_left", "bmgore arm @s links"), action("gore.arm_right", "bmgore arm @s rechts"),
-			action("gore.arm_both", "bmgore arm @s beide"));
-		this.list.row(action("gore.graze", "bmgore kopf @s streifschuss"), action("gore.headshot", "bmgore kopf @s toedlich"));
-		this.list.row(action("gore.jaw", "bmgore kiefer @s"), action("gore.through", "bmgore durchschuss @s"));
-		this.list.row(action("gore.dying", "bmgore sterben @s"), action("gore.heal", "bmgore heilen @s"));
+		List<String> targets = new ArrayList<>(List.of("@s", "@a"));
+		if (this.minecraft.getConnection() != null) {
+			this.minecraft.getConnection().getOnlinePlayers().stream().map(info -> info.getProfile().name()).sorted(String.CASE_INSENSITIVE_ORDER)
+				.forEach(targets::add);
+		}
+		if (!targets.contains(goreTarget)) {
+			goreTarget = "@s";
+		}
+		this.list.row(CycleButton.builder((String t) -> switch (t) {
+				case "@s" -> Component.translatable("options.ballisticmissiles.target.self").withStyle(ChatFormatting.AQUA);
+				case "@a" -> Component.translatable("options.ballisticmissiles.target.all").withStyle(ChatFormatting.GOLD);
+				default -> Component.literal(t).withStyle(ChatFormatting.YELLOW);
+			}, goreTarget)
+			.withValues(targets)
+			.withTooltip(t -> Tooltip.create(Component.translatable("options.ballisticmissiles.target.tooltip")))
+			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.target"), (b, v) -> {
+				goreTarget = v;
+				this.refresh = 1;
+			}));
+		this.list.row(gore("gore.leg_left", "bein %s links"), gore("gore.leg_right", "bein %s rechts"), gore("gore.leg_both", "bein %s beide"));
+		this.list.row(gore("gore.arm_left", "arm %s links"), gore("gore.arm_right", "arm %s rechts"), gore("gore.arm_both", "arm %s beide"));
+		this.list.row(gore("gore.graze", "kopf %s streifschuss"), gore("gore.headshot", "kopf %s toedlich"));
+		this.list.row(gore("gore.jaw", "kiefer %s"), gore("gore.through", "durchschuss %s"));
+		this.list.row(gore("gore.dying", "sterben %s"), gore("gore.heal", "heilen %s"));
+		// the target's invulnerability, as the integrated server knows it (one player: theirs; everyone: off)
 		var server = this.minecraft.getSingleplayerServer();
-		var me = server == null || this.minecraft.player == null ? null : server.getPlayerList().getPlayer(this.minecraft.player.getUUID());
-		boolean invulnerable = me != null && de.rcm.ballistic.injury.Injuries.invulnerable(me);
+		boolean invulnerable = false;
+		if (server != null && this.minecraft.player != null && !goreTarget.equals("@a")) {
+			var target = goreTarget.equals("@s") ? server.getPlayerList().getPlayer(this.minecraft.player.getUUID())
+				: server.getPlayerList().getPlayerByName(goreTarget);
+			invulnerable = target != null && de.rcm.ballistic.injury.Injuries.invulnerable(target);
+		}
 		this.list.row(command(CycleButton.onOffBuilder(invulnerable)
 			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.invulnerable.tooltip")))
 			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.invulnerable"),
-				(b, v) -> this.run("bmgore unverwundbar " + (v ? "an" : "aus")))));
+				(b, v) -> this.run("bmgore unverwundbar " + goreTarget + " " + (v ? "an" : "aus")))));
+	}
+
+	/** A gore test on the chosen player(s): {@code %s} in the command is where they go. */
+	private AbstractWidget gore(String key, String command) {
+		return command(Button.builder(Component.translatable("options.ballisticmissiles." + key),
+			b -> this.run("bmgore " + String.format(Locale.ROOT, command, goreTarget))).build());
 	}
 
 	private void ai() {

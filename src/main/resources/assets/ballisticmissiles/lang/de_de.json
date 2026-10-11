@@ -737,7 +737,7 @@
 	"options.ballisticmissiles.section.world": "Welt",
 	"options.ballisticmissiles.section.display": "Darstellung",
 	"options.ballisticmissiles.section.gore_test": "Verletzungen testen",
-	"options.ballisticmissiles.gore_test.note": "Wirkt auf dich selbst (/bmgore … @s). Das Gore-System ist Pre-Alpha.",
+	"options.ballisticmissiles.gore_test.note": "Wähle unten aus, wen es trifft (/bmgore … <Spieler>). Das Gore-System ist Pre-Alpha.",
 	"options.ballisticmissiles.gore.leg_left": "Bein links ab",
 	"options.ballisticmissiles.gore.leg_right": "Bein rechts ab",
 	"options.ballisticmissiles.gore.leg_both": "Beide Beine ab",
@@ -797,5 +797,9 @@
 	"commands.ballisticmissiles.world.crater_repair": "Repariere %s Blöcke im Umkreis von %s Blöcken …",
 	"announce.ballisticmissiles.server_setting": "Server-Einstellung geändert",
 	"announce.ballisticmissiles.changed_by": "Geändert von %s",
-	"announce.ballisticmissiles.server": "Server"
+	"announce.ballisticmissiles.server": "Server",
+	"options.ballisticmissiles.target": "Ziel",
+	"options.ballisticmissiles.target.self": "Ich",
+	"options.ballisticmissiles.target.all": "Alle Spieler",
+	"options.ballisticmissiles.target.tooltip": "Auf wen die Verletzungen und „Unverwundbar“ wirken: du selbst, alle Spieler oder ein bestimmter Spieler, der gerade online ist."
 }
