@@ -49,7 +49,7 @@ public final class ServerConfigCommand {
 					int damage = IntegerArgumentType.getInteger(ctx, "prozent");
 					if (damage != ServerConfig.gunDamage) {
 						ServerConfig.gunDamage = damage;
-						announce(ctx.getSource(), "options.ballisticmissiles.gun_damage", Announcement.percent(damage, damage == 100));
+						announce(ctx.getSource(), "Gun damage", Announcement.percent(damage, damage == 100));
 					}
 					return changed(ctx.getSource());
 				}))));
@@ -58,7 +58,7 @@ public final class ServerConfigCommand {
 	private static int gore(CommandSourceStack source, boolean on) {
 		if (ServerConfig.gore != on) {
 			ServerConfig.gore = on;
-			announce(source, "options.ballisticmissiles.server_gore", Announcement.state(on, "options.ballisticmissiles.allowed", "options.ballisticmissiles.forbidden"));
+			announce(source, "Gore", Announcement.state(on, "ALLOWED", "FORBIDDEN"));
 		}
 		return changed(source);
 	}
@@ -66,7 +66,7 @@ public final class ServerConfigCommand {
 	private static int nukes(CommandSourceStack source, boolean on) {
 		if (ServerConfig.nukes != on) {
 			ServerConfig.nukes = on;
-			announce(source, "options.ballisticmissiles.server_nukes", Announcement.state(on, "options.ballisticmissiles.allowed", "options.ballisticmissiles.forbidden"));
+			announce(source, "Nuclear weapons", Announcement.state(on, "ALLOWED", "FORBIDDEN"));
 		}
 		return changed(source);
 	}
@@ -86,14 +86,14 @@ public final class ServerConfigCommand {
 	}
 
 	/** Everyone on the server is told, big on their screens. */
-	private static void announce(CommandSourceStack source, String settingKey, Component value) {
-		Announcement.setting(source.getServer(), Component.translatable(settingKey), value, source.getEntity() == null ? null : source.getTextName());
+	private static void announce(CommandSourceStack source, String setting, Component value) {
+		Announcement.setting(source.getServer(), Component.literal(setting), value, source.getEntity() == null ? null : source.getTextName());
 	}
 
 	private static int set(CommandSourceStack source, int chance) {
 		if (chance != ServerConfig.misfireChance) {
-			announce(source, "options.ballisticmissiles.misfires", chance == 0
-				? Announcement.state(false, "options.on", "options.off") : Announcement.percent(chance, false));
+			announce(source, "Misfires", chance == 0
+				? Announcement.state(false, "ON", "OFF") : Announcement.percent(chance, false));
 		}
 		ServerConfig.misfireChance = chance;
 		ServerConfig.save();

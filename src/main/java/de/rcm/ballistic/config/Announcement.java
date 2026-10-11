@@ -12,7 +12,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
 /**
- * A world setting changed: announced to everyone on the server, big in the middle of the screen (a title,
+ * A world setting changed (always in English): announced to everyone on the server, big in the middle of the screen (a title,
  * the setting and its new value; below it who changed it), with a chime - and in the chat, to read again.
  */
 public final class Announcement {
@@ -28,10 +28,10 @@ public final class Announcement {
 		Component title = Component.empty().append(setting.copy().withStyle(ChatFormatting.WHITE)).append(Component.literal(": ").withStyle(ChatFormatting.GRAY))
 			.append(value);
 		Component subtitle = Component.literal("⚠ ").withStyle(ChatFormatting.GOLD)
-			.append(by == null ? Component.translatable("announce.ballisticmissiles.server_setting")
-				: Component.translatable("announce.ballisticmissiles.changed_by", by)).withStyle(ChatFormatting.GOLD);
+			.append(by == null ? Component.literal("Server setting changed")
+				: Component.literal("Changed by " + by)).withStyle(ChatFormatting.GOLD);
 		Component chat = Component.literal("[").withStyle(ChatFormatting.DARK_GRAY)
-			.append(Component.translatable("announce.ballisticmissiles.server").withStyle(ChatFormatting.GOLD))
+			.append(Component.literal("Server").withStyle(ChatFormatting.GOLD))
 			.append(Component.literal("] ").withStyle(ChatFormatting.DARK_GRAY)).append(title)
 			.append(Component.literal(by == null ? "" : " (" + by + ")").withStyle(ChatFormatting.GRAY));
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -45,8 +45,8 @@ public final class Announcement {
 	}
 
 	/** Green "allowed"/"on" or red "forbidden"/"off". */
-	public static Component state(boolean on, String onKey, String offKey) {
-		return Component.translatable(on ? onKey : offKey).withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED, ChatFormatting.BOLD);
+	public static Component state(boolean on, String onText, String offText) {
+		return Component.literal(on ? onText : offText).withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED, ChatFormatting.BOLD);
 	}
 
 	public static Component percent(int value, boolean normal) {
