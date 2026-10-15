@@ -637,6 +637,9 @@ public final class ModNetworking {
 		public static final int ATTACHMENT_TOGGLE = 15;
 		/** Take the light and laser off the gun. */
 		public static final int ATTACHMENT_REMOVE = 16;
+		/** Start mounting a weapon light / laser from the inventory (it clicks home a moment later). */
+		public static final int ATTACH_LIGHT = 17;
+		public static final int ATTACH_LASER = 18;
 		public static final Type<GunInputPayload> TYPE = new Type<>(BallisticMissiles.id("gun_input"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunInputPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunInputPayload::action, GunInputPayload::new);
@@ -829,6 +832,8 @@ public final class ModNetworking {
 				case GunInputPayload.AK_INSPECT, GunInputPayload.AK_CHECK, GunInputPayload.RPG_CHECK -> shareGunAction(context.player(), payload.action());
 				case GunInputPayload.ATTACHMENT_TOGGLE -> de.rcm.ballistic.gun.GunAttachments.toggle(context.player());
 				case GunInputPayload.ATTACHMENT_REMOVE -> de.rcm.ballistic.gun.GunAttachments.remove(context.player());
+				case GunInputPayload.ATTACH_LIGHT -> de.rcm.ballistic.gun.GunAttachments.startMount(context.player(), true);
+				case GunInputPayload.ATTACH_LASER -> de.rcm.ballistic.gun.GunAttachments.startMount(context.player(), false);
 				default -> {
 				}
 			}

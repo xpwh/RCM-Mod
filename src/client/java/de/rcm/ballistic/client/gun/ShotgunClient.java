@@ -334,7 +334,7 @@ public final class ShotgunClient {
 			return;
 		}
 		ShotgunMotion.Hands hands = ShotgunMotion.hands(frame(mc, partialTick, stack));
-		Vector3f left = hands.left();
+		Vector3f left = AttachAnim.supportHand(partialTick, stack, hands.left());
 		Vector3f shellBase = hands.shell();
 		float shellTilt = hands.shellTilt();
 		poseStack.pushPose();

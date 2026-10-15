@@ -363,7 +363,8 @@ public final class GlockClient {
 		poseStack.pushPose();
 		poseStack.translate(-3.2F / 16.0F, 2.4F / 16.0F, 0.5F / 16.0F);
 		poseStack.mulPose(Axis.YP.rotationDegrees(3.0F));
-		AkArms.draw(player, base, poseStack, collector, light, hands.right(), hands.left(), hands.rightShoulder(), hands.leftShoulder(), hands.rightPole(),
+		AkArms.draw(player, base, poseStack, collector, light, hands.right(), AttachAnim.supportHand(partialTick, stack, hands.left()), hands.rightShoulder(),
+			hands.leftShoulder(), hands.rightPole(),
 			hands.leftPole(), GlockMotion.ARM_THICK, GlockMotion.FOREARM);
 		poseStack.popPose();
 	}

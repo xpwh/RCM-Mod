@@ -148,6 +148,10 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunAttachmentM
 
 		// ---- the light and laser on the handguard
 		GunAttachmentModels.submit(armed.att(), GunAttachmentModels.AK, false, poseStack, collector, light, context.firstPerson());
+		if (context.firstPerson()) {
+			// a light or laser on its way from the pouch onto the rail (key P)
+			de.rcm.ballistic.client.gun.AttachAnim.submitCarried(poseStack, collector, light);
+		}
 
 		// ---- muzzle flash, for the first frame or two of each shot
 		float shot = now - lastShot;

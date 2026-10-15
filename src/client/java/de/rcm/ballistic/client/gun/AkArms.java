@@ -57,7 +57,8 @@ public final class AkArms {
 		// the item's first-person display transform (models/item/ak47_in_hand.json) and the renderer's re-centring
 		poseStack.translate(-3.2F / 16.0F, 2.4F / 16.0F, 0.5F / 16.0F);
 		poseStack.mulPose(Axis.YP.rotationDegrees(3.0F));
-		draw(player, base, poseStack, collector, light, anim.rightHand, anim.leftHand, RIGHT_SHOULDER, LEFT_SHOULDER);
+		Vector3f left = AttachAnim.supportHand(partialTick, stack, anim.leftHand);
+		draw(player, base, poseStack, collector, light, anim.rightHand, left, RIGHT_SHOULDER, LEFT_SHOULDER);
 		poseStack.popPose();
 	}
 

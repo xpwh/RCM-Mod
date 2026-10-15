@@ -73,18 +73,21 @@ public abstract class ItemInHandRendererMixin {
 		} else if (stack.is(ModRegistry.GLOCK)) {
 			Matrix4f base = new Matrix4f(poseStack.last().pose());
 			de.rcm.ballistic.client.gun.GlockClient.transform(poseStack, partialTick, stack);
+			de.rcm.ballistic.client.gun.AttachAnim.applyGun(poseStack, partialTick, stack);
 			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
 				de.rcm.ballistic.client.gun.GlockClient.renderArms(player, stack, base, poseStack, collector, light, partialTick);
 			}
 		} else if (stack.is(ModRegistry.SHOTGUN)) {
 			Matrix4f base = new Matrix4f(poseStack.last().pose());
 			de.rcm.ballistic.client.gun.ShotgunClient.transform(poseStack, partialTick, stack);
+			de.rcm.ballistic.client.gun.AttachAnim.applyGun(poseStack, partialTick, stack);
 			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
 				de.rcm.ballistic.client.gun.ShotgunClient.renderArms(player, stack, base, poseStack, collector, light, partialTick);
 			}
 		} else if (stack.is(ModRegistry.AK47)) {
 			Matrix4f base = new Matrix4f(poseStack.last().pose());
 			AkFirstPerson.transform(poseStack, partialTick, stack);
+			de.rcm.ballistic.client.gun.AttachAnim.applyGun(poseStack, partialTick, stack);
 			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
 				AkArms.render(player, stack, base, poseStack, collector, light, partialTick);
 			}

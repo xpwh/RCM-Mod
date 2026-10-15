@@ -101,6 +101,19 @@ public final class GunAttachmentModels {
 		}
 	}
 
+	/** One device, unmounted, at {@code at} in the gun's space, turned {@code tilt} degrees off lying true. */
+	public static void submitDevice(boolean light, boolean small, Vector3f at, float tilt, PoseStack poseStack, SubmitNodeCollector collector, int lightCoords) {
+		BoxMesh body = light ? (small ? SMALL_LIGHT : LIGHT) : (small ? SMALL_LASER : LASER);
+		BoxMesh lens = light ? (small ? SMALL_LIGHT_LENS : LIGHT_LENS) : (small ? SMALL_LASER_LENS : LASER_LENS);
+		poseStack.pushPose();
+		poseStack.translate(at.x, at.y, at.z);
+		poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(tilt));
+		poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-tilt * 0.4F));
+		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> body.emit(pose, consumer, lightCoords));
+		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> lens.emit(pose, consumer, lightCoords, light ? 0xFF8A8A80 : 0xFF603030));
+		poseStack.popPose();
+	}
+
 	// ------------------------------------------------------------------ meshes (front of the device towards -Z)
 
 	private static BoxMesh buildLight() {

@@ -112,6 +112,51 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 		player.displayClientMessage(Component.translatable("message.ballisticmissiles.attachment_removed").withStyle(ChatFormatting.GRAY), true);
 	}
 
+	/** Ticks from pressing the mount key until the device clicks home on the rail (the first-person animation's click). */
+	public static final int MOUNT_TICKS = 31;
+	private static final java.util.Map<java.util.UUID, long[]> PENDING = new java.util.HashMap<>();
+
+	/**
+	 * The player started mounting a light (or laser) from their inventory on the gun in their hand: it goes
+	 * on when the animation clicks it home, if they still hold the gun and have the device then.
+	 */
+	public static void startMount(ServerPlayer player, boolean light) {
+		ItemStack gun = player.getMainHandItem();
+		if (!isGun(gun) || (light ? of(gun).light : of(gun).laser)) {
+			return;
+		}
+		PENDING.put(player.getUUID(), new long[] {player.level().getGameTime() + MOUNT_TICKS, light ? 1 : 0});
+	}
+
+	/** Called every server tick: mounts what is due. */
+	public static void tickPending(net.minecraft.server.MinecraftServer server) {
+		if (PENDING.isEmpty()) {
+			return;
+		}
+		PENDING.entrySet().removeIf(e -> {
+			ServerPlayer player = server.getPlayerList().getPlayer(e.getKey());
+			if (player == null) {
+				return true;
+			}
+			if (player.level().getGameTime() < e.getValue()[0]) {
+				return false;
+			}
+			boolean light = e.getValue()[1] == 1;
+			net.minecraft.world.item.Item device = light ? ModRegistry.WEAPON_LIGHT : ModRegistry.LASER_MODULE;
+			var inv = player.getInventory();
+			for (int i = 0; i < inv.getContainerSize(); i++) {
+				ItemStack s = inv.getItem(i);
+				if (s.is(device)) {
+					if (mount(player, InteractionHand.MAIN_HAND, light) && !player.getAbilities().instabuild) {
+						s.shrink(1);
+					}
+					break;
+				}
+			}
+			return true;
+		});
+	}
+
 	/** Mounts {@code light} or a laser on the gun held in {@code gunHand}; false if it already has one. */
 	public static boolean mount(ServerPlayer player, InteractionHand gunHand, boolean light) {
 		ItemStack gun = player.getItemInHand(gunHand);

@@ -85,6 +85,10 @@ public final class ShotgunItemRenderer implements SpecialModelRenderer<GunAttach
 		if (armed != null) {
 			// light and laser clamped either side of the barrel, ahead of the forend
 			GunAttachmentModels.submit(armed.att(), GunAttachmentModels.SHOTGUN, false, poseStack, collector, light, context.firstPerson());
+		if (context.firstPerson()) {
+			// a light or laser on its way from the pouch onto the rail (key P)
+			de.rcm.ballistic.client.gun.AttachAnim.submitCarried(poseStack, collector, light);
+		}
 		}
 		// the bolt in the ejection port: its face rides back with the action, uncovering the chamber
 		float face = PORT_FRONT + back * PUMP_TRAVEL;

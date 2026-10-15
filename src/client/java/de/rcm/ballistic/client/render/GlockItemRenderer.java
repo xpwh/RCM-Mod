@@ -106,6 +106,10 @@ public final class GlockItemRenderer implements SpecialModelRenderer<GunAttachme
 		if (armed != null) {
 			// light and laser under the dust cover, on the frame's rail
 			GunAttachmentModels.submit(armed.att(), GunAttachmentModels.GLOCK, true, poseStack, collector, light, firstPerson);
+			if (firstPerson) {
+				// a light or laser on its way from the pouch onto the rail (key P)
+				de.rcm.ballistic.client.gun.AttachAnim.submitCarried(poseStack, collector, light);
+			}
 		}
 		float back = p.slide() * SLIDE_TRAVEL;
 		// a round in the chamber shows through the port with the slide pulled back

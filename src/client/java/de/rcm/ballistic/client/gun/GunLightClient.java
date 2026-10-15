@@ -37,6 +37,7 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class GunLightClient {
 	private static KeyMapping key;
+	private static KeyMapping mountKey;
 	/** Laser lines to draw this frame: from, to, how visible the line itself is. */
 	private static final List<double[]> LASERS = new ArrayList<>();
 
@@ -45,7 +46,21 @@ public final class GunLightClient {
 
 	public static void init(KeyMapping.Category category) {
 		key = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.gun_light", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, category));
+		mountKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.gun_mount", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, category));
 		ClientTickEvents.END_CLIENT_TICK.register(GunLightClient::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(AttachAnim::tick);
+		// P mounts a light or laser on the gun in hand; vanilla also has P (social interactions): with a gun
+		// in hand ours wins, before vanilla handles its keys this tick
+		ClientTickEvents.START_CLIENT_TICK.register(mc -> {
+			while (mountKey.consumeClick()) {
+				if (mc.player != null && mc.screen == null && GunAttachments.isGun(mc.player.getMainHandItem())) {
+					while (mc.options.keySocialInteractions.consumeClick()) {
+						// swallowed
+					}
+					AttachAnim.request(mc);
+				}
+			}
+		});
 		// before the dynamic lights are drawn (they are registered after this), so the beams light this frame
 		WorldRenderEvents.END_MAIN.register(GunLightClient::render);
 	}
