@@ -25,6 +25,8 @@
 		"PlayerModelMixin",
 		"SkyRendererMixin",
 		"SoundEngineMixin",
+		"ThermalEntityMixin",
+		"ThermalLivingMixin",
 		"TitleScreenMixin"
 	],
 	"injectors": {

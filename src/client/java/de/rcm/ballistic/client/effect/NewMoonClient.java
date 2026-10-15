@@ -65,6 +65,8 @@ public final class NewMoonClient {
 		}
 		float dark = Mth.clamp(mc.level.getSkyDarken() / 11.0F, 0.0F, 1.0F);
 		float x = Mth.clamp((dark - 0.3F) / 0.55F, 0.0F, 1.0F);
-		return shown * x * x * (3.0F - 2.0F * x) * Mth.clamp(darkness / 100.0F, 0.01F, 1.0F);
+		// through night vision or a thermal camera the dark is no obstacle (the picture is amplified instead)
+		float seen = 1.0F - Math.max(0.8F * Vision.nightVision(0.0F), Vision.thermal(0.0F));
+		return shown * x * x * (3.0F - 2.0F * x) * Mth.clamp(darkness / 100.0F, 0.01F, 1.0F) * seen;
 	}
 }

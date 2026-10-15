@@ -85,7 +85,7 @@ public final class GunAttachmentModels {
 			poseStack.pushPose();
 			poseStack.translate(m.zx(), m.zy(), m.zz());
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> body.emit(pose, consumer, light));
-			if (att.laserOn()) {
+			if (att.laserOn() && (!att.ir() || de.rcm.ballistic.client.effect.Vision.seesInfrared())) {
 				collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> lens.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 			} else {
 				collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> lens.emit(pose, consumer, light, 0xFF603030));

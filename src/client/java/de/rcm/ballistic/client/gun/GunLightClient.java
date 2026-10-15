@@ -39,7 +39,7 @@ import org.lwjgl.glfw.GLFW;
 public final class GunLightClient {
 	private static KeyMapping key;
 	private static KeyMapping mountKey;
-	/** Laser lines to draw this frame: from, to, how visible the line itself is. */
+	/** Laser lines to draw this frame: from, to, infrared (1) or not. */
 	private static final List<double[]> LASERS = new ArrayList<>();
 
 	private GunLightClient() {
@@ -122,7 +122,9 @@ public final class GunLightClient {
 					}
 				}
 			}
-			if (a.laserShining()) {
+			// an infrared laser is seen only through night vision (and lights nothing the eye can see)
+			boolean irSeen = !a.ir() || de.rcm.ballistic.client.effect.Vision.seesInfrared();
+			if (a.laserShining() && irSeen) {
 				Vec3 from;
 				Vec3 dir;
 				if (ownView) {
@@ -141,8 +143,10 @@ public final class GunLightClient {
 				}
 				// the dot sits a hair off the surface, towards the gun, so it is not swallowed by it
 				end = end.subtract(aim.normalize().scale(0.012));
-				LASERS.add(new double[] {from.x, from.y, from.z, end.x, end.y, end.z});
-				DynamicLights.lamp(player.getId() * 8L + 2L, end.subtract(aim.normalize().scale(0.08)), 0xFF2410, 0.3F, 1.6F);
+				LASERS.add(new double[] {from.x, from.y, from.z, end.x, end.y, end.z, a.ir() ? 1.0 : 0.0});
+				if (!a.ir()) {
+					DynamicLights.lamp(player.getId() * 8L + 2L, end.subtract(aim.normalize().scale(0.08)), 0xFF2410, 0.3F, 1.6F);
+				}
 			}
 		}
 		if (LASERS.isEmpty()) {
@@ -150,12 +154,14 @@ public final class GunLightClient {
 		}
 		// the line itself shows faintly in clear air, plainly in smoke, rain and the dark
 		float day = 1.0F - Mth.clamp(mc.level.getSkyDarken() / 11.0F, 0.0F, 1.0F);
-		float air = Mth.clamp(0.08F + SmokeField.fog() * 1.5F + mc.level.getRainLevel(partial) * 0.3F + (1.0F - day) * 0.2F, 0.0F, 0.8F);
+		float airBase = Mth.clamp(0.08F + SmokeField.fog() * 1.5F + mc.level.getRainLevel(partial) * 0.3F + (1.0F - day) * 0.2F, 0.0F, 0.8F);
 		VertexConsumer consumer = context.consumers().getBuffer(RenderTypes.lightning());
 		PoseStack.Pose pose = context.matrices().last();
 		for (double[] l : LASERS) {
 			Vec3 a = new Vec3(l[0], l[1], l[2]).subtract(cam);
 			Vec3 b = new Vec3(l[3], l[4], l[5]).subtract(cam);
+			// an infrared beam through the tube: a bright thread whatever the air (the goggles turn it green)
+			float air = l[6] > 0.5 ? Math.max(airBase, 0.55F) : airBase;
 			// a 650 nm beam, a few millimetres across: a thin bright thread where the air scatters it, a fainter
 			// haze round it in smoke
 			ribbon(consumer, pose, a, b, 0.0025F, Math.round(air * 255.0F) << 24 | 0xFF2A18);

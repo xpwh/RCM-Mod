@@ -225,7 +225,16 @@ public class SettingsScreen extends Screen {
 					ModConfig.lightQuality = v;
 					ModConfig.dynamicLights = v > 0;
 				}));
-		this.list.row(toggle("eye_adaptation", ModConfig.eyeAdaptation, "eye_adaptation", v -> ModConfig.eyeAdaptation = v));
+		this.list.row(toggle("eye_adaptation", ModConfig.eyeAdaptation, "eye_adaptation", v -> ModConfig.eyeAdaptation = v),
+			toggle("auto_exposure", ModConfig.autoExposure, "auto_exposure", v -> ModConfig.autoExposure = v));
+		this.list.header("options.ballisticmissiles.section.shaders", 0xFF90D0FF);
+		this.list.row(toggle("real_water", ModConfig.realWater, "real_water", v -> ModConfig.realWater = v),
+			toggle("sun_shadows", ModConfig.sunShadows, "sun_shadows", v -> ModConfig.sunShadows = v));
+		this.list.row(toggle("ambient_occlusion", ModConfig.ambientOcclusion, "ambient_occlusion", v -> ModConfig.ambientOcclusion = v),
+			toggle("lens_flare", ModConfig.lensFlare, "lens_flare", v -> ModConfig.lensFlare = v));
+		IntSlider bloom = new IntSlider(0, 100, "options.ballisticmissiles.bloom", ModConfig.bloom, v -> ModConfig.bloom = v);
+		bloom.setTooltip(Tooltip.create(Component.translatable("options.ballisticmissiles.bloom.tooltip")));
+		this.list.row(bloom);
 	}
 
 	private void effects() {

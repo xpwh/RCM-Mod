@@ -105,6 +105,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.render.BulletHoles.init();
 		ModConfig.load();
 		de.rcm.ballistic.client.render.ExhaustPlume.init();
+		de.rcm.ballistic.client.effect.WorldFx.init(); // before the dynamic lights: the water is drawn first, then lit
 		de.rcm.ballistic.client.effect.DynamicLights.init();
 		de.rcm.ballistic.client.effect.EyeAdaptation.init();
 		de.rcm.ballistic.client.effect.Sky.init();

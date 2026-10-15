@@ -26,6 +26,10 @@ public final class EyeAdaptation {
 	private static float shadeO;
 	private static float shade;
 	private static final float[] LIT = new float[3];
+	/** What the eye has grown used to coming out of the dark: it takes a second or two to close down. */
+	private static float lightAdapted;
+	private static float over;
+	private static float overO;
 
 	private EyeAdaptation() {
 	}
@@ -38,6 +42,7 @@ public final class EyeAdaptation {
 	private static void tick(Minecraft mc) {
 		glareO = glare;
 		shadeO = shade;
+		overO = over;
 		if (mc.level == null || mc.player == null || !ModConfig.eyeAdaptation || mc.isPaused()) {
 			if (mc.level == null || !ModConfig.eyeAdaptation) {
 				glare = 0.0F;
@@ -70,6 +75,20 @@ public final class EyeAdaptation {
 		adapted += target > adapted ? (target - adapted) * 0.3F : (target - adapted) * 0.012F;
 		// how much darker the world looks than the eye is set for
 		shade = Mth.clamp((adapted - steady) * 0.85F, 0.0F, 0.7F);
+		// out of a dark bunker into the day: everything blinding white at first, settling as the eye closes down
+		lightAdapted += steady > lightAdapted ? (steady - lightAdapted) * 0.045F : (steady - lightAdapted) * 0.02F;
+		over = ModConfig.autoExposure ? Mth.clamp((steady - lightAdapted) * 1.5F - 0.05F, 0.0F, 0.85F) : 0.0F;
+		if (Vision.any() > 0.0F) {
+			// through goggles or a camera the picture is made for the eye
+			shade = 0.0F;
+			glare = 0.0F;
+			over = 0.0F;
+		}
+	}
+
+	/** How overexposed the picture is now (0-1), for the post effect. */
+	public static float overexposure(float partialTick) {
+		return Mth.lerp(partialTick, overO, over);
 	}
 
 	private static void render(GuiGraphics g, float partialTick) {

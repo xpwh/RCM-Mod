@@ -17,14 +17,19 @@ import net.minecraft.world.item.ItemStack;
  * What is mounted on a gun's rails - a weapon light, a laser module - and whether each is switched on.
  * Kept on the gun's stack, so every player who sees the gun sees them (and their light).
  */
-public record GunAttachments(boolean light, boolean laser, boolean lightOn, boolean laserOn) {
-	public static final GunAttachments NONE = new GunAttachments(false, false, false, false);
+public record GunAttachments(boolean light, boolean laser, boolean lightOn, boolean laserOn, boolean ir) {
+	public static final GunAttachments NONE = new GunAttachments(false, false, false, false, false);
+	/** What goes on: a weapon light, a (visible red) laser, an infrared laser - only seen through night vision. */
+	public static final int LIGHT = 0;
+	public static final int LASER = 1;
+	public static final int IR_LASER = 2;
 
 	public static final Codec<GunAttachments> CODEC = RecordCodecBuilder.create(i -> i.group(
 		Codec.BOOL.optionalFieldOf("light", false).forGetter(GunAttachments::light),
 		Codec.BOOL.optionalFieldOf("laser", false).forGetter(GunAttachments::laser),
 		Codec.BOOL.optionalFieldOf("light_on", false).forGetter(GunAttachments::lightOn),
-		Codec.BOOL.optionalFieldOf("laser_on", false).forGetter(GunAttachments::laserOn)
+		Codec.BOOL.optionalFieldOf("laser_on", false).forGetter(GunAttachments::laserOn),
+		Codec.BOOL.optionalFieldOf("ir", false).forGetter(GunAttachments::ir)
 	).apply(i, GunAttachments::new));
 
 	public static final StreamCodec<ByteBuf, GunAttachments> STREAM_CODEC = StreamCodec.composite(
@@ -32,6 +37,7 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 		ByteBufCodecs.BOOL, GunAttachments::laser,
 		ByteBufCodecs.BOOL, GunAttachments::lightOn,
 		ByteBufCodecs.BOOL, GunAttachments::laserOn,
+		ByteBufCodecs.BOOL, GunAttachments::ir,
 		GunAttachments::new
 	);
 
@@ -67,7 +73,7 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 			boolean l = (next & 1) != 0;
 			boolean z = (next & 2) != 0;
 			if ((!l || this.light) && (!z || this.laser)) {
-				return new GunAttachments(this.light, this.laser, l, z);
+				return new GunAttachments(this.light, this.laser, l, z, this.ir);
 			}
 		}
 		return this;
@@ -106,7 +112,7 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 			player.getInventory().placeItemBackInInventory(new ItemStack(ModRegistry.WEAPON_LIGHT));
 		}
 		if (a.laser) {
-			player.getInventory().placeItemBackInInventory(new ItemStack(ModRegistry.LASER_MODULE));
+			player.getInventory().placeItemBackInInventory(new ItemStack(a.ir ? ModRegistry.IR_LASER_MODULE : ModRegistry.LASER_MODULE));
 		}
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_MAG_OUT, SoundSource.PLAYERS, 0.5F, 1.4F);
 		player.displayClientMessage(Component.translatable("message.ballisticmissiles.attachment_removed").withStyle(ChatFormatting.GRAY), true);
@@ -117,15 +123,20 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 	private static final java.util.Map<java.util.UUID, long[]> PENDING = new java.util.HashMap<>();
 
 	/**
-	 * The player started mounting a light (or laser) from their inventory on the gun in their hand: it goes
-	 * on when the animation clicks it home, if they still hold the gun and have the device then.
+	 * The player started mounting a light, a laser or an IR laser ({@code kind}) from their inventory on the
+	 * gun in their hand: it goes on when the animation clicks it home, if they still hold the gun and have
+	 * the device then.
 	 */
-	public static void startMount(ServerPlayer player, boolean light) {
+	public static void startMount(ServerPlayer player, int kind) {
 		ItemStack gun = player.getMainHandItem();
-		if (!isGun(gun) || (light ? of(gun).light : of(gun).laser)) {
+		if (!isGun(gun) || (kind == LIGHT ? of(gun).light : of(gun).laser)) {
 			return;
 		}
-		PENDING.put(player.getUUID(), new long[] {player.level().getGameTime() + MOUNT_TICKS, light ? 1 : 0});
+		PENDING.put(player.getUUID(), new long[] {player.level().getGameTime() + MOUNT_TICKS, kind});
+	}
+
+	public static net.minecraft.world.item.Item device(int kind) {
+		return kind == LIGHT ? ModRegistry.WEAPON_LIGHT : kind == IR_LASER ? ModRegistry.IR_LASER_MODULE : ModRegistry.LASER_MODULE;
 	}
 
 	/** Called every server tick: mounts what is due. */
@@ -141,13 +152,13 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 			if (player.level().getGameTime() < e.getValue()[0]) {
 				return false;
 			}
-			boolean light = e.getValue()[1] == 1;
-			net.minecraft.world.item.Item device = light ? ModRegistry.WEAPON_LIGHT : ModRegistry.LASER_MODULE;
+			int kind = (int) e.getValue()[1];
+			net.minecraft.world.item.Item device = device(kind);
 			var inv = player.getInventory();
 			for (int i = 0; i < inv.getContainerSize(); i++) {
 				ItemStack s = inv.getItem(i);
 				if (s.is(device)) {
-					if (mount(player, InteractionHand.MAIN_HAND, light) && !player.getAbilities().instabuild) {
+					if (mount(player, InteractionHand.MAIN_HAND, kind) && !player.getAbilities().instabuild) {
 						s.shrink(1);
 					}
 					break;
@@ -157,8 +168,9 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 		});
 	}
 
-	/** Mounts {@code light} or a laser on the gun held in {@code gunHand}; false if it already has one. */
-	public static boolean mount(ServerPlayer player, InteractionHand gunHand, boolean light) {
+	/** Mounts a light, laser or IR laser ({@code kind}) on the gun held in {@code gunHand}; false if it already has one. */
+	public static boolean mount(ServerPlayer player, InteractionHand gunHand, int kind) {
+		boolean light = kind == LIGHT;
 		ItemStack gun = player.getItemInHand(gunHand);
 		if (!isGun(gun)) {
 			return false;
@@ -168,9 +180,11 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.attachment_already").withStyle(ChatFormatting.YELLOW), true);
 			return false;
 		}
-		gun.set(ModRegistry.GUN_ATTACHMENTS, light ? new GunAttachments(true, a.laser, false, a.laserOn) : new GunAttachments(a.light, true, a.lightOn, false));
+		gun.set(ModRegistry.GUN_ATTACHMENTS, light ? new GunAttachments(true, a.laser, false, a.laserOn, a.ir)
+			: new GunAttachments(a.light, true, a.lightOn, false, kind == IR_LASER));
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_MAG_IN, SoundSource.PLAYERS, 0.5F, 1.5F);
-		player.displayClientMessage(Component.translatable(light ? "message.ballisticmissiles.attachment_light_on" : "message.ballisticmissiles.attachment_laser_on")
+		player.displayClientMessage(Component.translatable(light ? "message.ballisticmissiles.attachment_light_on"
+			: kind == IR_LASER ? "message.ballisticmissiles.attachment_ir_on" : "message.ballisticmissiles.attachment_laser_on")
 			.withStyle(ChatFormatting.GREEN), true);
 		return true;
 	}

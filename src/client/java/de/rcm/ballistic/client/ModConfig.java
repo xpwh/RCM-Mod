@@ -53,6 +53,18 @@ public final class ModConfig {
 	public static boolean realSky = true;
 	/** The eye adapting to the dark slowly, dazzled by flashes at night. */
 	public static boolean eyeAdaptation = true;
+	/** Water mirrors the sky and what is round it, with waves (screen-space reflections). */
+	public static boolean realWater = true;
+	/** Sunlight casts shadows (traced through the depth of the picture). */
+	public static boolean sunShadows = true;
+	/** Soft darkening in corners and crevices (screen-space ambient occlusion). */
+	public static boolean ambientOcclusion = true;
+	/** The sun's lens flare when you look near it. */
+	public static boolean lensFlare = true;
+	/** Bright lights glow over what is round them, 0-100. */
+	public static int bloom = 40;
+	/** Stepping out of the dark into daylight blinds you for a moment. */
+	public static boolean autoExposure = true;
 	public static boolean blood = true;
 	/** Limbs shot off shown as they are (the stump, the shortened leg); off: they stay whole to look at. */
 	public static boolean gore = true;
@@ -113,6 +125,12 @@ public final class ModConfig {
 			lightShafts = bool(p, "lightShafts", lightShafts);
 			realSky = bool(p, "realSky", realSky);
 			eyeAdaptation = bool(p, "eyeAdaptation", eyeAdaptation);
+			realWater = bool(p, "realWater", realWater);
+			sunShadows = bool(p, "sunShadows", sunShadows);
+			ambientOcclusion = bool(p, "ambientOcclusion", ambientOcclusion);
+			lensFlare = bool(p, "lensFlare", lensFlare);
+			bloom = percent(p, "bloom", bloom);
+			autoExposure = bool(p, "autoExposure", autoExposure);
 			blood = bool(p, "blood", blood);
 			gore = bool(p, "gore", gore);
 			goreWarning = bool(p, "goreWarning", goreWarning);
@@ -144,6 +162,12 @@ public final class ModConfig {
 			p.setProperty("lightShafts", Boolean.toString(lightShafts));
 			p.setProperty("realSky", Boolean.toString(realSky));
 			p.setProperty("eyeAdaptation", Boolean.toString(eyeAdaptation));
+			p.setProperty("realWater", Boolean.toString(realWater));
+			p.setProperty("sunShadows", Boolean.toString(sunShadows));
+			p.setProperty("ambientOcclusion", Boolean.toString(ambientOcclusion));
+			p.setProperty("lensFlare", Boolean.toString(lensFlare));
+			p.setProperty("bloom", Integer.toString(bloom));
+			p.setProperty("autoExposure", Boolean.toString(autoExposure));
 			p.setProperty("blood", Boolean.toString(blood));
 			p.setProperty("gore", Boolean.toString(gore));
 			p.setProperty("goreWarning", Boolean.toString(goreWarning));

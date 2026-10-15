@@ -69,7 +69,7 @@ public final class Sky {
 	}
 
 	/** Direction to the sun (it moves through the x-y plane, rising in the east). */
-	private static Vector3f sun(Minecraft mc, float partialTick) {
+	static Vector3f sun(Minecraft mc, float partialTick) {
 		float angle = mc.gameRenderer.getMainCamera().attributeProbe().getValue(EnvironmentAttributes.SUN_ANGLE, partialTick) * Mth.DEG_TO_RAD;
 		return new Vector3f(-Mth.sin(angle), Mth.cos(angle), 0.0F);
 	}

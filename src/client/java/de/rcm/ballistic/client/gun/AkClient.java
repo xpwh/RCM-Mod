@@ -75,6 +75,7 @@ public final class AkClient {
 		check = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.mag_check", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, CATEGORY));
 		inspect = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.ballisticmissiles.inspect", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, CATEGORY));
 		GunLightClient.init(CATEGORY);
+		de.rcm.ballistic.client.effect.Vision.init(CATEGORY);
 		ClientTickEvents.END_CLIENT_TICK.register(AkClient::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(GunAudio::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(ShellCasings::tick);

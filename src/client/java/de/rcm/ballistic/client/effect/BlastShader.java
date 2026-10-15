@@ -152,7 +152,9 @@ public final class BlastShader {
 			return;
 		}
 		boolean wanted = mc.level != null && de.rcm.ballistic.client.ModConfig.screenEffects > 0 && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
-			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F || suppression > 0.01F || loss > 0.01F);
+			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F || suppression > 0.01F || loss > 0.01F
+			|| Vision.any() > 0.01F || de.rcm.ballistic.client.ModConfig.bloom > 0 || de.rcm.ballistic.client.ModConfig.lensFlare
+			|| EyeAdaptation.overexposure(0.0F) > 0.01F);
 		if (!wanted) {
 			if (ours) {
 				renderer.clearPostEffect();
@@ -162,8 +164,9 @@ public final class BlastShader {
 		}
 		if (params == null) {
 			// registered before the effect first loads, so the post chain picks this texture up
-			params = new DynamicTexture(() -> "Blast shader parameters", 8, 1, false);
+			params = new DynamicTexture(() -> "Blast shader parameters", 12, 1, false);
 			mc.getTextureManager().register(PARAMS, params);
+			WorldFx.ensureTextures(mc);
 		}
 		if (!ours) {
 			((GameRendererAccessor) renderer).ballisticmissiles$setPostEffect(EFFECT);
@@ -267,6 +270,29 @@ public final class BlastShader {
 		float heart = Heartbeat.phase();
 		float pulse = loss <= 0.0F ? 0.0F : throb(heart >= 0.0F ? heart : ownBeat);
 		img.setPixel(7, 0, argb(255, loss * k, pulse, Mth.clamp((loss - 0.35F) / 0.5F, 0.0F, 1.0F) * k));
+		// seeing in the dark: night vision (and how hard the tube amplifies: harder the darker it is), thermal
+		float night = mc.level == null ? 0.0F : Mth.clamp(mc.level.getSkyDarken() / 11.0F, 0.0F, 1.0F);
+		float sky = mc.level == null ? 0.0F : mc.level.getBrightness(net.minecraft.world.level.LightLayer.SKY, camera.blockPosition()) / 15.0F;
+		float gain = Mth.clamp(0.12F + 0.88F * Math.max(night, 1.0F - sky), 0.0F, 1.0F);
+		img.setPixel(8, 0, argb(byteOf(gain), Vision.nightVision(partialTick), Vision.thermal(partialTick), Vision.warmUp()));
+		// the sun: where it is on screen and how much of a flare it throws (by day, in clear weather)
+		org.joml.Vector3f sun = Sky.sun(mc, partialTick);
+		float flare = 0.0F;
+		float[] sunScreen = {0.5F, 0.5F, 0.0F, 0.0F};
+		if (de.rcm.ballistic.client.ModConfig.lensFlare && mc.level != null && mc.level.dimension() == net.minecraft.world.level.Level.OVERWORLD
+			&& camera.getFluidInCamera() == net.minecraft.world.level.material.FogType.NONE) {
+			sunScreen = project(camera, camera.position().add(sun.x * 1000.0, sun.y * 1000.0, sun.z * 1000.0), tanHalf, aspect);
+			float up = Mth.clamp((sun.y + 0.02F) / 0.12F, 0.0F, 1.0F);
+			float clear = (1.0F - mc.level.getRainLevel(partialTick)) * (1.0F - WinterClient.amount());
+			float edge = Mth.clamp(1.0F - (Math.max(Math.abs(sunScreen[0] - 0.5F), Math.abs(sunScreen[1] - 0.5F)) - 0.5F) / 0.25F, 0.0F, 1.0F);
+			flare = sunScreen[3] > 0.0F ? up * clear * edge : 0.0F;
+		}
+		img.setPixel(9, 0, argb(255, Mth.clamp(sunScreen[0], 0.0F, 1.0F), Mth.clamp(sunScreen[1], 0.0F, 1.0F), flare));
+		// bloom (and what counts as bright enough: by day only the sun and the white-hot, at night every lamp),
+		// and how overexposed the picture is coming out of the dark
+		float bloomAmount = de.rcm.ballistic.client.ModConfig.bloom / 100.0F;
+		img.setPixel(10, 0, argb(255, bloomAmount, EyeAdaptation.overexposure(partialTick), Mth.lerp(night, 0.86F, 0.55F)));
+		img.setPixel(11, 0, argb(255, 0.0F, 0.0F, 0.0F));
 		params.upload();
 	}
 

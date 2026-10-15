@@ -54,7 +54,8 @@ public final class AttachAnim {
 		GunAttachments a = GunAttachments.of(stack);
 		boolean haveLight = mc.player.getInventory().contains(new ItemStack(ModRegistry.WEAPON_LIGHT));
 		boolean haveLaser = mc.player.getInventory().contains(new ItemStack(ModRegistry.LASER_MODULE));
-		Boolean which = !a.light() && haveLight ? Boolean.TRUE : !a.laser() && haveLaser ? Boolean.FALSE : null;
+		boolean haveIr = mc.player.getInventory().contains(new ItemStack(ModRegistry.IR_LASER_MODULE));
+		Boolean which = !a.light() && haveLight ? Boolean.TRUE : !a.laser() && (haveLaser || haveIr) ? Boolean.FALSE : null;
 		if (which == null) {
 			String key = a.light() && a.laser() ? "message.ballisticmissiles.attachment_full" : "message.ballisticmissiles.attachment_none_in_inventory";
 			mc.gui.setOverlayMessage(Component.translatable(key), false);
@@ -64,7 +65,7 @@ public final class AttachAnim {
 		gun = stack.getItem();
 		start = mc.level.getGameTime();
 		lastSound = -1;
-		ClientPlayNetworking.send(new GunInputPayload(light ? GunInputPayload.ATTACH_LIGHT : GunInputPayload.ATTACH_LASER));
+		ClientPlayNetworking.send(new GunInputPayload(light ? GunInputPayload.ATTACH_LIGHT : haveLaser ? GunInputPayload.ATTACH_LASER : GunInputPayload.ATTACH_IR_LASER));
 	}
 
 	private static boolean active(float now) {

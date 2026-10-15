@@ -18,11 +18,12 @@ import net.minecraft.world.level.Level;
  * shotgun) in the other, a right-click mounts it on the gun.
  */
 public class AttachmentItem extends Item {
-	private final boolean light;
+	private final int kind;
 
-	public AttachmentItem(Properties properties, boolean light) {
+	/** @param kind {@link GunAttachments#LIGHT}, {@link GunAttachments#LASER} or {@link GunAttachments#IR_LASER} */
+	public AttachmentItem(Properties properties, int kind) {
 		super(properties);
-		this.light = light;
+		this.kind = kind;
 	}
 
 	@Override
@@ -34,7 +35,7 @@ public class AttachmentItem extends Item {
 			}
 			return InteractionResult.FAIL;
 		}
-		if (player instanceof ServerPlayer server && GunAttachments.mount(server, other, this.light) && !player.getAbilities().instabuild) {
+		if (player instanceof ServerPlayer server && GunAttachments.mount(server, other, this.kind) && !player.getAbilities().instabuild) {
 			player.getItemInHand(hand).shrink(1);
 		}
 		return InteractionResult.SUCCESS;
@@ -42,7 +43,7 @@ public class AttachmentItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
-		String key = this.light ? "weapon_light" : "laser_module";
+		String key = this.kind == GunAttachments.LIGHT ? "weapon_light" : this.kind == GunAttachments.IR_LASER ? "ir_laser_module" : "laser_module";
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles." + key).withStyle(ChatFormatting.GRAY));
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.attachment_usage").withStyle(ChatFormatting.GOLD));
 	}

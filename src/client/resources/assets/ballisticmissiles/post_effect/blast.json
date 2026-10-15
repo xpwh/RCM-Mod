@@ -15,7 +15,14 @@
 				{
 					"sampler_name": "Params",
 					"location": "ballisticmissiles:blast_params",
-					"width": 8,
+					"width": 12,
+					"height": 1,
+					"bilinear": false
+				},
+				{
+					"sampler_name": "Depth",
+					"location": "ballisticmissiles:fx_full_depth",
+					"width": 1,
 					"height": 1,
 					"bilinear": false
 				}

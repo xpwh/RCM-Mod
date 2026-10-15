@@ -13,10 +13,15 @@
 //    and the negative afterimage a nuclear flash burns into the eye
 //  * shock and blood loss: the colour draining out of the world, the edges going black and throbbing
 //    with the heart, the picture doubling and swimming as the eyes stop holding it together
-// Expensive parts only run while they are visible; idle the shader is not even active.
+//  * always (as set): bloom round lamps, fire and the sun; the sun's lens flare (hidden when something
+//    stands in front of it); the picture blown out white stepping from the dark into daylight
+//  * night vision: the world amplified into grainy green, lamps flaring, seen through round eyepieces;
+//    thermal: warm bodies and hot engines white on the cold grey land, the sky black
+// Expensive parts only run while they are visible.
 
 uniform sampler2D InSampler;
 uniform sampler2D ParamsSampler;
+uniform sampler2D DepthSampler; // the world's depth at the end of the main pass (no hand in it)
 
 in vec2 texCoord;
 
@@ -332,10 +337,111 @@ void main() {
         col *= 1.0 - pulse * 0.12 * bloodLoss;
     }
 
+    vec4 p8 = param(8);
+    vec4 p9 = param(9);
+    vec4 p10 = param(10);
+
+    // ---- bloom: the bright glowing over what is round them (lamps, fire, the sun)
+    float bloomAmt = p10.r;
+    if (bloomAmt > 0.0) {
+        float threshold = p10.b;
+        vec3 glow = vec3(0.0);
+        float weight = 0.0;
+        for (int ring = 1; ring <= 3; ring++) {
+            float rad = float(ring) * float(ring) * 0.0035 + 0.002;
+            float w = 1.0 / float(ring);
+            for (int i = 0; i < 8; i++) {
+                float a = float(i) * 0.785398 + float(ring) * 0.39;
+                glow += hot(texture(InSampler, uv + vec2(cos(a) / aspect, sin(a)) * rad).rgb, threshold) * w;
+                weight += w;
+            }
+        }
+        col += glow / weight * bloomAmt * 1.1;
+    }
+
+    // ---- the sun's lens flare: only while it is in clear view (the world's depth round it is the sky's)
+    float flareAmt = p9.b;
+    if (flareAmt > 0.0) {
+        vec2 sunPos = p9.rg;
+        float vis = 0.0;
+        for (int i = 0; i < 9; i++) {
+            vec2 s = sunPos + vec2(float(i % 3) - 1.0, float(i / 3) - 1.0) * vec2(0.005 / aspect, 0.005);
+            if (s.x > 0.0 && s.y > 0.0 && s.x < 1.0 && s.y < 1.0) {
+                vis += step(0.99999, texture(DepthSampler, s).r);
+            }
+        }
+        float k = flareAmt * vis / 9.0;
+        if (k > 0.0) {
+            vec2 d = (texCoord - sunPos) * vec2(aspect, 1.0);
+            float r = length(d);
+            // the glare round the sun, and a faint six-pointed starburst from the iris
+            col += vec3(1.0, 0.93, 0.8) * exp(-r * 7.0) * 0.3 * k;
+            float ang = atan(d.y, d.x);
+            col += vec3(1.0, 0.96, 0.88) * pow(abs(cos(ang * 3.0)), 40.0) * exp(-r * 4.0) * 0.1 * k;
+            // ghosts of the aperture strung along the line through the middle of the frame
+            vec2 axis = vec2(0.5) - sunPos;
+            for (int i = 0; i < 6; i++) {
+                float f = 0.3 + float(i) * 0.38;
+                float size = 0.02 + 0.03 * fract(float(i) * 0.618 + 0.2);
+                vec2 g = (texCoord - (sunPos + axis * f * 2.0)) * vec2(aspect, 1.0);
+                float disc = smoothstep(size, size * 0.6, length(g));
+                vec3 tint = vec3(0.55 + 0.45 * sin(float(i) * 1.7), 0.6 + 0.4 * sin(float(i) * 1.7 + 2.1), 0.7 + 0.3 * sin(float(i) * 1.7 + 4.2));
+                col += tint * disc * 0.05 * k;
+            }
+            // a pale ring round the middle of the frame
+            float ring = length((texCoord - (sunPos + axis * 2.0 * 0.5)) * vec2(aspect, 1.0));
+            col += vec3(0.6, 0.8, 1.0) * smoothstep(0.012, 0.0, abs(ring - 0.32)) * 0.03 * k;
+        }
+    }
+
+    // ---- out of the dark into daylight: blown out white, settling as the eye closes down
+    float over = p10.g;
+    if (over > 0.0) {
+        col = 1.0 - pow(1.0 - clamp(col, 0.0, 1.0), vec3(1.0 + 4.0 * over));
+        col = mix(col, vec3(1.0), over * 0.3);
+    }
+
     // ---- tunnel vision and grain
     float vig = 1.0 - smoothstep(0.35, 0.95, length(c * vec2(aspect * 0.8, 1.0)));
     col *= mix(1.0, vig, 0.45 * strength + 0.5 * shock + 0.15 * rays);
     col += (hash(texCoord * OutSize + fract(time) * 91.0) - 0.5) * (0.045 * strength + 0.03 * shock + 0.015 * rays);
+
+    // ---- night vision: an image intensifier - what little light there is amplified into green, the
+    // brightest flaring out, a fine boiling grain over everything, seen through round eyepieces
+    float nv = p8.r;
+    if (nv > 0.0) {
+        float gain = 2.0 + 16.0 * p8.a;
+        float l = luma(col);
+        float lit = 1.0 - exp(-l * gain);
+        lit = pow(lit, 1.5); // the tube's contrast: dark stays dark, the lit stands out
+        vec3 halo = vec3(0.0);
+        for (int i = 0; i < 8; i++) {
+            float a = float(i) * 0.785398;
+            halo += hot(texture(InSampler, uv + vec2(cos(a) / aspect, sin(a)) * 0.012).rgb, 0.25);
+        }
+        lit += luma(halo) / 8.0 * gain * 0.05;
+        float grain = hash(texCoord * OutSize + fract(time * 7.31) * 113.0);
+        lit = lit * (0.85 + 0.3 * grain) + (grain - 0.5) * 0.04;
+        lit += p8.b * 0.7; // a fresh tube warming up
+        vec3 phosphor = vec3(0.3, 1.0, 0.42) * clamp(lit, 0.0, 1.2) + vec3(0.015, 0.04, 0.02);
+        float rr = length((texCoord - 0.5) * vec2(aspect, 1.0));
+        phosphor *= 1.0 - smoothstep(0.43, 0.5, rr);
+        phosphor *= 1.0 - 0.25 * smoothstep(0.2, 0.45, rr);
+        col = mix(col, phosphor, nv);
+    }
+
+    // ---- thermal: brightness is heat - the cold land a flat grey, bodies and engines white, the sky black
+    float thermalView = p8.g;
+    if (thermalView > 0.0) {
+        vec3 soft = (texture(InSampler, uv + vec2(px.x, 0.0)).rgb + texture(InSampler, uv - vec2(px.x, 0.0)).rgb
+            + texture(InSampler, uv + vec2(0.0, px.y)).rgb + texture(InSampler, uv - vec2(0.0, px.y)).rgb) * 0.25;
+        float l = luma(mix(col, soft, 0.5));
+        float h = l < 0.72 ? 0.07 + l * 0.42 : mix(0.37, 1.0, smoothstep(0.72, 0.95, l));
+        float skyPx = step(0.99999, texture(DepthSampler, uv).r);
+        h = mix(h, 0.03, skyPx);
+        h += (hash(texCoord * OutSize + fract(time * 5.7) * 71.0) - 0.5) * 0.035;
+        col = mix(col, vec3(clamp(h, 0.0, 1.0)), thermalView);
+    }
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

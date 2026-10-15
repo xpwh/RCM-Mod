@@ -529,10 +529,15 @@ public final class ModRegistry {
 		"runway_light", props -> new BlockItem(RUNWAY_LIGHT, props), new Item.Properties().useBlockDescriptionPrefix()
 	);
 	public static final Item WEAPON_LIGHT = registerItem(
-		"weapon_light", props -> new de.rcm.ballistic.gun.AttachmentItem(props, true), new Item.Properties().stacksTo(16)
+		"weapon_light", props -> new de.rcm.ballistic.gun.AttachmentItem(props, de.rcm.ballistic.gun.GunAttachments.LIGHT), new Item.Properties().stacksTo(16)
 	);
 	public static final Item LASER_MODULE = registerItem(
-		"laser_module", props -> new de.rcm.ballistic.gun.AttachmentItem(props, false), new Item.Properties().stacksTo(16)
+		"laser_module", props -> new de.rcm.ballistic.gun.AttachmentItem(props, de.rcm.ballistic.gun.GunAttachments.LASER), new Item.Properties().stacksTo(16)
+	);
+	/** An infrared aiming laser: its beam and dot are seen only through night vision. */
+	public static final Item IR_LASER_MODULE = registerItem(
+		"ir_laser_module", props -> new de.rcm.ballistic.gun.AttachmentItem(props, de.rcm.ballistic.gun.GunAttachments.IR_LASER),
+		new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)
 	);
 	public static final Item FIRST_AID_KIT = registerItem(
 		"first_aid_kit", props -> new de.rcm.ballistic.injury.MedicalItem(false, props), new Item.Properties().durability(4)
@@ -564,6 +569,15 @@ public final class ModRegistry {
 	public static final Item HAZMAT_SUIT = registerItem("hazmat_suit", Item::new, new Item.Properties().humanoidArmor(HAZMAT_MATERIAL, ArmorType.CHESTPLATE));
 	public static final Item HAZMAT_LEGGINGS = registerItem("hazmat_leggings", Item::new, new Item.Properties().humanoidArmor(HAZMAT_MATERIAL, ArmorType.LEGGINGS));
 	public static final Item HAZMAT_BOOTS = registerItem("hazmat_boots", Item::new, new Item.Properties().humanoidArmor(HAZMAT_MATERIAL, ArmorType.BOOTS));
+
+	/** Night-vision goggles, worn on the head; key H flips them down (an image intensifier, see the client's Vision). */
+	public static final ArmorMaterial NIGHT_VISION_MATERIAL = new ArmorMaterial(
+		10, Map.of(ArmorType.HELMET, 1, ArmorType.CHESTPLATE, 1, ArmorType.LEGGINGS, 1, ArmorType.BOOTS, 1, ArmorType.BODY, 1), 5,
+		SoundEvents.ARMOR_EQUIP_LEATHER, 0.0F, 0.0F, ItemTags.REPAIRS_LEATHER_ARMOR,
+		ResourceKey.create(EquipmentAssets.ROOT_ID, BallisticMissiles.id("night_vision"))
+	);
+	public static final Item NIGHT_VISION_GOGGLES = registerItem("night_vision_goggles", props -> new de.rcm.ballistic.item.InfoItem(props, "night_vision_goggles", 2),
+		new Item.Properties().humanoidArmor(NIGHT_VISION_MATERIAL, ArmorType.HELMET).rarity(Rarity.UNCOMMON));
 
 	public static final Item GEIGER_COUNTER = registerItem("geiger_counter", GeigerCounterItem::new, new Item.Properties().stacksTo(1));
 	public static final Item MISSILE_SILO_ITEM = registerItem(
@@ -836,6 +850,7 @@ public final class ModRegistry {
 		output.accept(GLOCK_MAG_EXTENDED);
 		output.accept(WEAPON_LIGHT);
 		output.accept(LASER_MODULE);
+		output.accept(IR_LASER_MODULE);
 		output.accept(AK_MAG);
 		output.accept(AK_MAG_TRACER);
 		output.accept(AK_MAG_TRACER_RED);
@@ -881,6 +896,7 @@ public final class ModRegistry {
 		output.accept(HAZMAT_LEGGINGS);
 		output.accept(HAZMAT_BOOTS);
 		output.accept(GEIGER_COUNTER);
+		output.accept(NIGHT_VISION_GOGGLES);
 	});
 	/** Building blocks of the wasteland blasts leave behind. */
 	public static final CreativeModeTab TAB_BLOCKS = tab("blocks", () -> SMOLDERING_EARTH_ITEM, output -> {
