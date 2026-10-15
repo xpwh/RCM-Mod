@@ -51,6 +51,8 @@ public final class ModConfig {
 	public static boolean cumulusClouds = false;
 	public static boolean lightShafts = true;
 	public static boolean realSky = true;
+	/** The eye adapting to the dark slowly, dazzled by flashes at night. */
+	public static boolean eyeAdaptation = true;
 	public static boolean blood = true;
 	/** Limbs shot off shown as they are (the stump, the shortened leg); off: they stay whole to look at. */
 	public static boolean gore = true;
@@ -71,6 +73,8 @@ public final class ModConfig {
 	public static boolean bulletHoles = true;
 	/** Muzzle flashes, rocket motors and explosions light up the world round them. */
 	public static boolean dynamicLights = true;
+	/** Dynamic light quality: 0 off, 1 low (few lights, hard shadows), 2 high, 3 ultra (many, soft shadows). */
+	public static int lightQuality = 2;
 	/** The connected server's misfire setting, as it last told us (shown in the settings, not saved here). */
 	public static int serverMisfireChance;
 	/** The connected server's other world settings, as it last told us. */
@@ -108,6 +112,7 @@ public final class ModConfig {
 			cumulusClouds = "cumulus".equals(p.getProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer"));
 			lightShafts = bool(p, "lightShafts", lightShafts);
 			realSky = bool(p, "realSky", realSky);
+			eyeAdaptation = bool(p, "eyeAdaptation", eyeAdaptation);
 			blood = bool(p, "blood", blood);
 			gore = bool(p, "gore", gore);
 			goreWarning = bool(p, "goreWarning", goreWarning);
@@ -117,6 +122,12 @@ public final class ModConfig {
 			explosionVolume = percent(p, "explosionVolume", explosionVolume);
 			bulletHoles = bool(p, "bulletHoles", bulletHoles);
 			dynamicLights = bool(p, "dynamicLights", dynamicLights);
+			try {
+				lightQuality = net.minecraft.util.Mth.clamp(Integer.parseInt(p.getProperty("lightQuality", dynamicLights ? "2" : "0").trim()), 0, 3);
+			} catch (NumberFormatException e) {
+				lightQuality = 2;
+			}
+			dynamicLights = lightQuality > 0;
 		} catch (Exception e) {
 			BallisticMissiles.LOGGER.warn("Could not read {}: {}", FILE, e.toString());
 		}
@@ -132,6 +143,7 @@ public final class ModConfig {
 			p.setProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer");
 			p.setProperty("lightShafts", Boolean.toString(lightShafts));
 			p.setProperty("realSky", Boolean.toString(realSky));
+			p.setProperty("eyeAdaptation", Boolean.toString(eyeAdaptation));
 			p.setProperty("blood", Boolean.toString(blood));
 			p.setProperty("gore", Boolean.toString(gore));
 			p.setProperty("goreWarning", Boolean.toString(goreWarning));
@@ -141,6 +153,7 @@ public final class ModConfig {
 			p.setProperty("explosionVolume", Integer.toString(explosionVolume));
 			p.setProperty("bulletHoles", Boolean.toString(bulletHoles));
 			p.setProperty("dynamicLights", Boolean.toString(dynamicLights));
+			p.setProperty("lightQuality", Integer.toString(lightQuality));
 			Files.createDirectories(FILE.getParent());
 			try (var out = Files.newOutputStream(FILE)) {
 				p.store(out, "Ballistic Missiles - client settings (settings screen, /bmconfig, /volcloud)");

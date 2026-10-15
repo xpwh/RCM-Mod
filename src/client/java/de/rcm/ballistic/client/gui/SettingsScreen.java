@@ -217,7 +217,15 @@ public class SettingsScreen extends Screen {
 				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.cloud_style"), (b, v) -> ModConfig.cumulusClouds = v));
 		this.list.header("options.ballisticmissiles.section.light", 0xFFFFE080);
 		this.list.row(toggle("real_sky", ModConfig.realSky, "real_sky", v -> ModConfig.realSky = v),
-			toggle("dynamic_lights", ModConfig.dynamicLights, "dynamic_lights", v -> ModConfig.dynamicLights = v));
+			CycleButton.builder((Integer q) -> q == 0 ? CommonComponents.OPTION_OFF
+						: Component.translatable("options.ballisticmissiles.quality." + (q == 1 ? "low" : q == 2 ? "high" : "ultra")), ModConfig.lightQuality)
+				.withValues(0, 1, 2, 3)
+				.withTooltip(q -> Tooltip.create(Component.translatable("options.ballisticmissiles.dynamic_lights.tooltip")))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.dynamic_lights"), (b, v) -> {
+					ModConfig.lightQuality = v;
+					ModConfig.dynamicLights = v > 0;
+				}));
+		this.list.row(toggle("eye_adaptation", ModConfig.eyeAdaptation, "eye_adaptation", v -> ModConfig.eyeAdaptation = v));
 	}
 
 	private void effects() {

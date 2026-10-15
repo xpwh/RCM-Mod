@@ -114,7 +114,8 @@ void main() {
             vec3 lit = ambient + sunCol * sunT * mix(1.0, powder, 0.5 * away) * phase * 0.9;
             lit += boltCol * (0.25 + 0.75 * (1.0 - h) * (1.0 - h)) * (0.4 + 0.6 * d);
             // a rocket engine (or a fireball) inside or under the cloud: it glows orange round it
-            lit += vec3(1.0, 0.45, 0.16) * glow * glow * 1.5 * (0.3 + 0.7 * d);
+            // (a big fireball's light reaches across the cloud base, lighting it from below)
+            lit += vec3(1.0, 0.5, 0.2) * glow * (0.5 + 1.2 * glow) * (0.3 + 0.7 * d);
             // exhaust smoke: dingy grey-brown
             lit *= mix(vec3(1.0), vec3(0.62, 0.6, 0.58), smoke);
             float a = 1.0 - exp(-d * sigma * stepLen);

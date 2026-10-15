@@ -102,6 +102,9 @@ final class RoundHatchModel {
 
 		if (state.counting && Mth.sin(state.time * 0.9F) > 0.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> GLOW.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			for (int i = 0; i < BEACONS.length; i++) {
+				de.rcm.ballistic.client.effect.DynamicLights.blockLamp(state.blockPos, i, BEACONS[i][0], SEAT + 0.85F, BEACONS[i][1], 0xFF2414, 0.85F, 10.0F);
+			}
 		}
 	}
 

@@ -114,6 +114,10 @@ public class InclinedLauncherRenderer implements BlockEntityRenderer<InclinedLau
 		if (state.status == 1 || (state.status == 2 && Mth.sin(state.time * 0.6F) > 0.0F)) {
 			BoxMesh lamp = state.status == 1 ? LAMP_GREEN : LAMP_RED;
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> lamp.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			// the status lamp lights the firing box and the ground round it
+			org.joml.Vector3f at = Axis.YP.rotationDegrees(state.yaw).transform(new org.joml.Vector3f(0.88F, 5.0F / 16.0F + 0.89F, REAR_Z + 0.24F));
+			de.rcm.ballistic.client.effect.DynamicLights.blockLamp(state.blockPos, 0, at.x, at.y, at.z,
+				state.status == 1 ? 0x40FF60 : 0xFF2010, state.status == 1 ? 0.35F : 0.8F, state.status == 1 ? 4.0F : 8.0F);
 		}
 		// the canister, in its rail frame
 		poseStack.translate(0.0F, REAR_Y, REAR_Z);

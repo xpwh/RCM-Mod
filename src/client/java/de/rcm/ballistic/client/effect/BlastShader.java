@@ -80,6 +80,9 @@ public final class BlastShader {
 			VolumetricClouds.blast(pos, (float) Math.min(450.0, 90.0 * scale), 0.9F);
 		} else if (scale >= 3.0) {
 			VolumetricClouds.blast(pos, (float) Math.min(160.0, 22.0 * scale), 0.5F);
+		} else if (newKind == Kind.FIRE && scale >= 0.75) {
+			// a MOAB's or a thermobaric's fireball: too low to tear the clouds, but it lights their base orange
+			VolumetricClouds.fireGlow(pos, (float) (80.0 * scale));
 		}
 		double distance = ClientEffects.distanceToCamera(Minecraft.getInstance(), pos);
 		double reach = 260.0 * Math.max(0.3, scale);

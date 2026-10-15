@@ -195,15 +195,24 @@ public class LaunchPadRenderer implements BlockEntityRenderer<LaunchPadBlockEnti
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> ELEVATOR.emit(pose, consumer, light));
 		poseStack.popPose();
 
+		// the floodlights really light the pad (dynamic light: these lamps shine on what is round them)
+		for (int i = 0; i < FLOODLIGHTS.length; i++) {
+			de.rcm.ballistic.client.effect.DynamicLights.blockLamp(state.blockPos, i, FLOODLIGHTS[i][0] * 0.92F, 5.8F, FLOODLIGHTS[i][1] * 0.92F,
+				0xFFF0D8, 0.55F, 20.0F);
+		}
 		// status lights: steady green when ready, fast red flashing through countdown and launch
 		if (state.status == 1) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> READY_LIGHT.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			de.rcm.ballistic.client.effect.DynamicLights.blockLamp(state.blockPos, 8, ARM_HINGE_X + 0.3F, 6.5F, 0.65F, 0x40FF60, 0.4F, 7.0F);
 		} else if (state.status == 2 && Mth.sin(state.time * 0.8F) > 0.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> COUNT_LIGHT.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			de.rcm.ballistic.client.effect.DynamicLights.blockLamp(state.blockPos, 8, ARM_HINGE_X + 0.3F, 6.5F, 0.65F, 0xFF2010, 0.9F, 12.0F);
+			de.rcm.ballistic.client.effect.DynamicLights.blockLamp(state.blockPos, 9, ARM_HINGE_X + 0.3F, 14.5F, 0.65F, 0xFF2010, 0.9F, 12.0F);
 		}
 		// aviation obstruction lights on the tower and the lightning masts: slow red blink
 		if (Mth.sin(state.time * 0.2F) > 0.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> BEACON.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			de.rcm.ballistic.client.effect.DynamicLights.blockLamp(state.blockPos, 10, TOWER_X, TOWER_TOP + 3.1F, 0.0F, 0xFF3020, 0.5F, 9.0F);
 		}
 		poseStack.popPose();
 	}

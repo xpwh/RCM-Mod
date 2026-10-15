@@ -136,6 +136,8 @@ public final class VolumetricClouds {
 	/** Cloud piled up round the rims of the holes (0-1), and rocket engines / fireballs lighting the cloud (0-1). */
 	private static final float[] RING = new float[MAP * MAP];
 	private static final float[] GLOW = new float[MAP * MAP];
+	/** A fireball's light on the cloud base: it dies away over seconds, not the moment the rocket has gone. */
+	private static final float[] FIRE = new float[MAP * MAP];
 	private static boolean glowing;
 	private static boolean disturbed;
 	private static boolean dirty = true;
@@ -338,7 +340,17 @@ public final class VolumetricClouds {
 		}
 		puncture(pos.x, pos.z, radius * 0.45F, radius, 1.4F, 3600);
 		stamp(SMOKE, pos.x, pos.z, radius * 0.45F, smoke, true);
-		stamp(GLOW, pos.x, pos.z, radius * 0.9F, 1.0F, false);
+		// the fireball lights the whole cloud base over it orange, and the glow lingers as it burns out
+		stamp(FIRE, pos.x, pos.z, radius * 1.6F, 1.0F, false);
+		glowing = true;
+	}
+
+	/** A big fireball far below: it lights the cloud base over it, without reaching it. */
+	public static void fireGlow(Vec3 pos, float radius) {
+		if (Float.isNaN(base) || pos.y > base + thickness() || pos.y < base - 400.0) {
+			return;
+		}
+		stamp(FIRE, pos.x, pos.z, radius, (float) Mth.clamp(1.2 - (base - pos.y) / 400.0, 0.3, 1.0), false);
 		glowing = true;
 	}
 
@@ -433,6 +445,7 @@ public final class VolumetricClouds {
 				java.util.Arrays.fill(SMOKE, 0.0F);
 				java.util.Arrays.fill(RING, 0.0F);
 				java.util.Arrays.fill(GLOW, 0.0F);
+				java.util.Arrays.fill(FIRE, 0.0F);
 				PUNCTURES.clear();
 				disturbed = false;
 				dirty = true;
@@ -489,6 +502,12 @@ public final class VolumetricClouds {
 					g = g * 0.72F - 0.01F;
 					GLOW[i] = g > 0.0F ? g : 0.0F;
 					lit |= g > 0.0F;
+				}
+				float f = FIRE[i];
+				if (f > 0.0F) {
+					f = f * 0.982F - 0.0015F;
+					FIRE[i] = f > 0.0F ? f : 0.0F;
+					lit |= f > 0.0F;
 				}
 			}
 			glowing = lit;
@@ -564,7 +583,7 @@ public final class VolumetricClouds {
 				int h = Math.round(Mth.clamp(HOLE[i], 0.0F, 1.0F) * 255.0F);
 				int s = Math.round(Mth.clamp(SMOKE[i], 0.0F, 1.0F) * 255.0F);
 				int r = Math.round(Mth.clamp(RING[i], 0.0F, 1.0F) * 255.0F);
-				int g = Math.round(Mth.clamp(GLOW[i], 0.0F, 1.0F) * 255.0F);
+				int g = Math.round(Mth.clamp(Math.max(GLOW[i], FIRE[i]), 0.0F, 1.0F) * 255.0F);
 				img.setPixel(x, z, g << 24 | h << 16 | s << 8 | r);
 			}
 		}

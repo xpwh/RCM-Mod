@@ -157,6 +157,10 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 
 		if (state.counting && Mth.sin(state.time * 0.9F) > 0.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> BEACON_GLOW.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			// the beacons really light the headworks red
+			for (int i = 0; i < BEACONS.length; i++) {
+				de.rcm.ballistic.client.effect.DynamicLights.blockLamp(state.blockPos, i, BEACONS[i][0], DECK + 1.32F, BEACONS[i][1], 0xFF2414, 0.9F, 12.0F);
+			}
 		}
 		poseStack.popPose();
 	}

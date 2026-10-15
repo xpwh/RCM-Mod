@@ -64,6 +64,8 @@ public final class SmokeField {
 	private static final byte[] SHELTER = new byte[CAP];
 	/** How much of each puff shows through the cloud layer between it and the eye (1 all, 0 hidden). */
 	private static final float[] VEIL = new float[CAP];
+	/** Scratch: the dynamic light on the puff being drawn. */
+	private static final float[] LIT = new float[3];
 	private static int veilFrame;
 	private static final double[] MOVE = new double[3];
 	/** Smoke further than this from the camera is not collided (it is out of sight anyway). */
@@ -523,6 +525,15 @@ public final class SmokeField {
 		float cr = (c >> 16 & 255) / 255.0F * day;
 		float cg = (c >> 8 & 255) / 255.0F * day;
 		float cb = (c & 255) / 255.0F * day;
+		// lit by the fires, flashes and lamps round it: smoke over a fire glows orange, a muzzle flash
+		// lights up the cloud it fires into
+		LIT[0] = 0.0F;
+		LIT[1] = 0.0F;
+		LIT[2] = 0.0F;
+		DynamicLights.lightAt(X[i], Y[i], Z[i], LIT);
+		cr += LIT[0] * 1.6F;
+		cg += LIT[1] * 1.6F;
+		cb += LIT[2] * 1.6F;
 		float hot = GLOW[i] * Mth.clamp(1.0F - age / 6.0F, 0.0F, 1.0F);
 		if (hot > 0.0F) {
 			cr = Mth.lerp(hot, cr, 1.0F);
