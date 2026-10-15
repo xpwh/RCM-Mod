@@ -73,8 +73,8 @@ public final class WorldFx {
 			.withDepthWrite(false)
 			.withVertexFormat(DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS);
 		if (define.equals("SHADE")) {
-			// shade multiplies what is there
-			b = b.withBlend(new BlendFunction(SourceFactor.DST_COLOR, DestFactor.ZERO, SourceFactor.ZERO, DestFactor.ONE));
+			// shade multiplies what is there; Sampler1: the heightmap the sun's shadows are traced over
+			b = b.withSampler("Sampler1").withBlend(new BlendFunction(SourceFactor.DST_COLOR, DestFactor.ZERO, SourceFactor.ZERO, DestFactor.ONE));
 		} else {
 			b = b.withSampler("Sampler1").withSampler("Sampler2").withSampler("Sampler3").withColorWrite(true, false);
 		}
@@ -86,6 +86,12 @@ public final class WorldFx {
 		RenderPipelines.register(WATER_PIPELINE);
 		WorldRenderEvents.BEFORE_TRANSLUCENT.register(WorldFx::beforeTranslucent);
 		WorldRenderEvents.END_MAIN.register(WorldFx::endMain);
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			if (ModConfig.sunShadows && overworldView(mc)) {
+				SunHeightmap.update(mc);
+			}
+		});
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> SunHeightmap.clear());
 	}
 
 	private static boolean overworldView(Minecraft mc) {
@@ -106,6 +112,7 @@ public final class WorldFx {
 		if (shadeType == null) {
 			shadeType = RenderType.create("ballisticmissiles_world_fx_shade", RenderSetup.builder(SHADE_PIPELINE)
 				.withTexture("Sampler0", OPAQUE_DEPTH, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.withTexture("Sampler1", SunHeightmap.ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
 				.createRenderSetup());
 			waterType = RenderType.create("ballisticmissiles_world_fx_water", RenderSetup.builder(WATER_PIPELINE)
 				.withTexture("Sampler0", OPAQUE_DEPTH, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
@@ -146,9 +153,17 @@ public final class WorldFx {
 			float open = mc.player == null ? 1.0F : mc.level.getBrightness(net.minecraft.world.level.LightLayer.SKY, net.minecraft.core.BlockPos.containing(mc.player.getEyePosition())) / 15.0F;
 			float shadow = ModConfig.sunShadows ? 0.5F * sunlight(mc, sun, partial) * Mth.clamp((open - 0.3F) / 0.5F, 0.0F, 1.0F) : 0.0F;
 			float ao = ModConfig.ambientOcclusion ? 0.55F : 0.0F;
+			if (!SunHeightmap.ready()) {
+				shadow = 0.0F;
+			}
 			if (shadow > 0.01F || ao > 0.01F) {
 				int quality = Mth.clamp(ModConfig.lightQuality, 1, 3);
-				screen(buffers.getBuffer(shadeType), context.matrices().last(), camera, argb(1.0F, shadow, ao, 0.0F), sun, 0, quality);
+				Vec3 cam = camera.position();
+				// the camera within the heightmap (x, z) and its height, for the shadows traced over the map
+				float hx = (float) (cam.x - SunHeightmap.originX());
+				float hz = (float) (cam.z - SunHeightmap.originZ());
+				int camY = Mth.clamp((int) Math.round((cam.y + 256.0) * 16.0), 0, 32767);
+				screen(buffers.getBuffer(shadeType), context.matrices().last(), camera, argb(1.0F, shadow, ao, 0.0F), sun, quality, SunHeightmap.maxTop() + 64, hx, hz, camY);
 				buffers.endBatch(shadeType);
 			}
 		}
@@ -195,8 +210,11 @@ public final class WorldFx {
 		int zg = Math.round(Mth.clamp((float) zenith[1] * dim, 0.0F, 1.0F) * 255.0F);
 		int zb = Math.round(Mth.clamp((float) zenith[2] * dim, 0.0F, 1.0F) * 255.0F);
 		float glitter = sunlight(mc, sun, partial);
+		Vec3 cam = camera.position();
+		float cx = (float) (cam.x - Math.floor(cam.x / 2048.0) * 2048.0);
+		float cz = (float) (cam.z - Math.floor(cam.z / 2048.0) * 2048.0);
 		screen(buffers.getBuffer(waterType), context.matrices().last(), camera, argb(1.0F, glitter, mc.level.getRainLevel(partial), 0.0F), sun,
-			zr | zg << 8, zb);
+			zr | zg << 8, zb, cx, cz, 0);
 		buffers.endBatch(waterType);
 	}
 
@@ -207,23 +225,21 @@ public final class WorldFx {
 
 	/**
 	 * One quad over the whole view, far out (so the walking bob does not swing it). Colour: the pass's
-	 * parameters; UV0: the camera's x, z (wrapped, for the waves); UV2: two 16-bit words of data; normal:
-	 * the direction to the sun.
+	 * parameters; UV0: the camera's x, z (water: wrapped, for the waves; shade: within the heightmap); UV1:
+	 * the camera's height (shade); UV2: two 16-bit words of data; normal: the direction to the sun.
 	 */
-	private static void screen(VertexConsumer consumer, PoseStack.Pose pose, Camera camera, int color, Vector3f sun, int data0, int data1) {
+	private static void screen(VertexConsumer consumer, PoseStack.Pose pose, Camera camera, int color, Vector3f sun, int data0, int data1, float cx, float cz,
+		int overlay) {
 		org.joml.Vector3fc f = camera.forwardVector();
 		org.joml.Vector3fc u = camera.upVector();
 		org.joml.Vector3fc left = camera.leftVector();
-		Vec3 cam = camera.position();
-		float cx = (float) (cam.x - Math.floor(cam.x / 2048.0) * 2048.0);
-		float cz = (float) (cam.z - Math.floor(cam.z / 2048.0) * 2048.0);
 		float w = 6.0F;
 		int light = (data0 & 0xFFFF) | (data1 & 0xFFFF) << 16;
 		for (float[] c : new float[][] {{w, -w}, {-w, -w}, {-w, w}, {w, w}}) {
 			float x = (f.x() + left.x() * c[0] + u.x() * c[1]) * 500.0F;
 			float y = (f.y() + left.y() * c[0] + u.y() * c[1]) * 500.0F;
 			float z = (f.z() + left.z() * c[0] + u.z() * c[1]) * 500.0F;
-			consumer.addVertex(pose, x, y, z).setColor(color).setUv(cx, cz).setOverlay(0).setLight(light).setNormal(pose, sun.x, sun.y, sun.z);
+			consumer.addVertex(pose, x, y, z).setColor(color).setUv(cx, cz).setOverlay(overlay).setLight(light).setNormal(pose, sun.x, sun.y, sun.z);
 		}
 	}
 }

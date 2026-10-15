@@ -6,9 +6,12 @@
 // Screen-space light on the world, from copies of the world's depth (and picture).
 //
 // SHADE (before the translucent terrain, multiplied into the picture):
-//   sun shadows - every pixel walks towards the sun through the depth of the picture; where something
-//   on screen stands between it and the sun it is in shadow (trees, houses, entities, a missile on its
-//   pad all throw them, and they move with the sun); faces turned from the sun darken too.
+//   sun shadows - every pixel walks towards the sun over a heightmap of the world round the camera (the
+//   top of every column: ground, roofs, walls, trees): where the line passes beneath a column top it is
+//   in shadow. That does not depend on what is on screen - a roof shades the room under it wherever you
+//   look, the sun falls in through the doorway, hills and houses throw long shadows at evening. A few
+//   short steps through the depth of the picture add what the map does not hold: entities, small edges.
+//   Several rays over the sun's disc give soft half-shadows; shadows are cool, lit by the blue sky.
 //   ambient occlusion - points round each pixel, in the half-sphere over its surface, are tested against
 //   the depth: the more of them are buried, the deeper the corner, the darker it is.
 //
@@ -19,6 +22,9 @@
 // deeper it lies.
 
 uniform sampler2D Sampler0; // depth of the opaque world (before the translucent terrain)
+#ifdef SHADE
+uniform sampler2D Sampler1; // heightmap of the world round the camera: per column the first free block
+#endif
 #ifdef WATER
 uniform sampler2D Sampler1; // depth with the water
 uniform sampler2D Sampler2; // picture of the opaque world
@@ -28,6 +34,7 @@ uniform sampler2D Sampler3; // picture with the water as Minecraft drew it
 in vec3 relPos;
 flat in vec4 params;
 flat in vec2 cameraXZ;
+flat in float cameraY;
 flat in ivec2 data;
 flat in vec3 sunDir;
 flat in mat4 invViewProj;
@@ -97,27 +104,25 @@ void main() {
             float here = length(q);
             float gap = here - scene;
             // buried - but only by what is close, not by something far in front of it
-            occluded += smoothstep(0.02, 0.12, gap) * (1.0 - smoothstep(radius, radius * 2.5, gap));
+            float aoBias = 0.03 + here * 0.006;
+            occluded += smoothstep(aoBias, aoBias + 0.1, gap) * (1.0 - smoothstep(radius, radius * 2.5, gap));
         }
         float ao = 1.0 - occluded / float(samples);
         shade *= 1.0 - aoStrength * (1.0 - ao) * (1.0 - smoothstep(48.0, 96.0, dist));
     }
 
-    // ---- sun shadows: several rays to points spread over the sun's disc (a little wider than the real
-    // one, so it shows), each a clean walk with no random start - the fraction that gets through gives a
-    // soft half-shadow that widens the further the shadow lies from what casts it, and no speckle
+    // ---- sun shadows (see the top)
     vec3 tint = vec3(1.0);
-    if (shadowStrength > 0.0 && dist < 128.0) {
+    if (shadowStrength > 0.0 && dist < 160.0) {
         float facing = dot(n, sunDir);
         float lit = 1.0;
         if (facing > 0.0) {
             int rays = quality >= 3 ? 5 : quality == 2 ? 3 : 1;
-            int steps = quality >= 3 ? 30 : quality == 2 ? 26 : 22;
-            float grow = quality >= 3 ? 1.15 : quality == 2 ? 1.16 : 1.2;
             vec3 su = normalize(cross(sunDir, abs(sunDir.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
             vec3 sv = cross(sunDir, su);
-            const float SPREAD = 0.018; // radians: the disc the rays sample
-            vec3 start = p + n * (0.05 + dist * 0.002);
+            const float SPREAD = 0.02; // radians: the disc the rays sample
+            vec3 start = p + n * 0.06;
+            float maxTop = float(data.y) - 64.0;
             float through = 0.0;
             for (int r = 0; r < 5; r++) {
                 if (r >= rays) break;
@@ -126,26 +131,45 @@ void main() {
                     float a = float(r - 1) * 6.2831853 / float(rays - 1) + 0.4;
                     dir = normalize(sunDir + (su * cos(a) + sv * sin(a)) * SPREAD);
                 }
-                float travelled = 0.0;
-                float stepLen = 0.05;
                 float hit = 0.0;
-                for (int i = 0; i < 30; i++) {
-                    if (i >= steps) break;
-                    travelled += stepLen;
-                    stepLen *= grow;
-                    vec3 q = start + dir * travelled;
-                    vec3 sp = project(q);
-                    if (sp.z < 0.0 || sp.x < 0.0 || sp.y < 0.0 || sp.x > 1.0 || sp.y > 1.0) break;
-                    float scene = sceneDistance(sp.xy);
-                    float here = length(q);
-                    float gap = here - scene;
-                    // something solid in front of this point of the walk, and not far in front of it (how
-                    // thick what casts the shadow is can only be guessed: up to a couple of blocks)
-                    if (gap > 0.06 + here * 0.004 && gap < 2.5 + travelled * 0.15) {
+                // over the heightmap: steps of a third of a block near, longer further out
+                float t = 0.0;
+                float stepLen = 0.3;
+                for (int i = 0; i < 90; i++) {
+                    t += stepLen;
+                    stepLen = min(stepLen * 1.025, 1.0);
+                    vec3 q = start + dir * t;
+                    float y = q.y + cameraY;
+                    if (y > maxTop) break; // above everything round here: nothing left to hit
+                    vec2 hm = q.xz + cameraXZ;
+                    ivec2 c = ivec2(floor(hm));
+                    if (c.x < 0 || c.y < 0 || c.x >= 256 || c.y >= 256) break;
+                    vec4 h = texelFetch(Sampler1, c, 0);
+                    float top = floor(h.r * 255.0 + 0.5) + floor(h.g * 255.0 + 0.5) * 256.0 - 64.0;
+                    if (y < top - 0.02) {
                         hit = 1.0;
                         break;
                     }
-                    if (travelled > 48.0) break;
+                    if (t > 56.0) break;
+                }
+                // a few short steps through the picture: entities and the small things the map misses
+                if (hit < 0.5) {
+                    float travelled = 0.0;
+                    float stepS = 0.06;
+                    for (int i = 0; i < 12; i++) {
+                        travelled += stepS;
+                        stepS *= 1.3;
+                        vec3 q = start + dir * travelled;
+                        vec3 sp = project(q);
+                        if (sp.z < 0.0 || sp.x < 0.0 || sp.y < 0.0 || sp.x > 1.0 || sp.y > 1.0) break;
+                        float here = length(q);
+                        float gap = here - sceneDistance(sp.xy);
+                        if (gap > 0.08 + here * 0.006 && gap < 1.2) {
+                            hit = 1.0;
+                            break;
+                        }
+                        if (travelled > 3.0) break;
+                    }
                 }
                 through += 1.0 - hit;
             }
@@ -154,9 +178,9 @@ void main() {
         // faces turned from the sun are in their own shade, softer than a cast shadow (the sky lights them)
         float face = mix(0.45, 1.0, smoothstep(-0.05, 0.25, facing));
         lit = min(lit, face);
-        float k = shadowStrength * (1.0 - lit) * (1.0 - smoothstep(80.0, 128.0, dist));
-        // what lights a shadow is the blue sky, not the sun: shadows are cool, more so the stronger they are
-        tint = vec3(1.0) - k * vec3(1.0, 0.9, 0.68);
+        float k = shadowStrength * (1.0 - lit) * (1.0 - smoothstep(110.0, 160.0, dist));
+        // what lights a shadow is the blue sky, not the sun: shadows are a little cool
+        tint = vec3(1.0) - k * vec3(1.0, 0.95, 0.82);
     }
     vec3 result = vec3(shade) * tint;
     if (min(result.r, min(result.g, result.b)) > 0.995) discard;
