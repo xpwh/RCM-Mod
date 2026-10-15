@@ -1,47 +1,65 @@
 package de.rcm.ballistic.client.gui;
 
-import de.rcm.ballistic.ModRegistry;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.AddressMode;
+import com.mojang.blaze3d.textures.FilterMode;
+import de.rcm.ballistic.BallisticMissiles;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalTime;
-import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.function.Supplier;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The lock in front of the control panel, made up as a missile launch-control terminal: amber CRT text,
- * classification banners, hazard stripes, a radar scope sweeping for contacts, DEFCON and silo status, and
- * the launch code typed into its boxes. A wrong code sets off the radar alarm and tears the panel red,
- * three in a row seal the terminal for a few seconds; the right code drops to DEFCON 1, launches a missile
- * off the scope and zooms through into the menu. Once unlocked it stays open until the game is restarted.
- * Only the password's SHA-256 is kept here.
+ * The lock in front of the control panel: a clean, modern sign-in card. A frosted dark card with soft
+ * rounded corners and a deep shadow floats over the blurred world, slow coloured lights drifting behind it;
+ * a lock badge with a breathing glow, a short title, the password field as a pill where every character
+ * pops in as a dot, and an unlock button. Everything eases in one after another. A wrong password shakes
+ * the card like a spring and turns the field red; three in a row lock it for a few seconds with a draining
+ * bar. The right one turns the badge green, springs the lock open, draws a check mark and lets the card
+ * sink away into the menu. Once unlocked it stays open until the game is restarted.
+ * <p>
+ * The soft shapes (rounded corners, circles, glows) come from small textures drawn here at start-up and
+ * scaled with smooth filtering, so the edges stay clean at any GUI scale. Only the password's SHA-256 is kept.
  */
 public class PasswordScreen extends Screen {
 	private static final String HASH = "97db65274cf09892773eed0fb7751716d93f33ae995029961402d2e9b7a5d9df";
-	private static final String BANNER = "STRENG GEHEIM // NUR FÜR BEFUGTES PERSONAL // STRATEGISCHES RAKETENKOMMANDO // ZUGRIFF WIRD PROTOKOLLIERT // ";
-	private static final String GLITCH = "#%&@$*+=?/<>0123456789ABCDEF";
-	private static final int W = 340;
+	private static final int W = 248;
 	private static final int H = 206;
-	private static final int SLOTS = 14;
-	private static final int AMBER = 0xFFB020;
-	private static final int RED = 0xFF3030;
-	private static final int GREEN = 0x40FF70;
-	private static final int DARK = 0x080A08;
-	private static final long GRANT_TIME = 1700L;
-	/** Contacts on the scope: angle (radians), distance (0..1). */
-	private static final float[][] BLIPS = {{0.7F, 0.62F}, {2.1F, 0.38F}, {3.4F, 0.8F}, {4.6F, 0.55F}, {5.5F, 0.27F}};
+	private static final int FIELD_W = 196;
+	private static final int FIELD_H = 26;
+	private static final int ACCENT_A = 0x6366F1; // indigo
+	private static final int ACCENT_B = 0x8B5CF6; // violet
+	private static final int ERROR = 0xF43F5E;
+	private static final int SUCCESS = 0x22C55E;
+	private static final long OUT_TIME = 950L;
+
+	private static final Identifier ORB = BallisticMissiles.id("dynamic/ui_orb");
+	private static final Identifier FILL = BallisticMissiles.id("dynamic/ui_round_fill");
+	private static final Identifier EDGE = BallisticMissiles.id("dynamic/ui_round_edge");
+	private static final Identifier DISC = BallisticMissiles.id("dynamic/ui_disc");
+	/** Rounded-rectangle textures: 64 px with a 24 px corner radius (nine-sliced), the edge 2 px wide. */
+	private static final int TEX = 64;
+	private static final int CORNER = 24;
+	private static boolean texturesMade;
 
 	private static boolean unlocked;
 
@@ -49,16 +67,21 @@ public class PasswordScreen extends Screen {
 	private final @Nullable Screen parent;
 	private EditBox box;
 	private long opened = -1L;
-	private long deniedAt = -10_000L;
+	private long deniedAt = -100_000L;
+	/** When a wrong password was last entered (the message below the field). */
+	private long wrongAt = -100_000L;
 	private long grantedAt = -1L;
 	private long lockedUntil;
-	private long lastKey = -10_000L;
+	private long lockedFrom;
+	private final long[] typedAt = new long[64];
 	private int fails;
 	private int lastLength;
-	private boolean bootBeep;
+	private float hover;
+	private float focus;
+	private long lastFrame;
 
 	public PasswordScreen(@Nullable Screen parent, Supplier<Screen> target) {
-		super(Component.literal("Startfreigabe"));
+		super(Component.literal("Passwort"));
 		this.parent = parent;
 		this.target = target;
 	}
@@ -70,16 +93,17 @@ public class PasswordScreen extends Screen {
 
 	@Override
 	protected void init() {
+		makeTextures();
 		String typed = this.box != null ? this.box.getValue() : "";
-		this.box = new EditBox(this.font, this.width / 2, this.height / 2, 120, 20, Component.literal("Startcode"));
-		this.box.setMaxLength(32);
+		this.box = new EditBox(this.font, this.width / 2, this.height / 2, FIELD_W, FIELD_H, Component.literal("Passwort"));
+		this.box.setMaxLength(48);
 		this.box.setValue(typed);
 		this.box.setFilter(s -> !s.contains(" "));
-		this.addWidget(this.box); // takes the keys; the code boxes are drawn here
+		this.addWidget(this.box); // takes the keys; the field is drawn here
 		this.setInitialFocus(this.box);
 		if (this.opened < 0L) {
 			this.opened = Util.getMillis();
-			play(ModRegistry.RADIO_CLICK, 0.9F, 0.8F);
+			this.lastFrame = this.opened;
 		}
 	}
 
@@ -99,53 +123,71 @@ public class PasswordScreen extends Screen {
 			return true;
 		}
 		if (event.isConfirmation()) {
-			submit();
+			this.submit();
 			return true;
 		}
 		return super.keyPressed(event);
 	}
 
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (event.button() == 0 && this.grantedAt < 0L && this.overButton(event.x(), event.y())) {
+			this.submit();
+			return true;
+		}
+		return super.mouseClicked(event, doubleClick);
+	}
+
 	private void submit() {
 		long now = Util.getMillis();
-		if (now < this.lockedUntil || this.box.getValue().isEmpty()) {
-			play(ModRegistry.COUNTDOWN_BEEP, 0.5F, 0.5F);
+		if (now < this.lockedUntil) {
+			return;
+		}
+		if (this.box.getValue().isEmpty()) {
+			this.deniedAt = now; // a gentle shake: nothing typed yet
 			return;
 		}
 		if (sha256(this.box.getValue().trim()).equals(HASH)) {
 			this.grantedAt = now;
 			unlocked = true;
-			play(ModRegistry.TARGET_LOCK, 1.0F, 0.8F);
-			play(ModRegistry.COUNTDOWN_BEEP, 1.4F, 0.6F);
+			play(SoundEvents.AMETHYST_BLOCK_CHIME, 1.5F, 0.9F);
+			play(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.8F, 0.35F);
 		} else {
 			this.deniedAt = now;
+			this.wrongAt = now;
 			this.fails++;
 			this.box.setValue("");
 			this.lastLength = 0;
-			play(ModRegistry.RADAR_ALARM, 1.0F, 0.55F);
+			play(SoundEvents.NOTE_BLOCK_BASS.value(), 0.8F, 0.35F);
 			if (this.fails >= 3) {
 				this.fails = 0;
+				this.lockedFrom = now;
 				this.lockedUntil = now + 5000L;
-				play(ModRegistry.SILO_LID_LOCK, 1.0F, 0.8F);
 			}
 		}
 	}
 
 	@Override
 	public void tick() {
-		long now = Util.getMillis();
-		if (!this.bootBeep && now - this.opened > 650L) {
-			this.bootBeep = true;
-			play(ModRegistry.COUNTDOWN_BEEP, 1.2F, 0.35F);
+		if (this.grantedAt >= 0L && Util.getMillis() - this.grantedAt > OUT_TIME) {
+			this.minecraft.setScreen(this.target.get());
 		}
-		if (this.grantedAt >= 0L) {
-			long since = now - this.grantedAt;
-			if (since > 450L && since < 500L) {
-				play(ModRegistry.SAM_LAUNCH, 1.3F, 0.35F); // the missile leaving the scope
-			}
-			if (since > GRANT_TIME) {
-				this.minecraft.setScreen(this.target.get());
-			}
-		}
+	}
+
+	// ------------------------------------------------------------------ layout
+
+	private float cardX() {
+		return (this.width - W) / 2.0F;
+	}
+
+	private float cardY() {
+		return (this.height - H) / 2.0F;
+	}
+
+	private boolean overButton(double mx, double my) {
+		float x = this.cardX() + (W - FIELD_W) / 2.0F;
+		float y = this.cardY() + 150;
+		return mx >= x && mx < x + FIELD_W && my >= y && my < y + 24;
 	}
 
 	// ------------------------------------------------------------------ drawing
@@ -153,356 +195,368 @@ public class PasswordScreen extends Screen {
 	@Override
 	public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
 		long now = Util.getMillis();
+		float dt = Math.min(0.1F, (now - this.lastFrame) / 1000.0F);
+		this.lastFrame = now;
 		float t = (now - this.opened) / 1000.0F;
-		float denied = 1.0F - Mth.clamp((now - this.deniedAt) / 700.0F, 0.0F, 1.0F);
-		float granted = this.grantedAt < 0L ? 0.0F : Mth.clamp((now - this.grantedAt) / (float) GRANT_TIME, 0.0F, 1.0F);
+		float out = this.grantedAt < 0L ? 0.0F : Mth.clamp((now - this.grantedAt) / (float) OUT_TIME, 0.0F, 1.0F);
 		boolean locked = now < this.lockedUntil;
-		int accent = granted > 0.0F ? GREEN : denied > 0.0F || locked ? RED : AMBER;
+		float err = (now - this.deniedAt) / 1000.0F;
 
 		int length = this.box.getValue().length();
 		if (length != this.lastLength) {
 			if (length > this.lastLength) {
-				play(ModRegistry.RADIO_CLICK, 1.7F + (float) Math.random() * 0.3F, 0.25F);
+				for (int i = this.lastLength; i < length && i < this.typedAt.length; i++) {
+					this.typedAt[i] = now;
+				}
+				play(SoundEvents.UI_BUTTON_CLICK.value(), 2.0F, 0.06F);
 			}
 			this.lastLength = length;
-			this.lastKey = now;
 		}
+		this.hover = approach(this.hover, this.overButton(mouseX, mouseY) && !locked && out <= 0.0F ? 1.0F : 0.0F, dt * 10.0F);
+		this.focus = approach(this.focus, length > 0 || this.box.isFocused() ? 1.0F : 0.0F, dt * 6.0F);
 
-		backdrop(g, t, now, accent, granted, denied);
+		// ---- backdrop: dimmed, with soft lights drifting slowly behind the card
+		float bgIn = ease(Mth.clamp(t / 0.35F, 0.0F, 1.0F)) * (1.0F - ease(Mth.clamp((out - 0.6F) / 0.4F, 0.0F, 1.0F)));
+		g.fillGradient(0, 0, this.width, this.height, argb(0.72F * bgIn, 0x0B0D14), argb(0.86F * bgIn, 0x050608));
+		float cx = this.width * 0.5F;
+		float cy = this.height * 0.5F;
+		this.orb(g, cx + Mth.sin(t * 0.21F) * 170.0F - 60.0F, cy + Mth.cos(t * 0.17F) * 90.0F - 40.0F, 260.0F, ACCENT_A, 0.22F * bgIn);
+		this.orb(g, cx + Mth.cos(t * 0.13F + 1.0F) * 190.0F + 80.0F, cy + Mth.sin(t * 0.19F + 2.0F) * 80.0F + 50.0F, 300.0F, ACCENT_B, 0.17F * bgIn);
+		this.orb(g, cx + Mth.sin(t * 0.11F + 4.0F) * 220.0F, cy + Mth.cos(t * 0.23F + 3.0F) * 120.0F, 220.0F, 0x06B6D4, 0.1F * bgIn);
 
-		float intro = Mth.clamp(t / 0.5F, 0.0F, 1.0F);
-		float out = smooth(Mth.clamp((granted - 0.7F) / 0.3F, 0.0F, 1.0F));
-		float scale = easeOutBack(intro) * (1.0F + out * 0.4F);
-		float shake = denied * denied * Mth.sin(t * 75.0F) * 10.0F;
-		float fade = intro * (1.0F - out);
-		if (fade > 0.01F) {
-			g.pose().pushMatrix();
-			g.pose().translate(this.width / 2.0F + shake, this.height / 2.0F);
-			g.pose().scale(scale, scale);
-			panel(g, t, now, accent, fade, denied, granted, locked);
-			g.pose().popMatrix();
+		// ---- the card: rises in, springs when the password is wrong, sinks away when it is right
+		float enter = easeOutExpo(Mth.clamp(t / 0.6F, 0.0F, 1.0F));
+		float shake = err < 0.7F ? (float) (Math.exp(-err * 7.0) * Math.sin(err * 46.0) * 9.0) : 0.0F;
+		float leave = ease(Mth.clamp((out - 0.45F) / 0.55F, 0.0F, 1.0F));
+		float alpha = enter * (1.0F - leave);
+		if (alpha <= 0.005F) {
+			return;
 		}
-	}
+		float scale = (0.94F + 0.06F * enter) * (1.0F - 0.05F * leave);
+		float lift = (1.0F - enter) * 18.0F + leave * 10.0F;
+		float x0 = this.cardX();
+		float y0 = this.cardY();
 
-	private void backdrop(GuiGraphics g, float t, long now, int accent, float granted, float denied) {
-		int w = this.width;
-		int h = this.height;
-		float in = Mth.clamp(t / 0.3F, 0.0F, 1.0F);
-		g.fill(0, 0, w, h, argb(0.84F * in, DARK));
-		// map grid, scrolling slowly, with coordinates along the edge
-		int step = 32;
-		int off = (int) (t * 6.0F) % step;
-		for (int x = -step + off; x < w; x += step) {
-			g.fill(x, 0, x + 1, h, argb(0.05F * in, accent));
-		}
-		for (int y = -step + off; y < h; y += step) {
-			g.fill(0, y, w, y + 1, argb(0.05F * in, accent));
-		}
-		// CRT scan lines and a sweep running down
-		for (int y = 0; y < h; y += 3) {
-			g.fill(0, y, w, y + 1, argb(0.14F * in, 0x000000));
-		}
-		int sweep = (int) ((t * 0.3F % 1.0F) * (h + 80)) - 40;
-		g.fillGradient(0, sweep - 40, w, sweep, argb(0.0F, accent), argb(0.06F * in, accent));
-		// classification banners, top and bottom, crawling
-		banner(g, 0, t, in, granted, denied);
-		banner(g, h - 11, -t, in, granted, denied);
-		// telemetry down the sides
-		g.drawString(this.font, "LAT 52°31'N  LON 13°24'E", 6, 16, argb(0.35F * in, accent), false);
-		g.drawString(this.font, "UPLINK: AKTIV  KANAL 7", 6, 26, argb(0.35F * in, accent), false);
-		String utc = "UTC " + LocalTime.now(ZoneOffset.UTC).withNano(0);
-		g.drawString(this.font, utc, w - 6 - this.font.width(utc), 16, argb(0.5F * in, accent), false);
-		String net = "NETZ: GESICHERT";
-		g.drawString(this.font, net, w - 6 - this.font.width(net), 26, argb(0.35F * in, accent), false);
-		if (denied > 0.0F) {
-			g.fill(0, 0, w, h, argb(0.25F * denied * denied, RED));
-		}
-		if (granted > 0.0F) {
-			float flash = granted < 0.1F ? granted / 0.1F : 1.0F - (granted - 0.1F) / 0.9F;
-			g.fill(0, 0, w, h, argb(0.2F * flash, GREEN));
-		}
-	}
-
-	private void banner(GuiGraphics g, int y, float t, float in, float granted, float denied) {
-		int w = this.width;
-		int color = granted > 0.0F ? 0x1C7A30 : 0x8A1010;
-		g.fill(0, y, w, y + 11, argb(0.9F * in, color));
-		String text = granted > 0.0F ? "STARTFREIGABE ERTEILT // WAFFENSYSTEME FREIGEGEBEN // " : BANNER;
-		int tw = this.font.width(text);
-		int x = (int) (-((t * 30.0F) % tw + tw) % tw);
-		for (int i = x - tw; i < w; i += tw) {
-			g.drawString(this.font, text, i, y + 2, argb(in, 0xFFE8E8), false);
-		}
-	}
-
-	private void panel(GuiGraphics g, float t, long now, int accent, float fade, float denied, float granted, boolean locked) {
-		int x0 = -W / 2;
-		int y0 = -H / 2;
-		int x1 = W / 2;
-		int y1 = H / 2;
-		for (int i = 4; i >= 1; i--) {
-			g.fill(x0 - i * 2, y0 - i * 2, x1 + i * 2, y1 + i * 2, argb(0.03F * fade, accent));
-		}
-		g.fill(x0, y0, x1, y1, argb(0.93F * fade, 0x0C0E0A));
-
-		// hazard stripes along the top, crawling
-		hazard(g, x0, y0, x1, y0 + 7, t, fade, granted > 0.0F ? GREEN : denied > 0.0F || locked ? RED : 0xFFC81E);
-		// title bar
-		g.fill(x0, y0 + 7, x1, y0 + 21, argb(0.2F * fade, accent));
-		g.drawString(this.font, typed("STRATCOM  //  STARTKONTROLLE  //  SILO 07", t - 0.2F, 70.0F), x0 + 8, y0 + 10, argb(fade, accent), false);
-		boolean blink = (now / 350L) % 2L == 0L;
-		String rec = "● REC";
-		g.drawString(this.font, rec, x1 - 8 - this.font.width(rec), y0 + 10, argb((blink ? 1.0F : 0.3F) * fade, RED), false);
-
-		float draw = smooth(Mth.clamp((t - 0.1F) / 0.6F, 0.0F, 1.0F));
-		frame(g, x0, y0, x1, y1, draw, argb(fade, accent));
-		if (draw >= 1.0F) {
-			int c = argb(fade, accent);
-			bracket(g, x0 - 3, y0 - 3, 12, 1, 1, c);
-			bracket(g, x1 + 2, y0 - 3, 12, -1, 1, c);
-			bracket(g, x0 - 3, y1 + 2, 12, 1, -1, c);
-			bracket(g, x1 + 2, y1 + 2, 12, -1, -1, c);
-		}
-
-		// radar scope on the left
-		int rx = x0 + 58;
-		int ry = y0 + 82;
-		radar(g, t, rx, ry, 44, accent, fade, granted, denied);
-		g.drawString(this.font, "RADAR // LUFTRAUM", rx - 44, ry + 52, argb(0.6F * fade, accent), false);
-		String contacts = granted > 0.0F ? "1 ABGANG" : BLIPS.length + " KONTAKTE";
-		g.drawString(this.font, contacts, rx - 44, ry + 62, argb(0.45F * fade, accent), false);
-
-		// status on the right
-		int sx = x0 + 120;
-		String title = granted > 0.0F ? "STARTFREIGABE ERTEILT"
-			: denied > 0.0F ? "UNGÜLTIGER STARTCODE"
-			: locked ? "TERMINAL VERSIEGELT"
-			: glitched("AUTORISIERUNG ERFORDERLICH", t - 0.35F, now);
 		g.pose().pushMatrix();
-		g.pose().translate(sx, y0 + 30);
-		g.pose().scale(1.3F, 1.3F);
-		g.drawString(this.font, title, 0, 0, argb(fade, granted > 0.0F || denied > 0.0F || locked ? accent : 0xFFF2D8), true);
-		g.pose().popMatrix();
+		g.pose().translate(cx + shake, cy + lift);
+		g.pose().scale(scale, scale);
+		g.pose().translate(-cx, -cy);
 
-		// DEFCON box, dropping to 1 when cleared
-		int defcon = granted > 0.0F ? Math.max(1, 3 - (int) (granted * 8.0F)) : 3;
-		int defColor = defcon == 1 ? RED : defcon == 2 ? 0xFF8020 : AMBER;
-		boolean defBlink = defcon == 1 ? (now / 150L) % 2L == 0L : true;
-		int dy = y0 + 48;
-		g.fill(sx, dy, sx + 62, dy + 26, argb(0.9F * fade, defBlink ? defColor : 0x2A1A08));
-		g.drawString(this.font, "DEFCON", sx + 4, dy + 3, argb(fade, DARK), false);
-		g.pose().pushMatrix();
-		g.pose().translate(sx + 44, dy + 4);
-		g.pose().scale(2.0F, 2.0F);
-		g.drawString(this.font, String.valueOf(defcon), 0, 0, argb(fade, DARK), false);
-		g.pose().popMatrix();
-		String[] lines = {
-			"SILO 07: " + (granted > 0.0F ? "OFFEN" : "GESICHERT"),
-			"SPRENGKOPF: " + (granted > 0.0F ? "SCHARF" : "GESICHERT"),
-			"ZIELDATEN: " + (granted > 0.0F ? "GELADEN" : "---"),
-		};
-		for (int i = 0; i < lines.length; i++) {
-			g.drawString(this.font, typed(lines[i], t - 0.5F - i * 0.15F, 60.0F), sx + 70, dy + 1 + i * 9, argb(0.75F * fade, i == 0 && granted > 0.0F ? GREEN : 0xD8C8A0), false);
+		// soft shadow, then the card with a hairline edge and a faint sheen along its top
+		this.orbStretched(g, x0 - 30, y0 - 10, W + 60, H + 60, 0x000000, 0.65F * alpha);
+		this.round(g, FILL, (int) x0, (int) y0, W, H, 14, argb(0.92F * alpha, 0x12141C));
+		this.round(g, EDGE, (int) x0, (int) y0, W, H, 14, argb(0.14F * alpha, 0xFFFFFF));
+		g.fillGradient((int) x0 + 14, (int) y0 + 1, (int) x0 + W - 14, (int) y0 + 2, argb(0.18F * alpha, 0xFFFFFF), argb(0.0F, 0xFFFFFF));
+
+		int left = (int) x0;
+		int top = (int) y0;
+		boolean success = out > 0.0F;
+		float successIn = ease(Mth.clamp(out / 0.3F, 0.0F, 1.0F));
+		boolean showError = err < 2.4F && !success;
+
+		// ---- lock badge with a breathing glow
+		float s1 = stagger(t, 0);
+		int bx = left + W / 2;
+		int by = top + 40;
+		int badgeColor = success ? lerpColor(ACCENT_A, SUCCESS, successIn) : showError && err < 0.6F ? lerpColor(ERROR, ACCENT_A, err / 0.6F) : ACCENT_A;
+		float breathe = 0.5F + 0.5F * Mth.sin(t * 2.2F);
+		this.orb(g, bx, by, 90.0F + 10.0F * breathe, badgeColor, (0.28F + 0.12F * breathe) * alpha * s1);
+		this.disc(g, bx, by + (1.0F - s1) * 6.0F, 21.0F, argb(alpha * s1, badgeColor));
+		this.disc(g, bx, by - 4 + (1.0F - s1) * 6.0F, 17.0F, argb(0.18F * alpha * s1, 0xFFFFFF));
+		this.lockIcon(g, bx, (int) (by + (1.0F - s1) * 6.0F), alpha * s1, success ? ease(Mth.clamp(out / 0.35F, 0.0F, 1.0F)) : 0.0F);
+
+		// ---- title and subtitle
+		float s2 = stagger(t, 1);
+		Component title = Component.literal(success ? "Entsperrt" : locked ? "Kurz gesperrt" : "Zugriff geschützt").withStyle(ChatFormatting.BOLD);
+		this.centered(g, title, left + W / 2, top + 76 + (1.0F - s2) * 6.0F, argb(alpha * s2, 0xF4F4F6));
+		float s3 = stagger(t, 2);
+		String sub = success ? "Willkommen zurück." : locked ? "Zu viele Versuche. Bitte warte kurz." : "Gib dein Passwort ein, um fortzufahren.";
+		this.centered(g, Component.literal(sub), left + W / 2, top + 90 + (1.0F - s3) * 6.0F, argb(0.55F * alpha * s3, 0xC9CCD6));
+
+		// ---- password field
+		float s4 = stagger(t, 3);
+		int fx = left + (W - FIELD_W) / 2;
+		int fy = (int) (top + 110 + (1.0F - s4) * 6.0F);
+		float sinceWrong = (now - this.wrongAt) / 1000.0F;
+		float redness = locked ? 1.0F : sinceWrong < 2.4F && length == 0 ? 1.0F - sinceWrong / 2.4F : 0.0F;
+		int ring = success ? SUCCESS : lerpColor(ACCENT_A, ERROR, redness);
+		float ringAlpha = Math.max(this.focus * 0.9F, redness);
+		if (ringAlpha > 0.01F) {
+			this.orbStretched(g, fx - 14, fy - 12, FIELD_W + 28, FIELD_H + 24, ring, 0.22F * ringAlpha * alpha * s4);
 		}
-
-		// the launch code, one box per character
-		int cy = y0 + 104;
-		String label = locked ? "SICHERHEITSSPERRE  -  " + ((this.lockedUntil - now) / 1000L + 1L) + " s" : "STARTCODE EINGEBEN";
-		g.drawString(this.font, typed(label, t - 0.7F, 60.0F), sx, cy - 11, argb(0.8F * fade, locked ? RED : accent), false);
-		float codeIn = smooth(Mth.clamp((t - 0.6F) / 0.4F, 0.0F, 1.0F));
+		this.round(g, FILL, fx, fy, FIELD_W, FIELD_H, 13, argb(alpha * s4, 0x0B0C12));
+		this.round(g, EDGE, fx, fy, FIELD_W, FIELD_H, 13, lerpArgb(argb(0.16F * alpha * s4, 0xFFFFFF), argb(alpha * s4, ring), ringAlpha));
 		int n = this.box.getValue().length();
-		int box = 12;
-		int gap = 2;
-		for (int i = 0; i < SLOTS; i++) {
-			float show = Mth.clamp(codeIn * SLOTS - i, 0.0F, 1.0F);
-			if (show <= 0.0F) {
-				break;
-			}
-			int bx = sx + i * (box + gap);
-			boolean filled = i < n;
-			boolean current = i == Math.min(n, SLOTS - 1) && granted <= 0.0F && !locked;
-			g.fill(bx, cy, bx + box, cy + 16, argb(0.9F * fade * show, filled ? 0x2A2008 : 0x111309));
-			outline(g, bx, cy, bx + box, cy + 16, argb(fade * show * (current && blink ? 1.0F : 0.55F), accent));
-			if (filled) {
-				// a typed character rolls through random symbols before it settles as a mark
-				float settle = i == n - 1 ? Mth.clamp((now - this.lastKey) / 180.0F, 0.0F, 1.0F) : 1.0F;
-				String ch = settle < 1.0F ? String.valueOf(GLITCH.charAt((int) (hash(now / 30L + i) * GLITCH.length()))) : "*";
-				g.drawString(this.font, ch, bx + (box - this.font.width(ch)) / 2 + 1, cy + 5, argb(fade, settle < 1.0F ? 0xFFFFFF : accent), false);
-			}
+		int midY = fy + FIELD_H / 2;
+		if (n == 0 && !success) {
+			g.drawString(this.font, "Passwort", fx + 14, midY - 4, argb(0.35F * alpha * s4, 0xC9CCD6), false);
 		}
-		if (n > SLOTS) {
-			g.drawString(this.font, "+" + (n - SLOTS), sx + SLOTS * (box + gap) + 2, cy + 5, argb(fade, accent), false);
+		int spacing = 11;
+		int maxDots = (FIELD_W - 28) / spacing;
+		int shown = Math.min(n, maxDots);
+		int start = fx + 14 + 3;
+		for (int i = 0; i < shown; i++) {
+			int idx = n - shown + i;
+			float pop = Mth.clamp((now - this.typedAt[Math.min(idx, this.typedAt.length - 1)]) / 260.0F, 0.0F, 1.0F);
+			float k = easeOutBack(pop);
+			float r = 3.2F * k;
+			int dot = success ? lerpColor(0xF4F4F6, SUCCESS, successIn) : 0xF4F4F6;
+			this.disc(g, start + i * spacing, midY, Math.max(0.1F, r), argb(alpha * s4 * Math.min(1.0F, pop * 2.0F), dot));
+		}
+		if (!success && !locked) {
+			float caretOn = 0.5F + 0.5F * Mth.cos((now % 1100L) / 1100.0F * Mth.TWO_PI);
+			int caretX = n == 0 ? fx + 13 : start + (shown - 1) * spacing + 7;
+			g.fill(caretX, midY - 6, caretX + 1, midY + 6, argb(caretOn * 0.85F * alpha * s4, ACCENT_A | 0x303030));
+		}
+		// below the field: the error, or the lock-out draining away
+		if (locked) {
+			float left01 = (this.lockedUntil - now) / (float) (this.lockedUntil - this.lockedFrom);
+			int barW = (int) (FIELD_W * Mth.clamp(left01, 0.0F, 1.0F));
+			g.fill(fx, fy + FIELD_H + 6, fx + FIELD_W, fy + FIELD_H + 8, argb(0.12F * alpha, 0xFFFFFF));
+			g.fill(fx, fy + FIELD_H + 6, fx + barW, fy + FIELD_H + 8, argb(0.9F * alpha, ERROR));
+		} else if (!success && n == 0 && now - this.wrongAt < 2400L) {
+			float since = (now - this.wrongAt) / 1000.0F;
+			float msg = ease(Mth.clamp(since / 0.25F, 0.0F, 1.0F)) * (1.0F - ease(Mth.clamp((since - 1.8F) / 0.6F, 0.0F, 1.0F)));
+			this.centered(g, Component.literal("Falsches Passwort"), left + W / 2, fy + FIELD_H + 4 - (1.0F - msg) * 3.0F, argb(0.9F * alpha * msg, ERROR));
 		}
 
-		// attempts and keys
-		g.drawString(this.font, "VERSUCHE", sx, cy + 24, argb(0.55F * fade, 0xD8C8A0), false);
-		for (int i = 0; i < 3; i++) {
-			int on = i < this.fails || locked ? RED : 0x3A3A2A;
-			g.fill(sx + 50 + i * 10, cy + 24, sx + 56 + i * 10, cy + 31, argb(fade, on));
+		// ---- the unlock button
+		float s5 = stagger(t, 4);
+		int btnY = (int) (top + 150 + (1.0F - s5) * 6.0F);
+		int btnColor = success ? lerpColor(ACCENT_A, SUCCESS, successIn) : locked ? 0x3A3D4A : lerpColor(ACCENT_A, ACCENT_B, this.hover * 0.5F);
+		float press = this.hover * 0.04F;
+		this.orbStretched(g, fx - 10, btnY - 6, FIELD_W + 20, 36, btnColor, (0.18F + 0.22F * this.hover) * alpha * s5);
+		this.round(g, FILL, fx, btnY, FIELD_W, 24, 12, argb(alpha * s5, btnColor));
+		g.fillGradient(fx + 12, btnY + 1, fx + FIELD_W - 12, btnY + 12, argb((0.16F + press) * alpha * s5, 0xFFFFFF), argb(0.0F, 0xFFFFFF));
+		if (success) {
+			this.checkMark(g, fx + FIELD_W / 2, btnY + 12, alpha, ease(Mth.clamp((out - 0.08F) / 0.32F, 0.0F, 1.0F)));
+		} else {
+			Component label = Component.literal(locked ? ((this.lockedUntil - now) / 1000L + 1L) + " s" : "Entsperren").withStyle(ChatFormatting.BOLD);
+			this.centered(g, label, fx + FIELD_W / 2, btnY + 8, argb(alpha * s5 * (locked ? 0.6F : 1.0F), 0xFFFFFF));
 		}
-		String keys = "[ENTER] AUTORISIEREN    [ESC] ABBRECHEN";
-		g.drawString(this.font, keys, x1 - 10 - this.font.width(keys), y1 - 14, argb(0.5F * fade, 0xD8C8A0), false);
-		hazard(g, x0, y1 - 4, x1, y1, -t, fade * 0.7F, accent);
 
-		// a wrong code tears the panel: bars of it slide sideways for a moment
-		if (denied > 0.0F) {
-			long seed = now / 40L;
-			for (int i = 0; i < 6; i++) {
-				int by = y0 + (int) (hash(seed * 7 + i) * H);
-				int bh = 2 + (int) (hash(seed * 13 + i * 3) * 7);
-				int shift = (int) ((hash(seed * 3 + i * 5) - 0.5F) * 46.0F * denied);
-				g.fill(x0 + shift, by, x1 + shift, Math.min(y1, by + bh), argb(0.35F * denied * fade, RED));
-			}
+		// ---- footer
+		float s6 = stagger(t, 5);
+		this.centered(g, Component.literal("Enter zum Entsperren  ·  Esc zum Abbrechen"), left + W / 2, top + H - 18 + (1.0F - s6) * 4.0F,
+			argb(0.32F * alpha * s6, 0xC9CCD6));
+		g.pose().popMatrix();
+	}
+
+	/** Each element eases in a little after the one above it. */
+	private static float stagger(float t, int index) {
+		return easeOutExpo(Mth.clamp((t - 0.12F - index * 0.06F) / 0.5F, 0.0F, 1.0F));
+	}
+
+	private void centered(GuiGraphics g, Component text, int x, float y, int color) {
+		if ((color >>> 24) < 5) {
+			return;
+		}
+		g.drawString(this.font, text, x - this.font.width(text) / 2, Math.round(y), color, false);
+	}
+
+	/** The padlock: a body with a keyhole and a shackle that lifts and swings open when unlocked. */
+	private void lockIcon(GuiGraphics g, int x, int y, float alpha, float open) {
+		int white = argb(alpha, 0xFFFFFF);
+		int dark = argb(alpha * 0.9F, 0x2A2A40);
+		// shackle: an arc of short segments over two legs; opening lifts it and the right leg comes free
+		float lift = open * 4.0F;
+		float r = 4.5F;
+		float sy = y - 3 - lift;
+		for (int i = 0; i <= 12; i++) {
+			float a = Mth.PI * i / 12.0F;
+			g.pose().pushMatrix();
+			g.pose().translate(x + Mth.cos(a) * r, sy - Mth.sin(a) * r);
+			g.pose().rotate(-a + Mth.HALF_PI);
+			g.fill(-1, -1, 1, 1, white);
+			g.pose().popMatrix();
+		}
+		g.fill(Math.round(x - r - 1), Math.round(sy), Math.round(x - r + 1), y + 1, white);
+		g.fill(Math.round(x + r - 1), Math.round(sy), Math.round(x + r + 1), Math.round(sy + 3 + (1.0F - open) * 1.0F), white);
+		// body and keyhole
+		this.round(g, FILL, x - 7, y - 1, 14, 11, 3, white);
+		this.disc(g, x, y + 3.5F, 1.6F, dark);
+		g.fill(x, y + 4, x + 1, y + 7, dark);
+	}
+
+	/** A check mark drawing itself, short stroke first. */
+	private void checkMark(GuiGraphics g, int x, int y, float alpha, float p) {
+		int white = argb(alpha, 0xFFFFFF);
+		float first = Mth.clamp(p / 0.4F, 0.0F, 1.0F);
+		float second = Mth.clamp((p - 0.4F) / 0.6F, 0.0F, 1.0F);
+		this.stroke(g, x - 6, y, x - 2, y + 4, first, white);
+		if (second > 0.0F) {
+			this.stroke(g, x - 2, y + 4, x + 7, y - 5, second, white);
 		}
 	}
 
-	private void radar(GuiGraphics g, float t, int x, int y, int r, int accent, float fade, float granted, float denied) {
-		// rings and cross hairs
-		for (int ring = 1; ring <= 3; ring++) {
-			circle(g, x, y, r * ring / 3.0F, ring == 3 ? 72 : 48, argb((ring == 3 ? 0.8F : 0.3F) * fade, accent));
+	private void stroke(GuiGraphics g, float ax, float ay, float bx, float by, float p, int color) {
+		float dx = (bx - ax) * p;
+		float dy = (by - ay) * p;
+		float len = Mth.sqrt(dx * dx + dy * dy);
+		if (len < 0.1F) {
+			return;
 		}
-		g.fill(x - r, y, x + r, y + 1, argb(0.25F * fade, accent));
-		g.fill(x, y - r, x + 1, y + r, argb(0.25F * fade, accent));
-		// bearing ticks
-		for (int i = 0; i < 36; i++) {
-			g.pose().pushMatrix();
-			g.pose().translate(x, y);
-			g.pose().rotate(i * Mth.TWO_PI / 36.0F);
-			g.fill(r + 2, 0, r + (i % 9 == 0 ? 7 : 4), 1, argb(0.5F * fade, accent));
-			g.pose().popMatrix();
+		g.pose().pushMatrix();
+		g.pose().translate(ax, ay);
+		g.pose().rotate((float) Math.atan2(dy, dx));
+		g.fill(0, -1, Math.max(1, Math.round(len)), 1, color);
+		g.pose().popMatrix();
+	}
+
+	// ------------------------------------------------------------------ soft shapes from the textures
+
+	/** A soft round light (radial falloff), centred on (x, y). */
+	private void orb(GuiGraphics g, float x, float y, float size, int rgb, float alpha) {
+		this.orbStretched(g, x - size / 2.0F, y - size / 2.0F, size, size, rgb, alpha);
+	}
+
+	private void orbStretched(GuiGraphics g, float x, float y, float w, float h, int rgb, float alpha) {
+		if (alpha <= 0.003F) {
+			return;
 		}
-		// the sweep, with a fading wake
-		float sweep = t * 2.4F % Mth.TWO_PI;
-		for (int k = 0; k < 14; k++) {
-			g.pose().pushMatrix();
-			g.pose().translate(x, y);
-			g.pose().rotate(sweep - k * 0.045F);
-			g.fill(0, 0, r, 1, argb((k == 0 ? 0.9F : 0.3F * (1.0F - k / 14.0F)) * fade, accent));
-			g.pose().popMatrix();
+		g.pose().pushMatrix();
+		g.pose().translate(x, y);
+		g.pose().scale(w / 128.0F, h / 128.0F);
+		g.blit(RenderPipelines.GUI_TEXTURED, ORB, 0, 0, 0.0F, 0.0F, 128, 128, 128, 128, 128, 128, argb(alpha, rgb));
+		g.pose().popMatrix();
+	}
+
+	/** A filled circle with a clean edge. */
+	private void disc(GuiGraphics g, float x, float y, float radius, int argb) {
+		if ((argb >>> 24) == 0) {
+			return;
 		}
-		// contacts, lit as the sweep passes and fading after
-		for (float[] blip : BLIPS) {
-			float behind = (sweep - blip[0]) % Mth.TWO_PI;
-			if (behind < 0.0F) {
-				behind += Mth.TWO_PI;
-			}
-			float glow = 1.0F - behind / Mth.TWO_PI;
-			glow = glow * glow;
-			int bx = x + Math.round(Mth.cos(blip[0]) * blip[1] * r);
-			int by = y + Math.round(Mth.sin(blip[0]) * blip[1] * r);
-			int c = argb(glow * fade, denied > 0.0F ? RED : accent);
-			g.fill(bx - 1, by - 1, bx + 2, by + 2, c);
+		g.pose().pushMatrix();
+		g.pose().translate(x - radius, y - radius);
+		g.pose().scale(radius * 2.0F / 128.0F, radius * 2.0F / 128.0F);
+		g.blit(RenderPipelines.GUI_TEXTURED, DISC, 0, 0, 0.0F, 0.0F, 128, 128, 128, 128, 128, 128, argb);
+		g.pose().popMatrix();
+	}
+
+	/** A rounded rectangle (filled, or just its edge), nine-sliced from a texture so the corners stay smooth. */
+	private void round(GuiGraphics g, Identifier tex, int x, int y, int w, int h, int r, int argb) {
+		if ((argb >>> 24) == 0) {
+			return;
 		}
-		// cleared: a missile lifts off the middle and climbs out of the scope, trailing smoke
-		if (granted > 0.0F) {
-			float climb = smooth(Mth.clamp((granted - 0.2F) / 0.6F, 0.0F, 1.0F));
-			int my = y - Math.round(climb * (r + 30.0F));
-			for (int k = 1; k < 12; k++) {
-				int ty = my + 7 + k * 3;
-				if (ty > y + 2) {
-					break;
+		r = Math.min(r, Math.min(w, h) / 2);
+		int c = CORNER;
+		int m = TEX - 2 * c;
+		int far = TEX - c;
+		g.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0, 0, r, r, c, c, TEX, TEX, argb);
+		g.blit(RenderPipelines.GUI_TEXTURED, tex, x + w - r, y, far, 0, r, r, c, c, TEX, TEX, argb);
+		g.blit(RenderPipelines.GUI_TEXTURED, tex, x, y + h - r, 0, far, r, r, c, c, TEX, TEX, argb);
+		g.blit(RenderPipelines.GUI_TEXTURED, tex, x + w - r, y + h - r, far, far, r, r, c, c, TEX, TEX, argb);
+		if (w > 2 * r) {
+			g.blit(RenderPipelines.GUI_TEXTURED, tex, x + r, y, c, 0, w - 2 * r, r, m, c, TEX, TEX, argb);
+			g.blit(RenderPipelines.GUI_TEXTURED, tex, x + r, y + h - r, c, far, w - 2 * r, r, m, c, TEX, TEX, argb);
+		}
+		if (h > 2 * r) {
+			g.blit(RenderPipelines.GUI_TEXTURED, tex, x, y + r, 0, c, r, h - 2 * r, c, m, TEX, TEX, argb);
+			g.blit(RenderPipelines.GUI_TEXTURED, tex, x + w - r, y + r, far, c, r, h - 2 * r, c, m, TEX, TEX, argb);
+		}
+		if (w > 2 * r && h > 2 * r) {
+			g.blit(RenderPipelines.GUI_TEXTURED, tex, x + r, y + r, c, c, w - 2 * r, h - 2 * r, m, m, TEX, TEX, argb);
+		}
+	}
+
+	/** Draws the soft shapes once: a radial glow, a disc, and a rounded square filled and as an outline. */
+	private static void makeTextures() {
+		if (texturesMade) {
+			return;
+		}
+		texturesMade = true;
+		var manager = Minecraft.getInstance().getTextureManager();
+		manager.register(ORB, smooth("ui orb", 128, (px, py) -> {
+			double d = Math.hypot(px - 64.0, py - 64.0) / 64.0;
+			double f = Math.max(0.0, 1.0 - d);
+			return f * f * (3.0 - 2.0 * f) * f;
+		}));
+		manager.register(DISC, smooth("ui disc", 128, (px, py) -> coverage(62.0 - Math.hypot(px - 64.0, py - 64.0))));
+		manager.register(FILL, smooth("ui round fill", TEX, (px, py) -> coverage(-roundedBox(px, py))));
+		manager.register(EDGE, smooth("ui round edge", TEX, (px, py) -> {
+			double d = roundedBox(px, py);
+			return coverage(-d) - coverage(-(d + 2.2));
+		}));
+	}
+
+	/** Signed distance (texture pixels) to the rounded square filling the texture, negative inside. */
+	private static double roundedBox(double px, double py) {
+		double half = TEX / 2.0;
+		double qx = Math.abs(px - half) - (half - CORNER);
+		double qy = Math.abs(py - half) - (half - CORNER);
+		double outside = Math.hypot(Math.max(qx, 0.0), Math.max(qy, 0.0));
+		return outside + Math.min(Math.max(qx, qy), 0.0) - CORNER;
+	}
+
+	private static double coverage(double inside) {
+		return Mth.clamp(inside + 0.5, 0.0, 1.0);
+	}
+
+	private interface Shape {
+		double at(double x, double y);
+	}
+
+	/** A white texture whose alpha is the shape, supersampled 4x4, with smooth (linear) filtering. */
+	private static DynamicTexture smooth(String name, int size, Shape shape) {
+		NativeImage image = new NativeImage(size, size, false);
+		for (int y = 0; y < size; y++) {
+			for (int x = 0; x < size; x++) {
+				double sum = 0.0;
+				for (int sy = 0; sy < 4; sy++) {
+					for (int sx = 0; sx < 4; sx++) {
+						sum += shape.at(x + (sx + 0.5) / 4.0, y + (sy + 0.5) / 4.0);
+					}
 				}
-				int spread = k / 3;
-				g.fill(x - spread, ty, x + 1 + spread, ty + 3, argb(0.5F * (1.0F - k / 12.0F) * fade, 0xC8C8B8));
+				int a = (int) Math.round(Mth.clamp(sum / 16.0, 0.0, 1.0) * 255.0);
+				image.setPixel(x, y, a << 24 | 0xFFFFFF);
 			}
-			int body = argb(fade, 0xF0F0E0);
-			g.fill(x, my - 3, x + 1, my - 2, body); // nose
-			g.fill(x - 1, my - 2, x + 2, my + 6, body);
-			g.fill(x - 2, my + 4, x + 3, my + 7, body); // fins
-			boolean flicker = (Util.getMillis() / 40L) % 2L == 0L;
-			g.fill(x - 1, my + 7, x + 2, my + (flicker ? 11 : 9), argb(fade, 0xFF9020));
-		} else {
-			// the silo at the centre
-			g.fill(x - 2, y - 2, x + 3, y + 3, argb(fade, accent));
+		}
+		return new SmoothTexture(name, image);
+	}
+
+	private static final class SmoothTexture extends DynamicTexture {
+		SmoothTexture(String name, NativeImage image) {
+			super(() -> name, image);
+			this.sampler = RenderSystem.getSamplerCache().getSampler(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE, FilterMode.LINEAR, FilterMode.LINEAR, false);
 		}
 	}
 
 	// ------------------------------------------------------------------ helpers
 
-	private static void circle(GuiGraphics g, int x, int y, float r, int segments, int color) {
-		for (int i = 0; i < segments; i++) {
-			float a = i * Mth.TWO_PI / segments;
-			int px = x + Math.round(Mth.cos(a) * r);
-			int py = y + Math.round(Mth.sin(a) * r);
-			g.fill(px, py, px + 1, py + 1, color);
-		}
+	private static float approach(float value, float target, float rate) {
+		return value + (target - value) * Math.min(1.0F, rate);
 	}
 
-	/** Diagonal warning stripes in a strip, crawling sideways. */
-	private static void hazard(GuiGraphics g, int x0, int y0, int x1, int y1, float t, float fade, int color) {
-		int period = 12;
-		int shift = Math.floorMod((int) (t * 20.0F), period);
-		int on = argb(0.85F * fade, color);
-		int offc = argb(0.85F * fade, 0x101008);
-		g.fill(x0, y0, x1, y1, offc);
-		for (int y = y0; y < y1; y++) {
-			int s = shift + (y - y0);
-			for (int x = x0 - period + Math.floorMod(s, period); x < x1; x += period) {
-				g.fill(Math.max(x0, x), y, Math.min(x1, x + period / 2), y + 1, on);
-			}
-		}
-	}
-
-	/** The outline drawn in clockwise from the top left, {@code p} of the way round. */
-	private static void frame(GuiGraphics g, int x0, int y0, int x1, int y1, float p, int color) {
-		int w = x1 - x0;
-		int h = y1 - y0;
-		float len = p * 2.0F * (w + h);
-		g.fill(x0, y0, x0 + (int) Math.min(len, w), y0 + 1, color);
-		len -= w;
-		if (len > 0.0F) {
-			g.fill(x1 - 1, y0, x1, y0 + (int) Math.min(len, h), color);
-		}
-		len -= h;
-		if (len > 0.0F) {
-			g.fill(x1 - (int) Math.min(len, w), y1 - 1, x1, y1, color);
-		}
-		len -= w;
-		if (len > 0.0F) {
-			g.fill(x0, y1 - (int) Math.min(len, h), x0 + 1, y1, color);
-		}
-	}
-
-	private static void outline(GuiGraphics g, int x0, int y0, int x1, int y1, int color) {
-		frame(g, x0, y0, x1, y1, 1.0F, color);
-	}
-
-	private static void bracket(GuiGraphics g, int x, int y, int size, int dx, int dy, int color) {
-		g.fill(Math.min(x, x + dx * size), y, Math.max(x, x + dx * size) + 1, y + 1, color);
-		g.fill(x, Math.min(y, y + dy * size), x + 1, Math.max(y, y + dy * size) + 1, color);
-	}
-
-	private static String typed(String text, float t, float perSecond) {
-		return text.substring(0, Mth.clamp((int) (t * perSecond), 0, text.length()));
-	}
-
-	private static String glitched(String text, float t, long now) {
-		int shown = Mth.clamp((int) (t * 24.0F), 0, text.length());
-		StringBuilder out = new StringBuilder(text.substring(0, shown));
-		int scramble = Math.min(text.length() - shown, 4);
-		for (int i = 0; i < scramble; i++) {
-			out.append(GLITCH.charAt((int) (hash(now / 50L + i * 31L) * GLITCH.length())));
-		}
-		return out.toString();
-	}
-
-	private static float hash(long n) {
-		n = (n << 13) ^ n;
-		return ((n * (n * n * 15731L + 789221L) + 1376312589L) & 0x7fffffffL) / (float) 0x7fffffffL;
-	}
-
-	private static float smooth(float x) {
+	private static float ease(float x) {
 		return x * x * (3.0F - 2.0F * x);
 	}
 
+	private static float easeOutExpo(float x) {
+		return x >= 1.0F ? 1.0F : 1.0F - (float) Math.pow(2.0, -10.0 * x);
+	}
+
 	private static float easeOutBack(float x) {
-		float c1 = 1.70158F;
+		float c1 = 1.9F;
 		float k = x - 1.0F;
 		return 1.0F + (c1 + 1.0F) * k * k * k + c1 * k * k;
 	}
 
 	private static int argb(float alpha, int rgb) {
 		return Math.round(Mth.clamp(alpha, 0.0F, 1.0F) * 255.0F) << 24 | rgb & 0xFFFFFF;
+	}
+
+	private static int lerpColor(int a, int b, float f) {
+		f = Mth.clamp(f, 0.0F, 1.0F);
+		int r = Math.round(Mth.lerp(f, a >> 16 & 255, b >> 16 & 255));
+		int gr = Math.round(Mth.lerp(f, a >> 8 & 255, b >> 8 & 255));
+		int bl = Math.round(Mth.lerp(f, a & 255, b & 255));
+		return r << 16 | gr << 8 | bl;
+	}
+
+	private static int lerpArgb(int a, int b, float f) {
+		f = Mth.clamp(f, 0.0F, 1.0F);
+		int al = Math.round(Mth.lerp(f, a >>> 24, b >>> 24));
+		return al << 24 | lerpColor(a, b, f);
 	}
 
 	private static void play(SoundEvent sound, float pitch, float volume) {
