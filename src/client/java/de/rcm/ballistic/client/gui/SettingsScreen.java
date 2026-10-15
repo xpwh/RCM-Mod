@@ -369,6 +369,12 @@ public class SettingsScreen extends Screen {
 				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.server_nukes"),
 					(b, v) -> this.run("bmserver nukes " + (v ? "erlauben" : "verbieten")))));
 
+		this.list.header("options.ballisticmissiles.section.events", 0xFF8080FF);
+		this.list.row(command(CycleButton.onOffBuilder(de.rcm.ballistic.client.effect.NewMoonClient.active())
+			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.new_moon.tooltip")))
+			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.new_moon"),
+				(b, v) -> this.run("bmworld neumond " + (v ? "an" : "aus")))));
+
 		this.list.header("options.ballisticmissiles.section.repair", 0xFF90C0FF);
 		this.list.note("options.ballisticmissiles.repair.note");
 		var server = this.minecraft.getSingleplayerServer();

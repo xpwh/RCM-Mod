@@ -47,10 +47,37 @@ public final class DynamicLights {
 	private static final RenderPipeline PIPELINE = pipeline("dynamic_light", false);
 	/** The glow in the air: added on top (it lights the air in front of whatever is there, even the sky). */
 	private static final RenderPipeline HALO_PIPELINE = pipeline("dynamic_light_halo", true);
+	/** New-moon darkness: the alpha cleared (to collect the light the lights throw), then the picture darkened. */
+	private static final RenderPipeline CLEAR_PIPELINE = darkPipeline("dynamic_dark_clear", true);
+	private static final RenderPipeline DARK_PIPELINE = darkPipeline("dynamic_dark", false);
 	private static final Identifier DEPTH_ID = BallisticMissiles.id("textures/environment/light_depth");
+	private static final Identifier SCENE_ID = BallisticMissiles.id("textures/environment/light_scene");
+	private static final Identifier LIT_ID = BallisticMissiles.id("textures/environment/light_lit");
 	private static RenderType type;
 	private static RenderType haloType;
-	private static DepthCopy depth;
+	private static RenderType clearType;
+	private static RenderType darkType;
+	private static TexCopy depth;
+	/** The picture before the lights, and after them (with the light they threw in its alpha). */
+	private static TexCopy scene;
+	private static TexCopy lit;
+
+	private static RenderPipeline darkPipeline(String name, boolean clear) {
+		RenderPipeline.Builder b = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
+			.withLocation(BallisticMissiles.id("pipeline/" + name))
+			.withVertexShader(BallisticMissiles.id("core/dynamic_dark"))
+			.withFragmentShader(BallisticMissiles.id("core/dynamic_dark"))
+			.withDepthTestFunction(com.mojang.blaze3d.platform.DepthTestFunction.NO_DEPTH_TEST)
+			.withCull(false)
+			.withDepthWrite(false)
+			.withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS);
+		if (clear) {
+			b = b.withColorWrite(false, true).withShaderDefine("CLEAR");
+		} else {
+			b = b.withSampler("Sampler0").withSampler("Sampler1");
+		}
+		return b.build();
+	}
 
 	private static RenderPipeline pipeline(String name, boolean halo) {
 		RenderPipeline.Builder b = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
@@ -59,7 +86,9 @@ public final class DynamicLights {
 			.withFragmentShader(BallisticMissiles.id("core/dynamic_light"))
 			.withSampler("Sampler0")
 			// the light brightens what is already there: dst * (1 + light); the halo adds its glow
-			.withBlend(halo ? new BlendFunction(SourceFactor.ONE, DestFactor.ONE) : new BlendFunction(SourceFactor.DST_COLOR, DestFactor.ONE))
+			// (and adds how much light it throws to the alpha, for the new-moon darkness to keep lit)
+			.withBlend(halo ? new BlendFunction(SourceFactor.ONE, DestFactor.ONE)
+				: new BlendFunction(SourceFactor.DST_COLOR, DestFactor.ONE, SourceFactor.ONE, DestFactor.ONE))
 			.withDepthTestFunction(com.mojang.blaze3d.platform.DepthTestFunction.NO_DEPTH_TEST)
 			.withCull(false)
 			.withDepthWrite(false)
@@ -108,6 +137,8 @@ public final class DynamicLights {
 	public static void init() {
 		RenderPipelines.register(PIPELINE);
 		RenderPipelines.register(HALO_PIPELINE);
+		RenderPipelines.register(CLEAR_PIPELINE);
+		RenderPipelines.register(DARK_PIPELINE);
 		de.rcm.ballistic.ClientHooks.lightFlash = DynamicLights::flash;
 		WorldRenderEvents.END_MAIN.register(DynamicLights::render);
 	}
@@ -250,7 +281,7 @@ public final class DynamicLights {
 	private static void render(WorldRenderContext context) {
 		Minecraft mc = Minecraft.getInstance();
 		DRAWN.clear();
-		if (mc.level == null || (LIGHTS.isEmpty() && LAMPS.isEmpty())) {
+		if (mc.level == null || (LIGHTS.isEmpty() && LAMPS.isEmpty() && NewMoonClient.amount() <= 0.01F)) {
 			return;
 		}
 		int quality = ModConfig.lightQuality;
@@ -304,7 +335,11 @@ public final class DynamicLights {
 		}
 		LIGHTS.removeIf(l -> l.now <= 0.0F && (l.steady ? (now - l.born) / 1.0E6F >= l.decayMs : true));
 		LAMPS.values().removeIf(l -> (now - l.born) / 1.0E6F >= l.decayMs);
-		if (drawn.isEmpty() || quality <= 0) {
+		float pitch = NewMoonClient.amount();
+		if (quality <= 0) {
+			drawn.clear();
+		}
+		if (drawn.isEmpty() && pitch <= 0.01F) {
 			return;
 		}
 		// the ones that matter most on screen: strong, big and near
@@ -315,12 +350,17 @@ public final class DynamicLights {
 		}
 		DRAWN.addAll(drawn);
 		var target = mc.getMainRenderTarget();
-		if (target.getDepthTexture() == null) {
+		if (target.getDepthTexture() == null || target.getColorTexture() == null
+			|| !(context.consumers() instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers)) {
 			return;
 		}
 		if (depth == null) {
-			depth = new DepthCopy();
+			depth = new TexCopy("depth");
+			scene = new TexCopy("scene");
+			lit = new TexCopy("lit");
 			mc.getTextureManager().register(DEPTH_ID, depth);
+			mc.getTextureManager().register(SCENE_ID, scene);
+			mc.getTextureManager().register(LIT_ID, lit);
 		}
 		depth.copy(target.getDepthTexture());
 		if (type == null) {
@@ -330,29 +370,65 @@ public final class DynamicLights {
 			haloType = RenderType.create("ballisticmissiles_dynamic_light_halo", RenderSetup.builder(HALO_PIPELINE)
 				.withTexture("Sampler0", DEPTH_ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
 				.createRenderSetup());
+			clearType = RenderType.create("ballisticmissiles_dynamic_dark_clear", RenderSetup.builder(CLEAR_PIPELINE).createRenderSetup());
+			darkType = RenderType.create("ballisticmissiles_dynamic_dark", RenderSetup.builder(DARK_PIPELINE)
+				.withTexture("Sampler0", SCENE_ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.withTexture("Sampler1", LIT_ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.createRenderSetup());
+		}
+		PoseStack.Pose pose = context.matrices().last();
+		boolean darken = pitch > 0.01F;
+		if (darken) {
+			// the picture as the world lit it, and the alpha cleared to collect the lights' light
+			scene.copy(target.getColorTexture());
+			screen(buffers.getBuffer(clearType), pose, camera, 0);
+			buffers.endBatch(clearType);
 		}
 		// shadows: rays per light (soft ones only from big lights) and steps per ray
 		int softRays = quality == 1 ? 1 : quality == 2 ? 3 : 6;
 		int steps = quality == 1 ? 6 : quality == 2 ? 8 : 12;
+		if (!drawn.isEmpty()) {
+			VertexConsumer consumer = buffers.getBuffer(type);
+			for (Light l : drawn) {
+				int rays = l.radius > 18.0F && l.spotCos <= 0.0F ? softRays : 1;
+				quad(consumer, pose, camera, cam, l, Math.round(l.spotCos * 1000.0F), rays | steps << 4);
+			}
+			buffers.endBatch(type);
+		}
+		if (darken) {
+			// the new-moon darkness: what only the light map's floor lit sinks to black, what the lights reach
+			// shows in their light (the picture can only be doubled by the light pass; this lifts it fully)
+			lit.copy(target.getColorTexture());
+			double gamma = mc.options.gamma().get();
+			float floor = (float) ((0.03 + (1.0 - Math.pow(0.97, 4.0) - 0.03) * gamma) * 0.96 + 0.03);
+			screen(buffers.getBuffer(darkType), pose, camera, 0xFF000000 | Math.round(pitch * 255.0F) << 16 | Math.round(floor * 255.0F) << 8);
+			buffers.endBatch(darkType);
+		}
 		// the glow in the air: thin clear night air, thicker in rain, mist and smoke
 		float rain = mc.level.getRainLevel(1.0F);
 		haloDensity = Mth.clamp(0.06F + rain * 0.35F + mc.level.getThunderLevel(1.0F) * 0.15F + SmokeField.fog() * 1.2F, 0.0F, 1.0F) * dark;
-		PoseStack.Pose pose = context.matrices().last();
-		VertexConsumer consumer = context.consumers().getBuffer(type);
-		for (Light l : drawn) {
-			int rays = l.radius > 18.0F && l.spotCos <= 0.0F ? softRays : 1;
-			quad(consumer, pose, camera, cam, l, Math.round(l.spotCos * 1000.0F), rays | steps << 4);
-		}
-		if (quality >= 2 && haloDensity > 0.01F) {
-			VertexConsumer halo = context.consumers().getBuffer(haloType);
+		if (quality >= 2 && haloDensity > 0.01F && !drawn.isEmpty()) {
+			VertexConsumer halo = buffers.getBuffer(haloType);
 			for (Light l : drawn) {
 				// a lamp glows round itself; a spotlight's beam shows as a shaft through the air
 				quad(halo, pose, camera, cam, l, Math.round(haloDensity * 1000.0F), Math.round(Math.max(l.spotCos, 0.0F) * 1000.0F));
 			}
-		}
-		if (context.consumers() instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers) {
-			buffers.endBatch(type);
 			buffers.endBatch(haloType);
+		}
+	}
+
+	/** A quad over the whole view, far out; its colour carries the pass's parameters (darkness in red, the light map's floor in green). */
+	private static void screen(VertexConsumer consumer, PoseStack.Pose pose, Camera camera, int argb) {
+		org.joml.Vector3fc f = camera.forwardVector();
+		org.joml.Vector3fc u = camera.upVector();
+		org.joml.Vector3fc left = camera.leftVector();
+		float w = 6.0F;
+		int color = argb;
+		for (float[] c : new float[][] {{w, -w}, {-w, -w}, {-w, w}, {w, w}}) {
+			float x = (f.x() + left.x() * c[0] + u.x() * c[1]) * 500.0F;
+			float y = (f.y() + left.y() * c[0] + u.y() * c[1]) * 500.0F;
+			float z = (f.z() + left.z() * c[0] + u.z() * c[1]) * 500.0F;
+			consumer.addVertex(pose, x, y, z).setColor(color);
 		}
 	}
 
@@ -376,12 +452,18 @@ public final class DynamicLights {
 		}
 	}
 
-	/** A copy of the world's depth at the end of the main pass. */
-	private static final class DepthCopy extends net.minecraft.client.renderer.texture.AbstractTexture {
+	/** A copy of the world's depth, or of its picture, at the end of the main pass. */
+	private static final class TexCopy extends net.minecraft.client.renderer.texture.AbstractTexture {
+		private final String name;
+
+		TexCopy(String name) {
+			this.name = name;
+		}
+
 		void copy(com.mojang.blaze3d.textures.GpuTexture source) {
 			int w = source.getWidth(0);
 			int h = source.getHeight(0);
-			if (this.texture == null || this.texture.getWidth(0) != w || this.texture.getHeight(0) != h) {
+			if (this.texture == null || this.texture.getWidth(0) != w || this.texture.getHeight(0) != h || this.texture.getFormat() != source.getFormat()) {
 				if (this.textureView != null) {
 					this.textureView.close();
 				}
@@ -389,9 +471,9 @@ public final class DynamicLights {
 					this.texture.close();
 				}
 				var device = RenderSystem.getDevice();
-				this.texture = device.createTexture(() -> "Ballistic Missiles light depth copy",
+				this.texture = device.createTexture(() -> "Ballistic Missiles light " + this.name + " copy",
 					com.mojang.blaze3d.textures.GpuTexture.USAGE_COPY_DST | com.mojang.blaze3d.textures.GpuTexture.USAGE_TEXTURE_BINDING,
-					com.mojang.blaze3d.textures.TextureFormat.DEPTH32, w, h, 1, 1);
+					source.getFormat(), w, h, 1, 1);
 				this.textureView = device.createTextureView(this.texture);
 				this.sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
 			}

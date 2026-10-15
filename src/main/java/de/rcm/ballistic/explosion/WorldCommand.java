@@ -14,6 +14,7 @@ import net.minecraft.world.phys.Vec3;
  *   <li>{@code krater reparieren [radius]} - every block the explosions destroyed within the radius
  *       (default 64) put back as it was ({@link CraterLog})</li>
  *   <li>{@code krater info} - how many destroyed blocks are remembered here</li>
+ *   <li>{@code neumond an|aus} - the new-moon night event: pitch-black nights ({@link NewMoon})</li>
  * </ul>
  */
 public final class WorldCommand {
@@ -31,7 +32,16 @@ public final class WorldCommand {
 					int n = CraterLog.remembered(ctx.getSource().getLevel());
 					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.world.crater_info", n), false);
 					return n;
-				}))));
+				})))
+			.then(Commands.literal("neumond")
+				.then(Commands.literal("an").executes(ctx -> newMoon(ctx.getSource(), true)))
+				.then(Commands.literal("aus").executes(ctx -> newMoon(ctx.getSource(), false)))));
+	}
+
+	private static int newMoon(CommandSourceStack source, boolean on) {
+		NewMoon.set(source.getServer(), on);
+		source.sendSuccess(() -> Component.translatable(on ? "commands.ballisticmissiles.world.new_moon_on" : "commands.ballisticmissiles.world.new_moon_off"), true);
+		return 1;
 	}
 
 	private static int repair(CommandSourceStack source, int radius) {

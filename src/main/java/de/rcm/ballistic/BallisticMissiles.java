@@ -59,12 +59,14 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.explosion.WorldCommand.register(dispatcher));
 		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
+		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NewMoon::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.NuclearWinter::save);
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
 			(handler, sender, server) -> {
 				ServerPlayNetworking.send(handler.player, de.rcm.ballistic.network.ModNetworking.ServerConfigPayload.current());
 				RadiationManager.sync(handler.player.level(), handler.player);
 				de.rcm.ballistic.explosion.NuclearWinter.sync(handler.player);
+				de.rcm.ballistic.explosion.NewMoon.sync(handler.player);
 				de.rcm.ballistic.injury.Injuries.rejoin(handler.player);
 			});
 		net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(

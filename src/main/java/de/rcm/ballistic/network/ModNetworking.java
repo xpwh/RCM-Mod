@@ -396,6 +396,18 @@ public final class ModNetworking {
 		}
 	}
 
+	/** Server -> client: whether the new-moon night event is on (pitch-black nights). */
+	public record NewMoonPayload(boolean active) implements CustomPacketPayload {
+		public static final Type<NewMoonPayload> TYPE = new Type<>(BallisticMissiles.id("new_moon"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, NewMoonPayload> CODEC = StreamCodec.of((buf, p) -> buf.writeBoolean(p.active),
+			buf -> new NewMoonPayload(buf.readBoolean()));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: how much soot is in the stratosphere (nuclear winter, 0-1). */
 	public record WinterPayload(float soot) implements CustomPacketPayload {
 		public static final Type<WinterPayload> TYPE = new Type<>(BallisticMissiles.id("winter"));
@@ -839,6 +851,7 @@ public final class ModNetworking {
 			}
 		});
 		PayloadTypeRegistry.playS2C().register(WinterPayload.TYPE, WinterPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(NewMoonPayload.TYPE, NewMoonPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(FalloutPayload.TYPE, FalloutPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(DetonationPayload.TYPE, DetonationPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(RadarDataPayload.TYPE, RadarDataPayload.CODEC);

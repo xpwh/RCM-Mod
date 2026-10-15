@@ -11,6 +11,7 @@
 		"EntityRendererMixin",
 		"EntityRendererCullingMixin",
 		"EntityTurnMixin",
+		"EnvironmentAttributeProbeMixin",
 		"FogRendererMixin",
 		"GameRendererAccessor",
 		"GameRendererMixin",

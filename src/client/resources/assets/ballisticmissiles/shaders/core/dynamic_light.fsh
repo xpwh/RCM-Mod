@@ -104,7 +104,7 @@ void main() {
         // the air: haze, rain, smoke (a weapon light shows a faint beam even on a clear night)
         float k = lightCol.a * sum * (0.04 + spotCos) * 0.09;
         if (k < 0.002) discard;
-        fragColor = vec4(lightCol.rgb * min(k, 1.5), 1.0);
+        fragColor = vec4(lightCol.rgb * min(k, 1.5), 0.0);
         return;
     }
     float t0 = dot(lightPos, rd);
@@ -125,7 +125,7 @@ void main() {
     float density = spotCos;
     float k = lightCol.a * glow * density * 0.06;
     if (k < 0.002) discard;
-    fragColor = vec4(lightCol.rgb * k, 1.0);
+    fragColor = vec4(lightCol.rgb * k, 0.0);
 }
 #else
 void main() {
@@ -181,6 +181,8 @@ void main() {
     float k = lightCol.a * att * facing * lit * spot;
     if (k < 0.003) discard;
     // brightens what is there: result = dst * (1 + light)
-    fragColor = vec4(lightCol.rgb * k * 6.0, 1.0);
+    // the alpha collects how much light falls here (a quarter of it, so it does not clip at once), for the
+    // new-moon darkness to keep what the lights reach
+    fragColor = vec4(lightCol.rgb * k * 6.0, k * 0.25);
 }
 #endif

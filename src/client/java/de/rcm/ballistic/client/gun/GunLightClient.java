@@ -109,6 +109,18 @@ public final class GunLightClient {
 				// a little ahead of the lens, so the gun and the hand do not shadow their own beam; the cold white
 				// of an LED, a tight hot spot in a wide dim spill, thrown far
 				DynamicLights.spot(player.getId() * 8L + 1L, from.add(dir.scale(0.15)), dir, 26.0F, 0xEEF3FF, 1.0F, 56.0F);
+				// light thrown back off whatever the beam lands on near by: a wall a few steps away lights the
+				// room round you softly (the bounce is what lets you see beside the beam in a dark room)
+				Vec3 far = from.add(dir.scale(24.0));
+				HitResult wall = mc.level.clip(new ClipContext(from, far, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, player));
+				if (wall.getType() != HitResult.Type.MISS) {
+					double d = wall.getLocation().distanceTo(from);
+					float bounce = (float) (0.5 / (1.0 + d * d * 0.06));
+					if (bounce > 0.03F) {
+						DynamicLights.lamp(player.getId() * 8L + 3L, wall.getLocation().subtract(dir.scale(Math.min(0.8, d * 0.3))), 0xE4E8F0, bounce,
+							(float) (3.0 + d * 0.5));
+					}
+				}
 			}
 			if (a.laserShining()) {
 				Vec3 from;
@@ -127,6 +139,8 @@ public final class GunLightClient {
 					aim = dir.scale(2.0);
 					end = from.add(aim);
 				}
+				// the dot sits a hair off the surface, towards the gun, so it is not swallowed by it
+				end = end.subtract(aim.normalize().scale(0.012));
 				LASERS.add(new double[] {from.x, from.y, from.z, end.x, end.y, end.z});
 				DynamicLights.lamp(player.getId() * 8L + 2L, end.subtract(aim.normalize().scale(0.08)), 0xFF2410, 0.3F, 1.6F);
 			}
@@ -142,13 +156,19 @@ public final class GunLightClient {
 		for (double[] l : LASERS) {
 			Vec3 a = new Vec3(l[0], l[1], l[2]).subtract(cam);
 			Vec3 b = new Vec3(l[3], l[4], l[5]).subtract(cam);
-			ribbon(consumer, pose, a, b, 0.006F, Math.round(air * 255.0F) << 24 | 0xFF2A18);
-			ribbon(consumer, pose, a, b, 0.02F, Math.round(air * 0.35F * 255.0F) << 24 | 0xFF2A18);
-			// the dot where it strikes: a hot point and a soft glow round it, sized for distance
+			// a 650 nm beam, a few millimetres across: a thin bright thread where the air scatters it, a fainter
+			// haze round it in smoke
+			ribbon(consumer, pose, a, b, 0.0025F, Math.round(air * 255.0F) << 24 | 0xFF2A18);
+			ribbon(consumer, pose, a, b, 0.009F, Math.round(air * 0.3F * 255.0F) << 24 | 0xFF2010);
+			// the dot where it strikes: tiny and blinding at its heart (the beam spreads about a millimetre per
+			// metre), with the glare of it round it - bigger in the dark - and the shimmer of laser speckle
 			double d = b.length();
-			float r = (float) (0.025 + d * 0.0012);
-			dot(consumer, pose, camera, b, r, 0xFFFF6040);
-			dot(consumer, pose, camera, b, r * 3.0F, 0x70FF2010);
+			float r = (float) (0.004 + d * 0.0006);
+			float shimmer = 0.82F + 0.18F * (float) Math.random();
+			float glare = 0.35F + 0.65F * (1.0F - day);
+			dot(consumer, pose, camera, b, r, Math.round(255.0F * shimmer) << 24 | 0xFFE0D8);
+			dot(consumer, pose, camera, b, r * 2.2F, Math.round(220.0F * shimmer) << 24 | 0xFF3020);
+			dot(consumer, pose, camera, b, (float) (r * 6.0 + 0.01 * glare), Math.round(70.0F * glare * shimmer) << 24 | 0xFF1808);
 		}
 	}
 
