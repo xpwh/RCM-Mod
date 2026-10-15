@@ -10,7 +10,8 @@
 //   UV2.x   = light position y * 8 (signed), UV2.y = radius * 16
 //   UV1.x   = spotlight: cosine of the cone's half angle * 1000 (0 = a point light shining all round);
 //             in the halo pass: how thick the air is (haze, rain, smoke) * 1000
-//   UV1.y   = shadow quality: rays (low 4 bits) and steps per ray (next 4 bits); 0 = no shadows
+//   UV1.y   = shadow quality: rays (low 4 bits) and steps per ray (next 4 bits); 0 = no shadows;
+//             in the halo pass: a spotlight's cone cosine * 1000 (its beam in the air), 0 for a lamp
 //   Normal  = the spotlight's direction
 
 in vec3 Position;
@@ -28,6 +29,7 @@ flat out vec3 spotDir;
 flat out float spotCos;
 flat out int shadowRays;
 flat out int shadowSteps;
+flat out float beamCos;
 // clip space back to camera-relative world space, with all the view carries (the walking bob too)
 flat out mat4 invViewProj;
 
@@ -43,5 +45,6 @@ void main() {
     spotCos = float(UV1.x) / 1000.0;
     shadowRays = UV1.y & 15;
     shadowSteps = (UV1.y >> 4) & 15;
+    beamCos = float(UV1.y) / 1000.0;
     invViewProj = inverse(ProjMat * ModelViewMat);
 }

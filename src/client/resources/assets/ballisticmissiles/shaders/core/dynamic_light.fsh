@@ -23,6 +23,7 @@ flat in vec3 spotDir;
 flat in float spotCos;
 flat in int shadowRays;
 flat in int shadowSteps;
+flat in float beamCos;
 flat in mat4 invViewProj;
 
 out vec4 fragColor;
@@ -35,6 +36,15 @@ vec3 unproject(vec2 uv, float depth) {
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+// a weapon light's beam across its cone (x: angle off the axis / the cone's half angle): a tight, hot
+// spot, a faint ring round it from the reflector, and a wide dim spill fading out to the rim
+float beamProfile(float x) {
+    float hot = exp(-(x * x) / (0.2 * 0.2));
+    float ring = 0.1 * exp(-((x - 0.3) * (x - 0.3)) / (0.05 * 0.05));
+    float spill = 0.2 * (1.0 - smoothstep(0.5, 1.0, x));
+    return hot + ring + spill;
 }
 
 // how much of the light reaches p (0-1) along one ray towards the light point lp
@@ -70,6 +80,33 @@ void main() {
     float depth = textureLod(Sampler0, uv, 0.0).r;
     vec3 rd = normalize(relPos);
     float sceneT = depth >= 1.0 ? 1.0e5 : length(unproject(uv, depth));
+    if (beamCos > 0.0) {
+        // a spotlight's beam, seen where the air scatters it: marched along the view ray up to the world,
+        // summing the light each step stands in - bright by the lens, thinning out with distance
+        float outer = acos(beamCos);
+        float tEnd = min(sceneT, length(lightPos) + radius);
+        const int N = 28;
+        float dt = tEnd / float(N);
+        float jitter = hash(gl_FragCoord.xy);
+        float sum = 0.0;
+        for (int i = 0; i < N; i++) {
+            vec3 q = rd * (dt * (float(i) + jitter));
+            vec3 v = q - lightPos;
+            float d = length(v);
+            if (d < 0.05 || d > radius) continue;
+            float c = dot(v / d, spotDir);
+            if (c <= beamCos) continue;
+            float x = acos(clamp(c, -1.0, 1.0)) / outer;
+            float r = d / radius;
+            float fall = (1.0 - r * r) / (1.0 + d * d * 0.03);
+            sum += beamProfile(x) * fall * dt;
+        }
+        // the air: haze, rain, smoke (a weapon light shows a faint beam even on a clear night)
+        float k = lightCol.a * sum * (0.04 + spotCos) * 0.09;
+        if (k < 0.002) discard;
+        fragColor = vec4(lightCol.rgb * min(k, 1.5), 1.0);
+        return;
+    }
     float t0 = dot(lightPos, rd);
     float h2 = max(dot(lightPos, lightPos) - t0 * t0, 0.0);
     float h = sqrt(h2);
@@ -113,15 +150,15 @@ void main() {
     float spot = 1.0;
     if (spotCos > 0.0) {
         float c = dot(-l, spotDir);
-        spot = smoothstep(spotCos, mix(spotCos, 1.0, 0.45), c);
-        spot *= 0.75 + 0.25 * smoothstep(mix(spotCos, 1.0, 0.7), 1.0, c);
-        if (spot <= 0.001) discard;
+        if (c <= spotCos) discard;
+        spot = beamProfile(acos(clamp(c, -1.0, 1.0)) / acos(spotCos));
     }
 
-    // falls off with the square of the distance near the light, smoothly to nothing at the radius
+    // falls off with the square of the distance near the light, smoothly to nothing at the radius (a
+    // spotlight's focused beam carries much further)
     float r = d / radius;
     float att = 1.0 - r * r;
-    att = att * att / (1.0 + d * d * 0.08);
+    att = att * att / (1.0 + d * d * (spotCos > 0.0 ? 0.02 : 0.08));
 
     // shadows: rays to points spread over the light's size (a fireball is wide, a muzzle flash small),
     // each with its own dithered start so the penumbra is smooth rather than banded

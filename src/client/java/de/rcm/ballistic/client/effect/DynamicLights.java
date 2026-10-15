@@ -346,9 +346,8 @@ public final class DynamicLights {
 		if (quality >= 2 && haloDensity > 0.01F) {
 			VertexConsumer halo = context.consumers().getBuffer(haloType);
 			for (Light l : drawn) {
-				if (l.spotCos <= 0.0F) { // (a beam's glow in the air is its own business)
-					quad(halo, pose, camera, cam, l, Math.round(haloDensity * 1000.0F), 0);
-				}
+				// a lamp glows round itself; a spotlight's beam shows as a shaft through the air
+				quad(halo, pose, camera, cam, l, Math.round(haloDensity * 1000.0F), Math.round(Math.max(l.spotCos, 0.0F) * 1000.0F));
 			}
 		}
 		if (context.consumers() instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers) {

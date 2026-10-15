@@ -26,6 +26,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
@@ -99,21 +100,22 @@ public final class GunLightClient {
 				Vec3 from;
 				Vec3 dir;
 				if (ownView) {
-					from = viewToWorld(mc, camera, GunAttachmentModels.VIEW_LIGHT, true);
-					dir = viewToWorld(mc, camera, GunAttachmentModels.VIEW_LIGHT_DIR, false);
+					from = viewToWorld(mc, camera, GunAttachmentModels.VIEW_LIGHT);
+					dir = viewToWorld(mc, camera, new Vector3f(GunAttachmentModels.VIEW_LIGHT_DIR).mul(0.4F).add(GunAttachmentModels.VIEW_LIGHT)).subtract(from).normalize();
 				} else {
 					from = held(player, eye, look, partial, 0.0);
 					dir = look;
 				}
-				// a little ahead of the lens, so the gun and the hand do not shadow their own beam
-				DynamicLights.spot(player.getId() * 8L + 1L, from.add(dir.scale(0.15)), dir, 17.0F, 0xFFF6E8, 1.0F, 34.0F);
+				// a little ahead of the lens, so the gun and the hand do not shadow their own beam; the cold white
+				// of an LED, a tight hot spot in a wide dim spill, thrown far
+				DynamicLights.spot(player.getId() * 8L + 1L, from.add(dir.scale(0.15)), dir, 26.0F, 0xEEF3FF, 1.0F, 56.0F);
 			}
 			if (a.laserShining()) {
 				Vec3 from;
 				Vec3 dir;
 				if (ownView) {
-					from = viewToWorld(mc, camera, GunAttachmentModels.VIEW_LASER, true);
-					dir = viewToWorld(mc, camera, GunAttachmentModels.VIEW_LASER_DIR, false);
+					from = viewToWorld(mc, camera, GunAttachmentModels.VIEW_LASER);
+					dir = viewToWorld(mc, camera, new Vector3f(GunAttachmentModels.VIEW_LASER_DIR).mul(0.4F).add(GunAttachmentModels.VIEW_LASER)).subtract(from).normalize();
 				} else {
 					from = held(player, eye, look, partial, 0.04);
 					dir = look;
@@ -167,23 +169,23 @@ public final class GunLightClient {
 		return eye.add(look.scale(0.7)).add(right.scale(0.22 - side)).add(0.0, -0.22, 0.0);
 	}
 
-	/** A camera-space point (or direction) of the first-person gun, in the world. */
-	private static Vec3 viewToWorld(Minecraft mc, Camera camera, Vector3f v, boolean point) {
-		Vector3f fwd = new Vector3f(camera.forwardVector());
-		Vector3f up = new Vector3f(camera.upVector());
-		Vector3f right = new Vector3f(fwd).cross(up).normalize();
-		float x = v.x;
-		float y = v.y;
-		if (point) {
-			// the hand is drawn with the plain field of view, the world with zoom and sprint applied
-			float base = mc.options.fov().get().floatValue();
-			float mod = mc.player == null ? 1.0F : mc.player.getFieldOfViewModifier(true, mc.options.fovEffectScale().get().floatValue());
-			float k = (float) (Math.tan(Math.toRadians(base * 0.5)) / Math.tan(Math.toRadians(base * mod * 0.5)));
-			x *= k;
-			y *= k;
+	/**
+	 * A point of the first-person gun, in the world. The hand is drawn with the camera's turn already taken
+	 * out (so its positions are camera-relative but lined up with the world's axes) and with a fixed 70 degree
+	 * field of view, the world with the player's own (zoom and sprint included): the point is moved out from
+	 * the centre of view by the difference, so it lands where the gun is seen.
+	 */
+	private static Vec3 viewToWorld(Minecraft mc, Camera camera, Vector3f v) {
+		Vector3f local = camera.rotation().conjugate(new Quaternionf()).transform(new Vector3f(v));
+		float fov = mc.options.fov().get().floatValue();
+		if (mc.player != null) {
+			fov *= mc.player.getFieldOfViewModifier(true, mc.options.fovEffectScale().get().floatValue());
 		}
-		Vec3 w = new Vec3(right.x * x + up.x * y - fwd.x * v.z, right.y * x + up.y * y - fwd.y * v.z, right.z * x + up.z * y - fwd.z * v.z);
-		return point ? camera.position().add(w) : w.normalize();
+		float k = (float) (Math.tan(Math.toRadians(fov * 0.5)) / Math.tan(Math.toRadians(35.0)));
+		local.x *= k;
+		local.y *= k;
+		Vector3f w = camera.rotation().transform(local);
+		return camera.position().add(w.x, w.y, w.z);
 	}
 
 	/** A thin band from a to b (camera-relative), turned to face the eye. */
