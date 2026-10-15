@@ -72,14 +72,18 @@ float density(vec3 p, int detail, out float smoke, out float glow) {
     } else {
         d = layered(p, h, detail, dist, e, nr);
     }
-    d = max(d, 0.0) * (1.0 - dist.r);
+    float base = max(d, 0.0);
+    d = base * (1.0 - dist.r);
+    // a rocket only stirs the cloud that is there: heaped edges and exhaust show within the real cloud
+    // (as it was before the hole), never as new cloud in clear air - its trail out there is the smoke itself
+    float here = smoothstep(0.02, 0.3, base);
     // the cloud a rocket shoved aside, heaped up in a lumpy ring round the hole
     float heap = 0.35 + 0.45 * nr;
-    d += dist.b * smoothstep(0.0, 0.08, h) * (1.0 - smoothstep(heap - 0.2, heap, h)) * smoothstep(0.25, 0.75, e) * 0.75;
+    d += here * dist.b * smoothstep(0.0, 0.08, h) * (1.0 - smoothstep(heap - 0.2, heap, h)) * smoothstep(0.25, 0.75, e) * 0.75;
     glow = dist.a;
     // exhaust smoke: a column right through the layer where the rocket went, heaviest low down, frayed
     // (it thins out in the hole, where the blast of the passage has carried it on up)
-    float s = dist.g * smoothstep(0.0, 0.05, h) * (1.0 - 0.55 * h) * smoothstep(0.12, 0.8, e * 0.65 + nr * 0.55) * 0.9 * (1.0 - 0.75 * dist.r);
+    float s = here * dist.g * smoothstep(0.0, 0.05, h) * (1.0 - 0.55 * h) * smoothstep(0.12, 0.8, e * 0.65 + nr * 0.55) * 0.9 * (1.0 - 0.75 * dist.r);
     if (s > 0.0) {
         smoke = s / max(d + s, 1e-4);
         d += s;

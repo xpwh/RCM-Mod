@@ -26,6 +26,7 @@ flat in vec3 sunDir;
 flat in float reach;
 flat in float vStorm;
 flat in float lightning;
+flat in mat4 invViewProj;
 
 out vec4 fragColor;
 
@@ -47,16 +48,20 @@ void main() {
     vec3 cam = wrappedCamera(CameraBlockPos, CameraOffset);
     // distance to the world along this ray, from the depth copy
     float depth = texture(Sampler2, gl_FragCoord.xy / ScreenSize).r;
-    vec3 fwd = -vec3(ModelViewMat[0][2], ModelViewMat[1][2], ModelViewMat[2][2]);
     float sceneT = 1.0e6;
+    vec3 scenePos = rd * sceneT;
     if (depth < 1.0) {
-        float viewZ = -ProjMat[3][2] / (depth * 2.0 - 1.0 + ProjMat[2][2]);
-        sceneT = -viewZ / max(dot(rd, fwd), 0.05);
+        // the world point under this pixel, unprojected through the same matrices the world was drawn with
+        // (splitting them into a view direction and a linear depth goes wrong while the view bobs as you
+        // walk, and the shadows then swayed over the ground with every step)
+        vec4 w = invViewProj * vec4(gl_FragCoord.xy / ScreenSize * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+        scenePos = w.xyz / w.w;
+        sceneT = length(scenePos);
     }
 
 #ifndef RAYS
     if ((vLayer.y & 256) == 0 || depth >= 1.0) discard;
-    vec3 p = cam + rd * sceneT;
+    vec3 p = cam + scenePos;
     if (p.y >= bottom) discard;
     // looking down at the ground through the cloud layer from above: the clouds cover it anyway
     if (cam.y > bottom) discard;

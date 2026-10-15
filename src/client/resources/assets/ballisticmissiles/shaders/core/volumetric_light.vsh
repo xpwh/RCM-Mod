@@ -22,12 +22,15 @@ flat out vec3 sunDir;
 flat out float reach;
 flat out float vStorm;
 flat out float lightning;
+// from clip space back to camera-relative world space, with whatever the view carries (the walking bob too)
+flat out mat4 invViewProj;
 
 void main() {
     vec4 pos = ProjMat * ModelViewMat * vec4(Position, 1.0);
     // at the far plane: the quad sits far out (so the walking bob cannot swing it), past where it would clip
     gl_Position = pos.xyww;
     relPos = Position;
+    invViewProj = inverse(ProjMat * ModelViewMat);
     cloudInfo = Color;
     vWind = UV0;
     vLayer = UV1;
