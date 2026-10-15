@@ -24,7 +24,7 @@ public final class SettingsCommand {
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			if (pending && mc.screen == null) {
 				pending = false;
-				mc.setScreen(new SettingsScreen(null));
+				mc.setScreen(PasswordScreen.guard(null, () -> new SettingsScreen(null)));
 			}
 		});
 	}
