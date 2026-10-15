@@ -229,7 +229,10 @@ public class SettingsScreen extends Screen {
 			toggle("auto_exposure", ModConfig.autoExposure, "auto_exposure", v -> ModConfig.autoExposure = v));
 		this.list.header("options.ballisticmissiles.section.shaders", 0xFF90D0FF);
 		this.list.row(toggle("real_water", ModConfig.realWater, "real_water", v -> ModConfig.realWater = v),
-			toggle("sun_shadows", ModConfig.sunShadows, "sun_shadows", v -> ModConfig.sunShadows = v));
+			CycleButton.booleanBuilder(Component.translatable("options.ballisticmissiles.sun_shadows.new").withStyle(ChatFormatting.AQUA),
+					Component.translatable("options.ballisticmissiles.sun_shadows.classic"), ModConfig.sunShadows)
+				.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.sun_shadows.tooltip")))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.sun_shadows"), (b, v) -> ModConfig.sunShadows = v));
 		this.list.row(toggle("ambient_occlusion", ModConfig.ambientOcclusion, "ambient_occlusion", v -> ModConfig.ambientOcclusion = v),
 			toggle("lens_flare", ModConfig.lensFlare, "lens_flare", v -> ModConfig.lensFlare = v));
 		IntSlider bloom = new IntSlider(0, 100, "options.ballisticmissiles.bloom", ModConfig.bloom, v -> ModConfig.bloom = v);
