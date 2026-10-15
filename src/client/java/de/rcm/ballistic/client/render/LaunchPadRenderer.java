@@ -161,6 +161,7 @@ public class LaunchPadRenderer implements BlockEntityRenderer<LaunchPadBlockEnti
 		int light = state.lightCoords;
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
+		ModelPick.part(state, poseStack, camera, COMPLEX);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> COMPLEX.emit(pose, consumer, light));
 		collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> GLOW.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 
@@ -170,6 +171,7 @@ public class LaunchPadRenderer implements BlockEntityRenderer<LaunchPadBlockEnti
 			poseStack.pushPose();
 			poseStack.translate(ARM_HINGE_X, 0.0F, 0.0F);
 			poseStack.mulPose(new Quaternionf().rotationY(state.retract[i] * ARM_SWING));
+			ModelPick.part(state, poseStack, camera, arm);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> arm.emit(pose, consumer, light));
 			poseStack.popPose();
 		}
@@ -180,6 +182,7 @@ public class LaunchPadRenderer implements BlockEntityRenderer<LaunchPadBlockEnti
 			poseStack.mulPose(new Quaternionf().rotationY(c * Mth.HALF_PI));
 			poseStack.translate(CLAMP_PIVOT, TABLE + 0.32F, CLAMP_PIVOT);
 			poseStack.mulPose(new Quaternionf().rotationAxis(-state.clamps * 1.9F, new Vector3f(-1.0F, 0.0F, 1.0F).normalize()));
+			ModelPick.part(state, poseStack, camera, CLAMP);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> CLAMP.emit(pose, consumer, light));
 			poseStack.popPose();
 		}
@@ -188,6 +191,7 @@ public class LaunchPadRenderer implements BlockEntityRenderer<LaunchPadBlockEnti
 		float lift = 0.3F + (TOWER_TOP - 2.0F) * (0.5F - 0.5F * Mth.cos(state.time * 0.006F));
 		poseStack.pushPose();
 		poseStack.translate(TOWER_X, lift, 0.0F);
+		ModelPick.part(state, poseStack, camera, ELEVATOR);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> ELEVATOR.emit(pose, consumer, light));
 		poseStack.popPose();
 

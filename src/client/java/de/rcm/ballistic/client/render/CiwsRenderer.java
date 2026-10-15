@@ -82,14 +82,17 @@ public class CiwsRenderer implements BlockEntityRenderer<CiwsBlockEntity, CiwsRe
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
 		poseStack.mulPose(new Quaternionf().rotationY(state.yaw));
+		ModelPick.part(state, poseStack, camera, MOUNT);
 		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> MOUNT.emit(pose, consumer, light));
 
 		poseStack.translate(0.0F, PIVOT_Y, 0.0F);
 		poseStack.mulPose(new Quaternionf().rotationX(-state.pitch));
+		ModelPick.part(state, poseStack, camera, ELEVATING);
 		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> ELEVATING.emit(pose, consumer, light));
 
 		poseStack.pushPose();
 		poseStack.mulPose(new Quaternionf().rotationZ(state.spin));
+		ModelPick.part(state, poseStack, camera, BARRELS);
 		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> BARRELS.emit(pose, consumer, light));
 		poseStack.popPose();
 

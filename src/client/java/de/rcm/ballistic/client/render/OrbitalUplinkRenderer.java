@@ -103,6 +103,7 @@ public class OrbitalUplinkRenderer implements BlockEntityRenderer<OrbitalUplinkB
 		poseStack.translate(0.5F, 0.0F, 0.5F);
 		poseStack.pushPose();
 		poseStack.mulPose(new Quaternionf().rotationY(state.facing));
+		ModelPick.part(state, poseStack, camera, SITE);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> SITE.emit(pose, consumer, light));
 		boolean busy = state.phase != OrbitalUplinkBlockEntity.IDLE;
 		if (busy && Mth.sin(state.time * 0.9F) > 0.0F) {
@@ -117,6 +118,7 @@ public class OrbitalUplinkRenderer implements BlockEntityRenderer<OrbitalUplinkB
 		poseStack.popPose();
 		// azimuth: the whole head turns on the kingpost (world azimuth, 0 = +Z)
 		poseStack.mulPose(new Quaternionf().rotationY(state.azimuth));
+		ModelPick.part(state, poseStack, camera, TURNTABLE);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> TURNTABLE.emit(pose, consumer, light));
 		// the elevation jackscrew, from its anchor on the alidade to the lug on the tilted dish
 		Vector3f lug = new Vector3f(ACTUATOR_LUG).rotateX(-state.elevation).add(0.0F, PIVOT_Y, 0.0F);
@@ -126,10 +128,12 @@ public class OrbitalUplinkRenderer implements BlockEntityRenderer<OrbitalUplinkB
 			.beam(base, mid, 0.17F, 0.17F, WHITE)
 			.beam(new Vector3f(base).lerp(lug, 0.45F), lug, 0.08F, 0.08F, STEEL)
 			.build();
+		ModelPick.part(state, poseStack, camera, jack);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> jack.emit(pose, consumer, light));
 		// elevation: the dish tips up about the yoke's axis
 		poseStack.translate(0.0F, PIVOT_Y, 0.0F);
 		poseStack.mulPose(new Quaternionf().rotationX(-state.elevation));
+		ModelPick.part(state, poseStack, camera, DISH_MESH);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> DISH_MESH.emit(pose, consumer, light));
 		poseStack.popPose();
 	}

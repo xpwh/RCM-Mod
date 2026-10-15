@@ -95,11 +95,13 @@ public class AirDefenseRenderer implements BlockEntityRenderer<AirDefenseBlockEn
 
 		poseStack.pushPose();
 		poseStack.mulPose(new Quaternionf().rotationY(state.facingYaw));
+		ModelPick.part(state, poseStack, camera, SITE);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> SITE.emit(pose, consumer, light));
 		poseStack.popPose();
 
 		// launcher: turntable trains in azimuth, the canister pack elevates about its rear pivot
 		poseStack.mulPose(new Quaternionf().rotationY(state.yaw));
+		ModelPick.part(state, poseStack, camera, TURNTABLE);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> TURNTABLE.emit(pose, consumer, light));
 		Quaternionf tilt = new Quaternionf().rotationX(-state.elevation);
 		Vector3f ramTop = new Vector3f(0.0F, -0.05F, 2.1F).rotate(tilt).add(0.0F, PIVOT, 0.0F);
@@ -109,13 +111,16 @@ public class AirDefenseRenderer implements BlockEntityRenderer<AirDefenseBlockEn
 			.beam(v(-0.55F, 1.55F, 1.0F), v(-0.55F, 1.55F, 1.0F).lerp(new Vector3f(ramTop).add(-0.55F, 0, 0), 0.5F), 0.28F, 0.28F, OLIVE_DARK)
 			.beam(v(0.55F, 1.55F, 1.0F), v(0.55F, 1.55F, 1.0F).lerp(new Vector3f(ramTop).add(0.55F, 0, 0), 0.5F), 0.28F, 0.28F, OLIVE_DARK)
 			.build();
+		ModelPick.part(state, poseStack, camera, rams);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> rams.emit(pose, consumer, light));
 
 		poseStack.translate(0.0F, PIVOT, 0.0F);
 		poseStack.mulPose(tilt);
+		ModelPick.part(state, poseStack, camera, PACK);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> PACK.emit(pose, consumer, light));
 		for (int cell = 0; cell < 8; cell++) {
 			BoxMesh face = fired(cell, state.ammo) ? CELLS[cell][1] : CELLS[cell][0];
+			ModelPick.part(state, poseStack, camera, face);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> face.emit(pose, consumer, light));
 			float t = state.pop[cell];
 			if (t >= 0.0F && t < 45.0F) {

@@ -96,6 +96,7 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 		int light = state.lightCoords;
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
+		ModelPick.part(state, poseStack, camera, STATION);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> STATION.emit(pose, consumer, light));
 		collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> WINDOWS.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 		// height-finder: slow turn, nodding through the elevation sector
@@ -103,6 +104,7 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 		poseStack.translate(FINDER[0], 2.4F, FINDER[1]);
 		poseStack.mulPose(new Quaternionf().rotationY(state.time * 0.013F));
 		poseStack.mulPose(new Quaternionf().rotationX(-0.25F - 0.22F * Mth.sin(state.time * (state.alert ? 0.16F : 0.08F))));
+		ModelPick.part(state, poseStack, camera, FINDER_DISH);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> FINDER_DISH.emit(pose, consumer, light));
 		poseStack.popPose();
 		if (state.alert && Mth.sin(state.time * 1.3F) > 0.0F) {
@@ -111,6 +113,7 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 
 		poseStack.translate(0.0F, TURNTABLE, 0.0F);
 		poseStack.mulPose(new Quaternionf().rotationY(state.angle));
+		ModelPick.part(state, poseStack, camera, ANTENNA);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> ANTENNA.emit(pose, consumer, light));
 		boolean blink = state.alert ? Mth.sin(state.time * 1.3F) > 0.0F : Mth.sin(state.time * 0.2F) > 0.3F;
 		if (blink) {

@@ -13,7 +13,7 @@ import org.joml.Vector3f;
  * seen from outside, so it works with back-face culling.
  */
 public final class BoxMesh {
-	private static final int STRIDE = 8; // x y z u v nx ny nz
+	static final int STRIDE = 8; // x y z u v nx ny nz
 	private static final int GRID = 8;
 	private static final float INSET = 0.5F / 128.0F;
 
@@ -21,6 +21,23 @@ public final class BoxMesh {
 
 	private BoxMesh(float[] data) {
 		this.data = data;
+	}
+
+	/** The raw vertex data (STRIDE floats each, four to a face): read only. */
+	float[] vertices() {
+		return this.data;
+	}
+
+	/** The mesh's extent: {min x, y, z, max x, y, z} (an empty mesh: all zero). */
+	public float[] bounds() {
+		float[] b = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+		for (int i = 0; i < this.data.length; i += STRIDE) {
+			for (int k = 0; k < 3; k++) {
+				b[k] = Math.min(b[k], this.data[i + k]);
+				b[k + 3] = Math.max(b[k + 3], this.data[i + k]);
+			}
+		}
+		return this.data.length == 0 ? new float[6] : b;
 	}
 
 	public void emit(PoseStack.Pose pose, VertexConsumer consumer, int light) {

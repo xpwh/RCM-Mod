@@ -76,8 +76,10 @@ public class SeaMineRenderer implements BlockEntityRenderer<SeaMineBlockEntity, 
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
 		if (!state.water) {
+			ModelPick.part(state, poseStack, camera, CRADLE);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> CRADLE.emit(pose, consumer, light));
 			poseStack.translate(0.0F, 0.12F, 0.0F);
+			ModelPick.part(state, poseStack, camera, BODY);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> BODY.emit(pose, consumer, light));
 			poseStack.popPose();
 			return;
@@ -108,15 +110,18 @@ public class SeaMineRenderer implements BlockEntityRenderer<SeaMineBlockEntity, 
 			chain.beam(a, b, w, h, i % 3 == 0 ? RUST : STEEL);
 		}
 		BoxMesh chainMesh = chain.build();
+		ModelPick.part(state, poseStack, camera, chainMesh);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> chainMesh.emit(pose, consumer, light));
 		poseStack.pushPose();
 		poseStack.translate(0.0F, floor, 0.0F);
+		ModelPick.part(state, poseStack, camera, SINKER);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> SINKER.emit(pose, consumer, light));
 		poseStack.popPose();
 		poseStack.translate(swayX, bob, swayZ);
 		poseStack.translate(0.0F, CENTRE, 0.0F);
 		poseStack.mulPose(new Quaternionf().rotationXYZ(swayZ * 0.8F, t * 0.05F, -swayX * 0.8F));
 		poseStack.translate(0.0F, -CENTRE, 0.0F);
+		ModelPick.part(state, poseStack, camera, BODY);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> BODY.emit(pose, consumer, light));
 		poseStack.popPose();
 	}

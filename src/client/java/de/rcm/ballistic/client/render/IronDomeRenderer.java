@@ -104,12 +104,14 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
 		poseStack.mulPose(new Quaternionf().rotationY(state.facingYaw));
+		ModelPick.part(state, poseStack, camera, TRAILER);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> TRAILER.emit(pose, consumer, light));
 
 		// the radar array turns slowly on its mast; its beacon blinks
 		poseStack.pushPose();
 		poseStack.translate(RADAR_X, 3.4F, 0.4F);
 		poseStack.mulPose(new Quaternionf().rotationY(state.time * 0.04F));
+		ModelPick.part(state, poseStack, camera, RADAR_ARRAY);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> RADAR_ARRAY.emit(pose, consumer, light));
 		poseStack.popPose();
 		if (Mth.sin(state.time * 0.3F) > 0.6F) {
@@ -121,7 +123,7 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 
 		float r = state.reload;
 		if (r >= 0.0F) {
-			this.submitReload(state, r, poseStack, collector, light);
+			this.submitReload(state, r, poseStack, collector, light, camera);
 			poseStack.popPose();
 			return;
 		}
@@ -168,7 +170,7 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 	 * crane lifts the spent pod onto the back of the bed and swings the fresh one from the front of
 	 * the bed into the cradle; the truck drives off and the launcher goes back up to 55 degrees.
 	 */
-	private void submitReload(State state, float r, PoseStack poseStack, SubmitNodeCollector collector, int light) {
+	private void submitReload(State state, float r, PoseStack poseStack, SubmitNodeCollector collector, int light, CameraRenderState camera) {
 		float elevation = Mth.lerp(ease(r, 0.0F, 40.0F) - ease(r, 270.0F, 310.0F), ELEVATION, LOWERED_ELEVATION);
 		float truckZ = TRUCK_PARK_Z - 18.0F * (1.0F - ease(r, 30.0F, 85.0F)) + 22.0F * ease(r, 235.0F, 292.0F);
 		boolean truckThere = r > 25.0F && r < 295.0F;
@@ -213,6 +215,7 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 		// the truck itself
 		poseStack.pushPose();
 		poseStack.translate(TRUCK_X, 0.0F, truckZ);
+		ModelPick.part(state, poseStack, camera, TRUCK);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> TRUCK.emit(pose, consumer, light));
 		poseStack.popPose();
 		// the crane: boom from the post to the hook, the cable down to the pod
@@ -224,9 +227,11 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 			.beam(new Vector3f(post).add(0.0F, -1.2F, 0.0F), new Vector3f(post).lerp(tip, 0.45F), 0.12F, 0.12F, STEEL)
 			.beam(tip, hookAt, 0.03F, 0.03F, CABLE)
 			.build();
+		ModelPick.part(state, poseStack, camera, crane);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> crane.emit(pose, consumer, light));
 		poseStack.pushPose();
 		poseStack.translate(hookAt.x, hookAt.y, hookAt.z);
+		ModelPick.part(state, poseStack, camera, HOOK);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> HOOK.emit(pose, consumer, light));
 		poseStack.popPose();
 	}

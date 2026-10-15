@@ -76,6 +76,7 @@ public class JammerRenderer implements BlockEntityRenderer<JammerBlockEntity, Ja
 		int light = state.lightCoords;
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
+		ModelPick.part(state, poseStack, camera, TRUCK);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> TRUCK.emit(pose, consumer, light));
 		if (state.active && Mth.sin(state.time * 0.6F) > -0.2F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> BEACON.emit(pose, consumer, LightTexture.FULL_BRIGHT));
@@ -92,10 +93,12 @@ public class JammerRenderer implements BlockEntityRenderer<JammerBlockEntity, Ja
 			.box(-0.22F, ROOF, HINGE_Z - 0.22F, 0.22F, ROOF + 0.3F + lift, HINGE_Z + 0.22F, OLIVE_DARK)
 			.box(-0.15F, ROOF + 0.3F, HINGE_Z - 0.15F, 0.15F, ROOF + 0.35F + lift, HINGE_Z + 0.15F, STEEL)
 			.build();
+		ModelPick.part(state, poseStack, camera, column);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> column.emit(pose, consumer, light));
 		poseStack.translate(0.0F, ROOF + 0.35F + lift, HINGE_Z);
 		poseStack.mulPose(new Quaternionf().rotationY(Mth.PI + sweep));
 		poseStack.mulPose(new Quaternionf().rotationX(-(1.0F - d) * Mth.HALF_PI));
+		ModelPick.part(state, poseStack, camera, ANTENNA);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> ANTENNA.emit(pose, consumer, light));
 		poseStack.popPose();
 	}

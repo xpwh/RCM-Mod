@@ -29,6 +29,16 @@ public abstract class GameRendererMixin {
 	@Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V", at = @At("HEAD"))
 	private void ballisticmissiles$blastShader(DeltaTracker deltaTracker, boolean advance, CallbackInfo ci) {
 		BlastShader.frame(Minecraft.getInstance(), deltaTracker.getGameTimeDeltaPartialTick(false));
+		de.rcm.ballistic.client.render.ModelPick.nextFrame();
+	}
+
+	/** The big structures are aimed at by their whole model, not only their one block ({@code ModelPick}). */
+	@Inject(method = "pick(F)V", at = @At("TAIL"))
+	private void ballisticmissiles$pickStructures(float partialTick, CallbackInfo ci) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player != null) {
+			de.rcm.ballistic.client.render.ModelPick.pick(mc, mc.player.blockInteractionRange());
+		}
 	}
 
 	/** Aiming down the sights the head and the weapon hardly bob as you walk: you steady them. */

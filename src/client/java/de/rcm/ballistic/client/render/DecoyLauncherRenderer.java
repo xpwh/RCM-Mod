@@ -74,9 +74,11 @@ public class DecoyLauncherRenderer implements BlockEntityRenderer<DecoyLauncherB
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
 		poseStack.mulPose(new Quaternionf().rotationY(state.facingYaw));
+		ModelPick.part(state, poseStack, camera, BASE);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> BASE.emit(pose, consumer, light));
 		for (int i = 0; i < TUBES.length; i++) {
 			BoxMesh cap = i < TUBES.length - state.salvos ? CAPS[i + TUBES.length] : CAPS[i];
+			ModelPick.part(state, poseStack, camera, cap);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> cap.emit(pose, consumer, light));
 			float t = state.pop[i];
 			if (t >= 0.0F && t < 35.0F) {

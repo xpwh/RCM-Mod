@@ -99,6 +99,7 @@ public class LaserRenderer implements BlockEntityRenderer<LaserDefenseBlockEntit
 		int light = state.lightCoords;
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
+		ModelPick.part(state, poseStack, camera, CONTAINER);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> CONTAINER.emit(pose, consumer, light));
 		BoxMesh lamp = state.powered ? READY_LAMP : FAULT_LAMP;
 		collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> lamp.emit(pose, consumer, LightTexture.FULL_BRIGHT));
@@ -128,9 +129,11 @@ public class LaserRenderer implements BlockEntityRenderer<LaserDefenseBlockEntit
 		}
 
 		poseStack.mulPose(new Quaternionf().rotationY(state.yaw));
+		ModelPick.part(state, poseStack, camera, YOKE);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> YOKE.emit(pose, consumer, light));
 		poseStack.translate(0.0F, PIVOT, 0.0F);
 		poseStack.mulPose(new Quaternionf().rotationX(-state.pitch));
+		ModelPick.part(state, poseStack, camera, DIRECTOR);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> DIRECTOR.emit(pose, consumer, light));
 		poseStack.popPose();
 	}

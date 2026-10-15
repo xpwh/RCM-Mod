@@ -104,14 +104,16 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.0F, 0.5F);
 		if (state.submarine) {
-			this.submitSubmarine(state, poseStack, collector, light);
+			this.submitSubmarine(state, poseStack, collector, light, camera);
 			poseStack.popPose();
 			return;
 		}
+		ModelPick.part(state, poseStack, camera, HEADWORKS);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> HEADWORKS.emit(pose, consumer, light));
 
 		// the launch tube, lit by its own lamps
 		int tubeLight = LightTexture.pack(Math.max(LightTexture.block(light), 11), LightTexture.sky(light));
+		ModelPick.part(state, poseStack, camera, TUBE);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> TUBE.emit(pose, consumer, tubeLight));
 		collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> TUBE_LAMPS.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 
@@ -132,6 +134,7 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 			BoxMesh door = DOORS[i];
 			poseStack.pushPose();
 			poseStack.translate((i == 0 ? -1.0F : 1.0F) * state.open * DOOR_TRAVEL, 0.0F, 0.0F);
+			ModelPick.part(state, poseStack, camera, door);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> door.emit(pose, consumer, light));
 			poseStack.popPose();
 		}
@@ -143,8 +146,9 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 	}
 
 	/** Submarine variant: the hull around the block, the live hatch swinging open, the missile in its tube. */
-	private void submitSubmarine(State state, PoseStack poseStack, SubmitNodeCollector collector, int light) {
+	private void submitSubmarine(State state, PoseStack poseStack, SubmitNodeCollector collector, int light, CameraRenderState camera) {
 		poseStack.mulPose(new Quaternionf().rotationY(state.facingYaw));
+		ModelPick.part(state, poseStack, camera, SubmarineModel.HULL);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> SubmarineModel.HULL.emit(pose, consumer, light));
 		if (Mth.sin(state.time * 0.15F) > 0.6F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> SubmarineModel.MAST_LIGHT.emit(pose, consumer, LightTexture.FULL_BRIGHT));
@@ -162,6 +166,7 @@ public class SiloRenderer implements BlockEntityRenderer<MissileSiloBlockEntity,
 		// hatch hinged at its aft edge, swinging up to vertical
 		poseStack.translate(0.0F, SubmarineModel.DECK_Y, -0.45F);
 		poseStack.mulPose(new Quaternionf().rotationX(-state.open * 1.75F));
+		ModelPick.part(state, poseStack, camera, SubmarineModel.HATCH);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> SubmarineModel.HATCH.emit(pose, consumer, light));
 	}
 
