@@ -46,8 +46,8 @@ public abstract class KeyboardInputMixin extends ClientInput {
 			}
 		}
 		if (player != null && (de.rcm.ballistic.gun.AkItem.isAiming(player) || de.rcm.ballistic.item.RocketLauncherItem.isAiming(player)
-			|| de.rcm.ballistic.gun.ShotgunItem.isAiming(player))) {
-			this.moveVector = this.moveVector.scale(0.42F);
+			|| de.rcm.ballistic.gun.ShotgunItem.isAiming(player) || de.rcm.ballistic.gun.GlockItem.isAiming(player))) {
+			this.moveVector = this.moveVector.scale(de.rcm.ballistic.gun.GlockItem.isAiming(player) ? 0.6F : 0.42F);
 			Input k = this.keyPresses;
 			this.keyPresses = new Input(k.forward(), k.backward(), k.left(), k.right(), k.jump(), k.shift(), false);
 		}

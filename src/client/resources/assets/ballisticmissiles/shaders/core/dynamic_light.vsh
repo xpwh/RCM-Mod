@@ -23,7 +23,9 @@ flat out vec3 lightPos;
 flat out float radius;
 
 void main() {
-    gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
+    vec4 pos = ProjMat * ModelViewMat * vec4(Position, 1.0);
+    // at the far plane: the quad sits far out (so the walking bob cannot swing it), past where it would clip
+    gl_Position = pos.xyww;
     relPos = Position;
     lightCol = Color;
     lightPos = vec3(UV0.x, float(UV2.x) / 8.0, UV0.y);

@@ -40,6 +40,8 @@ import net.minecraft.world.phys.Vec3;
  * B cloud piled up round the holes' rims, A engine glow.
  */
 public final class VolumetricClouds {
+	/** How far out the quad over the whole view is drawn (blocks). */
+	private static final float FAR = 500.0F;
 	/** How thick the cloud layer is (blocks). */
 	public static final int THICKNESS = 96;
 	private static final int MAP = 256;
@@ -70,7 +72,7 @@ public final class VolumetricClouds {
 	private static RenderPipeline lightPipeline(String location, boolean shafts) {
 		RenderPipeline.Builder b = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
 			.withLocation(BallisticMissiles.id(location))
-			.withVertexShader(BallisticMissiles.id("core/volumetric_clouds"))
+			.withVertexShader(BallisticMissiles.id("core/volumetric_light"))
 			.withFragmentShader(BallisticMissiles.id("core/volumetric_light"))
 			.withSampler("Sampler0")
 			.withSampler("Sampler1")
@@ -588,7 +590,8 @@ public final class VolumetricClouds {
 		boolean shadows = ModConfig.cloudShadows;
 		boolean shafts = ModConfig.lightShafts && quality != ModConfig.Quality.LOW;
 		int layer = THICKNESS | (shadows ? 256 : 0) | (shafts ? 512 : 0);
-		boolean light = (shadows || shafts) && day > 0.05F && camY < bottom;
+		// shadows only below the layer; the shafts also come from the hills and trees, so from anywhere
+		boolean light = (shadows && camY < bottom || shafts) && day > 0.05F;
 		if (light) {
 			var target = mc.getMainRenderTarget();
 			if (target.getDepthTexture() == null) {
@@ -601,7 +604,7 @@ public final class VolumetricClouds {
 				depth.copy(target.getDepthTexture());
 			}
 		}
-		if (light && shadows) {
+		if (light && shadows && camY < bottom) {
 			screen(context.consumers().getBuffer(lightType(false)), pose, camera, color, windX, windZ, bottom, layer, reach, storm, sx, sy);
 		}
 		VertexConsumer consumer = context.consumers().getBuffer(type());
@@ -617,7 +620,7 @@ public final class VolumetricClouds {
 		}
 	}
 
-	/** A quad right across the view, a block in front of the eye (the light pass ignores depth). */
+	/** A quad right across the view, far out (the light pass ignores depth). */
 	private static void screen(VertexConsumer consumer, PoseStack.Pose pose, Camera camera, int color, float windX, float windZ, float bottom, int layer,
 		float reach, int storm, float sx, float sy) {
 		org.joml.Vector3fc f = camera.forwardVector();
@@ -626,9 +629,11 @@ public final class VolumetricClouds {
 		float w = 6.0F; // wide enough for any field of view
 		float[][] corners = {{w, -w}, {-w, -w}, {-w, w}, {w, w}};
 		for (float[] c : corners) {
-			float x = f.x() + l.x() * c[0] + u.x() * c[1];
-			float y = f.y() + l.y() * c[0] + u.y() * c[1];
-			float z = f.z() + l.z() * c[0] + u.z() * c[1];
+			// far out (FAR blocks), not a block in front of the eye: the walking bob shifts the eye a little, and
+			// that would swing the whole sky - the sun, the shafts - with every step; this far it does not show
+			float x = (f.x() + l.x() * c[0] + u.x() * c[1]) * FAR;
+			float y = (f.y() + l.y() * c[0] + u.y() * c[1]) * FAR;
+			float z = (f.z() + l.z() * c[0] + u.z() * c[1]) * FAR;
 			consumer.addVertex(pose, x, y, z).setColor(color).setUv(windX, windZ).setOverlay(OverlayTexture.pack((int) bottom, layer))
 				.setLight((int) reach | storm << 16).setNormal(pose, sx, sy, 0.0F);
 		}

@@ -27,6 +27,14 @@ public abstract class MinecraftMixin {
 	}
 
 	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
+	private void ballisticmissiles$glockTrigger(CallbackInfoReturnable<Boolean> cir) {
+		if (this.player != null && this.player.getMainHandItem().getItem() instanceof de.rcm.ballistic.gun.GlockItem) {
+			de.rcm.ballistic.client.gun.GlockClient.trigger(this.player);
+			cir.setReturnValue(false);
+		}
+	}
+
+	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$shotgunTrigger(CallbackInfoReturnable<Boolean> cir) {
 		if (this.player != null && this.player.getMainHandItem().getItem() instanceof de.rcm.ballistic.gun.ShotgunItem) {
 			de.rcm.ballistic.client.gun.ShotgunClient.trigger(this.player);
@@ -128,7 +136,8 @@ public abstract class MinecraftMixin {
 	private void ballisticmissiles$rpgNoMining(boolean attacking, CallbackInfo ci) {
 		if (this.player != null && (this.player.getMainHandItem().getItem() instanceof RocketLauncherItem
 			|| this.player.getMainHandItem().getItem() instanceof AkItem
-			|| this.player.getMainHandItem().getItem() instanceof de.rcm.ballistic.gun.ShotgunItem)) {
+			|| this.player.getMainHandItem().getItem() instanceof de.rcm.ballistic.gun.ShotgunItem
+			|| this.player.getMainHandItem().getItem() instanceof de.rcm.ballistic.gun.GlockItem)) {
 			ci.cancel();
 		}
 	}

@@ -90,7 +90,7 @@ public final class AkClient {
 		HudElementRegistry.replaceElement(net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.CROSSHAIR, crosshair -> (graphics, tickCounter) -> {
 			Minecraft mc = Minecraft.getInstance();
 			if (mc.player != null && (AkItem.isAiming(mc.player) || de.rcm.ballistic.item.RocketLauncherItem.isAiming(mc.player)
-				|| ShotgunClient.aimProgress(1.0F) > 0.5F || de.rcm.ballistic.injury.Injuries.get(mc.player).incapacitated())) {
+				|| ShotgunClient.aimProgress(1.0F) > 0.5F || GlockClient.aimProgress(1.0F) > 0.5F || de.rcm.ballistic.injury.Injuries.get(mc.player).incapacitated())) {
 				return;
 			}
 			crosshair.render(graphics, tickCounter);
@@ -181,6 +181,8 @@ public final class AkClient {
 				ClientPlayNetworking.send(new GunInputPayload(player.isShiftKeyDown() ? GunInputPayload.RELOAD_SWITCH : GunInputPayload.RELOAD));
 			} else if (ShotgunClient.holding(player)) {
 				ShotgunClient.reload(player);
+			} else if (GlockClient.holding(player)) {
+				GlockClient.reload(player);
 			}
 		}
 		while (selector.consumeClick()) {
@@ -208,6 +210,9 @@ public final class AkClient {
 			}
 			magCheckTick(mc, player, state, now);
 			while (inspect.consumeClick()) {
+				if (GlockClient.holding(player)) {
+					GlockClient.inspect(player);
+				}
 				if (state != null && !state.reloading() && !checking && aim <= 0.0F && inspectTime(now) < 0.0F && !triggerDown) {
 					inspectStart = now;
 					ClientPlayNetworking.send(new GunInputPayload(GunInputPayload.AK_INSPECT));
@@ -302,6 +307,10 @@ public final class AkClient {
 		}
 		if ((p.flags() & GunshotPayload.SHOTGUN) != 0) {
 			ShotgunClient.remoteShot(p);
+			return;
+		}
+		if ((p.flags() & GunshotPayload.PISTOL) != 0) {
+			GlockClient.remoteShot(p);
 			return;
 		}
 		Vec3 muzzle = new Vec3(p.x(), p.y(), p.z());

@@ -601,6 +601,7 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 		// kamikaze drone: its camera seeker picks the nearest living target around the aim point
 		// and the drone flies straight into it
 		boolean drone = this.missileType.model == MissileType.Model.DRONE;
+		boolean jet = this.missileType.model == MissileType.Model.JET;
 		if (drone && horizontal < 110 && this.stateAge % 4 == 0) {
 			Vec3 aimAt = target;
 			LivingEntity prey = null;
@@ -636,9 +637,10 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 			desired = new Vec3(0, 1, 0).lerp(heading.add(0, 0.55, 0).normalize(), Math.min(1.0, f * 1.4));
 			speed = (0.3 + 2.6 * f) * Math.min(1.0, this.missileType.cruiseSpeed() / 3.2 + 0.25);
 			turn = 0.18;
-		} else if (horizontal > 75) {
+		} else if (horizontal > (jet ? 150 : 75)) {
 			double ground = pos.y - CRUISE_ALTITUDE;
-			for (int k = 0; k <= 64; k += 8) {
+			// the fast one looks further ahead: it covers 14 blocks a tick
+			for (int k = 0; k <= (jet ? 192 : 64); k += 8) {
 				Vec3 probe = pos.add(heading.scale(k));
 				int px = Mth.floor(probe.x);
 				int pz = Mth.floor(probe.z);
@@ -646,7 +648,7 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 					ground = Math.max(ground, level.getHeight(Heightmap.Types.MOTION_BLOCKING, px, pz));
 				}
 			}
-			double climb = Mth.clamp((ground + CRUISE_ALTITUDE - pos.y) * 0.06, -0.35, 0.5);
+			double climb = Mth.clamp((ground + (jet ? CRUISE_ALTITUDE * 0.6 : CRUISE_ALTITUDE) - pos.y) * (jet ? 0.03 : 0.06), -0.35, 0.5);
 			desired = heading.add(0, climb, 0).normalize();
 			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP;
 			turn = 0.1;
@@ -655,6 +657,11 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 			desired = target.subtract(pos).normalize();
 			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP * (horizontal > 40 ? 1.2 : 1.5);
 			turn = 0.4;
+		} else if (jet) {
+			// sea-skimmer: no pop-up, a shallow run straight into the target at full speed
+			desired = target.add(0, 1.0, 0).subtract(pos).normalize();
+			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP;
+			turn = 0.3;
 		} else if (horizontal > 32) {
 			desired = heading.add(0, 0.6, 0).normalize(); // pop-up
 			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP;
@@ -665,6 +672,9 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 			turn = 0.32;
 		}
 
+		if (jet && age >= CRUISE_BOOST_TICKS) {
+			speed *= Math.min(1.0, 0.25 + (age - CRUISE_BOOST_TICKS) / 40.0); // the turbojet spools up after the booster drops
+		}
 		Vec3 newDir = dir.add(desired.subtract(dir).scale(turn));
 		newDir = newDir.lengthSqr() < 1.0E-6 ? desired : newDir.normalize();
 		Vec3 next = pos.add(newDir.scale(speed));

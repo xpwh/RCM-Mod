@@ -157,3 +157,10 @@ Real pump-action shotgun recordings from freesound.org.
 | Empty hull dropping | https://freesound.org/s/654489/ "Shotgun shell falling onto wood.wav" | bigal13 | CC BY 4.0 |
 
 The heartbeat of the dying player is synthesized by `tools/gen_sounds_v13.py`.
+
+## Glock 19 (`tools/import_glock_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Pistol shots near / mid (Walther PPQ 9 mm, Bersa .380, Carl Gustav M45 9 mm) | https://opengameart.org/content/the-free-firearm-sound-library "Prepared SFX Library" | The Free Firearm Sound Library team | CC0 1.0 |
+| Slide racks, magazine seating, striker clicks, 9 mm cases on concrete | https://bigsoundbank.com sounds #1355-1360, #1984-1995 | Joseph Sardin (BigSoundBank) | CC0 1.0 |

@@ -148,14 +148,14 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		// ---- muzzle flash, for the first frame or two of each shot
 		float shot = now - lastShot;
 		if (shot >= 0.0F && shot < 1.4F) {
-			muzzleFlash(poseStack, collector, shot, lastShot, ambient(light, mc));
+			muzzleFlash(poseStack, collector, shot, lastShot, ambient(light, mc), BORE_Y, MUZZLE_Z, 1.0F);
 		}
 		poseStack.popPose();
 	}
 
 
 	/** How bright the surroundings are (0 dark .. 1 daylight): a flash that is a spark at noon is a fireball at night. */
-	private static float ambient(int light, Minecraft mc) {
+	static float ambient(int light, Minecraft mc) {
 		float block = LightTexture.block(light) / 15.0F;
 		float sky = LightTexture.sky(light) / 15.0F;
 		float day = 1.0F;
@@ -171,19 +171,19 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 	 * burning gas reaching forward (with the secondary fireball) seen from the side, and the jets the
 	 * slant brake throws up and to the right. Drawn additively; picked and turned at random per shot.
 	 */
-	private static void muzzleFlash(PoseStack poseStack, SubmitNodeCollector collector, float age, long seed, float ambient) {
+	static void muzzleFlash(PoseStack poseStack, SubmitNodeCollector collector, float age, long seed, float ambient, float boreY, float muzzleZ, float size) {
 		java.util.Random r = new java.util.Random(seed * 31L + 7L);
 		float fade = age < 0.35F ? 1.0F : Math.max(0.0F, 1.0F - (age - 0.35F) / 1.05F);
 		float dark = 1.0F - ambient;
 		float bright = fade * (0.85F + 0.15F * dark);
-		float scale = (1.15F + 0.55F * dark) * (0.85F + 0.3F * r.nextFloat()) * (0.8F + 0.25F * Math.min(1.0F, age * 2.0F));
+		float scale = size * (1.15F + 0.55F * dark) * (0.85F + 0.3F * r.nextFloat()) * (0.8F + 0.25F * Math.min(1.0F, age * 2.0F));
 		int side = r.nextInt(4);
 		int front = r.nextInt(4);
 		float roll = r.nextFloat() * 360.0F;
 		int c = Mth.clamp((int) (bright * 255.0F), 0, 255);
 		int color = 0xFF000000 | c << 16 | c << 8 | c;
 		poseStack.pushPose();
-		poseStack.translate(0.0F, BORE_Y, MUZZLE_Z);
+		poseStack.translate(0.0F, boreY, muzzleZ);
 		poseStack.scale(scale, scale, scale);
 		poseStack.mulPose(Axis.ZP.rotationDegrees(roll));
 		float len = 0.36F;

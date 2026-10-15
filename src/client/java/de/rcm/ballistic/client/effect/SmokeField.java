@@ -116,6 +116,11 @@ public final class SmokeField {
 		if (amount < 100 && ClientEffects.rand() * 100.0F >= amount) {
 			return; // less smoke, as set in the settings
 		}
+		if (de.rcm.ballistic.client.ModConfig.fastSmoke) {
+			// fast and realistic: the puff spreads wider and thins out as it does, gone in a fraction of the time
+			life = life > 40 ? Math.max(40, (int) (life * 0.35F)) : life;
+			r1 *= 1.3F;
+		}
 		int i = count++;
 		X[i] = x;
 		Y[i] = y;
@@ -230,6 +235,10 @@ public final class SmokeField {
 	private static float opacity(int i, float t, float age) {
 		float in = Math.min(1.0F, age / 4.0F);
 		float out = t > 0.45F ? 1.0F - (t - 0.45F) / 0.55F : 1.0F;
+		if (de.rcm.ballistic.client.ModConfig.fastSmoke) {
+			// diluting as it spreads: the same smoke over a growing volume, so it thins from the start
+			out = (float) Math.pow(1.0F - t, 0.8F) * (1.0F - 0.25F * t);
+		}
 		return ALPHA[i] * in * out * out;
 	}
 

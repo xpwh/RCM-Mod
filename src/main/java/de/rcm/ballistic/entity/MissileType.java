@@ -44,7 +44,13 @@ public enum MissileType {
 	/** Climbs straight out of the sky; a while later a meteor shower rains down on the target. */
 	MOON("moon_rocket", Flight.BALLISTIC, Warhead.METEOR, Model.ICBM, 1.15F, 1.4F, 14.0F, 400, 80, 4.0, 1.4, Rarity.EPIC),
 	/** Trident-style submarine-launched ballistic missile with a MIRV bus; can be fired from underwater. */
-	SLBM("trident_missile", Flight.BALLISTIC, Warhead.MIRV, Model.ICBM, 0.95F, 1.2F, 11.5F, 300, 50, 1.3, 1.0, Rarity.EPIC);
+	SLBM("trident_missile", Flight.BALLISTIC, Warhead.MIRV, Model.ICBM, 0.95F, 1.2F, 11.5F, 300, 50, 1.3, 1.0, Rarity.EPIC),
+	/**
+	 * Harpoon / Kh-35-style anti-ship and land-attack missile: long and slim (34 cm across), a small
+	 * turbojet fed by a belly intake. After the booster drops away it skims the ground at about 290 m/s
+	 * (Mach 0.85) and goes straight into its target at the end, no pop-up.
+	 */
+	JET_CRUISE("jet_cruise_missile", Flight.CRUISE, Warhead.CRUISE, Model.JET, 1.0F, 0.6F, 4.6F, 120, 15, 1.0, 0.355, Rarity.RARE);
 
 	public enum Flight {
 		BALLISTIC,
@@ -106,7 +112,8 @@ public enum MissileType {
 		HEAVY_ICBM(12.0F, 0.6F),
 		CRUISE(6.0F, 0.3F),
 		HYPERSONIC(8.0F, 0.5F),
-		DRONE(3.5F, 0.22F);
+		DRONE(3.5F, 0.22F),
+		JET(4.6F, 0.17F);
 
 		public final float length;
 		public final float radius;
@@ -161,7 +168,8 @@ public enum MissileType {
 
 	/** Strategic missiles are too long for the mobile launcher truck. */
 	public boolean fitsOnTruck() {
-		return this.model == Model.TACTICAL || this.model == Model.CRUISE || this.model == Model.HYPERSONIC || this.model == Model.DRONE;
+		return this.model == Model.TACTICAL || this.model == Model.CRUISE || this.model == Model.HYPERSONIC || this.model == Model.DRONE
+			|| this.model == Model.JET;
 	}
 
 	/**
@@ -175,6 +183,7 @@ public enum MissileType {
 			case HYPERSONIC -> 0.35;
 			case CRUISE -> 0.12;
 			case DRONE -> 0.06;
+			case JET -> 0.05; // slim, and skimming the ground in the clutter
 		};
 	}
 
@@ -188,6 +197,7 @@ public enum MissileType {
 			case TACTICAL -> 0.8F;
 			case ICBM, HEAVY_ICBM -> 0.65F;
 			case HYPERSONIC -> 0.3F;
+			case JET -> 0.6F; // small, fast and seen late
 		};
 	}
 

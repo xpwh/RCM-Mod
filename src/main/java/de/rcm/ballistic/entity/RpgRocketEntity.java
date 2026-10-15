@@ -141,7 +141,7 @@ public class RpgRocketEntity extends Entity {
 
 	private @Nullable Entity firstEntityHit(ServerLevel level, Vec3 from, Vec3 to) {
 		List<Entity> list = level.getEntities(this, new AABB(from, to).inflate(0.6), e ->
-			(e instanceof LivingEntity || e instanceof JetEntity || e instanceof MobileLauncherEntity || e instanceof DestroyerEntity)
+			(e instanceof LivingEntity || e instanceof JetEntity || e instanceof MobileLauncherEntity)
 				&& e.isAlive() && !e.isSpectator() && (e != this.shooter || this.tickCount > 12));
 		Entity best = null;
 		double bestDist = Double.MAX_VALUE;

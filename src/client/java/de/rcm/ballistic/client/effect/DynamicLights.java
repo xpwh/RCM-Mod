@@ -189,9 +189,10 @@ public final class DynamicLights {
 			int color = Math.round(Mth.clamp(l.now, 0.0F, 1.0F) * 255.0F) << 24 | (l.rgb & 0xFFFFFF);
 			int light = (Math.round(ry * 8.0F) & 0xFFFF) | Math.round(Math.min(l.radius, 2000.0F) * 16.0F) << 16;
 			for (float[] c : corners) {
-				float x = f.x() + left.x() * c[0] + u.x() * c[1];
-				float y = f.y() + left.y() * c[0] + u.y() * c[1];
-				float z = f.z() + left.z() * c[0] + u.z() * c[1];
+				// far out, so the walking bob cannot swing the lit view (see Sky)
+				float x = (f.x() + left.x() * c[0] + u.x() * c[1]) * 500.0F;
+				float y = (f.y() + left.y() * c[0] + u.y() * c[1]) * 500.0F;
+				float z = (f.z() + left.z() * c[0] + u.z() * c[1]) * 500.0F;
 				consumer.addVertex(pose, x, y, z).setColor(color).setUv(rx, rz).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
 					.setNormal(pose, 0.0F, 1.0F, 0.0F);
 			}

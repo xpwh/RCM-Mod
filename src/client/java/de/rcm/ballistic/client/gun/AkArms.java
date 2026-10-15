@@ -84,6 +84,15 @@ public final class AkArms {
 	/** The same with the elbows pointing towards the given poles (base space). */
 	public static void draw(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, Vector3f rightHand,
 		Vector3f leftHand, Vector3f rightShoulderBase, Vector3f leftShoulderBase, Vector3f rightPole, Vector3f leftPole) {
+		draw(player, base, poseStack, collector, light, rightHand, leftHand, rightShoulderBase, leftShoulderBase, rightPole, leftPole, THICK, 1.0F);
+	}
+
+	/**
+	 * The same with arms {@code thick} times the model's width and forearms (and fists) {@code fore} times its
+	 * length: slimmer, shorter-handed arms for a small gun held out in front of the face.
+	 */
+	public static void draw(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, Vector3f rightHand,
+		Vector3f leftHand, Vector3f rightShoulderBase, Vector3f leftShoulderBase, Vector3f rightPole, Vector3f leftPole, float thick, float fore) {
 		Minecraft mc = Minecraft.getInstance();
 		PlayerModel model = mc.getEntityRenderDispatcher().getPlayerRenderer(player).getModel();
 		Identifier skin = player.getSkin().body().texturePath();
@@ -93,21 +102,21 @@ public final class AkArms {
 		float scale = toItem.transformDirection(new Vector3f(1.0F, 0.0F, 0.0F)).length();
 		Vector3f rightShoulder = toItem.transformPosition(rightShoulderBase, new Vector3f());
 		Vector3f leftShoulder = toItem.transformPosition(leftShoulderBase, new Vector3f());
-		Vector3f rightElbow = elbow(rightShoulder, rightHand, RIGHT_UPPER * scale, FOREARM * scale, toItem.transformDirection(new Vector3f(rightPole)));
-		Vector3f leftElbow = elbow(leftShoulder, leftHand, LEFT_UPPER * scale, FOREARM * scale, toItem.transformDirection(new Vector3f(leftPole)));
+		Vector3f rightElbow = elbow(rightShoulder, rightHand, RIGHT_UPPER * scale, FOREARM * fore * scale, toItem.transformDirection(new Vector3f(rightPole)));
+		Vector3f leftElbow = elbow(leftShoulder, leftHand, LEFT_UPPER * scale, FOREARM * fore * scale, toItem.transformDirection(new Vector3f(leftPole)));
 		boolean rightSleeve = player.isModelPartShown(PlayerModelPart.RIGHT_SLEEVE);
 		boolean leftSleeve = player.isModelPartShown(PlayerModelPart.LEFT_SLEEVE);
 		float rightFist = slim ? -0.5F : -1.0F;
 		float leftFist = slim ? 0.5F : 1.0F;
 		// forearms: fist at the hand, running back to the elbow
-		arm(model.rightArm, model.rightSleeve, rightSleeve, rightHand, rightElbow, rightFist, 1.0F, false, poseStack, collector, light, skin);
-		arm(model.leftArm, model.leftSleeve, leftSleeve, leftHand, leftElbow, leftFist, 1.0F, false, poseStack, collector, light, skin);
+		arm(model.rightArm, model.rightSleeve, rightSleeve, rightHand, rightElbow, rightFist, fore, false, poseStack, collector, light, skin, thick);
+		arm(model.leftArm, model.leftSleeve, leftSleeve, leftHand, leftElbow, leftFist, fore, false, poseStack, collector, light, skin, thick);
 		// upper arms: from the elbow on up to the shoulder (mostly out of view), drawn the other way round so
 		// the fist end of the model stays hidden at the shoulder
 		arm(model.rightArm, model.rightSleeve, rightSleeve, rightElbow, rightShoulder, rightFist, rightElbow.distance(rightShoulder) / (12.0F / 16.0F), true,
-			poseStack, collector, light, skin);
+			poseStack, collector, light, skin, thick);
 		arm(model.leftArm, model.leftSleeve, leftSleeve, leftElbow, leftShoulder, leftFist, leftElbow.distance(leftShoulder) / (12.0F / 16.0F), true,
-			poseStack, collector, light, skin);
+			poseStack, collector, light, skin, thick);
 	}
 
 	/**
@@ -144,7 +153,7 @@ public final class AkArms {
 	 * body) is turned outward.
 	 */
 	private static void arm(ModelPart arm, ModelPart sleeve, boolean sleeveShown, Vector3f from, Vector3f to, float fistX, float length, boolean reversed,
-		PoseStack poseStack, SubmitNodeCollector collector, int light, Identifier skin) {
+		PoseStack poseStack, SubmitNodeCollector collector, int light, Identifier skin, float thick) {
 		// +Y of the model: from the shoulder end towards the fist end
 		Vector3f down = reversed ? new Vector3f(to).sub(from) : new Vector3f(from).sub(to);
 		if (down.lengthSquared() < 1.0E-6F) {
@@ -164,7 +173,7 @@ public final class AkArms {
 		poseStack.pushPose();
 		poseStack.translate(from.x, from.y, from.z);
 		poseStack.mulPose(rot);
-		poseStack.scale(THICK, Math.max(0.05F, length), THICK);
+		poseStack.scale(thick, Math.max(0.05F, length), thick);
 		if (reversed) {
 			// the top of the model (2 px above its pivot) at the elbow, a pixel into the forearm to close the joint
 			poseStack.translate(-fistX / 16.0F, 1.0F / 16.0F, 0.0F);

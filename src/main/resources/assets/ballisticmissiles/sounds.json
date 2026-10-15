@@ -1632,5 +1632,155 @@
 				"name": "ballisticmissiles:shotgun/handle3"
 			}
 		]
+	},
+	"glock.shot": {
+		"subtitle": "subtitles.ballisticmissiles.glock_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/shot1"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot2"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot3"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot4"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot5"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot6"
+			}
+		]
+	},
+	"glock.shot_mid": {
+		"subtitle": "subtitles.ballisticmissiles.glock_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/shot_mid1"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_mid2"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_mid3"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_mid4"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_mid5"
+			}
+		]
+	},
+	"glock.shot_far": {
+		"subtitle": "subtitles.ballisticmissiles.glock_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/shot_far1"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_far2"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_far3"
+			}
+		]
+	},
+	"glock.slide_back": {
+		"subtitle": "subtitles.ballisticmissiles.glock_slide",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/slide_back1"
+			},
+			{
+				"name": "ballisticmissiles:glock/slide_back2"
+			},
+			{
+				"name": "ballisticmissiles:glock/slide_back3"
+			}
+		]
+	},
+	"glock.slide_forward": {
+		"subtitle": "subtitles.ballisticmissiles.glock_slide",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/slide_forward1"
+			},
+			{
+				"name": "ballisticmissiles:glock/slide_forward2"
+			},
+			{
+				"name": "ballisticmissiles:glock/slide_forward3"
+			}
+		]
+	},
+	"glock.mag_out": {
+		"subtitle": "subtitles.ballisticmissiles.glock_mag_out",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/mag_out1"
+			},
+			{
+				"name": "ballisticmissiles:glock/mag_out2"
+			}
+		]
+	},
+	"glock.mag_in": {
+		"subtitle": "subtitles.ballisticmissiles.glock_mag_in",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/mag_in1"
+			},
+			{
+				"name": "ballisticmissiles:glock/mag_in2"
+			},
+			{
+				"name": "ballisticmissiles:glock/mag_in3"
+			},
+			{
+				"name": "ballisticmissiles:glock/mag_in4"
+			}
+		]
+	},
+	"glock.dry": {
+		"subtitle": "subtitles.ballisticmissiles.glock_dry",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/dry1"
+			},
+			{
+				"name": "ballisticmissiles:glock/dry2"
+			},
+			{
+				"name": "ballisticmissiles:glock/dry3"
+			}
+		]
+	},
+	"glock.case": {
+		"subtitle": "subtitles.ballisticmissiles.glock_case",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/case1"
+			},
+			{
+				"name": "ballisticmissiles:glock/case2"
+			},
+			{
+				"name": "ballisticmissiles:glock/case3"
+			},
+			{
+				"name": "ballisticmissiles:glock/case4"
+			},
+			{
+				"name": "ballisticmissiles:glock/case5"
+			},
+			{
+				"name": "ballisticmissiles:glock/case6"
+			}
+		]
 	}
 }

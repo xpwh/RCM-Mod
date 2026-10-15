@@ -90,6 +90,7 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			case CRUISE -> new float[][] {{0.0F, 0.0F, 0.16F}};
 			case HYPERSONIC -> new float[][] {{0.0F, 0.0F, 0.38F}};
 			case DRONE -> new float[0][]; // piston engine and propeller: no exhaust plume
+			case JET -> new float[][] {{0.0F, 0.0F, 0.1F}};
 			default -> new float[][] {{0.0F, 0.0F, 0.45F}};
 		};
 	}
@@ -170,8 +171,15 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		}
 		collector.submitCustomGeometry(poseStack, bodyType, (pose, consumer) -> mesh.emit(pose, consumer, light));
 		boolean cruise = state.missileType.isCruise();
+		boolean slim = state.missileType.model == MissileType.Model.JET;
 		if (cruise && state.engineOn) {
+			// the slim jet missile has a slimmer booster under its tail
+			poseStack.pushPose();
+			if (slim) {
+				poseStack.scale(0.62F, 0.8F, 0.62F);
+			}
 			collector.submitCustomGeometry(poseStack, bodyType, (pose, consumer) -> MissileMesh.CRUISE_BOOSTER.emit(pose, consumer, light));
+			poseStack.popPose();
 		}
 		if (state.missileType.model == MissileType.Model.DRONE) {
 			// the propeller windmills during the boost and spins up to a blur once the engine runs
@@ -203,14 +211,17 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 				exitY = stageBottom - 0.5F;
 			}
 			if (cruise && state.engineOn) {
-				exits = new float[][] {{0.0F, 0.0F, 0.17F}};
-				exitY = -MissileMesh.CRUISE_BOOSTER_LENGTH - 0.28F;
+				exits = new float[][] {{0.0F, 0.0F, slim ? 0.11F : 0.17F}};
+				exitY = (-MissileMesh.CRUISE_BOOSTER_LENGTH - 0.28F) * (slim ? 0.8F : 1.0F);
+			} else if (slim && state.jet) {
+				exitY = -0.09F;
 			}
 			for (float[] exit : exits) {
 				// turbofan: only a faint hot glow instead of a rocket plume
-				float nozzle = state.jet ? exit[2] * 0.7F : exit[2];
+				float nozzle = state.jet ? exit[2] * (slim ? 0.9F : 0.7F) : exit[2];
+				// the slim missile's turbojet runs hot: a short orange-blue jet flame you can see
 				float flameLength = state.jet
-					? 0.55F * flicker
+					? (slim ? 1.25F * flicker : 0.55F * flicker)
 					: (state.ignition ? Math.min(1.0F, t / 30.0F) * 3.5F : 6.5F) * flicker * Mth.sqrt(exit[2] / 0.34F) * (exits.length > 1 ? 1.1F : 1.0F);
 				float phase = exit[0] * 13.0F + exit[1] * 7.0F;
 				poseStack.pushPose();

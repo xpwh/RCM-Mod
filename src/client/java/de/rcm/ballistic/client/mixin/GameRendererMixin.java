@@ -47,7 +47,7 @@ public abstract class GameRendererMixin {
 	private float ballisticmissiles$steadyAim(float bob) {
 		float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		float aim = Math.max(Math.max(de.rcm.ballistic.client.gun.AkClient.aimProgress(partialTick), de.rcm.ballistic.client.item.RpgClient.aimProgress(partialTick)),
-			de.rcm.ballistic.client.gun.ShotgunClient.aimProgress(partialTick));
+			Math.max(de.rcm.ballistic.client.gun.ShotgunClient.aimProgress(partialTick), de.rcm.ballistic.client.gun.GlockClient.aimProgress(partialTick)));
 		return bob * (1.0F - 0.88F * aim);
 	}
 

@@ -98,6 +98,9 @@ public class CloudParticle extends SingleQuadParticle {
 	// ------------------------------------------------------------------ fluent setup
 
 	public CloudParticle configure(int lifetime, float startSize, float endSize, int colorStart, int colorEnd, float alpha) {
+		if (de.rcm.ballistic.client.ModConfig.fastSmoke && lifetime > 30) {
+			lifetime = Math.max(30, (int) (lifetime * 0.45F)); // smoke set to clear fast
+		}
 		this.lifetime = Math.max(2, lifetime);
 		this.startSize = startSize;
 		this.endSize = endSize;

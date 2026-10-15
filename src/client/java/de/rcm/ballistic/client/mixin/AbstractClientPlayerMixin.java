@@ -14,7 +14,7 @@ public abstract class AbstractClientPlayerMixin {
 	@Inject(method = "getFieldOfViewModifier", at = @At("RETURN"), cancellable = true)
 	private void ballisticmissiles$aimZoom(boolean firstPerson, float fovEffectScale, CallbackInfoReturnable<Float> cir) {
 		float aim = RpgClient.aimProgress(0.0F);
-		float ak = de.rcm.ballistic.client.gun.AkClient.aimProgress(0.0F);
+		float ak = Math.max(de.rcm.ballistic.client.gun.AkClient.aimProgress(0.0F), 0.6F * de.rcm.ballistic.client.gun.GlockClient.aimProgress(0.0F));
 		if (aim > 0.0F || ak > 0.0F) {
 			// the RPG: over the iron sights a little, then into the 2.7x optical sight
 			float scope = de.rcm.ballistic.client.gun.AimOverlay.scope(0.0F);

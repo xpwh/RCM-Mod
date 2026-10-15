@@ -322,7 +322,7 @@ public final class MissileClientTicker {
 		double speed = nozzle.distanceTo(prev);
 
 		SmokeField.trail(missile.getId() * 4 + 1, nozzle.subtract(dir.scale(1.0 + MissileMesh.CRUISE_BOOSTER_LENGTH)),
-			SmokeField.Style.smallRocket(1.0F), missile.isBoosterBurning() ? 1.0F : 0.0F);
+			SmokeField.Style.smallRocket(missile.getMissileType().model == MissileType.Model.JET ? 0.7F : 1.0F), missile.isBoosterBurning() ? 1.0F : 0.0F);
 		if (missile.isBoosterBurning()) {
 			Vec3 b = nozzle.subtract(dir.scale(MissileMesh.CRUISE_BOOSTER_LENGTH + 0.3));
 			nozzleFire(b.x, b.y, b.z, dir, scale, 3);
@@ -335,6 +335,12 @@ public final class MissileClientTicker {
 			CloudParticle glow = ClientEffects.cloud(true, nozzle.x - dir.x * 0.3, nozzle.y - dir.y * 0.3, nozzle.z - dir.z * 0.3, 0, 0, 0);
 			if (glow != null) {
 				glow.configure(3, 0.35F, 0.25F, 0xFFC890, 0xFF7030, 0.5F);
+			}
+			if (missile.getMissileType().model == MissileType.Model.JET) {
+				// the turbojet: a thin grey streak of exhaust left hanging along the flight path, and a bright tail
+				SmokeField.trail(missile.getId() * 4 + 2, nozzle.subtract(dir.scale(0.4)),
+					new SmokeField.Style(0.3F, 1.6F, 220, 0xB4B0AA, 0.22F, 0.0F, 0.0F, 1.6F), 1.0F);
+				DynamicLights.steady(nozzle.subtract(dir.scale(0.5)), 0xFFB070, 0.45F, 7.0F);
 			}
 		}
 

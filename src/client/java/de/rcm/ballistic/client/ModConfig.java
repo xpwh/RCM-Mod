@@ -59,6 +59,11 @@ public final class ModConfig {
 	public static int screenEffects = 100;
 	/** How much smoke the smoke system makes, percent. */
 	public static int smokeAmount = 100;
+	/**
+	 * How smoke goes away. true: fast and realistic - it spreads out, thins and is gone in a fraction of the
+	 * time, like real smoke in moving air; false: the long-hanging smoke as before.
+	 */
+	public static boolean fastSmoke = false;
 	/** Loudness of explosions and other big bangs, percent. */
 	public static int explosionVolume = 100;
 	public static boolean bulletHoles = true;
@@ -105,6 +110,7 @@ public final class ModConfig {
 			goreWarning = bool(p, "goreWarning", goreWarning);
 			screenEffects = percent(p, "screenEffects", screenEffects);
 			smokeAmount = percent(p, "smokeAmount", smokeAmount);
+			fastSmoke = "fast".equals(p.getProperty("smokeFade", fastSmoke ? "fast" : "long"));
 			explosionVolume = percent(p, "explosionVolume", explosionVolume);
 			bulletHoles = bool(p, "bulletHoles", bulletHoles);
 			dynamicLights = bool(p, "dynamicLights", dynamicLights);
@@ -127,6 +133,7 @@ public final class ModConfig {
 			p.setProperty("goreWarning", Boolean.toString(goreWarning));
 			p.setProperty("screenEffects", Integer.toString(screenEffects));
 			p.setProperty("smokeAmount", Integer.toString(smokeAmount));
+			p.setProperty("smokeFade", fastSmoke ? "fast" : "long");
 			p.setProperty("explosionVolume", Integer.toString(explosionVolume));
 			p.setProperty("bulletHoles", Boolean.toString(bulletHoles));
 			p.setProperty("dynamicLights", Boolean.toString(dynamicLights));

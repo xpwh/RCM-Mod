@@ -28,6 +28,7 @@ public final class ShellCasings {
 	private static final int CAP = 96;
 	private static final int LIFE = 400;
 	private static final BoxMesh CASE = mesh();
+	private static final BoxMesh CASE_9MM = mesh9mm();
 	private static final List<Shell> SHELLS = new ArrayList<>();
 
 	private ShellCasings() {
@@ -40,6 +41,8 @@ public final class ShellCasings {
 		int age;
 		int bounces;
 		boolean resting;
+		/** A 9 mm pistol case: short and straight, a lighter, higher tinkle. */
+		boolean pistol;
 	}
 
 	/** The 7.62x39 case: bottle-necked, extractor groove, rim (a little bigger than life so it reads). */
@@ -51,6 +54,23 @@ public final class ShellCasings {
 				{0.004F * k, 0.0056F * k}, {0.029F * k, 0.0052F * k}, {0.032F * k, 0.0043F * k}, {0.039F * k, 0.0043F * k}}, 8);
 		b.revolve(AK_BLUED, new Vector3f(0, 0, -0.0002F), new Vector3f(0, 0, 1), new float[][] {{0.0F, 0.0F}, {0.0004F, 0.0022F * k}}, 6); // primer
 		return b.build();
+	}
+
+	/** The 9x19 mm case: short, straight-walled, rimless (a little bigger than life so it reads). */
+	private static BoxMesh mesh9mm() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		float k = 1.5F;
+		b.revolve(BRASS, new Vector3f(0, 0, 0), new Vector3f(0, 0, 1),
+			new float[][] {{0.0F, 0.0050F * k}, {0.0012F * k, 0.0050F * k}, {0.0017F * k, 0.0042F * k}, {0.0028F * k, 0.0042F * k},
+				{0.0033F * k, 0.0050F * k}, {0.019F * k, 0.0048F * k}}, 8);
+		b.revolve(AK_BLUED, new Vector3f(0, 0, -0.0002F), new Vector3f(0, 0, 1), new float[][] {{0.0F, 0.0F}, {0.0004F, 0.0021F * k}}, 6); // primer
+		return b.build();
+	}
+
+	/** A 9 mm case from a pistol, thrown from {@code at} with velocity {@code v}. */
+	public static void ejectPistol(Vec3 at, Vec3 v) {
+		eject(at, v);
+		SHELLS.get(SHELLS.size() - 1).pistol = true;
 	}
 
 	/** Throw a case from {@code at} with velocity {@code v} (blocks per tick). */
@@ -142,7 +162,8 @@ public final class ShellCasings {
 		s.bounces++;
 		if (s.bounces <= 3) {
 			float volume = s.bounces == 1 ? 0.35F : 0.18F;
-			GunAudio.play(ModRegistry.SHELL_DROP, new Vec3(s.x, s.y, s.z), volume, 0.9F + (float) Math.random() * 0.35F);
+			GunAudio.play(s.pistol ? ModRegistry.GLOCK_CASE : ModRegistry.SHELL_DROP, new Vec3(s.x, s.y, s.z), volume * (s.pistol ? 1.3F : 1.0F),
+				0.9F + (float) Math.random() * 0.35F);
 		}
 	}
 
@@ -191,7 +212,8 @@ public final class ShellCasings {
 			poseStack.mulPose(Axis.YP.rotationDegrees(Mth.lerp(partial, s.pyaw, s.yaw)));
 			poseStack.mulPose(Axis.XP.rotationDegrees(s.resting ? 0.0F : Mth.lerp(partial, s.ppitch, s.pitch)));
 			poseStack.translate(0.0F, 0.0F, -0.03F); // turn about the middle of the case
-			context.commandQueue().submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> CASE.emit(pose, consumer, light));
+			BoxMesh mesh = s.pistol ? CASE_9MM : CASE;
+			context.commandQueue().submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> mesh.emit(pose, consumer, light));
 			poseStack.popPose();
 		}
 	}

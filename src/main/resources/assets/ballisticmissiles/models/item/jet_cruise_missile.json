@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:item/handheld",
+	"textures": {
+		"layer0": "ballisticmissiles:item/jet_cruise_missile"
+	}
+}

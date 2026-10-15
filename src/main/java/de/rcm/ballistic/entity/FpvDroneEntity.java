@@ -527,7 +527,7 @@ public class FpvDroneEntity extends Entity {
 
 	private @Nullable Entity entityHit(ServerLevel level, Vec3 from, Vec3 to, @Nullable ServerPlayer pilot) {
 		List<Entity> list = level.getEntities(this, new AABB(from, to).inflate(0.5), e ->
-			(e instanceof LivingEntity || e instanceof JetEntity || e instanceof MobileLauncherEntity || e instanceof DestroyerEntity)
+			(e instanceof LivingEntity || e instanceof JetEntity || e instanceof MobileLauncherEntity)
 				&& e.isAlive() && !e.isSpectator() && (e != pilot || this.tickCount > 40));
 		Entity best = null;
 		double bestDist = Double.MAX_VALUE;

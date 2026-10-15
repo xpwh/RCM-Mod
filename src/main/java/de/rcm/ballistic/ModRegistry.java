@@ -167,11 +167,6 @@ public final class ModRegistry {
 		EntityType.Builder.<de.rcm.ballistic.entity.SpentStageEntity>of(de.rcm.ballistic.entity.SpentStageEntity::new, MobCategory.MISC).sized(1.0F, 1.0F)
 			.clientTrackingRange(32).updateInterval(1).fireImmune().noLootTable()
 	);
-	public static final EntityType<de.rcm.ballistic.entity.DestroyerEntity> DESTROYER = registerEntity(
-		"destroyer",
-		EntityType.Builder.<de.rcm.ballistic.entity.DestroyerEntity>of(de.rcm.ballistic.entity.DestroyerEntity::new, MobCategory.MISC).sized(5.0F, 6.0F)
-			.clientTrackingRange(32).updateInterval(1).fireImmune()
-	);
 	public static final EntityType<de.rcm.ballistic.entity.FighterEntity> FIGHTER = registerEntity(
 		"fighter",
 		EntityType.Builder.<de.rcm.ballistic.entity.FighterEntity>of(de.rcm.ballistic.entity.FighterEntity::new, MobCategory.MISC).sized(3.6F, 3.2F)
@@ -544,9 +539,6 @@ public final class ModRegistry {
 	public static final Item SUBMARINE_ITEM = registerItem(
 		"submarine", props -> new BlockItem(SUBMARINE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
 	);
-	public static final Item DESTROYER_ITEM = registerItem(
-		"destroyer", de.rcm.ballistic.item.DestroyerItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-	);
 	public static final Item ROCKET_LAUNCHER = registerItem(
 		"rocket_launcher", de.rcm.ballistic.item.RocketLauncherItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
 	);
@@ -572,6 +564,18 @@ public final class ModRegistry {
 			.component(net.minecraft.core.component.DataComponents.USE_EFFECTS, new net.minecraft.world.item.component.UseEffects(true, false, 0.85F))
 	);
 	public static final Item SHOTGUN_SHELL = registerItem("shotgun_shell", Item::new, new Item.Properties().stacksTo(25));
+	public static final Item GLOCK = registerItem(
+		"glock19", de.rcm.ballistic.gun.GlockItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
+			.component(net.minecraft.core.component.DataComponents.USE_EFFECTS, new net.minecraft.world.item.component.UseEffects(true, false, 0.9F))
+	);
+	public static final Item GLOCK_MAG = registerItem(
+		"glock_magazine", props -> new de.rcm.ballistic.gun.GlockMagazineItem(props, de.rcm.ballistic.gun.GlockMagazineItem.STANDARD),
+		new Item.Properties().stacksTo(8)
+	);
+	public static final Item GLOCK_MAG_EXTENDED = registerItem(
+		"glock_magazine_extended", props -> new de.rcm.ballistic.gun.GlockMagazineItem(props, de.rcm.ballistic.gun.GlockMagazineItem.EXTENDED),
+		new Item.Properties().stacksTo(4).rarity(Rarity.UNCOMMON)
+	);
 	public static final Item AK_MAG = registerItem(
 		"ak_magazine", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, de.rcm.ballistic.gun.GunState.BALL), new Item.Properties().stacksTo(8)
 	);
@@ -724,6 +728,15 @@ public final class ModRegistry {
 	public static final SoundEvent SHOTGUN_SHELL_IN = sound("shotgun.shell_in");
 	public static final SoundEvent SHOTGUN_DRY = sound("shotgun.dry");
 	public static final SoundEvent SHOTGUN_HANDLE = sound("shotgun.handle");
+	public static final SoundEvent GLOCK_SHOT = sound("glock.shot");
+	public static final SoundEvent GLOCK_SHOT_MID = sound("glock.shot_mid");
+	public static final SoundEvent GLOCK_SHOT_FAR = sound("glock.shot_far");
+	public static final SoundEvent GLOCK_SLIDE_BACK = sound("glock.slide_back");
+	public static final SoundEvent GLOCK_SLIDE_FORWARD = sound("glock.slide_forward");
+	public static final SoundEvent GLOCK_MAG_OUT = sound("glock.mag_out");
+	public static final SoundEvent GLOCK_MAG_IN = sound("glock.mag_in");
+	public static final SoundEvent GLOCK_DRY = sound("glock.dry");
+	public static final SoundEvent GLOCK_CASE = sound("glock.case");
 	public static final SoundEvent HEARTBEAT = sound("player.heartbeat");
 	public static final SoundEvent AK_MAG_OUT = sound("ak.mag_out");
 	public static final SoundEvent AK_MAG_IN = sound("ak.mag_in");
@@ -768,7 +781,6 @@ public final class ModRegistry {
 		output.accept(MISSILE_SILO_ITEM);
 		output.accept(SUBMARINE_ITEM);
 		output.accept(MOBILE_LAUNCHER_ITEM);
-		output.accept(DESTROYER_ITEM);
 		output.accept(B61_BOMB);
 		output.accept(POSEIDON_ITEM);
 		output.accept(ORBITAL_UPLINK_ITEM);
@@ -778,6 +790,9 @@ public final class ModRegistry {
 		loadedShotgun.set(GUN_STATE, de.rcm.ballistic.gun.GunState.DEFAULT.withRounds(de.rcm.ballistic.gun.ShotgunItem.CAPACITY));
 		output.accept(loadedShotgun);
 		output.accept(SHOTGUN_SHELL);
+		output.accept(de.rcm.ballistic.gun.GlockItem.loaded(GLOCK, de.rcm.ballistic.gun.GlockMagazineItem.STANDARD));
+		output.accept(GLOCK_MAG);
+		output.accept(GLOCK_MAG_EXTENDED);
 		output.accept(AK_MAG);
 		output.accept(AK_MAG_TRACER);
 		output.accept(AK_MAG_TRACER_RED);

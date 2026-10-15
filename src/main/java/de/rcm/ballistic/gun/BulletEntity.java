@@ -74,22 +74,31 @@ public class BulletEntity extends Entity {
 	}
 
 	public static void fire(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, boolean tracer, boolean red) {
-		launch(level, shooter, from, velocity, tracer, false, 1.0F, red);
+		launch(level, shooter, from, velocity, tracer, false, 1.0F, red, 1.0F);
+	}
+
+	/**
+	 * A 9 mm pistol round: slower than a rifle's and lighter, so it hits less hard and gives up sooner going
+	 * through things.
+	 */
+	public static void firePistol(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity) {
+		launch(level, shooter, from, velocity, false, false, 0.8F, false, 0.7F);
 	}
 
 	/** One ball of a shotgun's load. */
 	public static void firePellet(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, float damageScale) {
-		launch(level, shooter, from, velocity, false, true, damageScale, false);
+		launch(level, shooter, from, velocity, false, true, damageScale, false, 1.0F);
 	}
 
 	private static BulletEntity launch(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, boolean tracer, boolean pellet, float damageScale,
-		boolean red) {
+		boolean red, float power) {
 		BulletEntity b = ModRegistry.BULLET.create(level, EntitySpawnReason.TRIGGERED);
 		if (b == null) {
 			return null;
 		}
 		b.pellet = pellet;
 		b.damageScale = damageScale;
+		b.power = power;
 		b.drag = pellet ? 0.955 : DRAG;
 		b.origin = from;
 		b.shooter = shooter;
@@ -302,7 +311,7 @@ public class BulletEntity extends Entity {
 	private void hitEntity(ServerLevel level, Entity e, Vec3 from, Vec3 to) {
 		Vec3 at = de.rcm.ballistic.injury.CorpseHits.clip(e, from, to, de.rcm.ballistic.injury.CorpseHits.isCorpse(e) ? 0.05F : 0.2F).orElse(e.position());
 		float speed = (float) this.getDeltaMovement().length();
-		float damage = DAMAGE * Math.min(1.0F, 0.35F + speed / (float) AkItem.MUZZLE_VELOCITY) * (0.25F + 0.75F * this.power);
+		float damage = DAMAGE * this.damageScale * Math.min(1.0F, 0.35F + speed / (float) AkItem.MUZZLE_VELOCITY) * (0.25F + 0.75F * this.power);
 		if (this.pellet) {
 			// buckshot: full weight up close, falling off quickly as the balls slow
 			damage = DAMAGE * this.damageScale * (float) Math.min(1.0, 0.25 + speed / ShotgunItem.MUZZLE_VELOCITY * 0.85) * this.power;

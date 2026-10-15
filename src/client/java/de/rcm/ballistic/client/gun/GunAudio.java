@@ -111,6 +111,11 @@ public final class GunAudio {
 		report(muzzle, own, ModRegistry.SHOTGUN_SHOT, ModRegistry.SHOTGUN_SHOT_MID, ModRegistry.SHOTGUN_SHOT_FAR, 1.1F);
 	}
 
+	/** A 9 mm pistol at {@code muzzle}: a sharp, high crack, lighter than a rifle's, ringing in the same spaces. */
+	public static void pistol(Vec3 muzzle, boolean own) {
+		report(muzzle, own, ModRegistry.GLOCK_SHOT, ModRegistry.GLOCK_SHOT_MID, ModRegistry.GLOCK_SHOT_FAR, 0.75F);
+	}
+
 	private static void report(Vec3 muzzle, boolean own, net.minecraft.sounds.SoundEvent close, net.minecraft.sounds.SoundEvent mid,
 		net.minecraft.sounds.SoundEvent far, float tailGain) {
 		Minecraft mc = Minecraft.getInstance();

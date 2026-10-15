@@ -400,6 +400,8 @@ public final class ModNetworking {
 		public static final int LAST = 1;
 		public static final int TRACER = 2;
 		public static final int SHOTGUN = 4;
+		/** A 9 mm pistol shot. */
+		public static final int PISTOL = 16;
 		/** With {@link #TRACER}: it burns red. */
 		public static final int RED = 8;
 		public static final Type<GunshotPayload> TYPE = new Type<>(BallisticMissiles.id("gunshot"));
@@ -615,6 +617,9 @@ public final class ModNetworking {
 		public static final int RPG_CHECK = 9;
 		public static final int SHOTGUN_FIRE = 10;
 		public static final int SHOTGUN_LOAD = 11;
+		public static final int GLOCK_FIRE = 12;
+		public static final int GLOCK_RELOAD = 13;
+		public static final int GLOCK_RELOAD_SWITCH = 14;
 		public static final Type<GunInputPayload> TYPE = new Type<>(BallisticMissiles.id("gun_input"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunInputPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunInputPayload::action, GunInputPayload::new);
@@ -801,6 +806,9 @@ public final class ModNetworking {
 					}
 				}
 				case GunInputPayload.SHOTGUN_LOAD -> de.rcm.ballistic.gun.ShotgunItem.load(context.player());
+				case GunInputPayload.GLOCK_FIRE -> de.rcm.ballistic.gun.GlockItem.fire(context.player());
+				case GunInputPayload.GLOCK_RELOAD -> de.rcm.ballistic.gun.GlockItem.requestReload(context.player(), false);
+				case GunInputPayload.GLOCK_RELOAD_SWITCH -> de.rcm.ballistic.gun.GlockItem.requestReload(context.player(), true);
 				case GunInputPayload.AK_INSPECT, GunInputPayload.AK_CHECK, GunInputPayload.RPG_CHECK -> shareGunAction(context.player(), payload.action());
 				default -> {
 				}

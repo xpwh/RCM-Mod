@@ -52,6 +52,7 @@ public final class MissileMesh {
 	public static final MissileMesh EMP = buildEmp();
 	public static final MissileMesh ANTIMATTER = buildAntimatter();
 	public static final MissileMesh ANTI_RADAR = buildAntiRadar();
+	public static final MissileMesh JET = buildJet();
 
 	/** Length of the cruise missile booster hanging below the airframe. */
 	public static final float CRUISE_BOOSTER_LENGTH = 1.25F;
@@ -89,6 +90,7 @@ public final class MissileMesh {
 			case CRUISE -> CRUISE;
 			case HYPERSONIC -> HYPERSONIC;
 			case DRONE -> DRONE;
+			case JET -> JET;
 			default -> TACTICAL;
 		};
 	}
@@ -422,6 +424,41 @@ public final class MissileMesh {
 		}
 		b.radialBox(0.0F, R, 0.035F, 0.08F, 0.8F, 2.5F, Skin.METAL);
 		b.ring(4.88F, R, 0.008F, 0.04F);
+		return b.build();
+	}
+
+	/**
+	 * Harpoon / Kh-35-style turbojet missile: a long slim tube with an ogive radome, four small swept wings
+	 * at mid-body, four control fins at the tail, the turbojet's intake scoop under the belly and its
+	 * small nozzle at the tail.
+	 */
+	private static MissileMesh buildJet() {
+		float L = 4.6F;
+		float R = 0.17F;
+		Builder b = new Builder(L);
+		b.lathe(new float[][] {
+			{0.00F, 0.125F}, {0.05F, 0.15F}, {0.14F, R},
+			{1.30F, R}, {1.31F, R - 0.006F}, {1.34F, R - 0.006F}, {1.35F, R},
+			{2.95F, R}, {2.96F, R - 0.006F}, {2.99F, R - 0.006F}, {3.00F, R},
+			{3.72F, R}
+		}, Skin.BODY);
+		b.lathe(ogive(3.72F, L, R, 14), Skin.BODY);
+		b.ring(3.72F, R, 0.006F, 0.03F); // radome joint
+		// turbojet nozzle: a short tapered cone, dark inside
+		b.latheAt(0, 0, 20, new float[][] {{0.0F, 0.125F}, {-0.05F, 0.11F}, {-0.09F, 0.095F}}, Skin.METAL);
+		b.disc(-0.09F, 0.095F, true, Skin.DARK);
+		for (int i = 0; i < 4; i++) {
+			float a = Mth.PI / 4 + i * Mth.HALF_PI;
+			b.fin(a, R - 0.01F, 1.95F, 2.78F, 2.06F, 2.36F, 0.44F, 0.028F); // swept mid-body wings (fold out at launch)
+			b.fin(a, R - 0.01F, 0.04F, 0.58F, 0.1F, 0.36F, 0.3F, 0.026F); // tail control fins
+		}
+		// the turbojet's belly intake: a scoop with a dark mouth facing forward
+		b.radialBox(-Mth.HALF_PI, R - 0.02F, 0.09F, 0.17F, 0.75F, 1.42F, Skin.METAL);
+		b.radialBox(-Mth.HALF_PI, R - 0.01F, 0.085F, 0.13F, 1.38F, 1.43F, Skin.DARK);
+		// cable raceway along the back, radar altimeter windows under the belly
+		b.radialBox(Mth.HALF_PI, R, 0.025F, 0.045F, 0.45F, 3.6F, Skin.METAL);
+		b.radialBox(-Mth.HALF_PI, R, 0.008F, 0.07F, 2.95F, 3.05F, Skin.DARK);
+		b.radialBox(-Mth.HALF_PI, R, 0.008F, 0.07F, 3.25F, 3.35F, Skin.DARK);
 		return b.build();
 	}
 

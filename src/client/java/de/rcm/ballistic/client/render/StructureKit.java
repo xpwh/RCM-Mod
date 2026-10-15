@@ -77,6 +77,7 @@ final class StructureKit {
 	static final int GORE_BLOOD = 60;
 	static final int GORE_BRAIN = 61;
 	static final int GORE_SKIN = 62;
+	static final int GL_POLY = 63;
 
 	private StructureKit() {
 	}

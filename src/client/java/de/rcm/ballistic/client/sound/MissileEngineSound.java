@@ -47,6 +47,9 @@ public class MissileEngineSound extends AbstractTickableSoundInstance {
 		if (type.model == MissileType.Model.DRONE) {
 			return 0.55F; // the drone's two-stroke drone: low, buzzing "moped" sound
 		}
+		if (type.model == MissileType.Model.JET) {
+			return 1.4F; // small turbojet: a high, tearing whine
+		}
 		if (type.isCruise()) {
 			return 1.15F;
 		}

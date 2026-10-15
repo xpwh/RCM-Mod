@@ -32,6 +32,8 @@ import org.joml.Vector4f;
  * same model), so the land meets the sky without a seam; the volumetric clouds are lit by the same sun.
  */
 public final class Sky {
+	/** How far out the quad over the whole view is drawn (blocks). */
+	private static final float FAR = 500.0F;
 	private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
 		.withLocation(BallisticMissiles.id("pipeline/sky"))
 		.withVertexShader(BallisticMissiles.id("core/sky"))
@@ -107,9 +109,11 @@ public final class Sky {
 		float w = 6.0F;
 		float[][] corners = {{w, -w}, {-w, -w}, {-w, w}, {w, w}};
 		for (float[] c : corners) {
-			float x = f.x() + l.x() * c[0] + u.x() * c[1];
-			float y = f.y() + l.y() * c[0] + u.y() * c[1];
-			float z = f.z() + l.z() * c[0] + u.z() * c[1];
+			// far out (FAR blocks), not a block in front of the eye: the walking bob shifts the eye a little, and
+			// that would swing the whole sky - the sun, the shafts - with every step; this far it does not show
+			float x = (f.x() + l.x() * c[0] + u.x() * c[1]) * FAR;
+			float y = (f.y() + l.y() * c[0] + u.y() * c[1]) * FAR;
+			float z = (f.z() + l.z() * c[0] + u.z() * c[1]) * FAR;
 			consumer.addVertex(pose, x, y, z).setColor(color).setUv(0.0F, 0.0F).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0)
 				.setNormal(pose, sun.x, sun.y, sun.z);
 		}
