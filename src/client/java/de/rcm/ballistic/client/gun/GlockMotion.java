@@ -32,15 +32,17 @@ public final class GlockMotion {
 	static final float EYE_RELIEF = 0.27F;
 	static final Vector3f EYE = new Vector3f(NOTCH).sub(new Vector3f(SIGHT_LINE).mul(EYE_RELIEF));
 	static final Vector3f CAMERA = new Vector3f(-0.56F, 0.52F, 0.72F);
+	/** The item's origin (the grip) as the first-person display transform places it. */
+	static final Vector3f GRIP_PIVOT = new Vector3f(-3.2F / 16.0F, 2.4F / 16.0F, 0.5F / 16.0F);
 	/** Low ready: from vanilla's hand place (far right, low) to low in the middle, nearer. */
 	static final Vector3f READY = new Vector3f(-0.22F, 0.2F, 0.35F);
 	/** The hands (item space): the right fist round the grip, the left wrapped over it from the other side. */
 	public static final Vector3f GRIP = new Vector3f(0.0F, -0.004F, 0.006F);
 	public static final Vector3f SUPPORT = new Vector3f(-0.022F, -0.016F, -0.006F);
 	/** The magazine pouch on the left of the belt, as it lies from the gun drawn in for the reload. */
-	static final Vector3f POUCH = new Vector3f(-0.22F, -0.34F, 0.16F);
+	static final Vector3f POUCH = new Vector3f(-0.12F, -0.32F, -0.14F);
 	/** Over the top of the slide, fingers on the rear serrations (overhand rack). */
-	static final Vector3f OVERHAND = new Vector3f(-0.004F, GlockItemRenderer.SLIDE_TOP + 0.016F, GlockItemRenderer.SLIDE_REAR - 0.012F);
+	static final Vector3f OVERHAND = new Vector3f(-0.04F, GlockItemRenderer.SLIDE_TOP - 0.006F, GlockItemRenderer.SLIDE_REAR - 0.006F);
 	/** Fingers on the front serrations, the slide eased back a little to see the brass (press check). */
 	static final Vector3f PRESS = new Vector3f(-0.012F, GlockItemRenderer.SLIDE_TOP - 0.004F, -0.072F);
 	/** The inspect: how long it takes and the press check in the middle of it. */
@@ -254,7 +256,7 @@ public final class GlockMotion {
 				return lerp(slap, SUPPORT, ramp(r, GlockItem.T_IN + 1.0F, GlockItem.RELOAD_TACTICAL - 1.0F));
 			}
 			// from slide lock: over the top of the slide, rack it, let it fly, back onto the grip
-			Vector3f racked = new Vector3f(OVERHAND).add(0.0F, 0.004F, 0.035F);
+			Vector3f racked = new Vector3f(OVERHAND).add(-0.01F, 0.0F, 0.04F);
 			if (r < GlockItem.T_RACK_BACK - 2.0F) {
 				return swing(slap, OVERHAND, ramp(r, GlockItem.T_IN + 1.0F, GlockItem.T_RACK_BACK - 2.0F));
 			}
@@ -321,6 +323,10 @@ public final class GlockMotion {
 			poseStack.translate(0.0F, 0.02F * arc, -0.03F * arc);
 		}
 
+		// from here on everything turns about the grip (the item's origin, past the display transform's offset),
+		// not about vanilla's hand point
+		poseStack.translate(GRIP_PIVOT.x, GRIP_PIVOT.y, GRIP_PIVOT.z);
+
 		// its weight lagging behind the view
 		poseStack.translate(-this.lagYaw.x * 0.002F, this.lagPitch.x * 0.0018F, 0.0F);
 		poseStack.mulPose(Axis.YP.rotationDegrees(this.lagYaw.x * 0.5F));
@@ -360,10 +366,10 @@ public final class GlockMotion {
 			float rack = f.empty() ? ramp(r, GlockItem.T_IN + 1.0F, GlockItem.T_RACK_BACK - 1.0F) * (1.0F - ramp(r, GlockItem.T_RACK_FORWARD, end - 3.0F)) : 0.0F;
 			float yank = f.empty() ? jolt(r - GlockItem.T_RACK_BACK + 1.5F, 4.0F) : 0.0F;
 			float home = f.empty() ? jolt(r - GlockItem.T_RACK_FORWARD + 0.4F, 5.0F) : 0.0F;
-			poseStack.translate(-0.05F * in + 0.02F * rack, 0.07F * in + 0.012F * slap - 0.01F * rack, 0.1F * in - 0.025F * rack - 0.012F * yank);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(30.0F * in + 6.0F * release + 25.0F * rack - 4.0F * home));
-			poseStack.mulPose(Axis.XP.rotationDegrees(14.0F * in + 4.0F * release - 3.0F * slap + 6.0F * rack + 3.0F * home));
-			poseStack.mulPose(Axis.YP.rotationDegrees(-12.0F * in - 4.0F * yank));
+			poseStack.translate(-0.06F * in + 0.02F * rack, 0.14F * in + 0.012F * slap - 0.06F * rack, 0.03F * in - 0.16F * rack - 0.012F * yank);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-40.0F * in + 6.0F * release + 20.0F * rack - 4.0F * home));
+			poseStack.mulPose(Axis.XP.rotationDegrees(12.0F * in + 4.0F * release - 3.0F * slap + 6.0F * rack + 3.0F * home));
+			poseStack.mulPose(Axis.YP.rotationDegrees(12.0F * in - 4.0F * yank));
 		}
 
 		// looking it over: turned to show the right side and the port, the press check (brass in the chamber),
@@ -376,8 +382,8 @@ public final class GlockMotion {
 			float check = ramp(i, 20.0F, 25.0F) * (1.0F - ramp(i, 33.0F, 38.0F));
 			float tug = jolt(i - PRESS_BACK + 1.0F, 4.0F);
 			poseStack.translate(-0.06F * up, 0.06F * up, 0.08F * up);
-			poseStack.mulPose(Axis.YP.rotationDegrees(48.0F * right - 52.0F * left - 10.0F * check));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-18.0F * right + 30.0F * left + 8.0F * check));
+			poseStack.mulPose(Axis.YP.rotationDegrees(48.0F * right - 32.0F * left - 10.0F * check));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-18.0F * right - 25.0F * left + 8.0F * check));
 			poseStack.mulPose(Axis.XP.rotationDegrees(10.0F * up + 6.0F * left - 2.0F * tug));
 		}
 
@@ -416,8 +422,8 @@ public final class GlockMotion {
 		float run = f.run();
 		if (run > 0.0F) {
 			float stride = f.stride() * 0.3F;
-			poseStack.translate(0.03F * run, -0.1F * run + Math.abs(Mth.sin(stride * Mth.PI)) * 0.025F * run, 0.1F * run);
-			poseStack.mulPose(Axis.XP.rotationDegrees(-38.0F * run + Mth.sin(stride * Mth.PI * 2.0F) * 3.0F * run));
+			poseStack.translate(-0.02F * run, -0.02F * run + Math.abs(Mth.sin(stride * Mth.PI)) * 0.025F * run, 0.05F * run);
+			poseStack.mulPose(Axis.XP.rotationDegrees(-30.0F * run + Mth.sin(stride * Mth.PI * 2.0F) * 3.0F * run));
 			poseStack.mulPose(Axis.ZP.rotationDegrees(-12.0F * run + Mth.cos(stride * Mth.PI) * 4.0F * run));
 			poseStack.mulPose(Axis.YP.rotationDegrees(10.0F * run));
 		}
@@ -437,6 +443,7 @@ public final class GlockMotion {
 		poseStack.mulPose(Axis.YP.rotationDegrees(-this.yaw.x));
 		poseStack.mulPose(Axis.ZP.rotationDegrees(this.roll.x));
 		poseStack.translate(0.0F, 0.01F, -0.02F);
+		poseStack.translate(-GRIP_PIVOT.x, -GRIP_PIVOT.y, -GRIP_PIVOT.z);
 	}
 
 	// ------------------------------------------------------------------ the arms
@@ -462,7 +469,13 @@ public final class GlockMotion {
 		float a = f.aim();
 		Vector3f rs = new Vector3f(RIGHT_SHOULDER).lerp(AIM_RIGHT_SHOULDER, a);
 		Vector3f ls = new Vector3f(LEFT_SHOULDER).lerp(AIM_LEFT_SHOULDER, a);
-		return new Hands(new Vector3f(GRIP), supportHand(f), rs, new Vector3f(RIGHT_POLE), ls, new Vector3f(LEFT_POLE));
+		// reloading, the shooting elbow comes up and out so the forearm runs off to the side, clear of the magwell
+		float r = f.reload();
+		float in = r < 0.0F ? 0.0F : ramp(r, 0.0F, 4.0F) * (1.0F - ramp(r, (f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL) - 6.0F,
+			f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL));
+		Vector3f rightPole = new Vector3f(RIGHT_POLE).lerp(new Vector3f(1.0F, 0.1F, 0.5F), in);
+		Vector3f grip = new Vector3f(GRIP).add(0.0F, 0.012F * in, 0.004F * in);
+		return new Hands(grip, supportHand(f), rs, rightPole, ls, new Vector3f(LEFT_POLE));
 	}
 
 	private static Vector3f lerp(Vector3f a, Vector3f b, float t) {
