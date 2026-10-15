@@ -239,9 +239,35 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 		return this.trajectory;
 	}
 
+	/** Lies in an inclined launcher's canister, not yet fired (from the synced state and direction, so both sides know). */
+	public boolean inCanister() {
+		if (this.entityData == null || this.missileType == null || !this.missileType.isCruise()) {
+			return false;
+		}
+		return this.getState() < IGNITION && this.getFailure() == 0 && this.entityData.get(DATA_DIR).y() < 0.95F;
+	}
+
+	/**
+	 * In a canister the hitbox spans the whole canister, so aiming the designator anywhere at it reaches
+	 * the missile (and not the ground behind it).
+	 */
+	@Override
+	protected AABB makeBoundingBox(Vec3 pos) {
+		AABB base = super.makeBoundingBox(pos);
+		if (!this.inCanister()) {
+			return base;
+		}
+		Vec3 dir = this.getFlightDir();
+		Vec3 tip = pos.add(dir.scale(de.rcm.ballistic.block.InclinedLauncherBlock.CANISTER_LENGTH - de.rcm.ballistic.block.InclinedLauncherBlock.TAIL_IN));
+		return new AABB(pos, tip).inflate(0.4);
+	}
+
 	@Override
 	public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
 		super.onSyncedDataUpdated(accessor);
+		if (DATA_DIR.equals(accessor) || DATA_STATE.equals(accessor)) {
+			this.setBoundingBox(this.makeBoundingBox());
+		}
 		if (DATA_TARGET.equals(accessor) || DATA_LAUNCH.equals(accessor)) {
 			this.trajectory = null;
 		}
@@ -1222,6 +1248,9 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 	@Override
 	public boolean canBeCollidedWith(@Nullable Entity entity) {
+		if (this.inCanister()) {
+			return false; // the box spans the canister; the launcher itself is what you walk around
+		}
 		return this.getState() == IDLE || this.getState() == COUNTDOWN;
 	}
 

@@ -1,6 +1,17 @@
 package de.rcm.ballistic.block;
 
+import de.rcm.ballistic.ModRegistry;
+import de.rcm.ballistic.entity.MissileEntity;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -53,6 +64,35 @@ public class InclinedLauncherBlock extends Block implements EntityBlock {
 	@Override
 	public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
 		return new InclinedLauncherBlockEntity(pos, state);
+	}
+
+	/** The missile lying in this launcher's canister, if any. */
+	public static @Nullable MissileEntity loaded(Level level, BlockPos pos, Direction facing) {
+		Vec3 tail = missileTail(pos, facing);
+		for (MissileEntity m : level.getEntitiesOfClass(MissileEntity.class, new AABB(tail, tail).inflate(0.8))) {
+			if (m.inCanister()) {
+				return m;
+			}
+		}
+		return null;
+	}
+
+	/** Clicking the footing with the designator (or empty-handed, sneaking) works on the missile in the canister. */
+	@Override
+	protected InteractionResult useItemOn(
+		ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit
+	) {
+		if (!stack.is(ModRegistry.TARGET_DESIGNATOR) && !(stack.isEmpty() && player.isShiftKeyDown())) {
+			return InteractionResult.TRY_WITH_EMPTY_HAND;
+		}
+		MissileEntity missile = loaded(level, pos, state.getValue(FACING));
+		if (missile == null) {
+			if (stack.is(ModRegistry.TARGET_DESIGNATOR) && !level.isClientSide()) {
+				player.displayClientMessage(Component.translatable("message.ballisticmissiles.canister_empty").withStyle(ChatFormatting.YELLOW), true);
+			}
+			return stack.is(ModRegistry.TARGET_DESIGNATOR) ? InteractionResult.SUCCESS : InteractionResult.TRY_WITH_EMPTY_HAND;
+		}
+		return missile.interact(player, hand);
 	}
 
 	@Override

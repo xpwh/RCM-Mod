@@ -98,7 +98,84 @@ public class MissileSiloBlockEntity extends BlockEntity implements de.rcm.ballis
 	public static void clientTick(Level level, BlockPos pos, BlockState state, MissileSiloBlockEntity silo) {
 		silo.doorOpenO = silo.doorOpen;
 		boolean open = state.hasProperty(MissileSiloBlock.OPEN) && state.getValue(MissileSiloBlock.OPEN);
-		silo.doorOpen = Mth.clamp(silo.doorOpen + (open ? 1.0F : -1.0F) / 45.0F, 0.0F, 1.0F);
+		boolean round = state.getBlock() instanceof HatchSiloBlock;
+		silo.doorOpen = Mth.clamp(silo.doorOpen + (open ? 1.0F : -1.0F) / (round ? HatchSiloBlock.TRAVEL_TICKS : 45.0F), 0.0F, 1.0F);
+		if (round && silo.doorOpen != silo.doorOpenO) {
+			roundHatchEffects(level, pos, silo.doorOpenO, silo.doorOpen);
+		}
+	}
+
+	/** Sounds and dust of the round lid's phases, as its travel passes them (client). */
+	private static void roundHatchEffects(Level level, BlockPos pos, float from, float to) {
+		double x = pos.getX() + 0.5;
+		double y = pos.getY() + 1.2;
+		double z = pos.getZ() + 0.5;
+		boolean opening = to > from;
+		if (opening) {
+			if (passed(from, to, 0.0F)) {
+				// locking bolts drawn back, one after another round the rim
+				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_RETRACT, SoundSource.BLOCKS, 2.0F, 1.45F, false);
+				level.playLocalSound(x, y, z, ModRegistry.CHAIN_RATTLE, SoundSource.BLOCKS, 0.8F, 0.7F, false);
+			}
+			if (passed(from, to, HatchSiloBlock.BOLTS_END - 0.01F)) {
+				level.playLocalSound(x, y, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 2.0F, 1.7F, false);
+			}
+			if (passed(from, to, HatchSiloBlock.BOLTS_END + 0.01F)) {
+				// the seal breaks: a hiss of the tube's overpressure and dust off the rim
+				level.playLocalSound(x, y, z, ModRegistry.AIR_RELEASE, SoundSource.BLOCKS, 2.5F, 0.75F, false);
+				level.playLocalSound(x, y, z, ModRegistry.DOOR_HEAVY_OPEN, SoundSource.BLOCKS, 3.0F, 0.55F, false);
+				rimDust(level, x, y - 0.1, z, 26, 0.06);
+			}
+			if (passed(from, to, HatchSiloBlock.CRACK_END)) {
+				// the hydraulic pump runs up and the rams start to haul
+				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 4.0F, 0.6F, false);
+				level.playLocalSound(x, y, z, ModRegistry.UPLINK_SERVO, SoundSource.BLOCKS, 2.5F, 0.5F, false);
+			}
+			if (passed(from, to, 0.55F)) {
+				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 4.0F, 0.55F, false);
+				level.playLocalSound(x, y, z, ModRegistry.UPLINK_SERVO, SoundSource.BLOCKS, 2.0F, 0.45F, false);
+			}
+			if (passed(from, to, 0.999F)) {
+				// against the stops
+				level.playLocalSound(x + 2.0, y + 1.0, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 4.0F, 0.5F, false);
+				level.playLocalSound(x, y, z, ModRegistry.AIR_RELEASE, SoundSource.BLOCKS, 1.2F, 1.3F, false);
+			}
+		} else {
+			if (passed(to, from, 0.999F)) {
+				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_RETRACT, SoundSource.BLOCKS, 4.0F, 0.6F, false);
+				level.playLocalSound(x, y, z, ModRegistry.UPLINK_SERVO, SoundSource.BLOCKS, 2.5F, 0.5F, false);
+			}
+			if (passed(to, from, 0.55F)) {
+				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_RETRACT, SoundSource.BLOCKS, 4.0F, 0.55F, false);
+			}
+			if (passed(to, from, HatchSiloBlock.CRACK_END - 0.06F)) {
+				// the lid comes down on its seat
+				level.playLocalSound(x, y, z, ModRegistry.DOOR_HEAVY_CLOSE, SoundSource.BLOCKS, 4.0F, 0.5F, false);
+				level.playLocalSound(x, y, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 4.0F, 0.45F, false);
+				rimDust(level, x, y - 0.1, z, 20, 0.04);
+			}
+			if (passed(to, from, HatchSiloBlock.BOLTS_END - 0.02F)) {
+				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 2.0F, 1.5F, false);
+			}
+			if (passed(to, from, 0.01F)) {
+				level.playLocalSound(x, y, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 2.0F, 1.8F, false);
+			}
+		}
+	}
+
+	/** Whether {@code mark} lies in (lo, hi]. */
+	private static boolean passed(float lo, float hi, float mark) {
+		return lo <= mark && mark < hi || mark == 0.0F && lo == 0.0F && hi > 0.0F;
+	}
+
+	private static void rimDust(Level level, double x, double y, double z, int count, double speed) {
+		var random = level.getRandom();
+		for (int i = 0; i < count; i++) {
+			double a = random.nextDouble() * Math.PI * 2.0;
+			double r = 1.75;
+			level.addParticle(net.minecraft.core.particles.ParticleTypes.POOF, x + Math.cos(a) * r, y, z + Math.sin(a) * r,
+				Math.cos(a) * speed, 0.02 + random.nextDouble() * 0.03, Math.sin(a) * speed);
+		}
 	}
 
 	@Override
@@ -197,10 +274,13 @@ public class MissileSiloBlockEntity extends BlockEntity implements de.rcm.ballis
 		if (silo.age % 60 == 0) {
 			level.playSound(null, top.x, top.y, top.z, ModRegistry.SIREN, SoundSource.BLOCKS, 10.0F, 0.9F);
 		}
-		if (remaining == HATCH_OPEN_BEFORE) {
+		boolean round = state.getBlock() instanceof HatchSiloBlock;
+		if (remaining <= (round ? HatchSiloBlock.OPEN_BEFORE : HATCH_OPEN_BEFORE) && !state.getValue(MissileSiloBlock.OPEN)) {
 			silo.setHatch(true);
-			level.playSound(null, top.x, top.y, top.z, ModRegistry.DOOR_HEAVY_OPEN, SoundSource.BLOCKS, 4.0F, 0.75F);
-			level.playSound(null, top.x, top.y, top.z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 4.0F, 0.8F);
+			if (!round) { // the round lid's phases sound on the client, in step with its travel
+				level.playSound(null, top.x, top.y, top.z, ModRegistry.DOOR_HEAVY_OPEN, SoundSource.BLOCKS, 4.0F, 0.75F);
+				level.playSound(null, top.x, top.y, top.z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 4.0F, 0.8F);
+			}
 		}
 		if (++silo.age >= total) {
 			silo.launch(server, top);

@@ -449,7 +449,7 @@ public final class ModRegistry {
 
 	// ---------- Items ----------
 	public static final Item INCLINED_LAUNCHER_ITEM = registerItem(
-		"inclined_launcher", props -> new BlockItem(INCLINED_LAUNCHER, props), new Item.Properties().useBlockDescriptionPrefix()
+		"inclined_launcher", props -> new de.rcm.ballistic.item.InfoBlockItem(INCLINED_LAUNCHER, props, "inclined_launcher", 2), new Item.Properties().useBlockDescriptionPrefix()
 	);
 	public static final Item LAUNCH_PAD_ITEM = registerItem(
 		"launch_pad", props -> new BlockItem(LAUNCH_PAD, props), new Item.Properties().useBlockDescriptionPrefix()
