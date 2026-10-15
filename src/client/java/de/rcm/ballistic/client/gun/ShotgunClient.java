@@ -92,6 +92,23 @@ public final class ShotgunClient {
 	private static final Spring LAG_PITCH = new Spring(0.75F, 0.6F);
 	private static int pendingKicks;
 	private static float kickRoll;
+	/** A 12-gauge also shoves the gun to the side, not only up: and the shooter's upper body rocks with it. */
+	private static final Spring YAW = new Spring(0.8F, 0.45F);
+	private static final Spring LIFT = new Spring(0.7F, 0.6F);
+	/** Coming up onto the shoulder: it swings up a little past the line and settles back. */
+	private static final Spring SETTLE = new Spring(1.15F, 0.4F);
+	private static boolean wasAimed;
+	// moving: landing, the stride, a step to the side
+	private static long landTick = -100L;
+	private static float landHard;
+	private static boolean wasOnGround = true;
+	private static double fallFrom;
+	private static float walk;
+	private static float prevWalk;
+	private static float strafe;
+	private static float prevStrafe;
+	/** The last tick anything happened with the gun (a shot, loading, aiming, walking): long idle, a look at it. */
+	private static long busyTick;
 	private static float lastFrame = -1.0F;
 	private static float lastYaw;
 	private static float lastPitch;
@@ -100,6 +117,19 @@ public final class ShotgunClient {
 	}
 
 	public static void init() {
+		// aiming (the right button held) is "using" the shotgun, and while an item is in use Minecraft swallows
+		// every left click: take them first, they are the trigger
+		ClientTickEvents.START_CLIENT_TICK.register(mc -> {
+			if (mc.player != null && mc.screen == null && holding(mc.player) && mc.player.isUsingItem()) {
+				boolean fired = false;
+				while (mc.options.keyAttack.consumeClick()) {
+					if (!fired) {
+						trigger(mc.player);
+						fired = true;
+					}
+				}
+			}
+		});
 		ClientTickEvents.END_CLIENT_TICK.register(ShotgunClient::tick);
 		HudElementRegistry.addLast(BallisticMissiles.id("shotgun_ammo"), (graphics, tickCounter) -> hud(graphics));
 	}
@@ -249,6 +279,28 @@ public final class ShotgunClient {
 		boolean busy = s != null && (s.reloading() || now - s.lastShot() < ShotgunItem.READY);
 		float target = has && player.isSprinting() && !busy && !aiming ? 1.0F : 0.0F;
 		sprint += (target - sprint) * 0.25F;
+		if (has) {
+			if (!player.onGround()) {
+				if (wasOnGround) {
+					fallFrom = player.getY();
+				}
+				fallFrom = Math.max(fallFrom, player.getY());
+			} else if (!wasOnGround) {
+				landTick = now;
+				landHard = (float) Mth.clamp((fallFrom - player.getY()) / 3.0, 0.3, 1.0);
+			}
+			wasOnGround = player.onGround();
+			prevWalk = walk;
+			prevStrafe = strafe;
+			var vel = player.getDeltaMovement();
+			float yawRad = player.getYRot() * Mth.DEG_TO_RAD;
+			double side = vel.x * Math.cos(yawRad) + vel.z * Math.sin(yawRad);
+			strafe += ((float) Mth.clamp(side / 0.13, -1.0, 1.0) - strafe) * 0.18F;
+			walk += ((player.onGround() ? (float) Mth.clamp(vel.horizontalDistance() / 0.12, 0.0, 1.0) : 0.0F) - walk) * 0.2F;
+			if (busy || aiming || loading || walk > 0.1F || mc.options.keyAttack.isDown() || now - equipTick < 20) {
+				busyTick = now;
+			}
+		}
 		// shouldering it: the sling and the gun against your jacket
 		if (has && now == equipTick) {
 			GunAudio.play(ModRegistry.SHOTGUN_HANDLE, player.getEyePosition(), 0.45F, 0.95F + ClientEffects.rand() * 0.1F);
@@ -272,9 +324,13 @@ public final class ShotgunClient {
 		while (pendingKicks > 0) {
 			pendingKicks--;
 			float braced = 1.0F - 0.3F * aiming - (player.isCrouching() ? 0.15F : 0.0F);
-			BACK.v += 0.32F * braced;
-			PITCH.v += 15.0F * braced * (0.9F + 0.2F * ClientEffects.rand());
-			ROLL.v += 5.0F * kickRoll * braced;
+			// a 12-gauge: a hard shove straight back into the shoulder, the muzzle flipping up and out to the
+			// right, the upper body rocking up with it
+			BACK.v += 0.38F * braced;
+			PITCH.v += 17.0F * braced * (0.9F + 0.2F * ClientEffects.rand());
+			ROLL.v += 6.0F * kickRoll * braced;
+			YAW.v += (3.0F + 2.0F * ClientEffects.rand()) * braced;
+			LIFT.v += 0.06F * braced;
 		}
 		float dy = Mth.wrapDegrees(yaw - lastYaw);
 		float dp = pitch - lastPitch;
@@ -283,7 +339,12 @@ public final class ShotgunClient {
 		float hold = 1.0F - 0.85F * aiming;
 		LAG_YAW.v += Mth.clamp(dy, -25.0F, 25.0F) * 0.1F * hold;
 		LAG_PITCH.v += Mth.clamp(dp, -25.0F, 25.0F) * 0.1F * hold;
-		for (Spring sp : new Spring[] {BACK, PITCH, ROLL, LAG_YAW, LAG_PITCH}) {
+		boolean aimed = aiming > 0.97F;
+		if (aimed && !wasAimed) {
+			SETTLE.v += 1.0F; // the stock beds into the shoulder
+		}
+		wasAimed = aimed;
+		for (Spring sp : new Spring[] {BACK, PITCH, ROLL, LAG_YAW, LAG_PITCH, YAW, LIFT, SETTLE}) {
 			sp.step(dt);
 		}
 		LAG_YAW.x = Mth.clamp(LAG_YAW.x, -8.0F, 8.0F);
@@ -331,69 +392,113 @@ public final class ShotgunClient {
 		poseStack.mulPose(Axis.XP.rotationDegrees((Mth.sin(now * 0.045F) * 0.4F + Mth.sin(breath) * 1.7F * tired) * steady));
 		poseStack.mulPose(Axis.YP.rotationDegrees((Mth.cos(now * 0.031F) * 0.35F + Mth.cos(breath * 0.5F) * 1.0F * tired) * steady));
 
-		// working the slide: the left arm snaps the forend back and drives it home. The pull drags the muzzle
-		// down and rolls the gun a little towards the pulling hand, the bolt slamming into the rear stop jars
-		// it, and driving it home throws the muzzle forward and back up onto the target
+		// the gun's weight in the step: a slow heave up and down and a lean into a sidestep (much less shouldered)
+		float hipHold = 1.0F - 0.8F * a;
+		float w = Mth.lerp(partialTick, prevWalk, walk) * hipHold * (1.0F - smooth(Mth.lerp(partialTick, prevSprint, sprint)));
+		if (w > 0.01F) {
+			float stride = mc.player.walkAnimation.position(partialTick) * 0.6F;
+			poseStack.translate(0.0F, -Math.abs(Mth.sin(stride)) * 0.016F * w, -Math.abs(Mth.sin(stride)) * 0.006F * w);
+			poseStack.mulPose(Axis.XP.rotationDegrees(Math.abs(Mth.sin(stride)) * 1.8F * w));
+			poseStack.mulPose(Axis.YP.rotationDegrees(Mth.sin(stride) * 0.9F * w));
+		}
+		float lean = Mth.lerp(partialTick, prevStrafe, strafe) * hipHold;
+		poseStack.mulPose(Axis.ZP.rotationDegrees(-5.0F * lean));
+		// bedding into the shoulder: up past the line, settling back
+		poseStack.translate(0.0F, 0.008F * SETTLE.x, 0.012F * SETTLE.x);
+		poseStack.mulPose(Axis.XP.rotationDegrees(1.6F * SETTLE.x));
+
+		// the pump, ridden out of the recoil: the shot still rocking the gun, the left arm rips the forend back -
+		// the gun dragged down and canted over to the left with it, the empty hull flicking out with a twitch
+		// of the receiver to the right at the stop - then slams it home, which throws the muzzle forward and
+		// back down onto the target
 		float pump = pumpFor(stack);
 		boolean racking = state.reloading() && state.reloadKind() == 2;
 		float since = racking ? now - state.reloadStart() : now - state.lastShot();
 		float backAt = racking ? ShotgunItem.RACK_BACK : ShotgunItem.PUMP_BACK;
 		float homeAt = racking ? ShotgunItem.RACK_FORWARD : ShotgunItem.PUMP_FORWARD;
 		float span = racking ? ShotgunItem.RACK : ShotgunItem.READY;
-		if (since >= 0.0F && since < span + 4.0F) {
-			float work = smooth((since - backAt + 3.0F) / 2.5F) * (1.0F - smooth((since - homeAt) / 4.0F));
-			float stop = jolt(since - backAt, 3.5F);
-			float home = jolt(since - homeAt, 4.0F);
-			float hip = 1.0F - 0.65F * a;
-			poseStack.translate(-0.008F * work * hip, -0.006F * work * hip + 0.004F * stop, 0.012F * pump * hip + 0.006F * stop - 0.012F * home);
-			poseStack.mulPose(Axis.XP.rotationDegrees((-3.2F * pump - 1.5F * stop + 2.4F * home) * hip));
-			poseStack.mulPose(Axis.ZP.rotationDegrees((4.5F * work + 2.0F * stop) * hip));
-			poseStack.mulPose(Axis.YP.rotationDegrees(-1.5F * pump * hip));
+		if (since >= 0.0F && since < span + 5.0F) {
+			float work = smooth((since - backAt + 3.0F) / 2.0F) * (1.0F - smooth((since - homeAt) / 4.5F));
+			float eject = jolt(since - backAt, 3.0F);
+			float home = jolt(since - homeAt, 4.5F);
+			float hip = 1.0F - 0.6F * a;
+			poseStack.translate(0.012F * work * hip, -0.018F * work * hip, 0.02F * pump * hip - 0.016F * home);
+			poseStack.mulPose(Axis.XP.rotationDegrees((-5.0F * pump + 3.0F * home) * hip));
+			poseStack.mulPose(Axis.ZP.rotationDegrees((9.0F * work - 4.0F * eject) * hip));
+			poseStack.mulPose(Axis.YP.rotationDegrees((-3.0F * pump + 1.5F * eject) * hip));
 		}
 
-		// a click instead of a bang: a twitch, then a look at the gun
+		// a click instead of a bang: a jerk of surprise, then the gun turned over to look at the empty tube
 		float dry = now - dryTick;
-		if (dry >= 0.0F && dry < 20.0F) {
-			float twitch = dry < 4.0F ? Mth.sin(dry / 4.0F * Mth.PI) : 0.0F;
-			float look = dry < 4.0F ? 0.0F : smooth((dry - 4.0F) / 5.0F) * (1.0F - smooth((dry - 12.0F) / 8.0F));
-			poseStack.translate(-0.03F * look, 0.03F * look - 0.004F * twitch, -0.006F * twitch);
-			poseStack.mulPose(Axis.XP.rotationDegrees(-1.0F * twitch + 4.0F * look));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-14.0F * look));
+		if (dry >= 0.0F && dry < 24.0F) {
+			float twitch = jolt(dry, 4.0F);
+			float look = dry < 4.0F ? 0.0F : smooth((dry - 4.0F) / 5.0F) * (1.0F - smooth((dry - 15.0F) / 9.0F));
+			poseStack.translate(-0.04F * look, 0.05F * look - 0.006F * twitch, -0.02F * look - 0.01F * twitch);
+			poseStack.mulPose(Axis.XP.rotationDegrees(-2.0F * twitch + 8.0F * look));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-55.0F * look));
+			poseStack.mulPose(Axis.YP.rotationDegrees(15.0F * look));
 		}
 
-		// loading: rolled over to the left, raised and turned in so the loading port underneath faces you,
-		// with a knock every time a shell is thumbed home
+		// loading: rolled right over, belly up and towards you so the loading port faces the eyes, muzzle raised;
+		// each shell: the thumb drives it into the tube - the gun shoved up and away a little - and the hand
+		// goes back to the pouch, the gun sinking back
 		float l = smooth(Mth.lerp(partialTick, prevLoad, load));
 		if (l > 0.0F) {
 			float c = state.reloading() ? (now - state.reloadStart()) % ShotgunItem.SHELL_CYCLE : 0.0F;
-			float knock = state.reloading() ? jolt(c - ShotgunItem.SHELL_IN, 4.0F) : 0.0F;
-			poseStack.translate(-0.07F * l, 0.14F * l + 0.006F * knock, -0.06F * l - 0.008F * knock);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-38.0F * l));
-			poseStack.mulPose(Axis.XP.rotationDegrees(11.0F * l - 2.0F * knock));
-			poseStack.mulPose(Axis.YP.rotationDegrees(24.0F * l));
+			float push = state.reloading() ? jolt(c - ShotgunItem.SHELL_IN + 1.5F, 5.0F) : 0.0F;
+			float reach = state.reloading() ? Mth.sin(Mth.clamp(c / (ShotgunItem.SHELL_IN - 1.5F), 0.0F, 1.0F) * Mth.PI) : 0.0F;
+			poseStack.translate(-0.11F * l, 0.17F * l + 0.012F * push - 0.006F * reach, -0.09F * l - 0.016F * push);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-68.0F * l + 3.0F * push));
+			poseStack.mulPose(Axis.XP.rotationDegrees(16.0F * l - 3.5F * push + 1.0F * reach));
+			poseStack.mulPose(Axis.YP.rotationDegrees(30.0F * l + 2.0F * reach));
 		}
 
-		// drawn: up from low and canted
-		float draw = 1.0F - smooth((now - equipTick) / 13.0F);
+		// a long while doing nothing: the gun lifted and turned to look along the receiver, then back
+		float idle = now - busyTick - 240.0F;
+		if (idle >= 0.0F && idle < 60.0F && a < 0.05F) {
+			float look = smooth(idle / 12.0F) * (1.0F - smooth((idle - 40.0F) / 18.0F));
+			float turn = Mth.sin(Mth.clamp((idle - 10.0F) / 28.0F, 0.0F, 1.0F) * Mth.PI);
+			poseStack.translate(-0.05F * look, 0.06F * look, -0.03F * look);
+			poseStack.mulPose(Axis.YP.rotationDegrees(28.0F * look + 10.0F * turn));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-20.0F * look - 25.0F * turn));
+			poseStack.mulPose(Axis.XP.rotationDegrees(6.0F * look));
+		}
+
+		// drawn: slung off the back - it comes over the right shoulder, butt high and muzzle down, and swings
+		// down into the hands
+		float draw = 1.0F - smooth((now - equipTick) / 15.0F);
 		if (draw > 0.0F) {
-			poseStack.translate(0.04F * draw, -0.27F * draw, 0.1F * draw);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-35.0F * draw));
-			poseStack.mulPose(Axis.XP.rotationDegrees(-30.0F * draw));
+			float swing = Mth.sin(draw * Mth.PI * 0.5F);
+			poseStack.translate(0.12F * draw, 0.2F * swing - 0.32F * draw * draw, 0.18F * draw);
+			poseStack.mulPose(Axis.XP.rotationDegrees(-55.0F * swing));
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-40.0F * draw));
+			poseStack.mulPose(Axis.YP.rotationDegrees(25.0F * draw));
 		}
 
-		// sprinting: muzzle down and across the body
+		// sprinting: port arms - the gun carried diagonally across the chest, muzzle up and to the left,
+		// bouncing with the stride
 		float run = smooth(Mth.lerp(partialTick, prevSprint, sprint));
 		if (run > 0.0F) {
 			float stride = mc.player.walkAnimation.position(partialTick) * 0.3F;
-			poseStack.translate(-0.06F * run, -0.07F * run + Math.abs(Mth.sin(stride * Mth.PI)) * 0.025F * run, 0.04F * run);
-			poseStack.mulPose(Axis.YP.rotationDegrees(36.0F * run + Mth.sin(stride * Mth.PI) * 3.0F * run));
-			poseStack.mulPose(Axis.XP.rotationDegrees(-22.0F * run));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(14.0F * run + Mth.cos(stride * Mth.PI) * 2.0F * run));
+			poseStack.translate(-0.1F * run, -0.03F * run + Math.abs(Mth.sin(stride * Mth.PI)) * 0.03F * run, 0.07F * run);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-48.0F * run + Mth.cos(stride * Mth.PI) * 3.0F * run));
+			poseStack.mulPose(Axis.XP.rotationDegrees(18.0F * run + Mth.sin(stride * Mth.PI * 2.0F) * 2.0F * run));
+			poseStack.mulPose(Axis.YP.rotationDegrees(22.0F * run));
+		}
+
+		// landing: knees give, the gun dips and comes back up
+		float land = now - landTick;
+		if (land >= 0.0F && land < 12.0F) {
+			float dip = Mth.sin(land / 12.0F * Mth.PI) * (1.0F - land / 12.0F) * landHard;
+			poseStack.translate(0.0F, -0.09F * dip, 0.012F * dip);
+			poseStack.mulPose(Axis.XP.rotationDegrees(-7.0F * dip));
 		}
 
 		// recoil
 		poseStack.translate(0.0F, 0.004F * Math.max(0.0F, PITCH.x) * 0.1F, Math.max(-0.03F, BACK.x));
+		poseStack.translate(0.0F, LIFT.x, 0.0F);
 		poseStack.mulPose(Axis.XP.rotationDegrees(PITCH.x));
+		poseStack.mulPose(Axis.YP.rotationDegrees(-YAW.x));
 		poseStack.mulPose(Axis.ZP.rotationDegrees(ROLL.x));
 	}
 
