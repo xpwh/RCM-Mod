@@ -633,6 +633,10 @@ public final class ModNetworking {
 		public static final int GLOCK_FIRE = 12;
 		public static final int GLOCK_RELOAD = 13;
 		public static final int GLOCK_RELOAD_SWITCH = 14;
+		/** The gun's light / laser switch: off, light, laser, both. */
+		public static final int ATTACHMENT_TOGGLE = 15;
+		/** Take the light and laser off the gun. */
+		public static final int ATTACHMENT_REMOVE = 16;
 		public static final Type<GunInputPayload> TYPE = new Type<>(BallisticMissiles.id("gun_input"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunInputPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunInputPayload::action, GunInputPayload::new);
@@ -823,6 +827,8 @@ public final class ModNetworking {
 				case GunInputPayload.GLOCK_RELOAD -> de.rcm.ballistic.gun.GlockItem.requestReload(context.player(), false);
 				case GunInputPayload.GLOCK_RELOAD_SWITCH -> de.rcm.ballistic.gun.GlockItem.requestReload(context.player(), true);
 				case GunInputPayload.AK_INSPECT, GunInputPayload.AK_CHECK, GunInputPayload.RPG_CHECK -> shareGunAction(context.player(), payload.action());
+				case GunInputPayload.ATTACHMENT_TOGGLE -> de.rcm.ballistic.gun.GunAttachments.toggle(context.player());
+				case GunInputPayload.ATTACHMENT_REMOVE -> de.rcm.ballistic.gun.GunAttachments.remove(context.player());
 				default -> {
 				}
 			}

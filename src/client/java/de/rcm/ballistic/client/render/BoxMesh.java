@@ -40,6 +40,17 @@ public final class BoxMesh {
 		return this.data.length == 0 ? new float[6] : b;
 	}
 
+	/** A copy scaled by {@code k} about the origin. */
+	public BoxMesh scaled(float k) {
+		float[] d = this.data.clone();
+		for (int i = 0; i < d.length; i += STRIDE) {
+			d[i] *= k;
+			d[i + 1] *= k;
+			d[i + 2] *= k;
+		}
+		return new BoxMesh(d);
+	}
+
 	public void emit(PoseStack.Pose pose, VertexConsumer consumer, int light) {
 		this.emit(pose, consumer, light, -1);
 	}

@@ -40,7 +40,7 @@ import org.joml.Vector3fc;
  * Item space as the AK's: origin at the right hand, -Z forward, +Y up, one unit a block (a metre), so the
  * same display transform and arms fit.
  */
-public final class ShotgunItemRenderer implements SpecialModelRenderer<ShotgunItemRenderer.Pose> {
+public final class ShotgunItemRenderer implements SpecialModelRenderer<GunAttachmentModels.Armed<ShotgunItemRenderer.Pose>> {
 	/** Height of the bore above the hand, and where the receiver ends and the muzzle is. */
 	public static final float BORE_Y = 0.135F;
 	public static final float RECEIVER_FRONT = -0.17F;
@@ -75,13 +75,17 @@ public final class ShotgunItemRenderer implements SpecialModelRenderer<ShotgunIt
 	}
 
 	@Override
-	public void submit(Pose pose, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil,
-		int outline) {
-		Pose p = pose == null ? Pose.REST : pose;
+	public void submit(GunAttachmentModels.Armed<Pose> armed, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light,
+		int overlay, boolean foil, int outline) {
+		Pose p = armed == null || armed.pose() == null ? Pose.REST : armed.pose();
 		float back = p.pump();
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.5F, 0.5F);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pp, consumer) -> GUN.emit(pp, consumer, light));
+		if (armed != null) {
+			// light and laser clamped either side of the barrel, ahead of the forend
+			GunAttachmentModels.submit(armed.att(), GunAttachmentModels.SHOTGUN, false, poseStack, collector, light, context.firstPerson());
+		}
 		// the bolt in the ejection port: its face rides back with the action, uncovering the chamber
 		float face = PORT_FRONT + back * PUMP_TRAVEL;
 		float length = PORT_REAR - face;
@@ -127,8 +131,8 @@ public final class ShotgunItemRenderer implements SpecialModelRenderer<ShotgunIt
 	}
 
 	@Override
-	public Pose extractArgument(ItemStack stack) {
-		return ShotgunClient.poseFor(stack);
+	public GunAttachmentModels.Armed<Pose> extractArgument(ItemStack stack) {
+		return new GunAttachmentModels.Armed<>(ShotgunClient.poseFor(stack), de.rcm.ballistic.gun.GunAttachments.of(stack));
 	}
 
 	public record Unbaked() implements SpecialModelRenderer.Unbaked {

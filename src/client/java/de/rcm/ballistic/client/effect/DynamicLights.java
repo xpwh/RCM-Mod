@@ -88,6 +88,11 @@ public final class DynamicLights {
 		float seed;
 		float now;
 		int shown;
+		/** A spotlight: the direction it shines and the cosine of its cone's half angle (0: shines all round). */
+		float spotX;
+		float spotY = -1.0F;
+		float spotZ;
+		float spotCos;
 	}
 
 	private static final List<Light> LIGHTS = new ArrayList<>();
@@ -138,6 +143,26 @@ public final class DynamicLights {
 		l.born = System.nanoTime();
 		l.decayMs = 110.0F;
 		l.steady = true;
+		l.spotCos = 0.0F;
+		l.spotX = 0.0F;
+		l.spotY = -1.0F;
+		l.spotZ = 0.0F;
+	}
+
+	/**
+	 * A spotlight (a weapon light) shining along {@code dir}, in a cone of half angle {@code halfAngleDeg};
+	 * like {@link #lamp}, it shines while this is called.
+	 */
+	public static void spot(long key, Vec3 at, Vec3 dir, float halfAngleDeg, int rgb, float strength, float radius) {
+		lamp(key, at, rgb, strength, radius);
+		Light l = LAMPS.get(key);
+		if (l != null) {
+			Vec3 d = dir.normalize();
+			l.spotX = (float) d.x;
+			l.spotY = (float) d.y;
+			l.spotZ = (float) d.z;
+			l.spotCos = Mth.cos(halfAngleDeg * Mth.DEG_TO_RAD);
+		}
 	}
 
 	/**
@@ -189,9 +214,19 @@ public final class DynamicLights {
 			if (d2 >= l.radius * l.radius) {
 				continue;
 			}
+			float cone = 1.0F;
+			if (l.spotCos > 0.0F) {
+				// a beam only lights what is in it (smoke in a torch beam glows, beside it stays dark)
+				double d = Math.max(1.0E-3, Math.sqrt(d2));
+				float c = (float) ((-dx * l.spotX - dy * l.spotY - dz * l.spotZ) / d);
+				cone = smooth(l.spotCos, l.spotCos + (1.0F - l.spotCos) * 0.45F, c);
+				if (cone <= 0.0F) {
+					continue;
+				}
+			}
 			float r = (float) (Math.sqrt(d2) / l.radius);
 			float att = (1.0F - r * r);
-			att = att * att / (1.0F + (float) d2 * 0.08F) * l.now;
+			att = att * att / (1.0F + (float) d2 * 0.08F) * l.now * cone;
 			int c = l.shown;
 			out[0] += (c >> 16 & 255) / 255.0F * att;
 			out[1] += (c >> 8 & 255) / 255.0F * att;
@@ -305,13 +340,15 @@ public final class DynamicLights {
 		PoseStack.Pose pose = context.matrices().last();
 		VertexConsumer consumer = context.consumers().getBuffer(type);
 		for (Light l : drawn) {
-			int rays = l.radius > 18.0F ? softRays : 1;
-			quad(consumer, pose, camera, cam, l, 0, rays | steps << 4);
+			int rays = l.radius > 18.0F && l.spotCos <= 0.0F ? softRays : 1;
+			quad(consumer, pose, camera, cam, l, Math.round(l.spotCos * 1000.0F), rays | steps << 4);
 		}
 		if (quality >= 2 && haloDensity > 0.01F) {
 			VertexConsumer halo = context.consumers().getBuffer(haloType);
 			for (Light l : drawn) {
-				quad(halo, pose, camera, cam, l, Math.round(haloDensity * 1000.0F), 0);
+				if (l.spotCos <= 0.0F) { // (a beam's glow in the air is its own business)
+					quad(halo, pose, camera, cam, l, Math.round(haloDensity * 1000.0F), 0);
+				}
 			}
 		}
 		if (context.consumers() instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers) {
@@ -336,7 +373,7 @@ public final class DynamicLights {
 			float y = (f.y() + left.y() * c[0] + u.y() * c[1]) * 500.0F;
 			float z = (f.z() + left.z() * c[0] + u.z() * c[1]) * 500.0F;
 			consumer.addVertex(pose, x, y, z).setColor(color).setUv(rx, rz).setOverlay(uv1x | uv1y << 16).setLight(light)
-				.setNormal(pose, 0.0F, -1.0F, 0.0F);
+				.setNormal(pose, l.spotX, l.spotY, l.spotZ);
 		}
 	}
 

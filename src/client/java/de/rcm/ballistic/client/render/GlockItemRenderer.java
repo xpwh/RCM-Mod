@@ -37,7 +37,7 @@ import org.joml.Vector3fc;
  * Item space as the other guns': -Z forward, +Y up, one unit a metre; the origin is the middle of the grip,
  * where the shooting hand holds it.
  */
-public final class GlockItemRenderer implements SpecialModelRenderer<GlockItemRenderer.Pose> {
+public final class GlockItemRenderer implements SpecialModelRenderer<GunAttachmentModels.Armed<GlockItemRenderer.Pose>> {
 	public static final float SLIDE_BOTTOM = 0.040F;
 	public static final float SLIDE_TOP = 0.072F;
 	public static final float SLIDE_REAR = 0.034F;
@@ -92,9 +92,9 @@ public final class GlockItemRenderer implements SpecialModelRenderer<GlockItemRe
 	}
 
 	@Override
-	public void submit(Pose pose, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil,
-		int outline) {
-		Pose p = pose == null ? Pose.REST : pose;
+	public void submit(GunAttachmentModels.Armed<Pose> armed, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light,
+		int overlay, boolean foil, int outline) {
+		Pose p = armed == null || armed.pose() == null ? Pose.REST : armed.pose();
 		boolean firstPerson = context.firstPerson();
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.5F, 0.5F);
@@ -103,6 +103,10 @@ public final class GlockItemRenderer implements SpecialModelRenderer<GlockItemRe
 		}
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pp, consumer) -> FRAME.emit(pp, consumer, light));
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pp, consumer) -> BARREL.emit(pp, consumer, light));
+		if (armed != null) {
+			// light and laser under the dust cover, on the frame's rail
+			GunAttachmentModels.submit(armed.att(), GunAttachmentModels.GLOCK, true, poseStack, collector, light, firstPerson);
+		}
 		float back = p.slide() * SLIDE_TRAVEL;
 		// a round in the chamber shows through the port with the slide pulled back
 		if (p.chambered() && back > 0.008F) {
@@ -162,8 +166,8 @@ public final class GlockItemRenderer implements SpecialModelRenderer<GlockItemRe
 	}
 
 	@Override
-	public Pose extractArgument(ItemStack stack) {
-		return GlockClient.poseFor(stack);
+	public GunAttachmentModels.Armed<Pose> extractArgument(ItemStack stack) {
+		return new GunAttachmentModels.Armed<>(GlockClient.poseFor(stack), de.rcm.ballistic.gun.GunAttachments.of(stack));
 	}
 
 	public record Unbaked() implements SpecialModelRenderer.Unbaked {

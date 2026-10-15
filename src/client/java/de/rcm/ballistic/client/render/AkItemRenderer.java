@@ -46,7 +46,7 @@ import org.joml.Vector3fc;
  * <p>
  * Item space as for the RPG-7: origin at the hand on the grip, -Z forward, +Y up, +X right.
  */
-public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
+public final class AkItemRenderer implements SpecialModelRenderer<GunAttachmentModels.Armed<GunState>> {
 	/** Height of the bore above the hand. */
 	static final float BORE_Y = 0.085F;
 	static final float MUZZLE_Z = -0.712F;
@@ -86,8 +86,9 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 	}
 
 	@Override
-	public void submit(GunState state, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil,
-		int outline) {
+	public void submit(GunAttachmentModels.Armed<GunState> armed, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light,
+		int overlay, boolean foil, int outline) {
+		GunState state = armed.pose();
 		Minecraft mc = Minecraft.getInstance();
 		float now = mc.level == null ? 0.0F : mc.level.getGameTime() + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		long lastShot = context.firstPerson() ? Math.max(state.lastShot(), AkClient.lastShotTick()) : state.lastShot();
@@ -144,6 +145,9 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> mag2.emit(pose, consumer, light));
 			poseStack.popPose();
 		}
+
+		// ---- the light and laser on the handguard
+		GunAttachmentModels.submit(armed.att(), GunAttachmentModels.AK, false, poseStack, collector, light, context.firstPerson());
 
 		// ---- muzzle flash, for the first frame or two of each shot
 		float shot = now - lastShot;
@@ -231,8 +235,8 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 	}
 
 	@Override
-	public GunState extractArgument(ItemStack stack) {
-		return AkItem.state(stack);
+	public GunAttachmentModels.Armed<GunState> extractArgument(ItemStack stack) {
+		return new GunAttachmentModels.Armed<>(AkItem.state(stack), de.rcm.ballistic.gun.GunAttachments.of(stack));
 	}
 
 	public record Unbaked() implements SpecialModelRenderer.Unbaked {

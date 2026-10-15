@@ -92,6 +92,13 @@ public final class ModRegistry {
 		DataComponentType.<de.rcm.ballistic.gun.GunState>builder().persistent(de.rcm.ballistic.gun.GunState.CODEC)
 			.networkSynchronized(de.rcm.ballistic.gun.GunState.STREAM_CODEC).build()
 	);
+	/** The light and laser mounted on a gun, and whether they are on. */
+	public static final DataComponentType<de.rcm.ballistic.gun.GunAttachments> GUN_ATTACHMENTS = Registry.register(
+		BuiltInRegistries.DATA_COMPONENT_TYPE,
+		BallisticMissiles.id("gun_attachments"),
+		DataComponentType.<de.rcm.ballistic.gun.GunAttachments>builder().persistent(de.rcm.ballistic.gun.GunAttachments.CODEC)
+			.networkSynchronized(de.rcm.ballistic.gun.GunAttachments.STREAM_CODEC).build()
+	);
 	public static final DataComponentType<Integer> MAG_ROUNDS = Registry.register(
 		BuiltInRegistries.DATA_COMPONENT_TYPE,
 		BallisticMissiles.id("mag_rounds"),
@@ -521,6 +528,12 @@ public final class ModRegistry {
 	public static final Item RUNWAY_LIGHT_ITEM = registerItem(
 		"runway_light", props -> new BlockItem(RUNWAY_LIGHT, props), new Item.Properties().useBlockDescriptionPrefix()
 	);
+	public static final Item WEAPON_LIGHT = registerItem(
+		"weapon_light", props -> new de.rcm.ballistic.gun.AttachmentItem(props, true), new Item.Properties().stacksTo(16)
+	);
+	public static final Item LASER_MODULE = registerItem(
+		"laser_module", props -> new de.rcm.ballistic.gun.AttachmentItem(props, false), new Item.Properties().stacksTo(16)
+	);
 	public static final Item FIRST_AID_KIT = registerItem(
 		"first_aid_kit", props -> new de.rcm.ballistic.injury.MedicalItem(false, props), new Item.Properties().durability(4)
 	);
@@ -821,6 +834,8 @@ public final class ModRegistry {
 		output.accept(de.rcm.ballistic.gun.GlockItem.loaded(GLOCK, de.rcm.ballistic.gun.GlockMagazineItem.STANDARD));
 		output.accept(GLOCK_MAG);
 		output.accept(GLOCK_MAG_EXTENDED);
+		output.accept(WEAPON_LIGHT);
+		output.accept(LASER_MODULE);
 		output.accept(AK_MAG);
 		output.accept(AK_MAG_TRACER);
 		output.accept(AK_MAG_TRACER_RED);
