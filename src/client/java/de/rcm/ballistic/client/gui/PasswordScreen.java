@@ -10,7 +10,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.function.Supplier;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -46,10 +45,16 @@ public class PasswordScreen extends Screen {
 	private static final int H = 206;
 	private static final int FIELD_W = 196;
 	private static final int FIELD_H = 26;
-	private static final int ACCENT_A = 0x6366F1; // indigo
-	private static final int ACCENT_B = 0x8B5CF6; // violet
-	private static final int ERROR = 0xF43F5E;
-	private static final int SUCCESS = 0x22C55E;
+	// a quiet, neutral palette: near-black greys, off-white for what matters, colour only to say something
+	private static final int CARD = 0x161618;
+	private static final int FIELD = 0x0E0E10;
+	private static final int TEXT = 0xEDEDEF;
+	private static final int MUTED = 0x8E8E95;
+	private static final int FAINT = 0x5E5E66;
+	private static final int BUTTON = 0xE8E8EA;
+	private static final int BUTTON_INK = 0x111113;
+	private static final int ERROR = 0xE5484D;
+	private static final int SUCCESS = 0x30A46C;
 	private static final long OUT_TIME = 950L;
 
 	private static final Identifier ORB = BallisticMissiles.id("dynamic/ui_orb");
@@ -213,16 +218,13 @@ public class PasswordScreen extends Screen {
 			this.lastLength = length;
 		}
 		this.hover = approach(this.hover, this.overButton(mouseX, mouseY) && !locked && out <= 0.0F ? 1.0F : 0.0F, dt * 10.0F);
-		this.focus = approach(this.focus, length > 0 || this.box.isFocused() ? 1.0F : 0.0F, dt * 6.0F);
+		this.focus = approach(this.focus, length > 0 ? 1.0F : 0.0F, dt * 6.0F);
 
 		// ---- backdrop: dimmed, with soft lights drifting slowly behind the card
 		float bgIn = ease(Mth.clamp(t / 0.35F, 0.0F, 1.0F)) * (1.0F - ease(Mth.clamp((out - 0.6F) / 0.4F, 0.0F, 1.0F)));
-		g.fillGradient(0, 0, this.width, this.height, argb(0.72F * bgIn, 0x0B0D14), argb(0.86F * bgIn, 0x050608));
+		g.fillGradient(0, 0, this.width, this.height, argb(0.74F * bgIn, 0x0A0A0B), argb(0.84F * bgIn, 0x050505));
 		float cx = this.width * 0.5F;
 		float cy = this.height * 0.5F;
-		this.orb(g, cx + Mth.sin(t * 0.21F) * 170.0F - 60.0F, cy + Mth.cos(t * 0.17F) * 90.0F - 40.0F, 260.0F, ACCENT_A, 0.22F * bgIn);
-		this.orb(g, cx + Mth.cos(t * 0.13F + 1.0F) * 190.0F + 80.0F, cy + Mth.sin(t * 0.19F + 2.0F) * 80.0F + 50.0F, 300.0F, ACCENT_B, 0.17F * bgIn);
-		this.orb(g, cx + Mth.sin(t * 0.11F + 4.0F) * 220.0F, cy + Mth.cos(t * 0.23F + 3.0F) * 120.0F, 220.0F, 0x06B6D4, 0.1F * bgIn);
 
 		// ---- the card: rises in, springs when the password is wrong, sinks away when it is right
 		float enter = easeOutExpo(Mth.clamp(t / 0.6F, 0.0F, 1.0F));
@@ -243,10 +245,9 @@ public class PasswordScreen extends Screen {
 		g.pose().translate(-cx, -cy);
 
 		// soft shadow, then the card with a hairline edge and a faint sheen along its top
-		this.orbStretched(g, x0 - 30, y0 - 10, W + 60, H + 60, 0x000000, 0.65F * alpha);
-		this.round(g, FILL, (int) x0, (int) y0, W, H, 14, argb(0.92F * alpha, 0x12141C));
-		this.round(g, EDGE, (int) x0, (int) y0, W, H, 14, argb(0.14F * alpha, 0xFFFFFF));
-		g.fillGradient((int) x0 + 14, (int) y0 + 1, (int) x0 + W - 14, (int) y0 + 2, argb(0.18F * alpha, 0xFFFFFF), argb(0.0F, 0xFFFFFF));
+		this.orbStretched(g, x0 - 24, y0 - 4, W + 48, H + 44, 0x000000, 0.5F * alpha);
+		this.round(g, FILL, (int) x0, (int) y0, W, H, 12, argb(0.97F * alpha, CARD));
+		this.round(g, EDGE, (int) x0, (int) y0, W, H, 12, argb(0.08F * alpha, 0xFFFFFF));
 
 		int left = (int) x0;
 		int top = (int) y0;
@@ -254,24 +255,23 @@ public class PasswordScreen extends Screen {
 		float successIn = ease(Mth.clamp(out / 0.3F, 0.0F, 1.0F));
 		boolean showError = err < 2.4F && !success;
 
-		// ---- lock badge with a breathing glow
+		// ---- lock badge: a plain dark circle with a hairline ring; the lock takes the colour of what happened
 		float s1 = stagger(t, 0);
 		int bx = left + W / 2;
-		int by = top + 40;
-		int badgeColor = success ? lerpColor(ACCENT_A, SUCCESS, successIn) : showError && err < 0.6F ? lerpColor(ERROR, ACCENT_A, err / 0.6F) : ACCENT_A;
-		float breathe = 0.5F + 0.5F * Mth.sin(t * 2.2F);
-		this.orb(g, bx, by, 90.0F + 10.0F * breathe, badgeColor, (0.28F + 0.12F * breathe) * alpha * s1);
-		this.disc(g, bx, by + (1.0F - s1) * 6.0F, 21.0F, argb(alpha * s1, badgeColor));
-		this.disc(g, bx, by - 4 + (1.0F - s1) * 6.0F, 17.0F, argb(0.18F * alpha * s1, 0xFFFFFF));
-		this.lockIcon(g, bx, (int) (by + (1.0F - s1) * 6.0F), alpha * s1, success ? ease(Mth.clamp(out / 0.35F, 0.0F, 1.0F)) : 0.0F);
+		float by = top + 40 + (1.0F - s1) * 6.0F;
+		float wrongFlash = showError && err < 0.8F && this.wrongAt == this.deniedAt ? 1.0F - err / 0.8F : 0.0F;
+		int iconColor = success ? lerpColor(TEXT, SUCCESS, successIn) : lerpColor(TEXT, ERROR, wrongFlash);
+		this.disc(g, bx, by, 20.0F, argb(0.12F * alpha * s1, 0xFFFFFF));
+		this.disc(g, bx, by, 19.0F, argb(alpha * s1, 0x1D1D20));
+		this.lockIcon(g, bx, Math.round(by), alpha * s1, iconColor, success ? ease(Mth.clamp(out / 0.35F, 0.0F, 1.0F)) : 0.0F);
 
 		// ---- title and subtitle
 		float s2 = stagger(t, 1);
-		Component title = Component.literal(success ? "Entsperrt" : locked ? "Kurz gesperrt" : "Zugriff geschützt").withStyle(ChatFormatting.BOLD);
-		this.centered(g, title, left + W / 2, top + 76 + (1.0F - s2) * 6.0F, argb(alpha * s2, 0xF4F4F6));
+		Component title = Component.literal(success ? "Entsperrt" : locked ? "Kurz gesperrt" : "Zugriff geschützt");
+		this.centered(g, title, left + W / 2, top + 76 + (1.0F - s2) * 6.0F, argb(alpha * s2, TEXT));
 		float s3 = stagger(t, 2);
 		String sub = success ? "Willkommen zurück." : locked ? "Zu viele Versuche. Bitte warte kurz." : "Gib dein Passwort ein, um fortzufahren.";
-		this.centered(g, Component.literal(sub), left + W / 2, top + 90 + (1.0F - s3) * 6.0F, argb(0.55F * alpha * s3, 0xC9CCD6));
+		this.centered(g, Component.literal(sub), left + W / 2, top + 90 + (1.0F - s3) * 6.0F, argb(alpha * s3, MUTED));
 
 		// ---- password field
 		float s4 = stagger(t, 3);
@@ -279,66 +279,63 @@ public class PasswordScreen extends Screen {
 		int fy = (int) (top + 110 + (1.0F - s4) * 6.0F);
 		float sinceWrong = (now - this.wrongAt) / 1000.0F;
 		float redness = locked ? 1.0F : sinceWrong < 2.4F && length == 0 ? 1.0F - sinceWrong / 2.4F : 0.0F;
-		int ring = success ? SUCCESS : lerpColor(ACCENT_A, ERROR, redness);
-		float ringAlpha = Math.max(this.focus * 0.9F, redness);
-		if (ringAlpha > 0.01F) {
-			this.orbStretched(g, fx - 14, fy - 12, FIELD_W + 28, FIELD_H + 24, ring, 0.22F * ringAlpha * alpha * s4);
-		}
-		this.round(g, FILL, fx, fy, FIELD_W, FIELD_H, 13, argb(alpha * s4, 0x0B0C12));
-		this.round(g, EDGE, fx, fy, FIELD_W, FIELD_H, 13, lerpArgb(argb(0.16F * alpha * s4, 0xFFFFFF), argb(alpha * s4, ring), ringAlpha));
+		// the edge: faint at rest, brighter while typing, red after a wrong password, green when it was right
+		int edge = success ? argb(0.8F * alpha * s4, SUCCESS)
+			: redness > 0.0F ? lerpArgb(argb((0.1F + 0.2F * this.focus) * alpha * s4, 0xFFFFFF), argb(0.85F * alpha * s4, ERROR), redness)
+			: argb((0.1F + 0.22F * this.focus) * alpha * s4, 0xFFFFFF);
+		this.round(g, FILL, fx, fy, FIELD_W, FIELD_H, 8, argb(alpha * s4, FIELD));
+		this.round(g, EDGE, fx, fy, FIELD_W, FIELD_H, 8, edge);
 		int n = this.box.getValue().length();
 		int midY = fy + FIELD_H / 2;
 		if (n == 0 && !success) {
-			g.drawString(this.font, "Passwort", fx + 14, midY - 4, argb(0.35F * alpha * s4, 0xC9CCD6), false);
+			g.drawString(this.font, "Passwort", fx + 12, midY - 4, argb(alpha * s4, FAINT), false);
 		}
 		int spacing = 11;
 		int maxDots = (FIELD_W - 28) / spacing;
 		int shown = Math.min(n, maxDots);
-		int start = fx + 14 + 3;
+		int start = fx + 12 + 3;
 		for (int i = 0; i < shown; i++) {
 			int idx = n - shown + i;
 			float pop = Mth.clamp((now - this.typedAt[Math.min(idx, this.typedAt.length - 1)]) / 260.0F, 0.0F, 1.0F);
 			float k = easeOutBack(pop);
-			float r = 3.2F * k;
-			int dot = success ? lerpColor(0xF4F4F6, SUCCESS, successIn) : 0xF4F4F6;
+			float r = 2.8F * k;
+			int dot = success ? lerpColor(TEXT, SUCCESS, successIn) : TEXT;
 			this.disc(g, start + i * spacing, midY, Math.max(0.1F, r), argb(alpha * s4 * Math.min(1.0F, pop * 2.0F), dot));
 		}
 		if (!success && !locked) {
 			float caretOn = 0.5F + 0.5F * Mth.cos((now % 1100L) / 1100.0F * Mth.TWO_PI);
-			int caretX = n == 0 ? fx + 13 : start + (shown - 1) * spacing + 7;
-			g.fill(caretX, midY - 6, caretX + 1, midY + 6, argb(caretOn * 0.85F * alpha * s4, ACCENT_A | 0x303030));
+			int caretX = n == 0 ? fx + 11 : start + (shown - 1) * spacing + 7;
+			g.fill(caretX, midY - 5, caretX + 1, midY + 5, argb(caretOn * 0.8F * alpha * s4, TEXT));
 		}
 		// below the field: the error, or the lock-out draining away
 		if (locked) {
 			float left01 = (this.lockedUntil - now) / (float) (this.lockedUntil - this.lockedFrom);
 			int barW = (int) (FIELD_W * Mth.clamp(left01, 0.0F, 1.0F));
-			g.fill(fx, fy + FIELD_H + 6, fx + FIELD_W, fy + FIELD_H + 8, argb(0.12F * alpha, 0xFFFFFF));
-			g.fill(fx, fy + FIELD_H + 6, fx + barW, fy + FIELD_H + 8, argb(0.9F * alpha, ERROR));
+			g.fill(fx, fy + FIELD_H + 7, fx + FIELD_W, fy + FIELD_H + 8, argb(0.08F * alpha, 0xFFFFFF));
+			g.fill(fx, fy + FIELD_H + 7, fx + barW, fy + FIELD_H + 8, argb(0.8F * alpha, ERROR));
 		} else if (!success && n == 0 && now - this.wrongAt < 2400L) {
 			float since = (now - this.wrongAt) / 1000.0F;
 			float msg = ease(Mth.clamp(since / 0.25F, 0.0F, 1.0F)) * (1.0F - ease(Mth.clamp((since - 1.8F) / 0.6F, 0.0F, 1.0F)));
-			this.centered(g, Component.literal("Falsches Passwort"), left + W / 2, fy + FIELD_H + 4 - (1.0F - msg) * 3.0F, argb(0.9F * alpha * msg, ERROR));
+			this.centered(g, Component.literal("Falsches Passwort"), left + W / 2, fy + FIELD_H + 4 - (1.0F - msg) * 3.0F, argb(alpha * msg, ERROR));
 		}
 
 		// ---- the unlock button
 		float s5 = stagger(t, 4);
 		int btnY = (int) (top + 150 + (1.0F - s5) * 6.0F);
-		int btnColor = success ? lerpColor(ACCENT_A, SUCCESS, successIn) : locked ? 0x3A3D4A : lerpColor(ACCENT_A, ACCENT_B, this.hover * 0.5F);
-		float press = this.hover * 0.04F;
-		this.orbStretched(g, fx - 10, btnY - 6, FIELD_W + 20, 36, btnColor, (0.18F + 0.22F * this.hover) * alpha * s5);
-		this.round(g, FILL, fx, btnY, FIELD_W, 24, 12, argb(alpha * s5, btnColor));
-		g.fillGradient(fx + 12, btnY + 1, fx + FIELD_W - 12, btnY + 12, argb((0.16F + press) * alpha * s5, 0xFFFFFF), argb(0.0F, 0xFFFFFF));
+		// an off-white button, a touch brighter under the mouse; grey while locked, green once unlocked
+		int btnColor = success ? lerpColor(BUTTON, SUCCESS, successIn) : locked ? 0x2A2A2E : lerpColor(BUTTON, 0xFFFFFF, this.hover);
+		this.round(g, FILL, fx, btnY, FIELD_W, 24, 8, argb(alpha * s5, btnColor));
 		if (success) {
 			this.checkMark(g, fx + FIELD_W / 2, btnY + 12, alpha, ease(Mth.clamp((out - 0.08F) / 0.32F, 0.0F, 1.0F)));
 		} else {
-			Component label = Component.literal(locked ? ((this.lockedUntil - now) / 1000L + 1L) + " s" : "Entsperren").withStyle(ChatFormatting.BOLD);
-			this.centered(g, label, fx + FIELD_W / 2, btnY + 8, argb(alpha * s5 * (locked ? 0.6F : 1.0F), 0xFFFFFF));
+			Component label = Component.literal(locked ? "Warte " + ((this.lockedUntil - now) / 1000L + 1L) + " s" : "Entsperren");
+			this.centered(g, label, fx + FIELD_W / 2, btnY + 8, argb(alpha * s5, locked ? MUTED : BUTTON_INK));
 		}
 
 		// ---- footer
 		float s6 = stagger(t, 5);
 		this.centered(g, Component.literal("Enter zum Entsperren  ·  Esc zum Abbrechen"), left + W / 2, top + H - 18 + (1.0F - s6) * 4.0F,
-			argb(0.32F * alpha * s6, 0xC9CCD6));
+			argb(alpha * s6, FAINT));
 		g.pose().popMatrix();
 	}
 
@@ -355,9 +352,9 @@ public class PasswordScreen extends Screen {
 	}
 
 	/** The padlock: a body with a keyhole and a shackle that lifts and swings open when unlocked. */
-	private void lockIcon(GuiGraphics g, int x, int y, float alpha, float open) {
-		int white = argb(alpha, 0xFFFFFF);
-		int dark = argb(alpha * 0.9F, 0x2A2A40);
+	private void lockIcon(GuiGraphics g, int x, int y, float alpha, int color, float open) {
+		int white = argb(alpha, color);
+		int dark = argb(alpha, 0x1D1D20);
 		// shackle: an arc of short segments over two legs; opening lifts it and the right leg comes free
 		float lift = open * 4.0F;
 		float r = 4.5F;
@@ -405,11 +402,7 @@ public class PasswordScreen extends Screen {
 
 	// ------------------------------------------------------------------ soft shapes from the textures
 
-	/** A soft round light (radial falloff), centred on (x, y). */
-	private void orb(GuiGraphics g, float x, float y, float size, int rgb, float alpha) {
-		this.orbStretched(g, x - size / 2.0F, y - size / 2.0F, size, size, rgb, alpha);
-	}
-
+	/** A soft light (radial falloff) stretched over a rectangle: the card's shadow. */
 	private void orbStretched(GuiGraphics g, float x, float y, float w, float h, int rgb, float alpha) {
 		if (alpha <= 0.003F) {
 			return;
