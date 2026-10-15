@@ -13,6 +13,8 @@ import net.minecraft.world.entity.Entity;
 public final class ClientHooks {
 	public static Consumer<InteractionHand> openTargetScreen = hand -> {};
 	public static Consumer<InteractionHand> designateLookedAtBlock = hand -> {};
+	/** Asks the player which bunker the kit at this position should build. */
+	public static Consumer<net.minecraft.core.BlockPos> openBunkerMenu = pos -> {};
 	public static Consumer<MissileEntity> missileClientTick = missile -> {};
 	public static Consumer<Entity> projectileClientTick = entity -> {};
 	public static Consumer<JetEntity> jetClientTick = jet -> {};

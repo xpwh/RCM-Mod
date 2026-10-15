@@ -660,6 +660,10 @@ public final class VolumetricClouds {
 		if (light && shafts) {
 			screen(context.consumers().getBuffer(lightType(true)), pose, camera, color, windX, windZ, bottom, layer, reach, storm, sx, sy);
 		}
+		// drawn now, so the smoke that follows lands on top of them
+		if (context.consumers() instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers) {
+			buffers.endBatch();
+		}
 	}
 
 	/** A quad right across the view, far out (the light pass ignores depth). */

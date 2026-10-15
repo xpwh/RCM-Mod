@@ -166,7 +166,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.Contrails::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.SmokeField::tick);
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.SmokeField.clear());
-		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_ENTITIES.register(de.rcm.ballistic.client.effect.SmokeField::render);
+		net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.END_MAIN.register(de.rcm.ballistic.client.effect.SmokeField::render); // after the clouds
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.FalloutPayload.TYPE,
 			(payload, context) -> de.rcm.ballistic.client.effect.FalloutClient.receive(payload));
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.FalloutClient::tick);
@@ -204,6 +204,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 			}
 		};
 		ClientHooks.openTargetScreen = hand -> Minecraft.getInstance().setScreen(new TargetScreen(hand));
+		ClientHooks.openBunkerMenu = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.gui.BunkerScreen(pos));
 		ClientHooks.designateLookedAtBlock = BallisticMissilesClient::designate;
 	}
 

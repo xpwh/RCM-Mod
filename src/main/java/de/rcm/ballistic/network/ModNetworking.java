@@ -219,6 +219,19 @@ public final class ModNetworking {
 	}
 
 	/** Client -> server: the radar scope was closed. */
+	/** Client -> server: build this bunker kit as the basic or the luxury shelter. */
+	public record BunkerBuildPayload(BlockPos pos, boolean luxury) implements CustomPacketPayload {
+		public static final Type<BunkerBuildPayload> TYPE = new Type<>(BallisticMissiles.id("bunker_build"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BunkerBuildPayload> CODEC = StreamCodec.composite(
+			BlockPos.STREAM_CODEC, BunkerBuildPayload::pos, ByteBufCodecs.BOOL, BunkerBuildPayload::luxury, BunkerBuildPayload::new
+		);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	public record RadarClosePayload(BlockPos radar) implements CustomPacketPayload {
 		public static final Type<RadarClosePayload> TYPE = new Type<>(BallisticMissiles.id("radar_close"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, RadarClosePayload> CODEC = StreamCodec.composite(
@@ -821,6 +834,14 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playC2S().register(SetTargetPayload.TYPE, SetTargetPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(DesignatorActionPayload.TYPE, DesignatorActionPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(RadarClosePayload.TYPE, RadarClosePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(BunkerBuildPayload.TYPE, BunkerBuildPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(BunkerBuildPayload.TYPE, (payload, context) -> {
+			var player = context.player();
+			if (player.level() instanceof net.minecraft.server.level.ServerLevel level && level.isLoaded(payload.pos())
+				&& player.blockPosition().distSqr(payload.pos()) < 12 * 12) {
+				de.rcm.ballistic.bunker.BunkerBlock.buildChosen(level, payload.pos(), payload.luxury());
+			}
+		});
 		PayloadTypeRegistry.playS2C().register(CommandDataPayload.TYPE, CommandDataPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(FarTrackPayload.TYPE, FarTrackPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(CommandActionPayload.TYPE, CommandActionPayload.CODEC);

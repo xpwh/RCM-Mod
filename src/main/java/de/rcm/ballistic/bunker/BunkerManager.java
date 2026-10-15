@@ -15,7 +15,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class BunkerManager {
 	/** How far from its filter a bunker room reaches. */
-	private static final double REACH = 11.0;
+	private static final double REACH = 18.0; // the luxury shelter's whole hall from its one plant room
 	private static final Map<ResourceKey<Level>, Set<BlockPos>> RUNNING = new HashMap<>();
 
 	private BunkerManager() {

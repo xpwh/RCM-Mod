@@ -30,8 +30,8 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.Half;
 
 /**
- * Fallout shelter in a box. Placed on the ground, it digs and builds a complete buried bunker in the
- * direction you face: a hatch and a ladder shaft down eight metres, an airlock between two blast
+ * Fallout shelter in a box. Placed on the ground, it asks which shelter to build - this basic one or the
+ * {@link LuxuryBunker luxury one} - and then digs and builds it, buried, in the direction you faced: a hatch and a ladder shaft down eight metres, an airlock between two blast
  * doors, and a reinforced-concrete room with lights, bunks, a supply chest (radiation suit, Geiger
  * counter, food), a workbench and stove, the NBC air filter and the emergency generator that runs it.
  */
@@ -55,22 +55,48 @@ public class BunkerBlock extends Block {
 		return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection());
 	}
 
+	/** The one who placed the kit is asked which shelter to build (right-clicking it asks again). */
 	@Override
-	protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
-		super.onPlace(state, level, pos, oldState, movedByPiston);
-		if (!level.isClientSide() && !oldState.is(this)) {
-			level.scheduleTick(pos, this, 2);
+	public void setPlacedBy(Level level, BlockPos pos, BlockState state, net.minecraft.world.entity.@org.jspecify.annotations.Nullable LivingEntity placer,
+		ItemStack stack) {
+		super.setPlacedBy(level, pos, state, placer, stack);
+		if (level.isClientSide() && placer instanceof net.minecraft.world.entity.player.Player) {
+			de.rcm.ballistic.ClientHooks.openBunkerMenu.accept(pos.immutable());
 		}
 	}
 
 	@Override
+	protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player,
+		net.minecraft.world.phys.BlockHitResult hit) {
+		if (level.isClientSide()) {
+			de.rcm.ballistic.ClientHooks.openBunkerMenu.accept(pos.immutable());
+		}
+		return net.minecraft.world.InteractionResult.SUCCESS;
+	}
+
+	/** A kit placed before the menu existed still builds itself (the basic shelter). */
+	@Override
 	protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+		buildChosen(level, pos, false);
+	}
+
+	/** Builds the chosen shelter under the kit at {@code pos} (the kit itself goes). */
+	public static void buildChosen(ServerLevel level, BlockPos pos, boolean luxury) {
+		BlockState state = level.getBlockState(pos);
+		if (!state.is(ModRegistry.BUNKER)) {
+			return;
+		}
 		level.removeBlock(pos, false);
-		build(level, pos.below(), state.getValue(FACING));
+		if (luxury) {
+			LuxuryBunker.build(level, pos.below(), state.getValue(FACING));
+		} else {
+			build(level, pos.below(), state.getValue(FACING));
+		}
 		level.playSound(null, pos, de.rcm.ballistic.ModRegistry.DOOR_HEAVY_CLOSE, SoundSource.BLOCKS, 2.0F, 0.85F);
 		for (var player : level.players()) {
 			if (player.blockPosition().distSqr(pos) < 32 * 32) {
-				player.displayClientMessage(Component.translatable("message.ballisticmissiles.bunker_built").withStyle(ChatFormatting.GREEN), true);
+				player.displayClientMessage(Component.translatable(luxury ? "message.ballisticmissiles.bunker_built_luxury" : "message.ballisticmissiles.bunker_built")
+					.withStyle(ChatFormatting.GREEN), true);
 			}
 		}
 	}
@@ -80,7 +106,7 @@ public class BunkerBlock extends Block {
 		return hatch.relative(f, along).relative(f.getClockWise(), side).above(up);
 	}
 
-	private static void set(ServerLevel level, BlockPos p, BlockState state) {
+	static void set(ServerLevel level, BlockPos p, BlockState state) {
 		BlockState old = level.getBlockState(p);
 		if (old.getDestroySpeed(level, p) < 0.0F || old.hasBlockEntity() && !state.hasBlockEntity()) {
 			return; // bedrock, or someone's chest: leave it

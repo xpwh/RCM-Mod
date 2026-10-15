@@ -339,11 +339,11 @@ public class SettingsScreen extends Screen {
 	private void server() {
 		this.list.header("options.ballisticmissiles.section.world_settings", 0xFFFFC080);
 		this.list.note("options.ballisticmissiles.server.note");
-		var misfires = CycleButton.builder((Integer c) -> c == 0 ? CommonComponents.OPTION_OFF : Component.translatable("options.ballisticmissiles.misfires.value", c),
-				nearest(ServerConfig.MISFIRE_STEPS, ModConfig.serverMisfireChance))
-			.withValues(boxed(ServerConfig.MISFIRE_STEPS))
-			.withTooltip(c -> Tooltip.create(Component.translatable("options.ballisticmissiles.misfires.tooltip")))
-			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.misfires"), (b, v) -> this.run("bmserver fehlstarts " + v));
+		// 0-100 %: sent to the server once the slider is let go, not for every step it passes while dragging
+		IntSlider misfires = new IntSlider(0, 100, "options.ballisticmissiles.misfires.slider", ModConfig.serverMisfireChance,
+			v -> this.run("bmserver fehlstarts " + v));
+		misfires.commitOnRelease = true;
+		misfires.setTooltip(Tooltip.create(Component.translatable("options.ballisticmissiles.misfires.tooltip")));
 		int[] damage = {0, 25, 50, 75, 100, 150, 200, 300, 500};
 		var gunDamage = CycleButton.builder((Integer c) -> Component.translatable("options.ballisticmissiles.misfires.value", c),
 				nearest(damage, ModConfig.serverGunDamage))
@@ -648,6 +648,9 @@ public class SettingsScreen extends Screen {
 		private final int max;
 		private final String key;
 		private final IntConsumer setter;
+		/** Hand the value on only when the slider is let go (for settings that cost something to change). */
+		boolean commitOnRelease;
+		private int committed;
 
 		IntSlider(int min, int max, String key, int value, IntConsumer setter) {
 			super(0, 0, 150, 20, Component.empty(), (Mth.clamp(value, min, max) - min) / (double) (max - min));
@@ -655,6 +658,7 @@ public class SettingsScreen extends Screen {
 			this.max = max;
 			this.key = key;
 			this.setter = setter;
+			this.committed = Mth.clamp(value, min, max);
 			this.updateMessage();
 		}
 
@@ -669,7 +673,29 @@ public class SettingsScreen extends Screen {
 
 		@Override
 		protected void applyValue() {
-			this.setter.accept(this.current());
+			if (!this.commitOnRelease) {
+				this.setter.accept(this.current());
+			}
+		}
+
+		@Override
+		public void onRelease(net.minecraft.client.input.MouseButtonEvent event) {
+			super.onRelease(event);
+			this.commit();
+		}
+
+		@Override
+		public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+			boolean used = super.keyPressed(event);
+			this.commit();
+			return used;
+		}
+
+		private void commit() {
+			if (this.commitOnRelease && this.current() != this.committed) {
+				this.committed = this.current();
+				this.setter.accept(this.committed);
+			}
 		}
 	}
 }

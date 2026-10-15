@@ -14,9 +14,6 @@ import net.minecraft.util.Mth;
  */
 public final class ServerConfig {
 	private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("ballisticmissiles-server.properties");
-	/** The steps the settings screen offers for the misfire chance, percent. */
-	public static final int[] MISFIRE_STEPS = {0, 2, 5, 12};
-
 	/** Chance in percent that a launch goes wrong (0 = never). */
 	public static int misfireChance = 2;
 	/** Damage of the mod's guns (rounds, pellets), percent of normal. */

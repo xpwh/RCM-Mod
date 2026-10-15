@@ -459,7 +459,9 @@ public final class SmokeField {
 			float cloudTop = cloudBase + VolumetricClouds.thickness();
 			int slot = veilFrame++ & 7;
 			for (int i = slot; i < count; i += 8) {
-				boolean across = cam.y < cloudBase ? Y[i] > cloudBase : cam.y > cloudTop ? Y[i] < cloudTop : Math.abs(Y[i] - cam.y) > 4.0;
+				// any puff whose line of sight runs through the layer (now that smoke is drawn over the clouds,
+				// one inside the layer behind a cloud must be hidden by it too)
+				boolean across = cam.y < cloudBase ? Y[i] > cloudBase : cam.y > cloudTop ? Y[i] < cloudTop : true;
 				VEIL[i] = across ? CloudDensity.transmittance(cam, new Vec3(X[i], Y[i], Z[i]), 6) : 1.0F;
 			}
 		}
@@ -485,13 +487,18 @@ public final class SmokeField {
 		}
 		Arrays.sort(order, 0, n);
 		final int total = n;
-		PoseStack poseStack = context.matrices();
-		context.commandQueue().submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> {
-			for (int k = total - 1; k >= 0; k--) {
-				int i = (int) order[k];
-				emit(pose, consumer, i, cam, right, up, theta, day, partial);
-			}
-		});
+		// drawn at the end of the main pass, after the volumetric clouds: smoke writes no depth, so drawn with the
+		// entities the clouds were painted over it wherever a trail crossed in front of one (smoke beyond the
+		// cloud layer is dimmed by VEIL above instead)
+		PoseStack.Pose pose = context.matrices().last();
+		VertexConsumer consumer = context.consumers().getBuffer(TYPE);
+		for (int k = total - 1; k >= 0; k--) {
+			int i = (int) order[k];
+			emit(pose, consumer, i, cam, right, up, theta, day, partial);
+		}
+		if (context.consumers() instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers) {
+			buffers.endBatch(TYPE);
+		}
 	}
 
 	private static void emit(PoseStack.Pose pose, VertexConsumer consumer, int i, Vec3 cam, Vector3f right, Vector3f up, float theta, float day,
