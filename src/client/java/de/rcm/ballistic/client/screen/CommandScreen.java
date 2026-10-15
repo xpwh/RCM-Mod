@@ -31,6 +31,11 @@ import net.minecraft.world.level.material.MapColor;
  * Command center situation map: terrain around the center, all defense sites, every track in the air
  * with its velocity leader and predicted impact, the player, and the selected target. Click the map
  * to pick a target, then fire the linked launchers or call in an air strike / fire mission.
+ * <p>
+ * 2.0: tracks move live between the updates (carried on along their velocity), friend and foe in NATO
+ * symbols (blue circle friendly, red diamond hostile, with the kind of target and its altitude), the chance
+ * the defenses bring each hostile down, and a 3D view - the terrain tilted, every flight path drawn at its
+ * height with the predicted arc down to impact - that can be dragged round.
  */
 public class CommandScreen extends Screen {
 	private static final Identifier MAP_ID = BallisticMissiles.id("dynamic/command_map");
@@ -52,7 +57,14 @@ public class CommandScreen extends Screen {
 	private long confirmFireUntil;
 	/** The list in the panel: tracks in the air, or the state of the sites. */
 	private boolean showSites;
-	/** Where each track has been (entity id -> x, z points, oldest first): its flight path so far. */
+	/** 3D view: on, and its viewing angles (turned by dragging, slowly by itself otherwise). */
+	private boolean view3d;
+	private float yaw3d = 0.6F;
+	private float pitch3d = 0.62F;
+	private long lastDrag;
+	/** When the last update came in: the tracks are carried on along their velocity from there. */
+	private long receivedAt = System.currentTimeMillis();
+	/** Where each track has been (entity id -> x, y, z points, oldest first): its flight path so far. */
 	private final java.util.Map<Integer, java.util.ArrayDeque<float[]>> trails = new java.util.HashMap<>();
 
 	public CommandScreen(CommandDataPayload data) {
@@ -69,6 +81,7 @@ public class CommandScreen extends Screen {
 	public void update(CommandDataPayload data) {
 		boolean relabel = data.links() != this.data.links() || data.cooldown() != this.data.cooldown();
 		this.data = data;
+		this.receivedAt = System.currentTimeMillis();
 		this.recordTrails();
 		if (relabel) {
 			this.rebuildWidgets();
@@ -84,8 +97,8 @@ public class CommandScreen extends Screen {
 			live.add(t.entityId());
 			var trail = this.trails.computeIfAbsent(t.entityId(), k -> new java.util.ArrayDeque<>());
 			float[] last = trail.peekLast();
-			if (last == null || Math.abs(last[0] - t.x()) + Math.abs(last[1] - t.z()) > 1.0F) {
-				trail.addLast(new float[] {t.x(), t.z()});
+			if (last == null || Math.abs(last[0] - t.x()) + Math.abs(last[2] - t.z()) + Math.abs(last[1] - t.y()) > 1.0F) {
+				trail.addLast(new float[] {t.x(), t.y(), t.z()});
 				while (trail.size() > 120) {
 					trail.removeFirst();
 				}
@@ -159,6 +172,10 @@ public class CommandScreen extends Screen {
 		}).bounds(px, y, PANEL - 10, 16).build());
 		this.addRenderableWidget(Button.builder(Component.literal("+"), b -> this.setZoom(this.zoom + 1)).bounds(this.mapLeft + 4, this.mapTop + 4, 16, 16).build());
 		this.addRenderableWidget(Button.builder(Component.literal("−"), b -> this.setZoom(this.zoom - 1)).bounds(this.mapLeft + 4, this.mapTop + 22, 16, 16).build());
+		this.addRenderableWidget(Button.builder(Component.literal(this.view3d ? "2D" : "3D"), b -> {
+			this.view3d = !this.view3d;
+			this.rebuildWidgets();
+		}).bounds(this.mapLeft + 4, this.mapTop + 44, 22, 16).build());
 	}
 
 	private void setZoom(int zoom) {
@@ -222,7 +239,15 @@ public class CommandScreen extends Screen {
 		if (super.mouseClicked(event, doubleClick)) {
 			return true;
 		}
-		if (this.overMap(event.x(), event.y())) {
+		if (this.overMap(event.x(), event.y()) && event.button() == 0) {
+			if (this.view3d) {
+				double[] ground = this.unproject(event.x(), event.y());
+				this.targetX = Mth.floor(ground[0]);
+				this.targetZ = Mth.floor(ground[1]);
+				this.confirmFireUntil = 0;
+				this.rebuildWidgets();
+				return true;
+			}
 			double k = 2.0 * this.range() / this.mapSize;
 			this.targetX = Mth.floor(this.center.getX() + 0.5 - this.range() + (event.x() - this.mapLeft) * k);
 			this.targetZ = Mth.floor(this.center.getZ() + 0.5 - this.range() + (event.y() - this.mapTop) * k);
@@ -231,6 +256,17 @@ public class CommandScreen extends Screen {
 			return true;
 		}
 		return false;
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+		if (this.view3d && this.overMap(event.x(), event.y()) && event.button() == 1) {
+			this.yaw3d += (float) dx * 0.01F;
+			this.pitch3d = Mth.clamp(this.pitch3d - (float) dy * 0.01F, 0.2F, 1.45F);
+			this.lastDrag = System.currentTimeMillis();
+			return true;
+		}
+		return super.mouseDragged(event, dx, dy);
 	}
 
 	@Override
@@ -295,12 +331,18 @@ public class CommandScreen extends Screen {
 		}
 		g.fill(this.mapLeft - 6, this.mapTop - 6, this.mapLeft + this.mapSize + PANEL + 6, this.mapTop + this.mapSize + 6, 0xF0101410);
 		g.fill(this.mapLeft - 6, this.mapTop - 6, this.mapLeft + this.mapSize + PANEL + 6, this.mapTop - 4, 0xFF2E5A36);
-		if (this.texture != null) {
-			g.blit(RenderPipelines.GUI_TEXTURED, MAP_ID, this.mapLeft, this.mapTop, 0, 0, this.mapSize, this.mapSize, TEX, TEX, TEX, TEX);
-		}
 		g.enableScissor(this.mapLeft, this.mapTop, this.mapLeft + this.mapSize, this.mapTop + this.mapSize);
-		this.drawGrid(g);
-		this.drawOverlay(g);
+		if (this.view3d) {
+			g.fill(this.mapLeft, this.mapTop, this.mapLeft + this.mapSize, this.mapTop + this.mapSize, 0xFF070B08);
+			this.draw3d(g);
+		} else {
+			if (this.texture != null) {
+				g.blit(RenderPipelines.GUI_TEXTURED, MAP_ID, this.mapLeft, this.mapTop, 0, 0, this.mapSize, this.mapSize, TEX, TEX, TEX, TEX);
+			}
+			this.drawGrid(g);
+			this.drawOverlay(g);
+		}
+		this.drawAlarmAndLegend(g);
 		g.disableScissor();
 		super.render(g, mouseX, mouseY, partialTick);
 		this.drawPanel(g, mouseX, mouseY);
@@ -336,9 +378,7 @@ public class CommandScreen extends Screen {
 				case 2 -> 0xFFFFE040; // silo
 				default -> 0xFFC060FF; // jammer
 			};
-			int state = this.stateColor(site);
-			g.fill(x - 3, y - 3, x + 3, y + 3, state != 0 && (blink || (site.flags() & SiteInfo.RELOADING) != 0) ? state : 0xFF000000);
-			g.fill(x - 2, y - 2, x + 2, y + 2, (site.flags() & SiteInfo.OFFLINE) != 0 ? 0xFF606060 : color);
+			this.siteSymbol(g, x, y, site, color, blink);
 		}
 		// where everything has flown: the path so far, fading towards its start
 		for (var e : this.trails.entrySet()) {
@@ -360,7 +400,7 @@ public class CommandScreen extends Screen {
 			for (float[] p : e.getValue()) {
 				if (prev != null) {
 					int alpha = 0x30 + 0x70 * i / Math.max(1, n);
-					this.line(g, (int) this.screenX(prev[0]), (int) this.screenY(prev[1]), (int) this.screenX(p[0]), (int) this.screenY(p[1]), alpha << 24 | rgb);
+					this.line(g, (int) this.screenX(prev[0]), (int) this.screenY(prev[2]), (int) this.screenX(p[0]), (int) this.screenY(p[2]), alpha << 24 | rgb);
 				}
 				prev = p;
 				i++;
@@ -372,19 +412,14 @@ public class CommandScreen extends Screen {
 		g.fill(ccx - 3, ccy - 3, ccx + 4, ccy + 4, 0xFF40FF70);
 		g.fill(ccx - 1, ccy - 1, ccx + 2, ccy + 2, 0xFF000000);
 		for (TrackInfo t : this.data.tracks()) {
-			int x = (int) this.screenX(t.x());
-			int y = (int) this.screenY(t.z());
+			int x = (int) this.screenX(this.liveX(t));
+			int y = (int) this.screenY(this.liveZ(t));
 			boolean aircraft = t.threatClass() == AirThreat.ThreatClass.AIRCRAFT.ordinal();
-			int color = !t.threat() ? 0xFF4090FF : aircraft ? 0xFFFFB030 : 0xFFFF4040;
+			int color = trackColor(t);
 			double k = this.mapSize / (2.0 * this.range());
 			this.line(g, x, y, x + (int) (t.vx() * 80 * k), y + (int) (t.vz() * 80 * k), color & 0xB0FFFFFF);
-			if (aircraft) {
-				g.fill(x - 2, y - 2, x + 3, y + 3, color);
-			} else {
-				g.fill(x - 1, y - 2, x + 2, y + 3, color);
-				g.fill(x - 2, y - 1, x + 3, y + 2, color);
-			}
-			g.drawString(this.font, String.format("T%02d", t.number()), x + 4, y - 9, color, false);
+			this.symbol(g, x, y, t);
+			this.label(g, x + 7, y - 10, t);
 			if (t.threat() && !aircraft) {
 				int ix = (int) this.screenX(t.impactX());
 				int iy = (int) this.screenY(t.impactZ());
@@ -404,13 +439,6 @@ public class CommandScreen extends Screen {
 			int y = (int) this.screenY(this.minecraft.player.getZ());
 			g.fill(x - 2, y - 2, x + 3, y + 3, 0xFF000000);
 			g.fill(x - 1, y - 1, x + 2, y + 2, 0xFFFFFFFF);
-		}
-		if (this.data.alarm() && (System.currentTimeMillis() / 500L) % 2 == 0) {
-			Component alarm = Component.translatable("screen.ballisticmissiles.command_alarm");
-			int w = this.font.width(alarm) + 12;
-			int ax = this.mapLeft + (this.mapSize - w) / 2;
-			g.fill(ax, this.mapTop + 16, ax + w, this.mapTop + 30, 0xE0A00000);
-			g.drawString(this.font, alarm, ax + 6, this.mapTop + 19, 0xFFFFFFFF, false);
 		}
 		if (this.targetX != null) {
 			int tx = (int) this.screenX(this.targetX + 0.5);
@@ -462,6 +490,10 @@ public class CommandScreen extends Screen {
 			Component name = t.nameKey().isEmpty() ? Component.literal("?") : Component.translatable(t.nameKey());
 			String eta = aircraft ? "" : "  " + Math.max(0, t.eta() / 20) + "s";
 			g.drawString(this.font, Component.literal(String.format("T%02d ", t.number())).append(name).append(eta), px, line, color, false);
+			if (t.threat() && t.intercept() >= 0.0F) {
+				String pct = Math.round(t.intercept() * 100.0F) + "%";
+				g.drawString(this.font, pct, px + PANEL - 14 - this.font.width(pct), line, interceptColor(t.intercept()), false);
+			}
 			line += 10;
 		}
 	}
@@ -520,6 +552,294 @@ public class CommandScreen extends Screen {
 			g.drawString(this.font, Component.literal("  ").append(Component.translatable("screen.ballisticmissiles.site_state." + key))
 				.append(String.format("  %d/%d", site.pos().getX(), site.pos().getZ())), px, line, (color & 0x00FFFFFF) | 0xA0000000, false);
 			line += 11;
+		}
+	}
+
+	// ------------------------------------------------------------------ 2.0: live tracks, symbols, 3D
+
+	/** How far (ticks) the tracks are carried on along their velocity since the last update. */
+	private float lead() {
+		return Math.min(12.0F, (System.currentTimeMillis() - this.receivedAt) / 50.0F);
+	}
+
+	private double liveX(TrackInfo t) {
+		return t.x() + t.vx() * this.lead();
+	}
+
+	private double liveY(TrackInfo t) {
+		return t.y() + t.vy() * this.lead();
+	}
+
+	private double liveZ(TrackInfo t) {
+		return t.z() + t.vz() * this.lead();
+	}
+
+	private static int trackColor(TrackInfo t) {
+		boolean aircraft = t.threatClass() == AirThreat.ThreatClass.AIRCRAFT.ordinal();
+		return !t.threat() ? 0xFF4090FF : aircraft ? 0xFFFFB030 : 0xFFFF4040;
+	}
+
+	private static int interceptColor(float p) {
+		return p >= 0.8F ? 0xFF50FF70 : p >= 0.5F ? 0xFFFFD040 : 0xFFFF4040;
+	}
+
+	private static String classLetter(TrackInfo t) {
+		AirThreat.ThreatClass[] classes = AirThreat.ThreatClass.values();
+		AirThreat.ThreatClass c = t.threatClass() >= 0 && t.threatClass() < classes.length ? classes[t.threatClass()] : AirThreat.ThreatClass.UNKNOWN;
+		return switch (c) {
+			case BALLISTIC -> "BM";
+			case CRUISE -> "CM";
+			case HYPERSONIC -> "HGV";
+			case REENTRY -> "RV";
+			case AIRCRAFT -> "AC";
+			default -> "?";
+		};
+	}
+
+	/** NATO-style air track symbol: friendly a blue circle, hostile a red diamond (filled dark, outlined bright). */
+	private void symbol(GuiGraphics g, int x, int y, TrackInfo t) {
+		int color = trackColor(t);
+		if (t.threat()) {
+			for (int i = -5; i <= 5; i++) {
+				int w = 5 - Math.abs(i);
+				g.fill(x - w, y + i, x + w + 1, y + i + 1, 0xC0200808);
+				g.fill(x - w, y + i, x - w + 1, y + i + 1, color);
+				g.fill(x + w, y + i, x + w + 1, y + i + 1, color);
+			}
+		} else {
+			for (int i = -4; i <= 4; i++) {
+				int w = (int) Math.round(Math.sqrt(16 - i * i));
+				g.fill(x - w, y + i, x + w + 1, y + i + 1, 0xC0081830);
+				g.fill(x - w, y + i, x - w + 1, y + i + 1, color);
+				g.fill(x + w, y + i, x + w + 1, y + i + 1, color);
+			}
+		}
+		g.fill(x, y, x + 1, y + 1, color);
+	}
+
+	/** Track label: number, kind, altitude, and for a hostile the chance it is shot down. */
+	private void label(GuiGraphics g, int x, int y, TrackInfo t) {
+		int color = trackColor(t);
+		String head = String.format("T%02d %s", t.number(), classLetter(t));
+		g.drawString(this.font, head, x, y, color, false);
+		String alt = Math.round(this.liveY(t)) + "m";
+		g.drawString(this.font, alt, x, y + 9, (color & 0x00FFFFFF) | 0xB0000000, false);
+		if (t.threat() && t.intercept() >= 0.0F) {
+			String pct = "ABF " + Math.round(t.intercept() * 100.0F) + "%";
+			g.drawString(this.font, pct, x + this.font.width(alt) + 4, y + 9, interceptColor(t.intercept()), false);
+		}
+	}
+
+	/** Friendly site: a blue-framed box in the colour of its kind, its border flashing with what is wrong. */
+	private void siteSymbol(GuiGraphics g, int x, int y, SiteInfo site, int color, boolean blink) {
+		int state = this.stateColor(site);
+		int frame = state != 0 && (blink || (site.flags() & SiteInfo.RELOADING) != 0) ? state : 0xFF4090FF;
+		g.fill(x - 4, y - 3, x + 5, y + 4, frame);
+		g.fill(x - 3, y - 2, x + 4, y + 3, 0xFF0A1420);
+		g.fill(x - 2, y - 1, x + 3, y + 2, (site.flags() & SiteInfo.OFFLINE) != 0 ? 0xFF606060 : color);
+	}
+
+	private void drawAlarmAndLegend(GuiGraphics g) {
+		if (this.data.alarm() && (System.currentTimeMillis() / 500L) % 2 == 0) {
+			Component alarm = Component.translatable("screen.ballisticmissiles.command_alarm");
+			int w = this.font.width(alarm) + 12;
+			int ax = this.mapLeft + (this.mapSize - w) / 2;
+			g.fill(ax, this.mapTop + 16, ax + w, this.mapTop + 30, 0xE0A00000);
+			g.drawString(this.font, alarm, ax + 6, this.mapTop + 19, 0xFFFFFFFF, false);
+		}
+		// legend along the bottom
+		int ly = this.mapTop + this.mapSize - 24;
+		int lx = this.mapLeft + this.mapSize - 150;
+		g.fill(lx - 4, ly - 3, this.mapLeft + this.mapSize - 2, ly + 21, 0xA0000000);
+		g.fill(lx, ly + 2, lx + 5, ly + 7, 0xFFFF4040);
+		g.drawString(this.font, Component.translatable("screen.ballisticmissiles.command_hostile"), lx + 8, ly, 0xFFFF6060, false);
+		g.fill(lx + 70, ly + 2, lx + 75, ly + 7, 0xFF4090FF);
+		g.drawString(this.font, Component.translatable("screen.ballisticmissiles.command_friendly"), lx + 78, ly, 0xFF70B0FF, false);
+		g.fill(lx, ly + 12, lx + 5, ly + 17, 0xFFFFB030);
+		g.drawString(this.font, Component.translatable("screen.ballisticmissiles.command_aircraft"), lx + 8, ly + 10, 0xFFFFC060, false);
+		if (this.view3d) {
+			g.drawString(this.font, Component.translatable("screen.ballisticmissiles.command_3d_hint"), this.mapLeft + 30, this.mapTop + 4, 0xA0B0C8B0, false);
+		}
+	}
+
+	private static final float VERTICAL = 1.5F;
+
+	private float scale3d() {
+		return (float) (this.mapSize / (2.0 * this.range()) * 0.72);
+	}
+
+	private float cx3d() {
+		return this.mapLeft + this.mapSize * 0.5F;
+	}
+
+	private float cy3d() {
+		return this.mapTop + this.mapSize * 0.58F;
+	}
+
+	/** World point to the 3D view: turned by the yaw, tilted by the pitch, heights stretched a little. */
+	private float[] project(double wx, double wy, double wz) {
+		double dx = wx - (this.center.getX() + 0.5);
+		double dz = wz - (this.center.getZ() + 0.5);
+		double dy = (wy - this.center.getY()) * VERTICAL;
+		double cs = Math.cos(this.yaw3d);
+		double sn = Math.sin(this.yaw3d);
+		double rx = dx * cs - dz * sn;
+		double rz = dx * sn + dz * cs;
+		float s = this.scale3d();
+		return new float[] {(float) (this.cx3d() + rx * s), (float) (this.cy3d() + (rz * Math.sin(this.pitch3d) - dy * Math.cos(this.pitch3d)) * s)};
+	}
+
+	/** A point on the screen back to the ground it shows: {x, z}. */
+	private double[] unproject(double mx, double my) {
+		float s = this.scale3d();
+		double rx = (mx - this.cx3d()) / s;
+		double rz = (my - this.cy3d()) / s / Math.sin(this.pitch3d);
+		double cs = Math.cos(this.yaw3d);
+		double sn = Math.sin(this.yaw3d);
+		return new double[] {this.center.getX() + 0.5 + rx * cs + rz * sn, this.center.getZ() + 0.5 - rx * sn + rz * cs};
+	}
+
+	private void line3d(GuiGraphics g, double x0, double y0, double z0, double x1, double y1, double z1, int color, boolean dashed) {
+		float[] a = this.project(x0, y0, z0);
+		float[] b = this.project(x1, y1, z1);
+		if (dashed) {
+			this.dashed(g, (int) a[0], (int) a[1], (int) b[0], (int) b[1], color);
+		} else {
+			this.line(g, (int) a[0], (int) a[1], (int) b[0], (int) b[1], color);
+		}
+	}
+
+	private void draw3d(GuiGraphics g) {
+		if (System.currentTimeMillis() - this.lastDrag > 4000L) {
+			this.yaw3d += 0.0015F; // a slow turn while nobody holds it
+		}
+		double gx = this.center.getX() + 0.5;
+		double gy = this.center.getY();
+		double gz = this.center.getZ() + 0.5;
+		int range = this.range();
+		// the terrain map laid flat and tilted: the ground plane maps to the screen by a 2x2 matrix
+		if (this.texture != null) {
+			float k = 0.72F;
+			float cs = Mth.cos(this.yaw3d);
+			float sn = Mth.sin(this.yaw3d);
+			float sp = Mth.sin(this.pitch3d);
+			float m00 = k * cs;
+			float m10 = -k * sn;
+			float m01 = k * sn * sp;
+			float m11 = k * cs * sp;
+			float mcx = this.mapLeft + this.mapSize * 0.5F;
+			float mcy = this.mapTop + this.mapSize * 0.5F;
+			org.joml.Matrix3x2f m = new org.joml.Matrix3x2f(m00, m01, m10, m11, this.cx3d() - (m00 * mcx + m10 * mcy), this.cy3d() - (m01 * mcx + m11 * mcy));
+			g.pose().pushMatrix();
+			g.pose().mul(m);
+			g.blit(RenderPipelines.GUI_TEXTURED, MAP_ID, this.mapLeft, this.mapTop, 0, 0, this.mapSize, this.mapSize, TEX, TEX, TEX, TEX);
+			g.pose().popMatrix();
+		}
+		// range rings and the cross on the ground, north marked
+		for (int ring = 1; ring <= 4; ring++) {
+			double r = range * ring / 4.0;
+			int n = 64;
+			for (int i = 0; i < n; i++) {
+				double a0 = Mth.TWO_PI * i / n;
+				double a1 = Mth.TWO_PI * (i + 1) / n;
+				this.line3d(g, gx + Math.cos(a0) * r, gy, gz + Math.sin(a0) * r, gx + Math.cos(a1) * r, gy, gz + Math.sin(a1) * r, 0x6040FF70, false);
+			}
+		}
+		this.line3d(g, gx - range, gy, gz, gx + range, gy, gz, 0x3040FF70, false);
+		this.line3d(g, gx, gy, gz - range, gx, gy, gz + range, 0x3040FF70, false);
+		float[] north = this.project(gx, gy, gz - range * 1.05);
+		g.drawCenteredString(this.font, "N", (int) north[0], (int) north[1] - 4, 0xFF40FF70);
+		// a height scale at the centre: a mast with marks every 100 m
+		for (int h = 100; h <= 400; h += 100) {
+			float[] p = this.project(gx, gy + h, gz);
+			g.fill((int) p[0] - 2, (int) p[1], (int) p[0] + 3, (int) p[1] + 1, 0x8040FF70);
+			g.drawString(this.font, h + "m", (int) p[0] + 4, (int) p[1] - 4, 0x8040FF70, false);
+		}
+		this.line3d(g, gx, gy, gz, gx, gy + 400, gz, 0x5040FF70, false);
+
+		boolean blink = (System.currentTimeMillis() / 400L) % 2 == 0;
+		for (SiteInfo site : this.data.sites()) {
+			float[] base = this.project(site.pos().getX() + 0.5, site.pos().getY(), site.pos().getZ() + 0.5);
+			if ((site.flags() & SiteInfo.DESTROYED) != 0) {
+				this.line(g, (int) base[0] - 3, (int) base[1] - 3, (int) base[0] + 3, (int) base[1] + 3, 0xFFFF2020);
+				this.line(g, (int) base[0] - 3, (int) base[1] + 3, (int) base[0] + 3, (int) base[1] - 3, 0xFFFF2020);
+				continue;
+			}
+			int color = switch (site.kind()) {
+				case 0 -> 0xFFFFFFFF;
+				case 1 -> 0xFF50E0FF;
+				case 2 -> 0xFFFFE040;
+				default -> 0xFFC060FF;
+			};
+			g.fill((int) base[0], (int) base[1] - 8, (int) base[0] + 1, (int) base[1], 0xA04090FF);
+			this.siteSymbol(g, (int) base[0], (int) base[1] - 10, site, color, blink);
+		}
+		float[] own = this.project(gx, gy, gz);
+		g.fill((int) own[0] - 3, (int) own[1] - 3, (int) own[0] + 4, (int) own[1] + 4, 0xFF40FF70);
+		g.fill((int) own[0] - 1, (int) own[1] - 1, (int) own[0] + 2, (int) own[1] + 2, 0xFF000000);
+
+		for (TrackInfo t : this.data.tracks()) {
+			int rgb = trackColor(t) & 0xFFFFFF;
+			// where it has flown, at its height
+			var trail = t.entityId() < 0 ? null : this.trails.get(t.entityId());
+			if (trail != null) {
+				float[] prev = null;
+				int i = 0;
+				int n = trail.size();
+				for (float[] p : trail) {
+					if (prev != null) {
+						int alpha = 0x30 + 0x90 * i / Math.max(1, n);
+						this.line3d(g, prev[0], prev[1], prev[2], p[0], p[1], p[2], alpha << 24 | rgb, false);
+					}
+					prev = p;
+					i++;
+				}
+			}
+			double x = this.liveX(t);
+			double y = this.liveY(t);
+			double z = this.liveZ(t);
+			// its shadow on the ground and the drop line down to it
+			this.line3d(g, x, y, z, x, gy, z, 0x50000000 | rgb, true);
+			float[] shadow = this.project(x, gy, z);
+			g.fill((int) shadow[0] - 1, (int) shadow[1], (int) shadow[0] + 2, (int) shadow[1] + 1, 0x90000000 | rgb);
+			boolean aircraft = t.threatClass() == AirThreat.ThreatClass.AIRCRAFT.ordinal();
+			if (t.threat() && !aircraft && t.eta() > 0) {
+				// the predicted arc down to impact: straight over the ground, a parabola in height
+				double tt = t.eta();
+				double accel = (gy - y - t.vy() * tt) / (tt * tt);
+				double px = x;
+				double py = y;
+				double pz = z;
+				int steps = 24;
+				for (int i = 1; i <= steps; i++) {
+					double f = (double) i / steps;
+					double tau = f * tt;
+					double nx = x + (t.impactX() - x) * f;
+					double nz = z + (t.impactZ() - z) * f;
+					double ny = y + t.vy() * tau + accel * tau * tau;
+					this.line3d(g, px, py, pz, nx, ny, nz, 0xA0000000 | rgb, true);
+					px = nx;
+					py = ny;
+					pz = nz;
+				}
+				float[] hit = this.project(t.impactX(), gy, t.impactZ());
+				float pulse = (System.currentTimeMillis() % 1000L) / 1000.0F;
+				int zone = Math.max(3, (int) (40.0 * this.scale3d()));
+				this.circle(g, (int) hit[0], (int) hit[1], zone, 0x80FF4040);
+				this.circle(g, (int) hit[0], (int) hit[1], (int) (zone * (0.4F + 0.6F * pulse)), ((int) (0xA0 * (1.0F - pulse)) << 24) | 0xFF4040);
+				g.drawString(this.font, Math.max(0, t.eta() / 20) + "s", (int) hit[0] + 5, (int) hit[1] + 2, 0xFFFF6060, false);
+			}
+			float[] at = this.project(x, y, z);
+			this.symbol(g, (int) at[0], (int) at[1], t);
+			this.label(g, (int) at[0] + 7, (int) at[1] - 10, t);
+		}
+		if (this.targetX != null) {
+			float[] tp = this.project(this.targetX + 0.5, gy, this.targetZ + 0.5);
+			int tx = (int) tp[0];
+			int ty = (int) tp[1];
+			g.fill(tx - 7, ty, tx + 8, ty + 1, 0xFFFF3030);
+			g.fill(tx, ty - 7, tx + 1, ty + 8, 0xFFFF3030);
+			this.circle(g, tx, ty, 5, 0xFFFF3030);
 		}
 	}
 

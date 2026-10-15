@@ -111,6 +111,10 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 		}
 		boolean was = this.alarm;
 		this.alarm = worst != null;
+		BlockState state = this.getBlockState();
+		if (state.hasProperty(CommandCenterBlock.POWERED) && state.getValue(CommandCenterBlock.POWERED) != this.alarm) {
+			level.setBlock(this.worldPosition, state.setValue(CommandCenterBlock.POWERED, this.alarm), 3);
+		}
 		long now = level.getGameTime();
 		if (this.alarm && now - this.lastSiren >= SIREN_TICKS) {
 			this.lastSiren = now;
@@ -138,21 +142,6 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 
 	private CommandDataPayload snapshot(ServerLevel level, ServerPlayer viewer, boolean open) {
 		Vec3 here = Vec3.atCenterOf(this.worldPosition);
-		List<TrackInfo> tracks = new ArrayList<>();
-		for (AirThreat t : ThreatTracker.threats(level)) {
-			Vec3 p = t.asEntity().position();
-			if (Math.hypot(p.x - here.x, p.z - here.z) > RANGE) {
-				continue;
-			}
-			Vec3 v = t.threatVelocity();
-			Vec3 impact = t.predictedImpact();
-			boolean hostile = !DefenseOwner.isFriendly(viewer.getUUID(), t);
-			tracks.add(new TrackInfo(t.asEntity().getId() % 100, t.threatClass().ordinal(), t.nameKey(), (float) p.x, (float) p.y, (float) p.z,
-				(float) v.x, (float) v.z, (float) impact.x, (float) impact.z, 0.0F, t.etaTicks(), hostile, 0, t.asEntity().getId()));
-			if (tracks.size() >= 200) {
-				break;
-			}
-		}
 		List<SiteInfo> sites = new ArrayList<>();
 		Set<BlockPos> seen = new HashSet<>();
 		long now = level.getGameTime();
@@ -183,7 +172,110 @@ public class CommandCenterBlockEntity extends BlockEntity implements DefenseSite
 				sites.add(new SiteInfo(p, e.getValue().ordinal(), typeOf(e.getValue(), null), -1, -1, -1, SiteInfo.OFFLINE));
 			}
 		}
+		List<TrackInfo> tracks = new ArrayList<>();
+		for (AirThreat t : ThreatTracker.threats(level)) {
+			Vec3 p = t.asEntity().position();
+			if (Math.hypot(p.x - here.x, p.z - here.z) > RANGE) {
+				continue;
+			}
+			Vec3 v = t.threatVelocity();
+			Vec3 impact = t.predictedImpact();
+			boolean hostile = !DefenseOwner.isFriendly(viewer.getUUID(), t);
+			float intercept = hostile ? interceptChance(t, p, impact, sites) : -1.0F;
+			tracks.add(new TrackInfo(t.asEntity().getId() % 100, t.threatClass().ordinal(), t.nameKey(), (float) p.x, (float) p.y, (float) p.z,
+				(float) v.x, (float) v.z, (float) impact.x, (float) impact.z, 0.0F, t.etaTicks(), hostile, 0, t.asEntity().getId(), (float) v.y, intercept));
+			if (tracks.size() >= 200) {
+				break;
+			}
+		}
 		return new CommandDataPayload(this.worldPosition, open, RANGE, tracks, sites, links(viewer).size(), Mth.ceil(this.cooldown / 20.0F), this.alarm);
+	}
+
+	/**
+	 * How likely the defenses on the map are to bring a hostile track down before it lands: every working
+	 * battery whose reach takes in the rest of its flight (from where it is to where it will come down) gets
+	 * its shots at it - Patriot and Iron Dome two interceptors each, with their kill probability against this
+	 * kind of target, CIWS and laser by how well they deal with it - and it survives only if every shot
+	 * misses. Out of rounds, jammed, unpowered or cut off counts for nothing; too close to impact for the
+	 * defenses to react cuts the odds.
+	 */
+	private static float interceptChance(AirThreat t, Vec3 pos, Vec3 impact, List<SiteInfo> sites) {
+		AirThreat.ThreatClass c = t.threatClass();
+		float base = t.killProbability();
+		float react = Mth.clamp(t.etaTicks() / 40.0F, 0.0F, 1.0F);
+		double miss = 1.0;
+		for (SiteInfo s : sites) {
+			if ((s.flags() & (SiteInfo.DESTROYED | SiteInfo.OFFLINE | SiteInfo.UNPOWERED | SiteInfo.JAMMED)) != 0 || s.ammo() == 0) {
+				continue;
+			}
+			double range;
+			float pk;
+			int shots = s.ammo() < 0 ? 2 : Math.min(2, s.ammo());
+			switch (s.type()) {
+				case SiteInfo.TYPE_PATRIOT -> {
+					boolean linked = false;
+					for (SiteInfo r : sites) {
+						if (r.type() == SiteInfo.TYPE_RADAR && (r.flags() & (SiteInfo.DESTROYED | SiteInfo.OFFLINE)) == 0
+							&& r.pos().distSqr(s.pos()) < AirDefenseBlockEntity.RADAR_LINK_RANGE * AirDefenseBlockEntity.RADAR_LINK_RANGE) {
+							linked = true;
+							break;
+						}
+					}
+					range = linked ? AirDefenseBlockEntity.LINKED_RANGE : AirDefenseBlockEntity.OWN_RANGE;
+					pk = Mth.clamp(base + (linked ? 0.1F : 0.0F), 0.05F, 0.97F);
+				}
+				case SiteInfo.TYPE_IRON_DOME -> {
+					range = IronDomeBlockEntity.RANGE;
+					pk = Math.min(0.95F, base + 0.15F);
+				}
+				case SiteInfo.TYPE_CIWS -> {
+					range = CiwsBlockEntity.RANGE;
+					shots = 1;
+					pk = switch (c) {
+						case CRUISE, AIRCRAFT -> 0.55F;
+						case BALLISTIC -> 0.3F;
+						case REENTRY -> 0.25F;
+						case HYPERSONIC -> 0.1F;
+						default -> 0.4F;
+					};
+				}
+				case SiteInfo.TYPE_LASER -> {
+					range = LaserDefenseBlockEntity.RANGE;
+					shots = 1;
+					pk = switch (c) {
+						case CRUISE, AIRCRAFT -> 0.6F;
+						case BALLISTIC -> 0.35F;
+						case REENTRY -> 0.3F;
+						case HYPERSONIC -> 0.08F;
+						default -> 0.4F;
+					};
+				}
+				case SiteInfo.TYPE_DECOY -> {
+					range = 80.0;
+					shots = 1;
+					pk = c == AirThreat.ThreatClass.CRUISE ? 0.3F : 0.0F;
+				}
+				default -> {
+					continue;
+				}
+			}
+			double sx = s.pos().getX() + 0.5;
+			double sz = s.pos().getZ() + 0.5;
+			if (distanceToPath(sx, sz, pos.x, pos.z, impact.x, impact.z) > range) {
+				continue;
+			}
+			miss *= Math.pow(1.0 - pk * react, shots);
+		}
+		return (float) (1.0 - miss);
+	}
+
+	/** Horizontal distance from a point to the stretch from (ax, az) to (bx, bz). */
+	private static double distanceToPath(double px, double pz, double ax, double az, double bx, double bz) {
+		double dx = bx - ax;
+		double dz = bz - az;
+		double len = dx * dx + dz * dz;
+		double f = len < 1.0E-6 ? 0.0 : Mth.clamp(((px - ax) * dx + (pz - az) * dz) / len, 0.0, 1.0);
+		return Math.hypot(px - (ax + dx * f), pz - (az + dz * f));
 	}
 
 	private static boolean isDefenseEntity(@Nullable BlockEntity be) {

@@ -43,6 +43,7 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.ai.SoldierEntity.createAttributes());
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.gun.GunAttachments::tickPending);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.NewMoon::tick);
+		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.Aurora::tick);
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % 6000 == 0) {
 				RadiationManager.save(server);
@@ -61,6 +62,7 @@ public class BallisticMissiles implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NewMoon::load);
+		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.Aurora::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.NuclearWinter::save);
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
 			(handler, sender, server) -> {
@@ -68,6 +70,7 @@ public class BallisticMissiles implements ModInitializer {
 				RadiationManager.sync(handler.player.level(), handler.player);
 				de.rcm.ballistic.explosion.NuclearWinter.sync(handler.player);
 				de.rcm.ballistic.explosion.NewMoon.sync(handler.player);
+				de.rcm.ballistic.explosion.Aurora.sync(handler.player);
 				de.rcm.ballistic.injury.Injuries.rejoin(handler.player);
 			});
 		net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(

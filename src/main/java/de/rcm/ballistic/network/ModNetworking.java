@@ -83,11 +83,16 @@ public final class ModNetworking {
 	/** One radar track as shown on the scope. */
 	public record TrackInfo(
 		int number, int threatClass, String nameKey, float x, float y, float z, float vx, float vz, float impactX, float impactZ, float impactError,
-		int eta, boolean threat, int age, int entityId
+		int eta, boolean threat, int age, int entityId, float vy, float intercept
 	) {
 		public TrackInfo(int number, int threatClass, String nameKey, float x, float y, float z, float vx, float vz, float impactX, float impactZ,
 			float impactError, int eta, boolean threat, int age) {
-			this(number, threatClass, nameKey, x, y, z, vx, vz, impactX, impactZ, impactError, eta, threat, age, -1);
+			this(number, threatClass, nameKey, x, y, z, vx, vz, impactX, impactZ, impactError, eta, threat, age, -1, 0.0F, -1.0F);
+		}
+
+		public TrackInfo(int number, int threatClass, String nameKey, float x, float y, float z, float vx, float vz, float impactX, float impactZ,
+			float impactError, int eta, boolean threat, int age, int entityId) {
+			this(number, threatClass, nameKey, x, y, z, vx, vz, impactX, impactZ, impactError, eta, threat, age, entityId, 0.0F, -1.0F);
 		}
 
 		static void write(FriendlyByteBuf buf, TrackInfo t) {
@@ -106,12 +111,15 @@ public final class ModNetworking {
 			buf.writeBoolean(t.threat);
 			buf.writeVarInt(t.age);
 			buf.writeInt(t.entityId);
+			buf.writeFloat(t.vy);
+			buf.writeFloat(t.intercept);
 		}
 
 		static TrackInfo read(FriendlyByteBuf buf) {
 			return new TrackInfo(
 				buf.readVarInt(), buf.readVarInt(), buf.readUtf(96), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
-				buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readVarInt(), buf.readBoolean(), buf.readVarInt(), buf.readInt()
+				buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readVarInt(), buf.readBoolean(), buf.readVarInt(), buf.readInt(),
+				buf.readFloat(), buf.readFloat()
 			);
 		}
 	}
@@ -404,6 +412,21 @@ public final class ModNetworking {
 			buf.writeBoolean(p.cutscene);
 			buf.writeVarInt(p.darkness);
 		}, buf -> new NewMoonPayload(buf.readBoolean(), buf.readBoolean(), buf.readVarInt()));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: the northern lights are out (and how they are set: for good, by chance). */
+	public record AuroraPayload(boolean active, boolean forced, boolean random) implements CustomPacketPayload {
+		public static final Type<AuroraPayload> TYPE = new Type<>(BallisticMissiles.id("aurora"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, AuroraPayload> CODEC = StreamCodec.of((buf, p) -> {
+			buf.writeBoolean(p.active);
+			buf.writeBoolean(p.forced);
+			buf.writeBoolean(p.random);
+		}, buf -> new AuroraPayload(buf.readBoolean(), buf.readBoolean(), buf.readBoolean()));
 
 		@Override
 		public Type<? extends CustomPacketPayload> type() {
@@ -857,6 +880,7 @@ public final class ModNetworking {
 		});
 		PayloadTypeRegistry.playS2C().register(WinterPayload.TYPE, WinterPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(NewMoonPayload.TYPE, NewMoonPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(AuroraPayload.TYPE, AuroraPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(FalloutPayload.TYPE, FalloutPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(DetonationPayload.TYPE, DetonationPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(RadarDataPayload.TYPE, RadarDataPayload.CODEC);

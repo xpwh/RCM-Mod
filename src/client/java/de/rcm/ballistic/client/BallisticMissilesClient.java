@@ -100,6 +100,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.render.ShotgunItemRenderer.register();
 		de.rcm.ballistic.client.render.GlockItemRenderer.register();
 		de.rcm.ballistic.client.render.GrenadeRenderers.register();
+		de.rcm.ballistic.client.render.PropItemRenderer.register();
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.render.GroundProps::tick);
 		de.rcm.ballistic.client.render.FpvDroneItemRenderer.register();
 		de.rcm.ballistic.client.render.SmokeDebug.init();
 		de.rcm.ballistic.client.render.BulletHoles.init();
@@ -109,11 +111,13 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.DynamicLights.init();
 		de.rcm.ballistic.client.effect.EyeAdaptation.init();
 		de.rcm.ballistic.client.effect.Sky.init();
+		de.rcm.ballistic.client.effect.NightSky.init();
 		de.rcm.ballistic.client.render.JetExhaust.init();
 		de.rcm.ballistic.client.effect.VolumetricClouds.init();
 		de.rcm.ballistic.client.effect.VolCloudCommand.init();
 		de.rcm.ballistic.client.gui.SettingsCommand.init();
 		BlockEntityRenderers.register(ModRegistry.CIWS_BE, CiwsRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.COMMAND_CENTER_BE, de.rcm.ballistic.client.render.CommandCenterRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.LAUNCH_PAD_BE, LaunchPadRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.INCLINED_LAUNCHER_BE, de.rcm.ballistic.client.render.InclinedLauncherRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.MISSILE_SILO_BE, SiloRenderer::new);
@@ -182,6 +186,10 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.NewMoonCutscene.init();
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.NewMoonClient::tick);
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.NewMoonClient.clear());
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.AuroraPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.AuroraClient.receive(payload.active(), payload.forced(), payload.random()));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.AuroraClient::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.AuroraClient.clear());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FalloutClient.clear());
 		ClientTickEvents.END_CLIENT_TICK.register(BallisticMissilesClient::debrisTrails);
 

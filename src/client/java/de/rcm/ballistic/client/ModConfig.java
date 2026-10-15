@@ -51,6 +51,8 @@ public final class ModConfig {
 	public static boolean cumulusClouds = false;
 	public static boolean lightShafts = true;
 	public static boolean realSky = true;
+	/** The Milky Way, finer stars and shooting stars at night. */
+	public static boolean nightSky = true;
 	/** The eye adapting to the dark slowly, dazzled by flashes at night. */
 	public static boolean eyeAdaptation = true;
 	/** Water mirrors the sky and what is round it, with waves (screen-space reflections). */
@@ -124,6 +126,7 @@ public final class ModConfig {
 			cumulusClouds = "cumulus".equals(p.getProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer"));
 			lightShafts = bool(p, "lightShafts", lightShafts);
 			realSky = bool(p, "realSky", realSky);
+			nightSky = bool(p, "nightSky", nightSky);
 			eyeAdaptation = bool(p, "eyeAdaptation", eyeAdaptation);
 			realWater = bool(p, "realWater", realWater);
 			sunShadows = bool(p, "sunShadows", sunShadows);
@@ -161,6 +164,7 @@ public final class ModConfig {
 			p.setProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer");
 			p.setProperty("lightShafts", Boolean.toString(lightShafts));
 			p.setProperty("realSky", Boolean.toString(realSky));
+			p.setProperty("nightSky", Boolean.toString(nightSky));
 			p.setProperty("eyeAdaptation", Boolean.toString(eyeAdaptation));
 			p.setProperty("realWater", Boolean.toString(realWater));
 			p.setProperty("sunShadows", Boolean.toString(sunShadows));

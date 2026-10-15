@@ -16,6 +16,8 @@ import net.minecraft.world.phys.Vec3;
  *   <li>{@code krater info} - how many destroyed blocks are remembered here</li>
  *   <li>{@code neumond an|aus} - the new-moon night event: pitch-black nights ({@link NewMoon})</li>
  *   <li>{@code neumond dunkelheit <1-100>} - how dark it makes them</li>
+ *   <li>{@code polarlicht an|aus} - the northern lights every night ({@link Aurora})</li>
+ *   <li>{@code polarlicht zufall an|aus} - now and then, by chance, on a rare night</li>
  * </ul>
  */
 public final class WorldCommand {
@@ -43,7 +45,26 @@ public final class WorldCommand {
 						NewMoon.setDarkness(ctx.getSource().getServer(), v);
 						ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.world.new_moon_darkness", v), true);
 						return v;
-					})))));
+					}))))
+			.then(Commands.literal("polarlicht")
+				.then(Commands.literal("an").executes(ctx -> aurora(ctx.getSource(), true)))
+				.then(Commands.literal("aus").executes(ctx -> aurora(ctx.getSource(), false)))
+				.then(Commands.literal("zufall")
+					.then(Commands.literal("an").executes(ctx -> auroraRandom(ctx.getSource(), true)))
+					.then(Commands.literal("aus").executes(ctx -> auroraRandom(ctx.getSource(), false))))));
+	}
+
+	private static int aurora(CommandSourceStack source, boolean on) {
+		Aurora.set(source.getServer(), on);
+		source.sendSuccess(() -> Component.translatable(on ? "commands.ballisticmissiles.world.aurora_on" : "commands.ballisticmissiles.world.aurora_off"), true);
+		return 1;
+	}
+
+	private static int auroraRandom(CommandSourceStack source, boolean on) {
+		Aurora.setRandom(source.getServer(), on);
+		source.sendSuccess(() -> Component.translatable(on ? "commands.ballisticmissiles.world.aurora_random_on"
+			: "commands.ballisticmissiles.world.aurora_random_off"), true);
+		return 1;
 	}
 
 	private static int newMoon(CommandSourceStack source, boolean on) {

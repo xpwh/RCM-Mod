@@ -394,6 +394,17 @@ public class SettingsScreen extends Screen {
 			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.new_moon"),
 				(b, v) -> this.run("bmworld neumond " + (v ? "an" : "aus")))),
 			command(darkness));
+		this.list.row(CycleButton.onOffBuilder(ModConfig.nightSky)
+				.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.night_sky.tooltip")))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.night_sky"), (b, v) -> ModConfig.nightSky = v),
+			command(CycleButton.onOffBuilder(de.rcm.ballistic.client.effect.AuroraClient.forced())
+				.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.aurora.tooltip")))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.aurora"),
+					(b, v) -> this.run("bmworld polarlicht " + (v ? "an" : "aus")))));
+		this.list.row(command(CycleButton.onOffBuilder(de.rcm.ballistic.client.effect.AuroraClient.random())
+			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.aurora_random.tooltip")))
+			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.aurora_random"),
+				(b, v) -> this.run("bmworld polarlicht zufall " + (v ? "an" : "aus")))));
 
 		this.list.header("options.ballisticmissiles.section.repair", 0xFF90C0FF);
 		this.list.note("options.ballisticmissiles.repair.note");

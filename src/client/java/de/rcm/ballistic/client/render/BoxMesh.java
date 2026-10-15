@@ -40,6 +40,21 @@ public final class BoxMesh {
 		return this.data.length == 0 ? new float[6] : b;
 	}
 
+	/** Several meshes as one. */
+	public static BoxMesh merge(BoxMesh... meshes) {
+		int n = 0;
+		for (BoxMesh m : meshes) {
+			n += m.data.length;
+		}
+		float[] d = new float[n];
+		int at = 0;
+		for (BoxMesh m : meshes) {
+			System.arraycopy(m.data, 0, d, at, m.data.length);
+			at += m.data.length;
+		}
+		return new BoxMesh(d);
+	}
+
 	/** A copy scaled by {@code k} about the origin. */
 	public BoxMesh scaled(float k) {
 		float[] d = this.data.clone();
