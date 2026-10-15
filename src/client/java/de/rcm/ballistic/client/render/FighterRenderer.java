@@ -205,7 +205,7 @@ public class FighterRenderer extends EntityRenderer<FighterEntity, FighterRender
 				poseStack.translate(f22 ? 1.05F : -0.75F, f22 ? 4.6F : 1.9F, 0.75F);
 				poseStack.mulPose(Axis.XP.rotationDegrees(180.0F));
 				collector.submitCustomGeometry(poseStack, JetRenderer.FLAME_TYPE,
-					(pose, consumer) -> MissileRenderer.flame(pose, consumer, 0.18F, 1.0F + (t * 7.0F % 1.0F), t * 3.0F, 1.0F));
+					(pose, consumer) -> ExhaustPlume.plume(pose, consumer, 0.18F, 1.0F + (t * 7.0F % 1.0F), t * 3.0F, 1.0F, ExhaustPlume.JET, 1.0F));
 				poseStack.popPose();
 			}
 			// Prandtl-Glauert condensation cone around Mach 1

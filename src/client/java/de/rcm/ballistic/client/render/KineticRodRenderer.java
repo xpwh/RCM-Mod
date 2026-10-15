@@ -29,7 +29,7 @@ import org.joml.Vector3f;
  * wrapped in a white-hot plasma sheath and drags a glowing wake.
  */
 public class KineticRodRenderer extends EntityRenderer<KineticRodEntity, KineticRodRenderer.State> {
-	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
+	private static final RenderType FLAME_TYPE = ExhaustPlume.TYPE;
 	static final float LENGTH = 6.2F;
 	static final float RADIUS = 0.17F;
 	static final BoxMesh MESH = mesh();
@@ -103,16 +103,16 @@ public class KineticRodRenderer extends EntityRenderer<KineticRodEntity, Kinetic
 			// de-orbit burn: the motor in the tail drives it down out of orbit
 			float b = state.burn;
 			collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
-				MissileRenderer.flame(pose, consumer, 0.45F, 16.0F * b, t, b);
-				MissileRenderer.flame(pose, consumer, 0.25F, 9.0F * b, t + 2.0F, b);
+				ExhaustPlume.plume(pose, consumer, 0.45F, 16.0F * b, t, b, ExhaustPlume.PLASMA, 1.0F);
+				ExhaustPlume.plume(pose, consumer, 0.25F, 9.0F * b, t + 2.0F, b, ExhaustPlume.PLASMA, 1.0F);
 			});
 		}
 		if (heat > 0.02F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> SHEATH.emit(pose, consumer, LightTexture.FULL_BRIGHT));
 			// the glowing wake streaming off the tail
 			collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
-				MissileRenderer.flame(pose, consumer, 0.35F * heat + 0.1F, 14.0F * heat + 2.0F, t, Math.min(1.0F, heat * 1.4F));
-				MissileRenderer.flame(pose, consumer, 0.2F, 6.0F * heat + 1.0F, t + 3.0F, heat);
+				ExhaustPlume.plume(pose, consumer, 0.35F * heat + 0.1F, 14.0F * heat + 2.0F, t, Math.min(1.0F, heat * 1.4F), ExhaustPlume.PLASMA, 1.0F);
+				ExhaustPlume.plume(pose, consumer, 0.2F, 6.0F * heat + 1.0F, t + 3.0F, heat, ExhaustPlume.PLASMA, 1.0F);
 			});
 		}
 		poseStack.popPose();

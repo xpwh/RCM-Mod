@@ -17,7 +17,7 @@ import org.joml.Quaternionf;
 /** Hellfire / Hydra rocket: a scaled-down winged missile body pointing along its flight, motor flame. */
 public class RocketRenderer extends EntityRenderer<RocketEntity, RocketRenderer.State> {
 	private static final RenderType TYPE = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/entity/anti_radar_missile.png"));
-	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
+	private static final RenderType FLAME_TYPE = ExhaustPlume.TYPE;
 
 	public RocketRenderer(EntityRendererProvider.Context context) {
 		super(context);
@@ -62,7 +62,6 @@ public class RocketRenderer extends EntityRenderer<RocketEntity, RocketRenderer.
 		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> MissileMesh.ANTI_RADAR.emit(pose, consumer, light));
 		collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
 			MissileRenderer.flame(pose, consumer, 0.22F, 2.4F, t, 1.0F);
-			MissileRenderer.flame(pose, consumer, 0.12F, 1.6F, t + 3.0F, 1.0F);
 		});
 		poseStack.popPose();
 		super.submit(state, poseStack, collector, camera);

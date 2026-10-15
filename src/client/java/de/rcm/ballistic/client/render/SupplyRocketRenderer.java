@@ -28,7 +28,7 @@ import org.joml.Vector3f;
  * that can be followed far into the sky.
  */
 public class SupplyRocketRenderer extends EntityRenderer<SupplyRocketEntity, SupplyRocketRenderer.State> {
-	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
+	private static final RenderType FLAME_TYPE = ExhaustPlume.TYPE;
 	static final float R = 0.32F;
 	static final BoxMesh MESH = mesh();
 
@@ -82,7 +82,6 @@ public class SupplyRocketRenderer extends EntityRenderer<SupplyRocketEntity, Sup
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> MESH.emit(pose, consumer, light));
 		collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
 			MissileRenderer.flame(pose, consumer, R * 0.8F, 5.5F, t, 1.0F);
-			MissileRenderer.flame(pose, consumer, R * 0.45F, 3.0F, t + 3.0F, 1.0F);
 		});
 		poseStack.popPose();
 		super.submit(state, poseStack, collector, camera);

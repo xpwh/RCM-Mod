@@ -26,7 +26,7 @@ import org.joml.Vector3f;
  * motor behind it and four thin stabiliser fins at the tail, spinning, with the motor flame.
  */
 public class RpgGrenadeRenderer extends EntityRenderer<RpgRocketEntity, RpgGrenadeRenderer.State> {
-	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
+	private static final RenderType FLAME_TYPE = ExhaustPlume.TYPE;
 	/** Real size (0.95 m long, 85 mm warhead) made a little bigger so it can be followed in flight. */
 	private static final float SCALE = 1.35F;
 	static final BoxMesh BODY = body();
@@ -80,7 +80,6 @@ public class RpgGrenadeRenderer extends EntityRenderer<RpgRocketEntity, RpgGrena
 		if (state.burning) {
 			collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
 				MissileRenderer.flame(pose, consumer, 0.03F, 0.55F, t, 1.0F);
-				MissileRenderer.flame(pose, consumer, 0.018F, 0.35F, t + 3.0F, 1.0F);
 			});
 		}
 		poseStack.popPose();

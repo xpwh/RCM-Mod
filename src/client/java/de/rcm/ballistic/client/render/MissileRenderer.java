@@ -26,8 +26,6 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRenderer.State> {
-	private static final Identifier FLAME_TEXTURE = BallisticMissiles.id("textures/entity/exhaust_flame.png");
-	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(FLAME_TEXTURE);
 	public static final RenderType GLOW_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/glow.png"));
 	static final RenderType PLASMA_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/plasma.png"));
 	private static final Map<MissileType, RenderType> BODY_TYPES = new EnumMap<>(MissileType.class);
@@ -71,6 +69,8 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		public boolean inCanister;
 		public boolean ignition;
 		public float engineTime;
+		/** Height of the missile (the plume balloons in thin air). */
+		public double altitude;
 		public float shakeX;
 		public float shakeZ;
 		/** 0..1 glow of the re-entry plasma sheath. */
@@ -122,6 +122,7 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		state.inCanister = entity.getState() <= MissileEntity.IGNITION && entity.getNoseDirection(partialTick).y < 0.95;
 		state.ignition = entity.getState() == MissileEntity.IGNITION;
 		state.engineTime = entity.clientStateAge + partialTick;
+		state.altitude = entity.getY();
 		if (state.ignition) {
 			// Hold-down shudder while the engine spools up.
 			float t = state.engineTime;
@@ -233,10 +234,11 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 				float phase = exit[0] * 13.0F + exit[1] * 7.0F;
 				poseStack.pushPose();
 				poseStack.translate(exit[0], exitY, exit[1]);
-				collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
-					flame(pose, consumer, nozzle, flameLength, t + phase, 1.0F);
-					flame(pose, consumer, nozzle * 0.55F, flameLength * 0.6F, t + phase + 7.0F, 1.0F);
-				});
+				// thin air high up: the plume balloons out
+				float expand = 1.0F + Mth.clamp((float) (state.altitude - 120.0) / 300.0F, 0.0F, 1.2F);
+				int style = state.jet ? ExhaustPlume.JET : ExhaustPlume.ROCKET;
+				collector.submitCustomGeometry(poseStack, ExhaustPlume.TYPE,
+					(pose, consumer) -> ExhaustPlume.plume(pose, consumer, nozzle, flameLength, t + phase, 1.0F, style, expand));
 				poseStack.popPose();
 			}
 		}
@@ -299,46 +301,9 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		return glow * flicker;
 	}
 
-	/** Exhaust plume: a bulging, flickering cone of revolution pointing down the -Y axis. */
+	/** Exhaust plume pointing down the -Y axis (see {@link ExhaustPlume}). */
 	static void flame(PoseStack.Pose pose, VertexConsumer consumer, float radius, float length, float time, float alpha) {
-		final int segments = 16;
-		final int rings = 7;
-		int fullBright = LightTexture.FULL_BRIGHT;
-		for (int ring = 0; ring < rings; ring++) {
-			float f0 = (float) ring / rings;
-			float f1 = (float) (ring + 1) / rings;
-			float y0 = -f0 * length;
-			float y1 = -f1 * length;
-			float r0 = plumeRadius(radius, f0, time);
-			float r1 = plumeRadius(radius, f1, time);
-			for (int s = 0; s < segments; s++) {
-				float a0 = Mth.TWO_PI * s / segments;
-				float a1 = Mth.TWO_PI * (s + 1) / segments;
-				float u0 = (float) s / segments;
-				float u1 = (float) (s + 1) / segments;
-				int c0 = color(f0, alpha);
-				int c1 = color(f1, alpha);
-				vertex(consumer, pose, Mth.cos(a0) * r0, y0, Mth.sin(a0) * r0, u0, f0, c0, fullBright, Mth.cos(a0), Mth.sin(a0));
-				vertex(consumer, pose, Mth.cos(a1) * r0, y0, Mth.sin(a1) * r0, u1, f0, c0, fullBright, Mth.cos(a1), Mth.sin(a1));
-				vertex(consumer, pose, Mth.cos(a1) * r1, y1, Mth.sin(a1) * r1, u1, f1, c1, fullBright, Mth.cos(a1), Mth.sin(a1));
-				vertex(consumer, pose, Mth.cos(a0) * r1, y1, Mth.sin(a0) * r1, u0, f1, c1, fullBright, Mth.cos(a0), Mth.sin(a0));
-			}
-		}
+		ExhaustPlume.plume(pose, consumer, radius, length, time, alpha);
 	}
 
-	private static float plumeRadius(float nozzle, float f, float time) {
-		// Expands right after the nozzle (under-expanded exhaust), then tapers off.
-		float bulge = Mth.sin(Mth.PI * Math.min(1.0F, f * 1.6F)) * 0.6F;
-		float diamond = 0.08F * Mth.sin(f * 22.0F - time * 1.4F);
-		return nozzle * (1.0F + bulge + diamond) * (1.0F - f * 0.7F);
-	}
-
-	private static int color(float f, float alpha) {
-		int a = (int) (255 * alpha * (1.0F - f) * (1.0F - f * 0.3F));
-		return Math.max(0, Math.min(255, a)) << 24 | 0xFFFFFF;
-	}
-
-	private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float z, float u, float v, int color, int light, float nx, float nz) {
-		consumer.addVertex(pose, x, y, z).setColor(color).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, nx, 0.0F, nz);
-	}
 }

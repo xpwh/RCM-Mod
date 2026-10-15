@@ -28,7 +28,7 @@ import org.joml.Vector3f;
  */
 public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 	private static final RenderType TYPE = RenderTypes.entityCutout(BallisticMissiles.id("textures/entity/strike_jet.png"));
-	static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
+	static final RenderType FLAME_TYPE = ExhaustPlume.TYPE;
 	static final RenderType VAPOR_TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/entity/vapor.png"));
 
 	private static final int GREY = 0;
@@ -446,7 +446,7 @@ public class JetRenderer extends EntityRenderer<JetEntity, JetRenderer.State> {
 		poseStack.pushPose();
 		poseStack.translate(0.0F, 8.6F, -0.25F);
 		poseStack.mulPose(new Quaternionf().rotationX(Mth.PI));
-		collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> MissileRenderer.flame(pose, consumer, 0.3F, 1.6F * flash / 0.35F, t, 1.0F));
+		collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> ExhaustPlume.plume(pose, consumer, 0.3F, 1.6F * flash / 0.35F, t, 1.0F, ExhaustPlume.JET, 1.0F));
 		poseStack.popPose();
 	}
 

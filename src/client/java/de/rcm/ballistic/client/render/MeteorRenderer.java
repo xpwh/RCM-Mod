@@ -21,7 +21,7 @@ import org.joml.Quaternionf;
 
 /** Tumbling, glowing chunk of rock with a fiery entry plume streaming behind it. */
 public class MeteorRenderer extends EntityRenderer<MeteorEntity, MeteorRenderer.State> {
-	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
+	private static final RenderType FLAME_TYPE = ExhaustPlume.TYPE;
 	private static final BoxMesh ROCK = buildRock();
 
 	public MeteorRenderer(EntityRendererProvider.Context context) {
@@ -71,8 +71,8 @@ public class MeteorRenderer extends EntityRenderer<MeteorEntity, MeteorRenderer.
 		// orient() puts +Y along the flight path; the flame mesh grows down -Y, i.e. behind the rock
 		poseStack.mulPose(state.heading);
 		collector.submitCustomGeometry(poseStack, FLAME_TYPE, (pose, consumer) -> {
-			MissileRenderer.flame(pose, consumer, 0.9F * s, 9.0F * s, t, 1.0F);
-			MissileRenderer.flame(pose, consumer, 1.4F * s, 4.0F * s, t + 3.0F, 0.7F);
+			ExhaustPlume.plume(pose, consumer, 0.9F * s, 9.0F * s, t, 1.0F, ExhaustPlume.PLASMA, 1.0F);
+			ExhaustPlume.plume(pose, consumer, 1.4F * s, 4.0F * s, t + 3.0F, 0.7F, ExhaustPlume.PLASMA, 1.0F);
 		});
 		poseStack.popPose();
 		super.submit(state, poseStack, collector, camera);

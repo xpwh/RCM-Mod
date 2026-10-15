@@ -56,7 +56,6 @@ public class AirMissileRenderer extends EntityRenderer<AirMissileEntity, AirMiss
 			float t = state.time;
 			collector.submitCustomGeometry(poseStack, JetRenderer.FLAME_TYPE, (pose, consumer) -> {
 				MissileRenderer.flame(pose, consumer, 0.12F, 2.6F, t, 1.0F);
-				MissileRenderer.flame(pose, consumer, 0.06F, 1.6F, t + 3.0F, 1.0F);
 			});
 		}
 		poseStack.popPose();

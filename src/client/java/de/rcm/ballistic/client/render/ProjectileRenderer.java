@@ -20,7 +20,7 @@ import org.joml.Quaternionf;
 public class ProjectileRenderer<T extends Entity> extends EntityRenderer<T, ProjectileRenderer.State> {
 	static final RenderType RV_TYPE = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/entity/reentry_vehicle.png"));
 	private static final RenderType INTERCEPTOR_TYPE = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/entity/interceptor.png"));
-	private static final RenderType FLAME_TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/entity/exhaust_flame.png"));
+	private static final RenderType FLAME_TYPE = ExhaustPlume.TYPE;
 
 	private final boolean interceptor;
 
