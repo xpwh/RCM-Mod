@@ -103,6 +103,7 @@
 	"entity.ballisticmissiles.tactical_nuke": "Taktische Atomrakete",
 	"entity.ballisticmissiles.mobile_launcher": "Mobiler Raketenwerfer",
 	"block.ballisticmissiles.missile_silo": "Raketensilo",
+	"block.ballisticmissiles.hatch_silo": "Raketensilo (Bodenluke)",
 	"tooltip.ballisticmissiles.incendiary_missile": "Zerlegt sich über dem Ziel in 40 brennende Brandsätze",
 	"tooltip.ballisticmissiles.anti_radar_missile": "Marschflug – sucht sich das nächste Radar / die nächste Flugabwehr am Ziel",
 	"tooltip.ballisticmissiles.emp_missile": "Höhenexplosion – EMP legt Radar, Flugabwehr, Silos, Raketen und Redstone lahm",

@@ -103,6 +103,7 @@
 	"entity.ballisticmissiles.tactical_nuke": "Tactical Nuclear Missile",
 	"entity.ballisticmissiles.mobile_launcher": "Mobile Missile Launcher",
 	"block.ballisticmissiles.missile_silo": "Missile Silo",
+	"block.ballisticmissiles.hatch_silo": "Missile Silo (Ground Hatch)",
 	"tooltip.ballisticmissiles.incendiary_missile": "Opens above the target into 40 burning incendiary bomblets",
 	"tooltip.ballisticmissiles.anti_radar_missile": "Cruise flight – homes onto the nearest radar / air defense at the target",
 	"tooltip.ballisticmissiles.emp_missile": "High-altitude burst – the EMP knocks out radars, air defense, silos, missiles and redstone",

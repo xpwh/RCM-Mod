@@ -352,6 +352,13 @@ public final class ModRegistry {
 		BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(8.0F, 3600.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()
 	);
 
+	/** Silo variant closed by a flat two-leaf ground hatch instead of headworks with sliding doors. */
+	public static final Block HATCH_SILO = registerBlock(
+		"hatch_silo",
+		de.rcm.ballistic.block.HatchSiloBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(8.0F, 3600.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()
+	);
+
 	/** Ballistic missile submarine lying on the sea floor; works like a silo and fires from underwater. */
 	public static final Block SUBMARINE = registerBlock(
 		"submarine",
@@ -437,7 +444,7 @@ public final class ModRegistry {
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("jammer"), FabricBlockEntityTypeBuilder.create(JammerBlockEntity::new, JAMMER).build()
 	);
 	public static final BlockEntityType<MissileSiloBlockEntity> MISSILE_SILO_BE = Registry.register(
-		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("missile_silo"), FabricBlockEntityTypeBuilder.create(MissileSiloBlockEntity::new, MISSILE_SILO, SUBMARINE).build()
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("missile_silo"), FabricBlockEntityTypeBuilder.create(MissileSiloBlockEntity::new, MISSILE_SILO, SUBMARINE, HATCH_SILO).build()
 	);
 
 	// ---------- Items ----------
@@ -548,6 +555,9 @@ public final class ModRegistry {
 	public static final Item GEIGER_COUNTER = registerItem("geiger_counter", GeigerCounterItem::new, new Item.Properties().stacksTo(1));
 	public static final Item MISSILE_SILO_ITEM = registerItem(
 		"missile_silo", props -> new BlockItem(MISSILE_SILO, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
+	);
+	public static final Item HATCH_SILO_ITEM = registerItem(
+		"hatch_silo", props -> new BlockItem(HATCH_SILO, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
 	);
 	public static final Item SUBMARINE_ITEM = registerItem(
 		"submarine", props -> new BlockItem(SUBMARINE, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
@@ -793,6 +803,7 @@ public final class ModRegistry {
 		output.accept(LAUNCH_PAD_ITEM);
 		output.accept(INCLINED_LAUNCHER_ITEM);
 		output.accept(MISSILE_SILO_ITEM);
+		output.accept(HATCH_SILO_ITEM);
 		output.accept(SUBMARINE_ITEM);
 		output.accept(MOBILE_LAUNCHER_ITEM);
 		output.accept(B61_BOMB);

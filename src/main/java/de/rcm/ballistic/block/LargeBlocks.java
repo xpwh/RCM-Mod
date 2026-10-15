@@ -24,6 +24,7 @@ public final class LargeBlocks {
 			m.put(ModRegistry.LAUNCH_PAD, 32.0);
 			m.put(ModRegistry.SUBMARINE, 32.0);
 			m.put(ModRegistry.MISSILE_SILO, 10.0);
+			m.put(ModRegistry.HATCH_SILO, 6.0);
 			m.put(ModRegistry.RADAR, 11.0);
 			m.put(ModRegistry.JAMMER, 9.0);
 			m.put(ModRegistry.LASER_DEFENSE, 8.0);
