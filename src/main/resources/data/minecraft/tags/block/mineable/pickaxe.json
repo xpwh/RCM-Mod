@@ -24,6 +24,7 @@
 		"ballisticmissiles:runway_asphalt",
 		"ballisticmissiles:runway_marking",
 		"ballisticmissiles:runway_light",
-		"ballisticmissiles:runway"
+		"ballisticmissiles:runway",
+		"ballisticmissiles:inclined_launcher"
 	]
 }

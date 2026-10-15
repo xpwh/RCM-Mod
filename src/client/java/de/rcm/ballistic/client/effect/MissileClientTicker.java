@@ -293,6 +293,25 @@ public final class MissileClientTicker {
 		if (pad) {
 			padIgnition(x, y, z, age, scale);
 		}
+		Vec3 nose = missile.getNoseDirection(1.0F);
+		if (nose.y < 0.95) {
+			// in an inclined canister: the booster lights inside it - flame out of the back, a burst of white
+			// smoke billowing out of both ends, a little scorched dust kicked up under the rear
+			Vec3 tail = missile.position().subtract(nose.scale(0.8));
+			nozzleFire(tail.x, tail.y, tail.z, nose, scale * 0.45F, 2);
+			if (age % 2 == 0) {
+				for (int i = 0; i < 3; i++) {
+					double sp = 0.2 + ClientEffects.rand() * 0.4;
+					CloudParticle p = ClientEffects.cloud(false, tail.x, tail.y, tail.z, -nose.x * sp + ClientEffects.gauss() * 0.06, 0.02,
+						-nose.z * sp + ClientEffects.gauss() * 0.06);
+					if (p != null) {
+						p.configure(50 + (int) (ClientEffects.rand() * 40), 0.4F, 2.2F, 0xE8E4DE, 0xB0ACA6, 0.6F).physics(0.9F, 0.003F);
+					}
+				}
+			}
+			ClientEffects.addShake(0.12F);
+			return;
+		}
 		int count = (4 + Math.min(14, age / 2)) / (pad ? 3 : 1);
 
 		// Smoke rolling out along the ground from the pad.
@@ -321,11 +340,13 @@ public final class MissileClientTicker {
 		missile.lastNozzlePos = nozzle;
 		double speed = nozzle.distanceTo(prev);
 
-		SmokeField.trail(missile.getId() * 4 + 1, nozzle.subtract(dir.scale(1.0 + MissileMesh.CRUISE_BOOSTER_LENGTH)),
-			SmokeField.Style.smallRocket(missile.getMissileType().model == MissileType.Model.JET ? 0.7F : 1.0F), missile.isBoosterBurning() ? 1.0F : 0.0F);
+		boolean slim = missile.getMissileType().slim();
+		// a slim missile's small booster leaves a thin pencil line, not a big rocket's column
+		SmokeField.trail(missile.getId() * 4 + 1, nozzle.subtract(dir.scale(1.0 + MissileMesh.CRUISE_BOOSTER_LENGTH * (slim ? 0.8 : 1.0))),
+			slim ? SmokeField.Style.thinMotor(0.3F) : SmokeField.Style.smallRocket(1.0F), missile.isBoosterBurning() ? 1.0F : 0.0F);
 		if (missile.isBoosterBurning()) {
-			Vec3 b = nozzle.subtract(dir.scale(MissileMesh.CRUISE_BOOSTER_LENGTH + 0.3));
-			nozzleFire(b.x, b.y, b.z, dir, scale, 3);
+			Vec3 b = nozzle.subtract(dir.scale(MissileMesh.CRUISE_BOOSTER_LENGTH * (slim ? 0.8 : 1.0) + 0.3));
+			nozzleFire(b.x, b.y, b.z, dir, slim ? scale * 0.45F : scale, slim ? 2 : 3);
 		} else {
 			// faint heat shimmer + exhaust haze
 			CloudParticle c = ClientEffects.cloud(false, nozzle.x - dir.x, nozzle.y - dir.y, nozzle.z - dir.z, -dir.x * 0.2, -dir.y * 0.2, -dir.z * 0.2);
@@ -336,10 +357,11 @@ public final class MissileClientTicker {
 			if (glow != null) {
 				glow.configure(3, 0.35F, 0.25F, 0xFFC890, 0xFF7030, 0.5F);
 			}
-			if (missile.getMissileType().model == MissileType.Model.JET) {
-				// the turbojet: a thin grey streak of exhaust left hanging along the flight path, and a bright tail
+			if (slim) {
+				// the jet / ramjet: a fine grey line of exhaust drawn along the flight path that frays and fades,
+				// and a bright tail - like an AMRAAM's thin trail
 				SmokeField.trail(missile.getId() * 4 + 2, nozzle.subtract(dir.scale(0.4)),
-					new SmokeField.Style(0.3F, 1.6F, 220, 0xB4B0AA, 0.22F, 0.0F, 0.0F, 1.6F), 1.0F);
+					new SmokeField.Style(0.14F, 0.75F, 320, 0xC8C4BE, 0.32F, 0.1F, 0.0F, 1.0F), 1.0F);
 				DynamicLights.steady(nozzle.subtract(dir.scale(0.5)), 0xFFB070, 0.45F, 7.0F);
 			}
 		}

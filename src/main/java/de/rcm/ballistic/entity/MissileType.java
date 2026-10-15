@@ -50,7 +50,13 @@ public enum MissileType {
 	 * turbojet fed by a belly intake. After the booster drops away it skims the ground at about 290 m/s
 	 * (Mach 0.85) and goes straight into its target at the end, no pop-up.
 	 */
-	JET_CRUISE("jet_cruise_missile", Flight.CRUISE, Warhead.CRUISE, Model.JET, 1.0F, 0.6F, 4.6F, 120, 15, 1.0, 0.355, Rarity.RARE);
+	JET_CRUISE("jet_cruise_missile", Flight.CRUISE, Warhead.CRUISE, Model.JET, 1.0F, 0.6F, 4.6F, 120, 15, 1.0, 0.355, Rarity.RARE),
+	/**
+	 * Kh-31PD anti-radiation missile: as slim, but a ramjet with four intakes round its tail - boosted, it
+	 * climbs high and runs at about 520 m/s, its passive seeker listening for radar; over the target area it
+	 * locks onto the nearest radar or air-defence site and dives steeply onto it.
+	 */
+	KH31PD("kh31pd_missile", Flight.CRUISE, Warhead.ANTI_RADAR, Model.RAMJET, 1.0F, 0.6F, 4.7F, 120, 15, 1.0, 0.2, Rarity.EPIC);
 
 	public enum Flight {
 		BALLISTIC,
@@ -113,7 +119,8 @@ public enum MissileType {
 		CRUISE(6.0F, 0.3F),
 		HYPERSONIC(8.0F, 0.5F),
 		DRONE(3.5F, 0.22F),
-		JET(4.6F, 0.17F);
+		JET(4.6F, 0.17F),
+		RAMJET(4.7F, 0.18F);
 
 		public final float length;
 		public final float radius;
@@ -169,7 +176,7 @@ public enum MissileType {
 	/** Strategic missiles are too long for the mobile launcher truck. */
 	public boolean fitsOnTruck() {
 		return this.model == Model.TACTICAL || this.model == Model.CRUISE || this.model == Model.HYPERSONIC || this.model == Model.DRONE
-			|| this.model == Model.JET;
+			|| this.model == Model.JET || this.model == Model.RAMJET;
 	}
 
 	/**
@@ -184,6 +191,7 @@ public enum MissileType {
 			case CRUISE -> 0.12;
 			case DRONE -> 0.06;
 			case JET -> 0.05; // slim, and skimming the ground in the clutter
+			case RAMJET -> 0.07;
 		};
 	}
 
@@ -198,6 +206,7 @@ public enum MissileType {
 			case ICBM, HEAVY_ICBM -> 0.65F;
 			case HYPERSONIC -> 0.3F;
 			case JET -> 0.6F; // small, fast and seen late
+			case RAMJET -> 0.45F; // fast, and diving at the very end
 		};
 	}
 
@@ -208,6 +217,11 @@ public enum MissileType {
 			}
 		}
 		return null;
+	}
+
+	/** The slim missiles: they fit the inclined canister launcher. */
+	public boolean slim() {
+		return this.model == Model.JET || this.model == Model.RAMJET;
 	}
 
 	public boolean isCruise() {

@@ -259,10 +259,24 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 		return this.entityData.get(DATA_FAIL);
 	}
 
+	/**
+	 * The canister of an inclined launcher this missile lies in, pointing up the rail (server; null: it stands
+	 * upright on a pad or in a silo).
+	 */
+	private @Nullable Vec3 rail;
+
+	/** Laid in an inclined launcher's canister, pointing along {@code dir}. */
+	public void placeOnRail(Vec3 dir) {
+		this.rail = dir.normalize();
+		this.setFlightDir(this.rail);
+	}
+
 	/** Nose direction, interpolated for rendering. */
 	public Vec3 getNoseDirection(float partialTick) {
 		if (this.getState() != FLIGHT) {
-			return new Vec3(0, 1, 0);
+			// in an inclined launcher it lies along the canister until it flies
+			Vec3 d = this.getFlightDir();
+			return this.missileType.isCruise() && d.y < 0.95 ? d.normalize() : new Vec3(0, 1, 0);
 		}
 		if (this.missileType.isCruise() || this.getFailure() != FAIL_NONE) {
 			Vec3 d = this.clientPrevDir.lerp(this.clientDir, partialTick);
@@ -601,7 +615,8 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 		// kamikaze drone: its camera seeker picks the nearest living target around the aim point
 		// and the drone flies straight into it
 		boolean drone = this.missileType.model == MissileType.Model.DRONE;
-		boolean jet = this.missileType.model == MissileType.Model.JET;
+		boolean ramjet = this.missileType.model == MissileType.Model.RAMJET;
+		boolean jet = this.missileType.model == MissileType.Model.JET || ramjet;
 		if (drone && horizontal < 110 && this.stateAge % 4 == 0) {
 			Vec3 aimAt = target;
 			LivingEntity prey = null;
@@ -624,7 +639,7 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 		}
 
 		// keep the corridor ahead loaded
-		for (int k = 0; k <= 160; k += 16) {
+		for (int k = 0; k <= (jet ? 320 : 160); k += 16) {
 			level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(pos.add(heading.scale(k)))), 3);
 		}
 
@@ -632,11 +647,29 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 		Vec3 desired;
 		double speed;
 		double turn;
-		if (age < CRUISE_BOOST_TICKS) {
+		if (age < CRUISE_BOOST_TICKS && this.rail != null) {
+			// out of the canister in two arcs: the booster pitches it up steeper than the rail, then it noses
+			// over, swinging round onto the target's bearing, and comes down to its cruise height
+			double f = (double) age / CRUISE_BOOST_TICKS;
+			Vec3 railFlat = new Vec3(this.rail.x, 0, this.rail.z);
+			railFlat = railFlat.lengthSqr() < 1.0E-6 ? heading : railFlat.normalize();
+			double railPitch = Math.asin(Mth.clamp(this.rail.y, -1.0, 1.0));
+			double up = railPitch + Math.toRadians(14.0);
+			double pitch = f < 0.3 ? Mth.lerp(smoothStep(f / 0.3), railPitch, up) : Mth.lerp(smoothStep((f - 0.3) / 0.7), up, Math.toRadians(-3.0));
+			Vec3 flat = railFlat.lerp(heading, smoothStep((f - 0.25) / 0.75)).normalize();
+			desired = flat.scale(Math.cos(pitch)).add(0, Math.sin(pitch), 0);
+			speed = (0.8 + 4.5 * f) * Math.min(1.0, this.missileType.cruiseSpeed() / 3.2 + 0.25);
+			turn = f < 0.1 ? 0.6 : 0.35;
+		} else if (age < CRUISE_BOOST_TICKS) {
 			double f = (double) age / CRUISE_BOOST_TICKS;
 			desired = new Vec3(0, 1, 0).lerp(heading.add(0, 0.55, 0).normalize(), Math.min(1.0, f * 1.4));
 			speed = (0.3 + 2.6 * f) * Math.min(1.0, this.missileType.cruiseSpeed() / 3.2 + 0.25);
 			turn = 0.18;
+		} else if (ramjet && horizontal < 260) {
+			// the anti-radiation dive: from high up, steeply down onto the emitter, still accelerating
+			desired = target.add(0, 0.5, 0).subtract(pos).normalize();
+			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP * 1.1;
+			turn = 0.28;
 		} else if (horizontal > (jet ? 150 : 75)) {
 			double ground = pos.y - CRUISE_ALTITUDE;
 			// the fast one looks further ahead: it covers 14 blocks a tick
@@ -648,7 +681,9 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 					ground = Math.max(ground, level.getHeight(Heightmap.Types.MOTION_BLOCKING, px, pz));
 				}
 			}
-			double climb = Mth.clamp((ground + (jet ? CRUISE_ALTITUDE * 0.6 : CRUISE_ALTITUDE) - pos.y) * (jet ? 0.03 : 0.06), -0.35, 0.5);
+			// the ramjet runs high (thin air, long range, a steep dive at the end), the turbojet skims the ground
+			double height = ramjet ? CRUISE_ALTITUDE * 3.5 : jet ? CRUISE_ALTITUDE * 0.6 : CRUISE_ALTITUDE;
+			double climb = Mth.clamp((ground + height - pos.y) * (jet ? 0.03 : 0.06), -0.35, 0.5);
 			desired = heading.add(0, climb, 0).normalize();
 			speed = this.missileType.cruiseSpeed() * CRUISE_SPEEDUP;
 			turn = 0.1;
@@ -1219,6 +1254,11 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 		output.putDouble("DirX", dir.x);
 		output.putDouble("DirY", dir.y);
 		output.putDouble("DirZ", dir.z);
+		if (this.rail != null) {
+			output.putDouble("RailX", this.rail.x);
+			output.putDouble("RailY", this.rail.y);
+			output.putDouble("RailZ", this.rail.z);
+		}
 	}
 
 	@Override
@@ -1235,5 +1275,12 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 		);
 		this.setFlightDir(new Vec3(input.getDoubleOr("DirX", 0), input.getDoubleOr("DirY", 1), input.getDoubleOr("DirZ", 0)));
 		this.trajectory = null;
+		double railY = input.getDoubleOr("RailY", 2.0);
+		this.rail = railY > 1.5 ? null : new Vec3(input.getDoubleOr("RailX", 0), railY, input.getDoubleOr("RailZ", 0));
+	}
+
+	private static double smoothStep(double x) {
+		x = Mth.clamp(x, 0.0, 1.0);
+		return x * x * (3.0 - 2.0 * x);
 	}
 }

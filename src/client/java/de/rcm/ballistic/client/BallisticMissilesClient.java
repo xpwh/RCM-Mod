@@ -112,6 +112,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.gui.SettingsCommand.init();
 		BlockEntityRenderers.register(ModRegistry.CIWS_BE, CiwsRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.LAUNCH_PAD_BE, LaunchPadRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.INCLINED_LAUNCHER_BE, de.rcm.ballistic.client.render.InclinedLauncherRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.MISSILE_SILO_BE, SiloRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.RADAR_BE, RadarRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.AIR_DEFENSE_BE, AirDefenseRenderer::new);

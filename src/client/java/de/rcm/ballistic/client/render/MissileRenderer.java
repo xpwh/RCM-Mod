@@ -68,6 +68,7 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		public final Quaternionf rotation = new Quaternionf();
 		public boolean engineOn;
 		public boolean jet;
+		public boolean inCanister;
 		public boolean ignition;
 		public float engineTime;
 		public float shakeX;
@@ -91,6 +92,7 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 			case HYPERSONIC -> new float[][] {{0.0F, 0.0F, 0.38F}};
 			case DRONE -> new float[0][]; // piston engine and propeller: no exhaust plume
 			case JET -> new float[][] {{0.0F, 0.0F, 0.1F}};
+			case RAMJET -> new float[][] {{0.0F, 0.0F, 0.12F}};
 			default -> new float[][] {{0.0F, 0.0F, 0.45F}};
 		};
 	}
@@ -116,6 +118,8 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		orient(state.rotation, dir);
 		state.engineOn = entity.isBoosterBurning();
 		state.jet = entity.isJetRunning() && !state.engineOn;
+		// a slim missile waiting in an inclined launcher's closed canister: out of sight until it fires
+		state.inCanister = entity.getState() < MissileEntity.IGNITION && entity.getNoseDirection(partialTick).y < 0.95;
 		state.ignition = entity.getState() == MissileEntity.IGNITION;
 		state.engineTime = entity.clientStateAge + partialTick;
 		if (state.ignition) {
@@ -141,6 +145,9 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 
 	@Override
 	public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+		if (state.inCanister) {
+			return;
+		}
 		MissileMesh mesh = MissileMesh.stack(state.missileType, state.dropped);
 		float stageBottom = MissileStages.bottom(state.missileType, state.dropped);
 		RenderType bodyType = BODY_TYPES.get(state.missileType);
@@ -171,7 +178,7 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		}
 		collector.submitCustomGeometry(poseStack, bodyType, (pose, consumer) -> mesh.emit(pose, consumer, light));
 		boolean cruise = state.missileType.isCruise();
-		boolean slim = state.missileType.model == MissileType.Model.JET;
+		boolean slim = state.missileType.slim();
 		if (cruise && state.engineOn) {
 			// the slim jet missile has a slimmer booster under its tail
 			poseStack.pushPose();

@@ -39,6 +39,9 @@ public class MissileItem extends Item {
 		Level level = context.getLevel();
 		BlockPos pos = context.getClickedPos();
 		Player player = context.getPlayer();
+		if (level.getBlockState(pos).getBlock() instanceof de.rcm.ballistic.block.InclinedLauncherBlock) {
+			return this.loadCanister(context, level, pos, player);
+		}
 		if (!(level.getBlockState(pos).getBlock() instanceof LaunchPadBlock)) {
 			if (player != null && !level.isClientSide()) {
 				player.displayClientMessage(Component.translatable("message.ballisticmissiles.needs_pad").withStyle(ChatFormatting.YELLOW), true);
@@ -67,6 +70,43 @@ public class MissileItem extends Item {
 			serverLevel.addFreshEntity(missile);
 			serverLevel.playSound(null, x, y, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 1.5F, 0.9F);
 			serverLevel.playSound(null, x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 1.2F, 1.0F);
+			if (player == null || !player.getAbilities().instabuild) {
+				context.getItemInHand().shrink(1);
+			}
+			if (player != null) {
+				player.displayClientMessage(Component.translatable("message.ballisticmissiles.placed").withStyle(ChatFormatting.GRAY), true);
+			}
+		}
+		return InteractionResult.SUCCESS;
+	}
+
+	/** Slides a slim missile into an inclined launcher's canister. */
+	private InteractionResult loadCanister(UseOnContext context, Level level, BlockPos pos, Player player) {
+		if (!this.missileType.slim()) {
+			if (player != null && !level.isClientSide()) {
+				player.displayClientMessage(Component.translatable("message.ballisticmissiles.canister_too_big").withStyle(ChatFormatting.YELLOW), true);
+			}
+			return InteractionResult.FAIL;
+		}
+		var facing = level.getBlockState(pos).getValue(de.rcm.ballistic.block.InclinedLauncherBlock.FACING);
+		var tail = de.rcm.ballistic.block.InclinedLauncherBlock.missileTail(pos, facing);
+		var dir = de.rcm.ballistic.block.InclinedLauncherBlock.railDirection(facing);
+		var mid = tail.add(dir.scale(2.0));
+		if (!level.getEntitiesOfClass(MissileEntity.class, new AABB(mid, mid).inflate(1.5)).isEmpty()) {
+			return InteractionResult.FAIL;
+		}
+		if (level instanceof ServerLevel serverLevel) {
+			MissileEntity missile = ModRegistry.missileEntity(this.missileType).create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.SPAWN_ITEM_USE);
+			if (missile == null) {
+				return InteractionResult.FAIL;
+			}
+			missile.setPos(tail.x, tail.y, tail.z);
+			missile.placeOnRail(dir);
+			if (player != null) {
+				missile.setOwner(player.getUUID());
+			}
+			serverLevel.addFreshEntity(missile);
+			serverLevel.playSound(null, tail.x, tail.y, tail.z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 1.2F, 1.1F);
 			if (player == null || !player.getAbilities().instabuild) {
 				context.getItemInHand().shrink(1);
 			}

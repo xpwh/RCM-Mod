@@ -234,6 +234,12 @@ public final class ModRegistry {
 		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
 	);
 
+	public static final Block INCLINED_LAUNCHER = registerBlock(
+		"inclined_launcher",
+		de.rcm.ballistic.block.InclinedLauncherBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
+	);
+
 	public static final Block RADAR = registerBlock(
 		"radar",
 		RadarBlock::new,
@@ -392,6 +398,10 @@ public final class ModRegistry {
 	public static final BlockEntityType<LaunchPadBlockEntity> LAUNCH_PAD_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("launch_pad"), FabricBlockEntityTypeBuilder.create(LaunchPadBlockEntity::new, LAUNCH_PAD).build()
 	);
+	public static final BlockEntityType<de.rcm.ballistic.block.InclinedLauncherBlockEntity> INCLINED_LAUNCHER_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("inclined_launcher"),
+		FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.InclinedLauncherBlockEntity::new, INCLINED_LAUNCHER).build()
+	);
 	public static final BlockEntityType<RadarBlockEntity> RADAR_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("radar"), FabricBlockEntityTypeBuilder.create(RadarBlockEntity::new, RADAR).build()
 	);
@@ -431,6 +441,9 @@ public final class ModRegistry {
 	);
 
 	// ---------- Items ----------
+	public static final Item INCLINED_LAUNCHER_ITEM = registerItem(
+		"inclined_launcher", props -> new BlockItem(INCLINED_LAUNCHER, props), new Item.Properties().useBlockDescriptionPrefix()
+	);
 	public static final Item LAUNCH_PAD_ITEM = registerItem(
 		"launch_pad", props -> new BlockItem(LAUNCH_PAD, props), new Item.Properties().useBlockDescriptionPrefix()
 	);
@@ -778,6 +791,7 @@ public final class ModRegistry {
 	/** Launchers, targeting and command: everything needed to fire. */
 	public static final CreativeModeTab TAB_LAUNCH = tab("launch", () -> LAUNCH_PAD_ITEM, output -> {
 		output.accept(LAUNCH_PAD_ITEM);
+		output.accept(INCLINED_LAUNCHER_ITEM);
 		output.accept(MISSILE_SILO_ITEM);
 		output.accept(SUBMARINE_ITEM);
 		output.accept(MOBILE_LAUNCHER_ITEM);

@@ -53,6 +53,7 @@ public final class MissileMesh {
 	public static final MissileMesh ANTIMATTER = buildAntimatter();
 	public static final MissileMesh ANTI_RADAR = buildAntiRadar();
 	public static final MissileMesh JET = buildJet();
+	public static final MissileMesh RAMJET = buildKh31();
 
 	/** Length of the cruise missile booster hanging below the airframe. */
 	public static final float CRUISE_BOOSTER_LENGTH = 1.25F;
@@ -91,6 +92,7 @@ public final class MissileMesh {
 			case HYPERSONIC -> HYPERSONIC;
 			case DRONE -> DRONE;
 			case JET -> JET;
+			case RAMJET -> RAMJET;
 			default -> TACTICAL;
 		};
 	}
@@ -459,6 +461,41 @@ public final class MissileMesh {
 		b.radialBox(Mth.HALF_PI, R, 0.025F, 0.045F, 0.45F, 3.6F, Skin.METAL);
 		b.radialBox(-Mth.HALF_PI, R, 0.008F, 0.07F, 2.95F, 3.05F, Skin.DARK);
 		b.radialBox(-Mth.HALF_PI, R, 0.008F, 0.07F, 3.25F, 3.35F, Skin.DARK);
+		return b.build();
+	}
+
+	/**
+	 * Kh-31PD: a slim body with a long dark radome over the passive seeker, four ramjet intake ducts running
+	 * along the rear half (their mouths open forward), cruciform wings between them and control fins at
+	 * the tail, the combined booster/ramjet nozzle.
+	 */
+	private static MissileMesh buildKh31() {
+		float L = 4.7F;
+		float R = 0.18F;
+		Builder b = new Builder(L);
+		b.lathe(new float[][] {
+			{0.00F, 0.14F}, {0.08F, 0.165F}, {0.16F, R},
+			{1.60F, R}, {1.61F, R - 0.006F}, {1.64F, R - 0.006F}, {1.65F, R},
+			{3.70F, R}
+		}, Skin.BODY);
+		b.lathe(ogive(3.70F, L, R, 16), Skin.BODY);
+		b.ring(3.70F, R, 0.006F, 0.03F);
+		b.latheAt(0, 0, 20, new float[][] {{0.0F, 0.14F}, {-0.06F, 0.13F}, {-0.1F, 0.12F}}, Skin.METAL);
+		b.disc(-0.1F, 0.12F, true, Skin.DARK);
+		// the four ramjet intakes round the tail half, their mouths dark and open forward
+		for (int i = 0; i < 4; i++) {
+			float a = i * Mth.HALF_PI;
+			float cx = Mth.cos(a) * (R + 0.045F);
+			float cz = Mth.sin(a) * (R + 0.045F);
+			b.latheAt(cx, cz, 10, new float[][] {{0.35F, 0.0F}, {0.45F, 0.055F}, {2.35F, 0.065F}, {2.42F, 0.066F}}, Skin.METAL);
+			b.latheAt(cx, cz, 10, new float[][] {{2.43F, 0.052F}, {2.43F, 0.0F}}, Skin.DARK);
+			b.radialBox(a, R - 0.01F, 0.05F, 0.03F, 0.5F, 2.3F, Skin.BODY); // the pylon joining it to the body
+		}
+		for (int i = 0; i < 4; i++) {
+			float a = Mth.PI / 4 + i * Mth.HALF_PI;
+			b.fin(a, R - 0.01F, 2.55F, 3.35F, 2.7F, 3.0F, 0.4F, 0.028F); // mid-body wings
+			b.fin(a, R - 0.01F, 0.04F, 0.55F, 0.1F, 0.34F, 0.3F, 0.026F); // tail control fins
+		}
 		return b.build();
 	}
 
