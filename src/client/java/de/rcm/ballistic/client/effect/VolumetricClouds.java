@@ -167,7 +167,7 @@ public final class VolumetricClouds {
 		RenderPipelines.register(SHADOW_PIPELINE);
 		RenderPipelines.register(SHAFT_PIPELINE);
 		ClientTickEvents.END_CLIENT_TICK.register(VolumetricClouds::tick);
-		WorldRenderEvents.END_MAIN.register(VolumetricClouds::render);
+		LatePass.register(VolumetricClouds::render); // after the particles, so what lies beyond the clouds stays behind them
 	}
 
 	/** Whether the volumetric clouds are drawn (instead of Minecraft's own). */
