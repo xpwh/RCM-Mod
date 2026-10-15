@@ -111,18 +111,19 @@ void main() {
     // ---- water on the lens: drops that refract the picture, and runnels sliding down
     float wet = 0.0;
     if (drench > 0.0) {
-        vec2 grid = vec2(26.0 * aspect, 26.0);
+        // small, scattered drops that slide down and thin out as the water runs off
+        vec2 grid = vec2(34.0 * aspect, 34.0);
         vec2 cell = floor(uv * grid);
         float slide = hash(vec2(cell.x, 7.0)) * 0.6 + 0.2;
-        vec2 g = uv * grid + vec2(0.0, time * slide * (1.0 - drench) * 6.0);
+        vec2 g = uv * grid + vec2(0.0, time * slide * (1.2 - drench) * 5.0);
         vec2 gc = floor(g);
         vec2 f = fract(g) - 0.5;
-        float has = step(1.0 - drench * 0.85, hash(gc + 3.7));
+        float has = step(1.0 - drench * 0.45, hash(gc + 3.7));
         vec2 off = (vec2(hash(gc), hash(gc + 1.3)) - 0.5) * 0.5;
-        float r = 0.18 + 0.2 * hash(gc + 9.1);
+        float r = 0.12 + 0.14 * hash(gc + 9.1);
         vec2 q = f - off;
-        float drop = has * smoothstep(r, r * 0.6, length(q * vec2(1.0, 0.8)));
-        uv += q / grid * drop * 2.4;
+        float drop = has * smoothstep(r, r * 0.55, length(q * vec2(1.0, 0.8)));
+        uv += q / grid * drop * 1.3;
         wet = drop;
     }
 
@@ -225,8 +226,8 @@ void main() {
     if (drench > 0.0) {
         vec3 smear = (texture(InSampler, uv + vec2(0.003, 0.0)).rgb + texture(InSampler, uv - vec2(0.003, 0.0)).rgb
             + texture(InSampler, uv + vec2(0.0, 0.004)).rgb + texture(InSampler, uv - vec2(0.0, 0.004)).rgb) * 0.25;
-        col = mix(col, smear * vec3(0.92, 1.0, 1.04), 0.35 * drench);
-        col += wet * 0.06 * drench;
+        col = mix(col, smear * vec3(0.95, 1.0, 1.03), 0.12 * drench);
+        col += wet * 0.04 * drench;
     }
 
     // ---- shell shock: soft focus and washed-out colour while the ears ring

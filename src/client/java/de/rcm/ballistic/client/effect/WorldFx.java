@@ -44,6 +44,7 @@ import org.joml.Vector3f;
 public final class WorldFx {
 	private static final RenderPipeline SHADE_PIPELINE = pipeline("world_fx_shade", "SHADE");
 	private static final RenderPipeline WATER_PIPELINE = pipeline("world_fx_water", "WATER");
+	private static final RenderPipeline UNDER_PIPELINE = pipeline("world_fx_under", "UNDER");
 	private static final Identifier OPAQUE_DEPTH = BallisticMissiles.id("textures/environment/fx_opaque_depth");
 	private static final Identifier OPAQUE_COLOR = BallisticMissiles.id("textures/environment/fx_opaque_color");
 	/** The world's depth at the end of the main pass (also read by the blast post effect). */
@@ -55,6 +56,7 @@ public final class WorldFx {
 	private static ScreenCopy fullColor;
 	private static RenderType shadeType;
 	private static RenderType waterType;
+	private static RenderType underType;
 	/** Whether the opaque copies were taken this frame (the water needs them). */
 	private static boolean haveOpaque;
 
@@ -75,6 +77,8 @@ public final class WorldFx {
 		if (define.equals("SHADE")) {
 			// shade multiplies what is there; Sampler1: the heightmap the sun's shadows are traced over
 			b = b.withSampler("Sampler1").withBlend(new BlendFunction(SourceFactor.DST_COLOR, DestFactor.ZERO, SourceFactor.ZERO, DestFactor.ONE));
+		} else if (define.equals("UNDER")) {
+			b = b.withSampler("Sampler1").withSampler("Sampler2").withColorWrite(true, false);
 		} else {
 			b = b.withSampler("Sampler1").withSampler("Sampler2").withSampler("Sampler3").withColorWrite(true, false);
 		}
@@ -84,12 +88,14 @@ public final class WorldFx {
 	public static void init() {
 		RenderPipelines.register(SHADE_PIPELINE);
 		RenderPipelines.register(WATER_PIPELINE);
+		RenderPipelines.register(UNDER_PIPELINE);
 		WorldRenderEvents.BEFORE_TRANSLUCENT.register(WorldFx::beforeTranslucent);
 		WorldRenderEvents.END_MAIN.register(WorldFx::endMain);
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-			if (ModConfig.sunShadows && overworldView(mc)) {
+			if ((ModConfig.sunShadows || ModConfig.realWater) && overworldView(mc)) {
 				SunHeightmap.update(mc);
 			}
+			underwaterMotes(mc);
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> SunHeightmap.clear());
 	}
@@ -119,6 +125,11 @@ public final class WorldFx {
 				.withTexture("Sampler1", FULL_DEPTH, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
 				.withTexture("Sampler2", OPAQUE_COLOR, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
 				.withTexture("Sampler3", FULL_COLOR, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.createRenderSetup());
+			underType = RenderType.create("ballisticmissiles_world_fx_under", RenderSetup.builder(UNDER_PIPELINE)
+				.withTexture("Sampler0", FULL_DEPTH, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.withTexture("Sampler1", SunHeightmap.ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.withTexture("Sampler2", FULL_COLOR, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
 				.createRenderSetup());
 		}
 	}
@@ -187,12 +198,16 @@ public final class WorldFx {
 			ensure(mc);
 			fullDepth.copy(main.getDepthTexture());
 		}
+		Camera camera = mc.gameRenderer.getMainCamera();
+		if (ModConfig.realWater && overworldView(mc) && camera.getFluidInCamera() == FogType.WATER) {
+			underwater(context, mc, camera);
+			return;
+		}
 		if (!haveOpaque || !ModConfig.realWater || !overworldView(mc)) {
 			return;
 		}
-		Camera camera = mc.gameRenderer.getMainCamera();
 		if (camera.getFluidInCamera() != FogType.NONE) {
-			return; // looking up from under water: the surface stays as it is
+			return;
 		}
 		var target = mc.getMainRenderTarget();
 		if (target.getDepthTexture() == null || target.getColorTexture() == null
@@ -213,9 +228,51 @@ public final class WorldFx {
 		Vec3 cam = camera.position();
 		float cx = (float) (cam.x - Math.floor(cam.x / 2048.0) * 2048.0);
 		float cz = (float) (cam.z - Math.floor(cam.z / 2048.0) * 2048.0);
-		screen(buffers.getBuffer(waterType), context.matrices().last(), camera, argb(1.0F, glitter, mc.level.getRainLevel(partial), 0.0F), sun,
+		screen(buffers.getBuffer(waterType), context.matrices().last(), camera,
+			argb(1.0F, glitter, mc.level.getRainLevel(partial), mc.level.getThunderLevel(partial)), sun,
 			zr | zg << 8, zb, cx, cz, 0);
 		buffers.endBatch(waterType);
+	}
+
+	/**
+	 * Looking from under water: caustics on the bottom, shafts of light from the surface, the distance blurred
+	 * into blue (traced over the heightmap, whose column tops are the water's surface).
+	 */
+	private static void underwater(WorldRenderContext context, Minecraft mc, Camera camera) {
+		var target = mc.getMainRenderTarget();
+		if (target.getColorTexture() == null || !SunHeightmap.ready()
+			|| !(context.consumers() instanceof MultiBufferSource.BufferSource buffers)) {
+			return;
+		}
+		ensure(mc);
+		fullColor.copy(target.getColorTexture());
+		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+		Vector3f sun = Sky.sun(mc, partial);
+		Vec3 cam = camera.position();
+		float hx = (float) (cam.x - SunHeightmap.originX());
+		float hz = (float) (cam.z - SunHeightmap.originZ());
+		int camY = Mth.clamp((int) Math.round((cam.y + 256.0) * 16.0), 0, 32767);
+		screen(buffers.getBuffer(underType), context.matrices().last(), camera, argb(1.0F, sunlight(mc, sun, partial), 0.0F, 0.0F), sun,
+			Mth.clamp(ModConfig.lightQuality, 1, 3), SunHeightmap.maxTop() + 64, hx, hz, camY);
+		buffers.endBatch(underType);
+	}
+
+	/** Specks drifting in the water round the eye. */
+	private static void underwaterMotes(Minecraft mc) {
+		if (!ModConfig.realWater || mc.level == null || mc.isPaused()
+			|| mc.gameRenderer.getMainCamera().getFluidInCamera() != FogType.WATER) {
+			return;
+		}
+		Vec3 eye = mc.gameRenderer.getMainCamera().position();
+		var random = mc.level.getRandom();
+		for (int i = 0; i < 4; i++) {
+			double x = eye.x + (random.nextDouble() - 0.5) * 14.0;
+			double y = eye.y + (random.nextDouble() - 0.5) * 8.0;
+			double z = eye.z + (random.nextDouble() - 0.5) * 14.0;
+			if (mc.level.getFluidState(net.minecraft.core.BlockPos.containing(x, y, z)).is(net.minecraft.tags.FluidTags.WATER)) {
+				mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.UNDERWATER, x, y, z, 0.0, 0.0, 0.0);
+			}
+		}
 	}
 
 	private static int argb(float a, float r, float g, float b) {

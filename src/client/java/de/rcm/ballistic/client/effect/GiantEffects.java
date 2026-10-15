@@ -313,7 +313,7 @@ final class GiantEffects {
 					addShake(1.5F);
 				}
 				if (Math.abs(toCam - front) < 6 && cam.y < s + h + 2) {
-					BlastShader.drench(1.0F);
+					BlastShader.drench(0.8F);
 				}
 			}
 			return t > Math.max(this.soundDelay + 2, (int) ((Tsunami.MAX_RADIUS - Tsunami.START_RADIUS) / Tsunami.SPEED) + 10);

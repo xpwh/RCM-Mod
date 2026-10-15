@@ -90,6 +90,9 @@ public final class BlastShader {
 			return;
 		}
 		float near = (float) Mth.clamp(1.0 - distance / (reach * 3.0), 0.0, 1.0);
+		if (newKind == Kind.WATER && distance < 30.0 + 25.0 * scale) {
+			drench((float) (0.6 * (1.0 - distance / (30.0 + 25.0 * scale))) + 0.2F);
+		}
 		if (near * scale >= heat * 0.8 || heat < 0.05F) {
 			kind = newKind;
 			tint = color;
@@ -134,13 +137,27 @@ public final class BlastShader {
 		return Mth.clamp((1.0F - ClientEffects.hearing()) / 0.9F, 0.0F, 1.0F);
 	}
 
+	private static boolean wasUnderwater;
+
+	/** Surfacing (and going under): water runs off the lens. */
+	private static void surfacing(Minecraft mc) {
+		boolean under = mc.level != null && mc.gameRenderer.getMainCamera().getFluidInCamera() == net.minecraft.world.level.material.FogType.WATER;
+		if (wasUnderwater && !under && mc.level != null) {
+			drench(0.55F);
+		} else if (!wasUnderwater && under) {
+			drench(0.25F);
+		}
+		wasUnderwater = under;
+	}
+
 	public static void tick(Minecraft mc) {
+		surfacing(mc);
 		strength = Math.max(0.0F, strength * 0.93F - 0.004F);
 		exposure = Math.max(0.0F, exposure * 0.9F - 0.004F);
 		heat = Math.max(0.0F, heat * heatDecay - 0.0015F);
 		dust = Math.max(0.0F, dust * 0.985F - 0.002F);
 		quake = Math.max(0.0F, quake * 0.985F - 0.002F);
-		drench = Math.max(0.0F, drench * 0.996F - 0.0008F);
+		drench = Math.max(0.0F, drench * 0.985F - 0.0015F); // the drops run off in a few seconds
 		suppression = Math.max(0.0F, suppression * 0.96F - 0.006F);
 		afterimage = Math.max(0.0F, afterimage * 0.991F - 0.0008F);
 		bloodLoss(mc);

@@ -15,6 +15,10 @@
 //   ambient occlusion - points round each pixel, in the half-sphere over its surface, are tested against
 //   the depth: the more of them are buried, the deeper the corner, the darker it is.
 //
+// UNDER (looking from under water, replacing the picture): sunlight through the waves - the bright, wobbling
+// net of caustics on the bottom and on whatever lies there, shafts of light slanting down from the surface,
+// the distance blurring into the water's blue.
+//
 // WATER (after it, replacing what the water drew): the surface's waves roll with the time; a ray mirrored
 // off them is walked through the picture to find what it sees (the land, trees, lights round it), the sky
 // where it leaves the screen; the mirror counts for more the flatter you look (Fresnel); the sun glitters;
@@ -24,6 +28,10 @@
 uniform sampler2D Sampler0; // depth of the opaque world (before the translucent terrain)
 #ifdef SHADE
 uniform sampler2D Sampler1; // heightmap of the world round the camera: per column the first free block
+#endif
+#ifdef UNDER
+uniform sampler2D Sampler1; // the heightmap: per column the first free block (the water's surface, or what is over it)
+uniform sampler2D Sampler2; // the picture
 #endif
 #ifdef WATER
 uniform sampler2D Sampler1; // depth with the water
@@ -188,7 +196,107 @@ void main() {
 }
 #endif
 
+#if defined(UNDER) || defined(WATER)
+// the net of light the waves focus onto the bottom (a few warped sine fields)
+float caustic(vec2 x, float t) {
+    vec2 p = mod(x * 6.28318, 6.28318) - 250.0;
+    vec2 i = p;
+    float c = 1.0;
+    const float inten = 0.005;
+    for (int n = 0; n < 4; n++) {
+        float tt = t * (1.0 - 3.5 / float(n + 1));
+        i = p + vec2(cos(tt - i.x) + sin(tt + i.y), sin(tt - i.y) + cos(tt + i.x));
+        c += 1.0 / length(vec2(p.x / (sin(i.x + tt) / inten), p.y / (cos(i.y + tt) / inten)));
+    }
+    c /= 4.0;
+    c = 1.17 - pow(c, 1.4);
+    return clamp(pow(abs(c), 8.0), 0.0, 1.0);
+}
+#endif
+
+#ifdef UNDER
+float columnTop(vec2 hm) {
+    ivec2 c = ivec2(floor(hm));
+    if (c.x < 0 || c.y < 0 || c.x >= 256 || c.y >= 256) return -1.0e4;
+    vec4 h = texelFetch(Sampler1, c, 0);
+    return floor(h.r * 255.0 + 0.5) + floor(h.g * 255.0 + 0.5) * 256.0 - 64.0;
+}
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / ScreenSize;
+    float depth = textureLod(Sampler0, uv, 0.0).r;
+    vec3 p = unproject(uv, min(depth, 0.99999));
+    float dist = depth >= 1.0 ? 96.0 : length(p);
+    vec3 rd = normalize(p);
+    vec3 col = textureLod(Sampler2, uv, 0.0).rgb;
+    float sun = params.r;
+    float t = GameTime * 1200.0;
+    vec2 slant = sunDir.xz / max(sunDir.y, 0.25);
+
+    // ---- caustics on what lies under the water, where the sun reaches through the surface above it
+    if (depth < 1.0 && sun > 0.0) {
+        float top = columnTop(p.xz + cameraXZ);
+        float below = top - (p.y + cameraY);
+        if (below > 0.0 && below < 40.0) {
+            vec2 at = p.xz + cameraXZ + slant * below;
+            float c = caustic(at * 0.3, t * 0.6);
+            float k = sun * exp(-below * 0.1) * (1.0 - smoothstep(20.0, 40.0, dist));
+            col *= 1.0 + c * 1.6 * k;
+        }
+    }
+
+    // ---- shafts of light slanting down from the surface, along the view
+    if (sun > 0.0) {
+        float tEnd = min(dist, 36.0);
+        const int N = 20;
+        float shafts = 0.0;
+        for (int i = 0; i < N; i++) {
+            vec3 q = rd * tEnd * (float(i) + 0.5) / float(N);
+            float below = columnTop(q.xz + cameraXZ) - (q.y + cameraY);
+            if (below <= 0.0 || below > 60.0) continue;
+            vec2 at = q.xz + cameraXZ + slant * below;
+            float beam = caustic(at * 0.08, t * 0.25);
+            shafts += beam * exp(-below * 0.06) * exp(-length(q) * 0.045);
+        }
+        col += vec3(0.5, 0.78, 0.86) * shafts / float(N) * tEnd * 0.05 * sun;
+    }
+
+    // ---- the distance blurring into the water's blue
+    float haze = 1.0 - exp(-dist * 0.04);
+    vec2 o = vec2(0.006 * haze) * vec2(ScreenSize.y / ScreenSize.x, 1.0);
+    vec3 soft = (textureLod(Sampler2, uv + vec2(o.x, 0.0), 0.0).rgb + textureLod(Sampler2, uv - vec2(o.x, 0.0), 0.0).rgb
+        + textureLod(Sampler2, uv + vec2(0.0, o.y), 0.0).rgb + textureLod(Sampler2, uv - vec2(0.0, o.y), 0.0).rgb) * 0.25;
+    col = mix(col, soft, haze * 0.7);
+    col = mix(col, FogColor.rgb, haze * 0.3);
+    fragColor = vec4(col, 1.0);
+}
+#endif
+
 #ifdef WATER
+// rings spreading where raindrops strike: a little push of the surface normal outwards from each ring
+vec2 rainRings(vec2 x, float t, float density) {
+    vec2 sum = vec2(0.0);
+    for (int layer = 0; layer < 2; layer++) {
+        vec2 g = x * 1.7 + float(layer) * vec2(0.37, 0.71);
+        vec2 base = floor(g);
+        for (int j = -1; j <= 1; j++) {
+            for (int i = -1; i <= 1; i++) {
+                vec2 cell = base + vec2(float(i), float(j));
+                float rnd = hash(cell + float(layer) * 13.1);
+                if (rnd > density) continue;
+                vec2 centre = cell + vec2(hash(cell + 1.7), hash(cell + 3.1));
+                float phase = fract(t * 0.9 + rnd * 7.3);
+                float radius = phase * 0.75;
+                vec2 d = g - centre;
+                float len = length(d);
+                float ring = exp(-pow((len - radius) * 12.0, 2.0)) * (1.0 - phase) * sin((len - radius) * 40.0);
+                sum += d / max(len, 1.0e-3) * ring;
+            }
+        }
+    }
+    return sum;
+}
+
 float waveHeight(vec2 x, float t) {
     float h = 0.0;
     h += sin(dot(x, vec2(0.8, 0.6)) * 1.1 + t * 1.3) * 0.5;
@@ -230,6 +338,12 @@ void main() {
     // the waves flatten out into the distance (they would only shimmer there)
     float waves = mix(0.22, 0.05, smoothstep(8.0, 64.0, dist)) * (1.0 + rain * 0.8);
     vec3 nw = waveNormal(world, t, waves);
+    // rain: rings spreading over the surface (more and bigger in a thunderstorm)
+    float thunder = params.b;
+    if (rain > 0.01 && dist < 48.0) {
+        vec2 rings = rainRings(world, t, rain * 0.35 + thunder * 0.4);
+        nw = normalize(nw + vec3(rings.x, 0.0, rings.y) * (0.35 + 0.35 * thunder) * (1.0 - smoothstep(24.0, 48.0, dist)));
+    }
     if (n.y < 0.0) nw.y = -nw.y;
 
     // ---- reflection: walk the mirrored ray through the picture
