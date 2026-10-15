@@ -331,6 +331,31 @@ public class BulletEntity extends Entity {
 			return;
 		}
 		e.invulnerableTime = 0; // rounds of a burst all land
+		if (e instanceof LivingEntity armored && !(armored instanceof net.minecraft.world.entity.player.Player p && (p.isCreative() || p.isSpectator()))) {
+			BallisticArmor.Result armor = BallisticArmor.bullet(armored, at, head, damage, this.pellet, this.random);
+			if (armor.stopped()) {
+				// the armour took it: a bruising blow and a shove, no wound
+				Vec3 line = this.getDeltaMovement().normalize();
+				if (e.hurtServer(level, source, armor.damage())) {
+					Vec3 push = line.scale(0.16);
+					e.push(push.x, 0.02, push.z);
+				}
+				if (armor.plate()) {
+					level.sendParticles(ModRegistry.SPARK, at.x, at.y, at.z, 6, 0.03, 0.03, 0.03, 0.2);
+					level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_METAL, SoundSource.PLAYERS, 1.1F, 1.15F + this.random.nextFloat() * 0.2F);
+				} else {
+					level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 0.9F, 0.55F + this.random.nextFloat() * 0.1F);
+				}
+				if (this.shooter instanceof net.minecraft.server.level.ServerPlayer shooterPlayer) {
+					shooterPlayer.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+						net.minecraft.core.Holder.direct(ModRegistry.BULLET_IMPACT_METAL), SoundSource.PLAYERS,
+						shooterPlayer.getX(), shooterPlayer.getEyeY(), shooterPlayer.getZ(), 0.3F, 1.5F, this.random.nextLong()));
+				}
+				this.discard();
+				return;
+			}
+			damage = armor.damage();
+		}
 		if (this.shooter instanceof net.minecraft.server.level.ServerPlayer shooterPlayer) {
 			// the shooter hears the hit land
 			shooterPlayer.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(

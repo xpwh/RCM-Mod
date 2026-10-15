@@ -144,7 +144,7 @@ public final class ClientEffects {
 	}
 
 	/** Blast trauma: muffles the world and makes the ears ring. */
-	static void deafen(Minecraft mc, float strength, int holdTicks) {
+	public static void deafen(Minecraft mc, float strength, int holdTicks) {
 		strength = Mth.clamp(strength, 0.0F, 1.0F);
 		if (strength < 0.08F) {
 			return;

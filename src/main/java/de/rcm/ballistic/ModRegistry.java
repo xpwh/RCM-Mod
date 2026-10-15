@@ -579,6 +579,78 @@ public final class ModRegistry {
 	public static final Item NIGHT_VISION_GOGGLES = registerItem("night_vision_goggles", props -> new de.rcm.ballistic.item.InfoItem(props, "night_vision_goggles", 2),
 		new Item.Properties().humanoidArmor(NIGHT_VISION_MATERIAL, ArmorType.HELMET).rarity(Rarity.UNCOMMON));
 
+	/** Ballistic armour in five weights (see BallisticArmor): from a soft vest to a bomb suit. */
+	public static final ArmorMaterial ARMOR_LIGHT_MATERIAL = new ArmorMaterial(
+		12, Map.of(ArmorType.HELMET, 1, ArmorType.CHESTPLATE, 4, ArmorType.LEGGINGS, 1, ArmorType.BOOTS, 1, ArmorType.BODY, 4), 9,
+		SoundEvents.ARMOR_EQUIP_LEATHER, 0.0F, 0.0F, ItemTags.REPAIRS_IRON_ARMOR,
+		ResourceKey.create(EquipmentAssets.ROOT_ID, BallisticMissiles.id("armor_light"))
+	);
+	public static final Item ARMOR_LIGHT_VEST = registerItem("armor_light_vest",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.LIGHT),
+		new Item.Properties().humanoidArmor(ARMOR_LIGHT_MATERIAL, ArmorType.CHESTPLATE));
+	public static final ArmorMaterial ARMOR_STANDARD_MATERIAL = new ArmorMaterial(
+		16, Map.of(ArmorType.HELMET, 2, ArmorType.CHESTPLATE, 6, ArmorType.LEGGINGS, 2, ArmorType.BOOTS, 1, ArmorType.BODY, 6), 9,
+		SoundEvents.ARMOR_EQUIP_IRON, 1.0F, 0.0F, ItemTags.REPAIRS_IRON_ARMOR,
+		ResourceKey.create(EquipmentAssets.ROOT_ID, BallisticMissiles.id("armor_standard"))
+	);
+	public static final Item ARMOR_STANDARD_HELMET = registerItem("armor_standard_helmet",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.STANDARD),
+		new Item.Properties().humanoidArmor(ARMOR_STANDARD_MATERIAL, ArmorType.HELMET));
+	public static final Item ARMOR_STANDARD_VEST = registerItem("armor_standard_vest",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.STANDARD),
+		new Item.Properties().humanoidArmor(ARMOR_STANDARD_MATERIAL, ArmorType.CHESTPLATE));
+	public static final ArmorMaterial ARMOR_MEDIUM_MATERIAL = new ArmorMaterial(
+		22, Map.of(ArmorType.HELMET, 2, ArmorType.CHESTPLATE, 6, ArmorType.LEGGINGS, 5, ArmorType.BOOTS, 2, ArmorType.BODY, 6), 9,
+		SoundEvents.ARMOR_EQUIP_IRON, 1.5F, 0.0F, ItemTags.REPAIRS_IRON_ARMOR,
+		ResourceKey.create(EquipmentAssets.ROOT_ID, BallisticMissiles.id("armor_medium"))
+	);
+	public static final Item ARMOR_MEDIUM_HELMET = registerItem("armor_medium_helmet",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.MEDIUM),
+		new Item.Properties().humanoidArmor(ARMOR_MEDIUM_MATERIAL, ArmorType.HELMET));
+	public static final Item ARMOR_MEDIUM_VEST = registerItem("armor_medium_vest",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.MEDIUM),
+		new Item.Properties().humanoidArmor(ARMOR_MEDIUM_MATERIAL, ArmorType.CHESTPLATE));
+	public static final Item ARMOR_MEDIUM_LEGGINGS = registerItem("armor_medium_leggings",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.MEDIUM),
+		new Item.Properties().humanoidArmor(ARMOR_MEDIUM_MATERIAL, ArmorType.LEGGINGS));
+	public static final Item ARMOR_MEDIUM_BOOTS = registerItem("armor_medium_boots",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.MEDIUM),
+		new Item.Properties().humanoidArmor(ARMOR_MEDIUM_MATERIAL, ArmorType.BOOTS));
+	public static final ArmorMaterial ARMOR_HEAVY_MATERIAL = new ArmorMaterial(
+		30, Map.of(ArmorType.HELMET, 3, ArmorType.CHESTPLATE, 7, ArmorType.LEGGINGS, 6, ArmorType.BOOTS, 3, ArmorType.BODY, 7), 9,
+		SoundEvents.ARMOR_EQUIP_NETHERITE, 2.5F, 0.05F, ItemTags.REPAIRS_IRON_ARMOR,
+		ResourceKey.create(EquipmentAssets.ROOT_ID, BallisticMissiles.id("armor_heavy"))
+	);
+	public static final Item ARMOR_HEAVY_HELMET = registerItem("armor_heavy_helmet",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.HEAVY),
+		new Item.Properties().humanoidArmor(ARMOR_HEAVY_MATERIAL, ArmorType.HELMET).rarity(Rarity.RARE));
+	public static final Item ARMOR_HEAVY_VEST = registerItem("armor_heavy_vest",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.HEAVY),
+		new Item.Properties().humanoidArmor(ARMOR_HEAVY_MATERIAL, ArmorType.CHESTPLATE).rarity(Rarity.RARE));
+	public static final Item ARMOR_HEAVY_LEGGINGS = registerItem("armor_heavy_leggings",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.HEAVY),
+		new Item.Properties().humanoidArmor(ARMOR_HEAVY_MATERIAL, ArmorType.LEGGINGS).rarity(Rarity.RARE));
+	public static final Item ARMOR_HEAVY_BOOTS = registerItem("armor_heavy_boots",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.HEAVY),
+		new Item.Properties().humanoidArmor(ARMOR_HEAVY_MATERIAL, ArmorType.BOOTS).rarity(Rarity.RARE));
+	public static final ArmorMaterial ARMOR_JUGGERNAUT_MATERIAL = new ArmorMaterial(
+		48, Map.of(ArmorType.HELMET, 4, ArmorType.CHESTPLATE, 9, ArmorType.LEGGINGS, 7, ArmorType.BOOTS, 4, ArmorType.BODY, 9), 9,
+		SoundEvents.ARMOR_EQUIP_NETHERITE, 3.5F, 0.2F, ItemTags.REPAIRS_IRON_ARMOR,
+		ResourceKey.create(EquipmentAssets.ROOT_ID, BallisticMissiles.id("armor_juggernaut"))
+	);
+	public static final Item ARMOR_JUGGERNAUT_HELMET = registerItem("armor_juggernaut_helmet",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.JUGGERNAUT),
+		new Item.Properties().humanoidArmor(ARMOR_JUGGERNAUT_MATERIAL, ArmorType.HELMET).rarity(Rarity.EPIC));
+	public static final Item ARMOR_JUGGERNAUT_VEST = registerItem("armor_juggernaut_vest",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.JUGGERNAUT),
+		new Item.Properties().humanoidArmor(ARMOR_JUGGERNAUT_MATERIAL, ArmorType.CHESTPLATE).rarity(Rarity.EPIC));
+	public static final Item ARMOR_JUGGERNAUT_LEGGINGS = registerItem("armor_juggernaut_leggings",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.JUGGERNAUT),
+		new Item.Properties().humanoidArmor(ARMOR_JUGGERNAUT_MATERIAL, ArmorType.LEGGINGS).rarity(Rarity.EPIC));
+	public static final Item ARMOR_JUGGERNAUT_BOOTS = registerItem("armor_juggernaut_boots",
+		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.JUGGERNAUT),
+		new Item.Properties().humanoidArmor(ARMOR_JUGGERNAUT_MATERIAL, ArmorType.BOOTS).rarity(Rarity.EPIC));
+
 	public static final Item GEIGER_COUNTER = registerItem("geiger_counter", GeigerCounterItem::new, new Item.Properties().stacksTo(1));
 	public static final Item MISSILE_SILO_ITEM = registerItem(
 		"missile_silo", props -> new BlockItem(MISSILE_SILO, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
@@ -639,6 +711,12 @@ public final class ModRegistry {
 	);
 	public static final Item GRENADE = registerItem(
 		"grenade", de.rcm.ballistic.gun.GrenadeItem::new, new Item.Properties().stacksTo(8)
+	);
+	public static final Item SMOKE_GRENADE = registerItem(
+		"smoke_grenade", props -> new de.rcm.ballistic.gun.GrenadeItem(props, de.rcm.ballistic.gun.GrenadeItem.SMOKE), new Item.Properties().stacksTo(8)
+	);
+	public static final Item FLASHBANG = registerItem(
+		"flashbang", props -> new de.rcm.ballistic.gun.GrenadeItem(props, de.rcm.ballistic.gun.GrenadeItem.FLASH), new Item.Properties().stacksTo(8)
 	);
 	public static final Item RPG_ROCKET = registerItem("rpg_rocket", Item::new, new Item.Properties().stacksTo(16));
 	public static final Item FPV_DRONE_ITEM = registerItem(
@@ -855,6 +933,8 @@ public final class ModRegistry {
 		output.accept(AK_MAG_TRACER);
 		output.accept(AK_MAG_TRACER_RED);
 		output.accept(GRENADE);
+		output.accept(SMOKE_GRENADE);
+		output.accept(FLASHBANG);
 		output.accept(ROCKET_LAUNCHER);
 		output.accept(RPG_ROCKET);
 		output.accept(FPV_DRONE_ITEM);
@@ -897,6 +977,21 @@ public final class ModRegistry {
 		output.accept(HAZMAT_BOOTS);
 		output.accept(GEIGER_COUNTER);
 		output.accept(NIGHT_VISION_GOGGLES);
+		output.accept(ARMOR_LIGHT_VEST);
+		output.accept(ARMOR_STANDARD_HELMET);
+		output.accept(ARMOR_STANDARD_VEST);
+		output.accept(ARMOR_MEDIUM_HELMET);
+		output.accept(ARMOR_MEDIUM_VEST);
+		output.accept(ARMOR_MEDIUM_LEGGINGS);
+		output.accept(ARMOR_MEDIUM_BOOTS);
+		output.accept(ARMOR_HEAVY_HELMET);
+		output.accept(ARMOR_HEAVY_VEST);
+		output.accept(ARMOR_HEAVY_LEGGINGS);
+		output.accept(ARMOR_HEAVY_BOOTS);
+		output.accept(ARMOR_JUGGERNAUT_HELMET);
+		output.accept(ARMOR_JUGGERNAUT_VEST);
+		output.accept(ARMOR_JUGGERNAUT_LEGGINGS);
+		output.accept(ARMOR_JUGGERNAUT_BOOTS);
 	});
 	/** Building blocks of the wasteland blasts leave behind. */
 	public static final CreativeModeTab TAB_BLOCKS = tab("blocks", () -> SMOLDERING_EARTH_ITEM, output -> {

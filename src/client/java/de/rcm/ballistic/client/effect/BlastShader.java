@@ -128,6 +128,15 @@ public final class BlastShader {
 		dust = Math.max(dust, s * 0.9F);
 	}
 
+	/** A flash burnt into the eye where you were looking (a stun grenade): the negative afterimage. */
+	public static void burnIn(float amount) {
+		if (amount > afterimage) {
+			afterimage = Mth.clamp(amount, 0.0F, 1.0F);
+			afterX = 0.5F;
+			afterY = 0.5F;
+		}
+	}
+
 	/** Flash reaching the camera. */
 	public static void flash(float amount) {
 		exposure = Math.max(exposure, Mth.clamp(amount, 0.0F, 1.0F));

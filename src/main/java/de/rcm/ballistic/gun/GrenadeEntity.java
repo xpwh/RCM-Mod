@@ -6,6 +6,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
@@ -28,7 +30,13 @@ import org.jspecify.annotations.Nullable;
  * fragments dangerous out to some twenty-five metres; it does not dig craters.
  */
 public class GrenadeEntity extends Entity {
+	private static final EntityDataAccessor<Byte> KIND = SynchedEntityData.defineId(GrenadeEntity.class, EntityDataSerializers.BYTE);
+	/** A smoke grenade that has popped: pouring out smoke. */
+	private static final EntityDataAccessor<Boolean> BURNING = SynchedEntityData.defineId(GrenadeEntity.class, EntityDataSerializers.BOOLEAN);
+	/** How long a smoke grenade pours out smoke, ticks. */
+	public static final int SMOKE_TICKS = 500;
 	private int fuse = GrenadeItem.FUSE;
+	private int burnt;
 	@Nullable
 	private Entity thrower;
 	/** Client: tumble, for the renderer. */
@@ -41,11 +49,16 @@ public class GrenadeEntity extends Entity {
 
 	/** @param fuse ticks left on the fuse (less than the full four seconds if it was cooked off in the hand) */
 	public static void throwFrom(ServerLevel level, Entity thrower, Vec3 from, Vec3 velocity, int fuse) {
+		throwFrom(level, thrower, from, velocity, fuse, GrenadeItem.FRAG);
+	}
+
+	public static void throwFrom(ServerLevel level, Entity thrower, Vec3 from, Vec3 velocity, int fuse, int kind) {
 		GrenadeEntity g = ModRegistry.GRENADE_ENTITY.create(level, EntitySpawnReason.TRIGGERED);
 		if (g == null) {
 			return;
 		}
 		g.thrower = thrower;
+		g.entityData.set(KIND, (byte) kind);
 		g.fuse = Math.max(1, fuse);
 		g.setPos(from);
 		g.setDeltaMovement(velocity);
@@ -54,6 +67,56 @@ public class GrenadeEntity extends Entity {
 
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		builder.define(KIND, (byte) GrenadeItem.FRAG);
+		builder.define(BURNING, false);
+	}
+
+	public int kind() {
+		return this.entityData.get(KIND);
+	}
+
+	public boolean burning() {
+		return this.entityData.get(BURNING);
+	}
+
+	/**
+	 * What a grenade does when its fuse runs out ({@code grenade} is the thrown one, or null when it went off in
+	 * the hand): the RGD-5 bursts, the stun grenade flashes and bangs, the smoke grenade starts smoking.
+	 */
+	public static void goOff(ServerLevel level, Vec3 at, @Nullable Entity thrower, int kind, @Nullable GrenadeEntity grenade) {
+		switch (kind) {
+			case GrenadeItem.FLASH -> {
+				if (grenade != null) {
+					grenade.discard();
+				}
+				Flashbang.detonate(level, at, thrower);
+			}
+			case GrenadeItem.SMOKE -> {
+				level.playSound(null, at.x, at.y, at.z, net.minecraft.sounds.SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.9F, 0.55F);
+				if (grenade != null) {
+					grenade.entityData.set(BURNING, true);
+					SmokeScreens.start(level, grenade);
+				} else if (thrower != null) {
+					// popped in the hand: it is dropped, smoking
+					GrenadeEntity g = ModRegistry.GRENADE_ENTITY.create(level, EntitySpawnReason.TRIGGERED);
+					if (g != null) {
+						g.thrower = thrower;
+						g.entityData.set(KIND, (byte) GrenadeItem.SMOKE);
+						g.entityData.set(BURNING, true);
+						g.fuse = 0;
+						g.setPos(at);
+						level.addFreshEntity(g);
+						SmokeScreens.start(level, g);
+					}
+				}
+			}
+			default -> {
+				if (grenade != null) {
+					grenade.discard();
+				}
+				de.rcm.ballistic.explosion.DetonationManager.detonateGrenade(level, at, thrower);
+			}
+		}
 	}
 
 	@Override
@@ -99,6 +162,10 @@ public class GrenadeEntity extends Entity {
 		if (this.level().isClientSide()) {
 			this.prevSpin = this.spin;
 			this.spin += (float) Math.sqrt(vx * vx + vz * vz) * 120.0F + (this.onGround() ? 0.0F : 6.0F);
+			if (this.burning()) {
+				this.burnt++;
+				de.rcm.ballistic.ClientHooks.smokeGrenade.emit(this.position().add(0, 0.1, 0), this.burnt);
+			}
 			return;
 		}
 		ServerLevel level = (ServerLevel) this.level();
@@ -109,15 +176,22 @@ public class GrenadeEntity extends Entity {
 				0.9F + this.random.nextFloat() * 0.2F);
 			MagazineLanding.knock(level, this, loud * 0.75F);
 		}
-		if (--this.fuse <= 0) {
-			this.detonate(level);
+		if (this.burning()) {
+			// pouring out smoke, hissing, until it is spent
+			this.burnt++;
+			SmokeScreens.track(this);
+			if (this.burnt % 20 == 1 && this.burnt < SMOKE_TICKS - 40) {
+				level.playSound(null, this.getX(), this.getY(), this.getZ(), net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS,
+					0.35F, 0.5F + this.random.nextFloat() * 0.1F);
+			}
+			if (this.burnt >= SMOKE_TICKS) {
+				this.discard();
+			}
+			return;
 		}
-	}
-
-	private void detonate(ServerLevel level) {
-		Vec3 pos = this.position().add(0, 0.15, 0);
-		this.discard();
-		de.rcm.ballistic.explosion.DetonationManager.detonateGrenade(level, pos, this.thrower);
+		if (--this.fuse <= 0) {
+			goOff(level, this.position().add(0, 0.15, 0), this.thrower, this.kind(), this);
+		}
 	}
 
 	@Override
@@ -128,10 +202,16 @@ public class GrenadeEntity extends Entity {
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
 		this.fuse = input.getIntOr("Fuse", GrenadeItem.FUSE);
+		this.entityData.set(KIND, (byte) input.getIntOr("Kind", GrenadeItem.FRAG));
+		this.entityData.set(BURNING, input.getBooleanOr("Burning", false));
+		this.burnt = input.getIntOr("Burnt", 0);
 	}
 
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
 		output.putInt("Fuse", this.fuse);
+		output.putInt("Kind", this.kind());
+		output.putBoolean("Burning", this.burning());
+		output.putInt("Burnt", this.burnt);
 	}
 }

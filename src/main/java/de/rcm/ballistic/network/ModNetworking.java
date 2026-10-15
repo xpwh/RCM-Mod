@@ -419,6 +419,23 @@ public final class ModNetworking {
 		}
 	}
 
+	/** Server -> client: a stun grenade went off at {@code pos}: how blinded (0-1) and deafened (0-1) this player is. */
+	public record FlashbangPayload(net.minecraft.world.phys.Vec3 pos, float blind, float deaf) implements CustomPacketPayload {
+		public static final Type<FlashbangPayload> TYPE = new Type<>(BallisticMissiles.id("flashbang"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, FlashbangPayload> CODEC = StreamCodec.of((buf, p) -> {
+			buf.writeDouble(p.pos.x);
+			buf.writeDouble(p.pos.y);
+			buf.writeDouble(p.pos.z);
+			buf.writeFloat(p.blind);
+			buf.writeFloat(p.deaf);
+		}, buf -> new FlashbangPayload(new net.minecraft.world.phys.Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()), buf.readFloat(), buf.readFloat()));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: the northern lights are out (and how they are set: for good, by chance). */
 	public record AuroraPayload(boolean active, boolean forced, boolean random) implements CustomPacketPayload {
 		public static final Type<AuroraPayload> TYPE = new Type<>(BallisticMissiles.id("aurora"));
@@ -881,6 +898,7 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playS2C().register(WinterPayload.TYPE, WinterPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(NewMoonPayload.TYPE, NewMoonPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(AuroraPayload.TYPE, AuroraPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(FlashbangPayload.TYPE, FlashbangPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(FalloutPayload.TYPE, FalloutPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(DetonationPayload.TYPE, DetonationPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(RadarDataPayload.TYPE, RadarDataPayload.CODEC);

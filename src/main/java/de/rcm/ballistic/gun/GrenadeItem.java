@@ -28,8 +28,13 @@ import net.minecraft.world.phys.Vec3;
  * for an underhand lob: short, soft, round a corner or into a trench.
  */
 public class GrenadeItem extends Item {
-	/** Fuse from the moment the lever flies off, ticks. */
+	/** Fuse of the RGD-5 from the moment the lever flies off, ticks. */
 	public static final int FUSE = 80;
+	public static final int FRAG = 0;
+	/** M18-style smoke grenade: pops after a second and a half and pours out a thick cloud for some 25 seconds. */
+	public static final int SMOKE = 1;
+	/** M84-style stun grenade: a blinding flash and a deafening bang after a second and a half, no fragments. */
+	public static final int FLASH = 2;
 	/** Ticks of winding up for a full throw. */
 	public static final int WIND_UP = 18;
 
@@ -45,8 +50,24 @@ public class GrenadeItem extends Item {
 		}
 	}
 
+	private final int kind;
+
 	public GrenadeItem(Properties properties) {
+		this(properties, FRAG);
+	}
+
+	public GrenadeItem(Properties properties, int kind) {
 		super(properties);
+		this.kind = kind;
+	}
+
+	public int kind() {
+		return this.kind;
+	}
+
+	/** Fuse of this kind, ticks. */
+	public static int fuse(int kind) {
+		return kind == FRAG ? FUSE : 30;
 	}
 
 	@Override
@@ -74,9 +95,10 @@ public class GrenadeItem extends Item {
 	}
 
 	/** Ticks left on the fuse of {@code player}'s grenade, or the full fuse if it is not cooking. */
-	private static int fuseLeft(Player player, Level level) {
+	private int fuseLeft(Player player, Level level) {
 		Long since = COOKING.get(player.getUUID());
-		return since == null ? FUSE : FUSE - (int) (level.getGameTime() - since);
+		int full = fuse(this.kind);
+		return since == null ? full : full - (int) (level.getGameTime() - since);
 	}
 
 	@Override
@@ -84,7 +106,7 @@ public class GrenadeItem extends Item {
 		if (!(entity instanceof Player player) || !COOKING.containsKey(player.getUUID())) {
 			return;
 		}
-		int left = fuseLeft(player, level);
+		int left = this.fuseLeft(player, level);
 		if (left <= 0) {
 			// held on too long
 			COOKING.remove(player.getUUID());
@@ -95,7 +117,7 @@ public class GrenadeItem extends Item {
 				stack.shrink(1);
 			}
 			Vec3 at = player.position().add(0, player.getBbHeight() * 0.6, 0).add(player.getLookAngle().scale(0.4));
-			de.rcm.ballistic.explosion.DetonationManager.detonateGrenade(level, at, player);
+			GrenadeEntity.goOff(level, at, player, this.kind, null);
 			return;
 		}
 		if (left % 5 == 0) {
@@ -123,7 +145,7 @@ public class GrenadeItem extends Item {
 		float power = Math.max(0.3F, Math.min(1.0F, held / (float) WIND_UP));
 		if (level instanceof ServerLevel server) {
 			boolean cooked = COOKING.containsKey(player.getUUID());
-			int fuse = fuseLeft(player, level);
+			int fuse = this.fuseLeft(player, level);
 			COOKING.remove(player.getUUID());
 			if (fuse <= 0) {
 				return true; // already gone off
@@ -144,7 +166,7 @@ public class GrenadeItem extends Item {
 				velocity = look.scale(1.3 * power).add(0, 0.12 * power, 0);
 			}
 			velocity = velocity.add(player.getDeltaMovement().multiply(1.0, 0.0, 1.0));
-			GrenadeEntity.throwFrom(server, player, from, velocity, fuse);
+			GrenadeEntity.throwFrom(server, player, from, velocity, fuse, this.kind);
 			if (!cooked) {
 				server.playSound(null, from.x, from.y, from.z, ModRegistry.GRENADE_SPOON, SoundSource.PLAYERS, 0.7F, 0.95F + server.getRandom().nextFloat() * 0.1F);
 			}
@@ -159,8 +181,9 @@ public class GrenadeItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
-		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.grenade.1").withStyle(ChatFormatting.GRAY));
-		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.grenade.2").withStyle(ChatFormatting.GOLD));
-		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.grenade.3").withStyle(ChatFormatting.DARK_GRAY));
+		String key = this.kind == SMOKE ? "smoke_grenade" : this.kind == FLASH ? "flashbang" : "grenade";
+		tooltip.accept(Component.translatable("tooltip.ballisticmissiles." + key + ".1").withStyle(ChatFormatting.GRAY));
+		tooltip.accept(Component.translatable("tooltip.ballisticmissiles." + key + ".2").withStyle(ChatFormatting.GOLD));
+		tooltip.accept(Component.translatable("tooltip.ballisticmissiles." + key + ".3").withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

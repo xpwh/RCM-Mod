@@ -5,10 +5,16 @@ import static de.rcm.ballistic.client.render.StructureKit.AK_WORN;
 import static de.rcm.ballistic.client.render.StructureKit.OLIVE;
 import static de.rcm.ballistic.client.render.StructureKit.OLIVE_DARK;
 import static de.rcm.ballistic.client.render.StructureKit.STEEL;
+import static de.rcm.ballistic.client.render.StructureKit.BLACK;
+import static de.rcm.ballistic.client.render.StructureKit.GUNMETAL;
+import static de.rcm.ballistic.client.render.StructureKit.WHITE;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import de.rcm.ballistic.gun.GrenadeItem;
 import de.rcm.ballistic.BallisticMissiles;
 import de.rcm.ballistic.gun.GrenadeEntity;
 import java.util.function.Consumer;
@@ -38,6 +44,13 @@ public final class GrenadeRenderers {
 	public static final Vector3f RING_AT = new Vector3f(0.05F, 0.07F, 0.0F);
 	public static final BoxMesh BODY = body();
 	public static final BoxMesh LEVER = lever();
+	/** M18-style smoke grenade: an olive sheet-steel can with a white band and the fuse on top, its lever down the side. */
+	public static final BoxMesh SMOKE_BODY = smokeBody();
+	/** M84-style stun grenade: a perforated steel tube with end caps, the fuse on top. */
+	public static final BoxMesh FLASH_BODY = flashBody();
+	/** The lever of the canister grenades, down the side of a can of radius {@code CAN_R}. */
+	public static final BoxMesh CAN_LEVER = canLever(0.031F);
+	public static final BoxMesh TUBE_LEVER = canLever(0.026F);
 	public static final BoxMesh RING = ring();
 
 	private GrenadeRenderers() {
@@ -45,6 +58,57 @@ public final class GrenadeRenderers {
 
 	public static void register() {
 		SpecialModelRenderers.ID_MAPPER.put(BallisticMissiles.id("grenade"), ItemRenderer.Unbaked.MAP_CODEC);
+		SpecialModelRenderers.ID_MAPPER.put(BallisticMissiles.id("grenade_kind"), ItemRenderer.KindUnbaked.MAP_CODEC);
+	}
+
+	/** The body (and its lever) of a grenade of {@code kind} ({@link GrenadeItem#FRAG}...). */
+	public static BoxMesh body(int kind) {
+		return kind == GrenadeItem.SMOKE ? SMOKE_BODY : kind == GrenadeItem.FLASH ? FLASH_BODY : BODY;
+	}
+
+	public static BoxMesh lever(int kind) {
+		return kind == GrenadeItem.SMOKE ? CAN_LEVER : kind == GrenadeItem.FLASH ? TUBE_LEVER : LEVER;
+	}
+
+	private static BoxMesh smokeBody() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		b.revolve(OLIVE, v(0, -0.062F, 0), v(0, 1, 0), new float[][] {{0.0F, 0.0F}, {0.002F, 0.031F}, {0.1F, 0.031F}}, 14);
+		b.revolve(WHITE, v(0, -0.062F, 0), v(0, 1, 0), new float[][] {{0.1F, 0.0315F}, {0.118F, 0.0315F}}, 14); // the band: what colour of smoke
+		b.revolve(OLIVE, v(0, -0.062F, 0), v(0, 1, 0), new float[][] {{0.118F, 0.031F}, {0.128F, 0.031F}, {0.13F, 0.0F}}, 14);
+		b.revolve(BLACK, v(0, -0.062F, 0), v(0, 1, 0), new float[][] {{0.0F, 0.018F}, {0.003F, 0.018F}}, 10); // emission holes underneath
+		b.revolve(AK_BLUED, v(0, 0.068F, 0), v(0, 1, 0), new float[][] {{0.0F, 0.012F}, {0.014F, 0.012F}}, 10);
+		b.revolve(AK_BLUED, v(0, 0.082F, 0), v(0, 1, 0), new float[][] {{0.0F, 0.015F}, {0.018F, 0.014F}, {0.024F, 0.009F}, {0.026F, 0.0F}}, 10);
+		return b.build();
+	}
+
+	private static BoxMesh flashBody() {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		float y0 = -0.06F;
+		b.revolve(GUNMETAL, v(0, y0, 0), v(0, 1, 0), new float[][] {{0.0F, 0.0F}, {0.003F, 0.026F}, {0.012F, 0.026F}}, 12);
+		// the tube with rows of vent holes
+		for (int row = 0; row < 4; row++) {
+			float a = 0.012F + row * 0.025F;
+			b.revolve(STEEL, v(0, y0, 0), v(0, 1, 0), new float[][] {{a, 0.0255F}, {a + 0.014F, 0.0255F}}, 12);
+			b.revolve(BLACK, v(0, y0, 0), v(0, 1, 0), new float[][] {{a + 0.014F, 0.0245F}, {a + 0.025F, 0.0245F}}, 12);
+		}
+		b.revolve(GUNMETAL, v(0, y0, 0), v(0, 1, 0), new float[][] {{0.112F, 0.026F}, {0.122F, 0.026F}, {0.125F, 0.0F}}, 12);
+		b.revolve(AK_BLUED, v(0, 0.065F, 0), v(0, 1, 0), new float[][] {{0.0F, 0.011F}, {0.014F, 0.011F}}, 10);
+		b.revolve(AK_BLUED, v(0, 0.079F, 0), v(0, 1, 0), new float[][] {{0.0F, 0.015F}, {0.018F, 0.014F}, {0.024F, 0.009F}, {0.026F, 0.0F}}, 10);
+		return b.build();
+	}
+
+	private static BoxMesh canLever(float r) {
+		BoxMesh.Builder b = new BoxMesh.Builder();
+		Vector3f[] spine = {v(0, 0.098F, -0.004F), v(0, 0.094F, 0.012F), v(0, 0.08F, r - 0.004F), v(0, 0.05F, r + 0.004F), v(0, 0.0F, r + 0.004F),
+			v(0, -0.035F, r + 0.003F)};
+		float[] depth = new float[spine.length];
+		float[] hw = new float[spine.length];
+		java.util.Arrays.fill(depth, 0.004F);
+		for (int i = 0; i < hw.length; i++) {
+			hw[i] = 0.011F - i * 0.0008F;
+		}
+		AkItemRenderer.sweep(b, AK_WORN, spine, depth, hw, 0.001F, 0.0F);
+		return b.build();
 	}
 
 	/** The pin and ring on their own (in the hand that pulled them). */
@@ -100,15 +164,27 @@ public final class GrenadeRenderers {
 
 	/** In the hand: 0 = pin in, 1 = pin pulled (the local player winding up to throw this very stack), 2 = lever gone too (cooking). */
 	public static final class ItemRenderer implements SpecialModelRenderer<Integer> {
+		private final int kind;
+
+		public ItemRenderer() {
+			this(GrenadeItem.FRAG);
+		}
+
+		public ItemRenderer(int kind) {
+			this.kind = kind;
+		}
+
 		@Override
 		public void submit(Integer state, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil,
 			int outline) {
 			boolean pinned = state == null || state == 0;
 			poseStack.pushPose();
 			poseStack.translate(0.5F, 0.5F, 0.5F);
+			BoxMesh body = body(this.kind);
+			BoxMesh lever = lever(this.kind);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> {
-				BODY.emit(pose, consumer, light);
-				LEVER.emit(pose, consumer, light);
+				body.emit(pose, consumer, light);
+				lever.emit(pose, consumer, light);
 				if (pinned) {
 					RING.emit(pose, consumer, light);
 				}
@@ -140,6 +216,22 @@ public final class GrenadeRenderers {
 			return 0;
 		}
 
+		/** The canister grenades: {@code kind} 1 smoke, 2 stun. */
+		public record KindUnbaked(int kind) implements SpecialModelRenderer.Unbaked {
+			public static final MapCodec<KindUnbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
+				i -> i.group(Codec.INT.fieldOf("kind").forGetter(KindUnbaked::kind)).apply(i, KindUnbaked::new));
+
+			@Override
+			public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
+				return new ItemRenderer(this.kind);
+			}
+
+			@Override
+			public MapCodec<KindUnbaked> type() {
+				return MAP_CODEC;
+			}
+		}
+
 		public record Unbaked() implements SpecialModelRenderer.Unbaked {
 			public static final MapCodec<Unbaked> MAP_CODEC = MapCodec.unit(new Unbaked());
 
@@ -165,6 +257,7 @@ public final class GrenadeRenderers {
 		public static class State extends EntityRenderState {
 			public float spin;
 			public float yaw;
+			public int kind;
 		}
 
 		@Override
@@ -177,6 +270,7 @@ public final class GrenadeRenderers {
 			super.extractRenderState(entity, state, partialTick);
 			state.spin = Mth.lerp(partialTick, entity.prevSpin, entity.spin);
 			state.yaw = (entity.getId() * 37) % 360;
+			state.kind = entity.kind();
 		}
 
 		@Override
@@ -186,7 +280,8 @@ public final class GrenadeRenderers {
 			poseStack.mulPose(Axis.YP.rotationDegrees(state.yaw));
 			poseStack.mulPose(Axis.XP.rotationDegrees(state.spin));
 			int light = state.lightCoords;
-			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> BODY.emit(pose, consumer, light));
+			BoxMesh body = body(state.kind);
+			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> body.emit(pose, consumer, light));
 			poseStack.popPose();
 			super.submit(state, poseStack, collector, camera);
 		}

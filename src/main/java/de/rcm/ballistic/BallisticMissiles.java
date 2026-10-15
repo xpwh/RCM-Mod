@@ -44,6 +44,8 @@ public class BallisticMissiles implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.gun.GunAttachments::tickPending);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.NewMoon::tick);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.Aurora::tick);
+		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.gun.SmokeScreens::tick);
+		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.gun.BallisticArmor::tick);
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % 6000 == 0) {
 				RadiationManager.save(server);

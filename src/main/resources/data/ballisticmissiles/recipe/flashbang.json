@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		" N ",
+		"ISI",
+		" G "
+	],
+	"key": {
+		"N": "minecraft:iron_nugget",
+		"I": "minecraft:iron_ingot",
+		"S": "minecraft:glowstone_dust",
+		"G": "minecraft:gunpowder"
+	},
+	"result": {
+		"id": "ballisticmissiles:flashbang",
+		"count": 2
+	}
+}

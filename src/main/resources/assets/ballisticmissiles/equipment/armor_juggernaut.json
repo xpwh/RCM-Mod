@@ -1,0 +1,14 @@
+{
+	"layers": {
+		"humanoid": [
+			{
+				"texture": "ballisticmissiles:armor_juggernaut"
+			}
+		],
+		"humanoid_leggings": [
+			{
+				"texture": "ballisticmissiles:armor_juggernaut"
+			}
+		]
+	}
+}

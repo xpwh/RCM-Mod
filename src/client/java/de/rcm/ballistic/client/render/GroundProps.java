@@ -94,6 +94,8 @@ public final class GroundProps {
 			m.put(ModRegistry.SHOTGUN, new Prop(ShotgunItemRenderer.GUN.bounds(), ModRegistry.METAL_THUD, 1.15F, 0.8F));
 			m.put(ModRegistry.ROCKET_LAUNCHER, new Prop(union(Rpg7ItemRenderer.LAUNCHER, Rpg7ItemRenderer.WARHEAD), ModRegistry.METAL_THUD, 0.9F, 0.9F));
 			m.put(ModRegistry.GRENADE, new Prop(union(GrenadeRenderers.BODY, GrenadeRenderers.LEVER), ModRegistry.MAG_DROP, 0.9F, 0.5F));
+			m.put(ModRegistry.SMOKE_GRENADE, new Prop(union(GrenadeRenderers.SMOKE_BODY, GrenadeRenderers.CAN_LEVER), ModRegistry.MAG_DROP, 0.85F, 0.5F));
+			m.put(ModRegistry.FLASHBANG, new Prop(union(GrenadeRenderers.FLASH_BODY, GrenadeRenderers.TUBE_LEVER), ModRegistry.MAG_DROP, 1.0F, 0.5F));
 			props = m;
 		}
 		return props;

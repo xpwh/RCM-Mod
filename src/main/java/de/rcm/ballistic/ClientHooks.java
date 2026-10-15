@@ -48,6 +48,12 @@ public final class ClientHooks {
 	public static Consumer<de.rcm.ballistic.gun.BulletEntity> bulletClientTick = bullet -> {};
 	public static SmokeTrail smokeTrail = (key, at, width, strength) -> {};
 	public static SmokeCloud smokeCloud = (at, drift, puffs, size) -> {};
+	/** A smoke grenade pouring out smoke ({@code age}: ticks since it popped). */
+	public static SmokeGrenade smokeGrenade = (at, age) -> {};
+
+	public interface SmokeGrenade {
+		void emit(net.minecraft.world.phys.Vec3 at, int age);
+	}
 
 	private ClientHooks() {
 	}

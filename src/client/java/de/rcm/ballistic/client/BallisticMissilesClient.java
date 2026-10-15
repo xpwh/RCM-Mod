@@ -189,6 +189,16 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.AuroraPayload.TYPE,
 			(payload, context) -> de.rcm.ballistic.client.effect.AuroraClient.receive(payload.active(), payload.forced(), payload.random()));
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.AuroraClient::tick);
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.FlashbangPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.FlashbangClient.receive(payload.pos(), payload.blind(), payload.deaf()));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.FlashbangClient::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FlashbangClient.clear());
+		HudElementRegistry.addLast(BallisticMissiles.id("flashbang"), (graphics, tickCounter) -> {
+			float white = de.rcm.ballistic.client.effect.FlashbangClient.white(tickCounter.getGameTimeDeltaPartialTick(false));
+			if (white > 0.003F) {
+				graphics.fill(0, 0, graphics.guiWidth(), graphics.guiHeight(), (int) (Math.min(1.0F, white) * 255.0F) << 24 | 0xFFFFFF);
+			}
+		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.AuroraClient.clear());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FalloutClient.clear());
 		ClientTickEvents.END_CLIENT_TICK.register(BallisticMissilesClient::debrisTrails);
@@ -209,6 +219,13 @@ public class BallisticMissilesClient implements ClientModInitializer {
 			if (strength > 0.02F) {
 				de.rcm.ballistic.client.effect.VolumetricClouds.smallRocket(key * 4 + 2, at, width); // through the clouds too
 			}
+		};
+		// a smoke grenade: thick white smoke pouring from the canister, heaviest in the first seconds, rolling out
+		// along the ground and up into a screen several blocks across before it thins away
+		ClientHooks.smokeGrenade = (at, age) -> {
+			int n = age < 40 ? 3 : age < de.rcm.ballistic.gun.GrenadeEntity.SMOKE_TICKS - 80 ? 2 : age % 3 == 0 ? 1 : 0;
+			de.rcm.ballistic.client.effect.SmokeField.burst(at, n, 0.2, new net.minecraft.world.phys.Vec3(0.0, 0.012, 0.0), 0.12, 700, 0.35F, 4.2F,
+				0xDCDCD6, 0.92F, 0.0002F);
 		};
 		ClientHooks.smokeCloud = (at, drift, puffs, size) ->
 			de.rcm.ballistic.client.effect.SmokeField.burst(at, puffs, size * 0.8, drift, 0.35, 1500, size * 0.5F, size * 3.2F, 0xE4E0DA, 0.8F, 0.0015F);

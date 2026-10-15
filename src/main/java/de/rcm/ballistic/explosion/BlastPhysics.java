@@ -129,6 +129,7 @@ public final class BlastPhysics {
 			if (struck != null) {
 				double d = Math.sqrt(best);
 				float hurt = (float) (damage * Math.max(0.3, 1.0 - d / range));
+				hurt = de.rcm.ballistic.gun.BallisticArmor.fragment(struck, hurt, level.getRandom());
 				struck.hurtServer(level, level.damageSources().explosion(source, null), hurt);
 				continue;
 			}

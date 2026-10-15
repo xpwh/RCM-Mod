@@ -607,6 +607,13 @@ public class SoldierEntity extends PathfinderMob {
 	}
 
 	private boolean sees(ServerLevel level, Vec3 spot) {
+		// blinded by a stun grenade: nothing beyond arm's length; and no one sees through a smoke screen
+		if (this.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS) && this.getEyePosition().distanceToSqr(spot) > 4.0) {
+			return false;
+		}
+		if (de.rcm.ballistic.gun.SmokeScreens.blocks(level, this.getEyePosition(), spot)) {
+			return false;
+		}
 		HitResult hit = level.clip(new ClipContext(this.getEyePosition(), spot, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
 		return hit.getType() == HitResult.Type.MISS || hit.getLocation().distanceToSqr(spot) < 1.0;
 	}
