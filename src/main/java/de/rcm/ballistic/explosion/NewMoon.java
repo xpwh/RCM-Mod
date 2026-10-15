@@ -20,7 +20,8 @@ import net.minecraft.world.level.storage.LevelResource;
 /**
  * The new-moon night event: no moon, no stars, overcast - the nights go pitch black, as they do far from
  * any town. Only what gives off light can be seen: torches, fires, muzzle flashes, weapon lights and lasers.
- * Switched on and off from the control panel ({@code /bmworld neumond an|aus}); saved with the world and
+ * Switched on and off from the control panel ({@code /bmworld neumond an|aus}), how dark from 1 to 100
+ * ({@code /bmworld neumond dunkelheit <1-100>}); saved with the world and
  * sent to every player.
  * <p>
  * Switching it on plays a cutscene for everyone at once (the client side is {@code NewMoonCutscene}):
@@ -34,6 +35,8 @@ public final class NewMoon {
 	public static final int LAPSE_TO = 110;
 	private static final long MIDNIGHT = 18000L;
 	private static boolean active;
+	/** How dark it makes the nights, 1 (hardly darker) to 100 (pitch black). */
+	private static int darkness = 100;
 	/** Server game time the time-lapse began, or -1; the day time it runs from and to. */
 	private static long lapseStart = -1L;
 	private static long lapseFrom;
@@ -44,6 +47,18 @@ public final class NewMoon {
 
 	public static boolean active() {
 		return active;
+	}
+
+	public static int darkness() {
+		return darkness;
+	}
+
+	public static void setDarkness(MinecraftServer server, int value) {
+		darkness = Math.max(1, Math.min(100, value));
+		save(server);
+		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			sync(player);
+		}
 	}
 
 	public static void set(MinecraftServer server, boolean on) {
@@ -62,12 +77,12 @@ public final class NewMoon {
 			}
 		}
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-			ServerPlayNetworking.send(player, new NewMoonPayload(active, changed));
+			ServerPlayNetworking.send(player, new NewMoonPayload(active, changed, darkness));
 		}
 	}
 
 	public static void sync(ServerPlayer player) {
-		ServerPlayNetworking.send(player, new NewMoonPayload(active, false));
+		ServerPlayNetworking.send(player, new NewMoonPayload(active, false, darkness));
 	}
 
 	/** Every server tick: the cutscene's time-lapse, eased in and out. */
@@ -100,6 +115,7 @@ public final class NewMoon {
 
 	public static void load(MinecraftServer server) {
 		active = false;
+		darkness = 100;
 		lapseStart = -1L;
 		Path path = file(server);
 		if (!Files.exists(path)) {
@@ -108,6 +124,9 @@ public final class NewMoon {
 		try {
 			JsonObject o = JsonParser.parseString(Files.readString(path, StandardCharsets.UTF_8)).getAsJsonObject();
 			active = o.get("active").getAsBoolean();
+			if (o.has("darkness")) {
+				darkness = Math.max(1, Math.min(100, o.get("darkness").getAsInt()));
+			}
 		} catch (IOException | RuntimeException e) {
 			BallisticMissiles.LOGGER.warn("Could not read new moon state from {}", path, e);
 		}
@@ -116,6 +135,7 @@ public final class NewMoon {
 	public static void save(MinecraftServer server) {
 		JsonObject o = new JsonObject();
 		o.addProperty("active", active);
+		o.addProperty("darkness", darkness);
 		Path path = file(server);
 		try {
 			Files.createDirectories(path.getParent());

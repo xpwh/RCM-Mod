@@ -15,6 +15,7 @@ import net.minecraft.world.phys.Vec3;
  *       (default 64) put back as it was ({@link CraterLog})</li>
  *   <li>{@code krater info} - how many destroyed blocks are remembered here</li>
  *   <li>{@code neumond an|aus} - the new-moon night event: pitch-black nights ({@link NewMoon})</li>
+ *   <li>{@code neumond dunkelheit <1-100>} - how dark it makes them</li>
  * </ul>
  */
 public final class WorldCommand {
@@ -35,7 +36,14 @@ public final class WorldCommand {
 				})))
 			.then(Commands.literal("neumond")
 				.then(Commands.literal("an").executes(ctx -> newMoon(ctx.getSource(), true)))
-				.then(Commands.literal("aus").executes(ctx -> newMoon(ctx.getSource(), false)))));
+				.then(Commands.literal("aus").executes(ctx -> newMoon(ctx.getSource(), false)))
+				.then(Commands.literal("dunkelheit")
+					.then(Commands.argument("prozent", IntegerArgumentType.integer(1, 100)).executes(ctx -> {
+						int v = IntegerArgumentType.getInteger(ctx, "prozent");
+						NewMoon.setDarkness(ctx.getSource().getServer(), v);
+						ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.world.new_moon_darkness", v), true);
+						return v;
+					})))));
 	}
 
 	private static int newMoon(CommandSourceStack source, boolean on) {

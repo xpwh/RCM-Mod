@@ -12,6 +12,6 @@ public abstract class SkyRendererMixin {
 	@ModifyArg(method = "renderSunMoonAndStars", at = @At(value = "INVOKE",
 		target = "Lnet/minecraft/client/renderer/SkyRenderer;renderMoon(Lnet/minecraft/world/level/MoonPhase;FLcom/mojang/blaze3d/vertex/PoseStack;)V"), index = 1)
 	private float ballisticmissiles$moonOut(float alpha) {
-		return alpha * (1.0F - NewMoonClient.moonGone());
+		return alpha * (1.0F - NewMoonClient.moonGone()) * de.rcm.ballistic.client.effect.NewMoonCutscene.moonFlicker(net.minecraft.client.Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false));
 	}
 }

@@ -370,10 +370,16 @@ public class SettingsScreen extends Screen {
 					(b, v) -> this.run("bmserver nukes " + (v ? "erlauben" : "verbieten")))));
 
 		this.list.header("options.ballisticmissiles.section.events", 0xFF8080FF);
+		// 1-100: sent to the server once the slider is let go
+		IntSlider darkness = new IntSlider(1, 100, "options.ballisticmissiles.new_moon_darkness", de.rcm.ballistic.client.effect.NewMoonClient.darknessSetting(),
+			v -> this.run("bmworld neumond dunkelheit " + v));
+		darkness.commitOnRelease = true;
+		darkness.setTooltip(Tooltip.create(Component.translatable("options.ballisticmissiles.new_moon_darkness.tooltip")));
 		this.list.row(command(CycleButton.onOffBuilder(de.rcm.ballistic.client.effect.NewMoonClient.active())
 			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.new_moon.tooltip")))
 			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.new_moon"),
-				(b, v) -> this.run("bmworld neumond " + (v ? "an" : "aus")))));
+				(b, v) -> this.run("bmworld neumond " + (v ? "an" : "aus")))),
+			command(darkness));
 
 		this.list.header("options.ballisticmissiles.section.repair", 0xFF90C0FF);
 		this.list.note("options.ballisticmissiles.repair.note");

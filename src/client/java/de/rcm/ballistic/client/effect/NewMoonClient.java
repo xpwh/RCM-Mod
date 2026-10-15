@@ -11,14 +11,17 @@ import net.minecraft.world.level.Level;
  */
 public final class NewMoonClient {
 	private static boolean active;
+	/** How dark the server wants it, 1-100. */
+	private static int darkness = 100;
 	/** The event eased in and out over a few seconds. */
 	private static float shown;
 
 	private NewMoonClient() {
 	}
 
-	public static void receive(boolean value, boolean cutscene) {
+	public static void receive(boolean value, boolean cutscene, int level) {
 		active = value;
+		darkness = level;
 		if (cutscene) {
 			NewMoonCutscene.start(value);
 		}
@@ -26,6 +29,10 @@ public final class NewMoonClient {
 
 	public static boolean active() {
 		return active;
+	}
+
+	public static int darknessSetting() {
+		return darkness;
 	}
 
 	public static void clear() {
@@ -50,7 +57,7 @@ public final class NewMoonClient {
 		return shown;
 	}
 
-	/** How pitch black it is now, 0-1: the event, as far as night has fallen (dusk darkens into it). */
+	/** How dark it is now, 0-1: the event, as far as night has fallen (dusk darkens into it), times the setting. */
 	public static float amount() {
 		Minecraft mc = Minecraft.getInstance();
 		if (shown <= 0.0F || mc.level == null) {
@@ -58,6 +65,6 @@ public final class NewMoonClient {
 		}
 		float dark = Mth.clamp(mc.level.getSkyDarken() / 11.0F, 0.0F, 1.0F);
 		float x = Mth.clamp((dark - 0.3F) / 0.55F, 0.0F, 1.0F);
-		return shown * x * x * (3.0F - 2.0F * x);
+		return shown * x * x * (3.0F - 2.0F * x) * Mth.clamp(darkness / 100.0F, 0.01F, 1.0F);
 	}
 }
