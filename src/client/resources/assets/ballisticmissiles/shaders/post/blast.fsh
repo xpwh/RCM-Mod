@@ -55,6 +55,92 @@ vec3 hot(vec3 c, float threshold) {
     return c * smoothstep(threshold, 1.0, luma(c));
 }
 
+// ---- water on the lens. A drop on glass is a tiny lens: through it you see a small, upside-down and
+// slightly soft picture of what lies around it, framed by a dark rim where the light bends away, with a
+// glint of the sky on its upper side and light gathered in its lower edge.
+struct Lens {
+    vec2 bend;    // where the light through this pixel comes from (screen units, x times aspect)
+    float cover;  // how much of the pixel lies under water
+    float rim;
+    float glint;
+};
+
+void bead(inout Lens l, vec2 q, float r, float seed) {
+    if (r <= 0.0) return;
+    float a = atan(q.y, q.x);
+    // no drop is a perfect circle
+    float rr = r * (1.0 + 0.06 * sin(2.0 * a + seed * 6.3) + 0.03 * sin(3.0 * a + seed * 17.0));
+    float x = length(q) / rr;
+    if (x >= 1.0) return;
+    float c = smoothstep(1.0, 0.8, x);
+    l.bend = mix(l.bend, -q * 3.4, c);
+    l.rim = mix(l.rim, smoothstep(0.5, 0.97, x), c);
+    vec2 s = q / rr - vec2(-0.3, 0.36);
+    float spot = smoothstep(0.22, 0.0, length(s * vec2(1.0, 1.5)));
+    float caustic = smoothstep(-0.4, -0.8, q.y / rr) * smoothstep(1.0, 0.7, x);
+    l.glint = mix(l.glint, spot + caustic * 0.25, c);
+    l.cover = max(l.cover, c);
+}
+
+// beads sitting still on the glass, scattered over a grid; as the water runs off they shrink and go one
+// by one
+void beads(inout Lens l, vec2 P, float rows, float amount, float rmin, float rmax, float salt) {
+    vec2 id = floor(P * rows);
+    vec2 f = fract(P * rows) - 0.5;
+    float h = hash(id + salt);
+    float r = mix(rmin, rmax, pow(hash(id + salt + 1.3), 2.0)) * smoothstep(h, h + 0.15, amount);
+    vec2 off = (vec2(hash(id + salt + 2.1), hash(id + salt + 3.7)) - 0.5) * max(0.0, 1.0 - 2.4 * rmax);
+    bead(l, (f - off) / rows, r / rows, hash(id + salt + 5.3));
+}
+
+// big drops that run down the glass in fits and starts, wandering a little, wiping the beads off their
+// path and leaving a wet streak and a string of tiny beads behind
+void runners(inout Lens l, vec2 P, float t, float amount, float salt) {
+    const float COLS = 7.0;
+    float col = floor(P.x * COLS);
+    float h = hash(vec2(col, salt));
+    float present = smoothstep(h, h + 0.12, amount);
+    if (present <= 0.0) return;
+    float speed = 0.12 + 0.16 * hash(vec2(col, salt + 1.0));
+    float u = t * speed * 6.0 + h * 6.0;
+    float stepped = floor(u) + smoothstep(0.45, 1.0, fract(u)); // stick, then slip
+    float y = 1.2 - fract(stepped / 6.0) * 1.65;
+    float cx = (col + 0.3 + 0.4 * hash(vec2(col, salt + 2.0))) / COLS;
+    float wig = 0.18 / COLS;
+    float ph = h * 6.283;
+    float r = (0.011 + 0.012 * hash(vec2(col, salt + 3.0))) * present;
+
+    // the streak above it, narrowing and drying out with distance
+    float above = P.y - y;
+    float trail = 0.0;
+    if (above > 0.0 && above < 0.32) {
+        float fade = 1.0 - above / 0.32;
+        float dx = P.x - (cx + wig * sin(P.y * 9.0 + ph));
+        float w = r * (0.25 + 0.35 * fade);
+        trail = smoothstep(w, w * 0.4, abs(dx)) * fade;
+        float keep = 1.0 - smoothstep(0.0, 0.3, trail);
+        l.cover *= keep;
+        l.rim *= keep;
+        l.glint *= keep;
+        l.bend *= keep;
+        // the film itself: a thin, faint smear of refraction
+        l.bend += vec2(-dx * 0.6, 0.0) * trail;
+        l.cover = max(l.cover, trail * 0.35);
+        // tiny beads strung along it
+        const float GAP = 0.016;
+        float row = floor(P.y / GAP);
+        float bh = hash(vec2(col + salt, row));
+        float by = (row + 0.5) * GAP;
+        vec2 bc = vec2(cx + wig * sin(by * 9.0 + ph) + (hash(vec2(row, col + salt)) - 0.5) * r * 0.6, by);
+        float br = step(0.35, bh) * r * (0.18 + 0.22 * bh) * smoothstep(0.0, 0.25, fade);
+        if (by > y + r) bead(l, P - bc, br, bh);
+    }
+    vec2 c = vec2(cx + wig * sin(y * 9.0 + ph), y);
+    vec2 q = P - c;
+    q.y *= q.y > 0.0 ? 0.78 : 1.0; // round and heavy below, drawn out where it pulls the streak
+    bead(l, q, r, h);
+}
+
 void main() {
     vec4 p0 = param(0);
     vec4 p1 = param(1);
@@ -108,23 +194,14 @@ void main() {
         uv += vec2(sway * 0.004, bounce * 0.007) * quake;
     }
 
-    // ---- water on the lens: drops that refract the picture, and runnels sliding down
-    float wet = 0.0;
+    // ---- water on the lens: beads of every size refracting the picture, and drops running down
+    Lens lens = Lens(vec2(0.0), 0.0, 0.0, 0.0);
     if (drench > 0.0) {
-        // small, scattered drops that slide down and thin out as the water runs off
-        vec2 grid = vec2(34.0 * aspect, 34.0);
-        vec2 cell = floor(uv * grid);
-        float slide = hash(vec2(cell.x, 7.0)) * 0.6 + 0.2;
-        vec2 g = uv * grid + vec2(0.0, time * slide * (1.2 - drench) * 5.0);
-        vec2 gc = floor(g);
-        vec2 f = fract(g) - 0.5;
-        float has = step(1.0 - drench * 0.45, hash(gc + 3.7));
-        vec2 off = (vec2(hash(gc), hash(gc + 1.3)) - 0.5) * 0.5;
-        float r = 0.12 + 0.14 * hash(gc + 9.1);
-        vec2 q = f - off;
-        float drop = has * smoothstep(r, r * 0.55, length(q * vec2(1.0, 0.8)));
-        uv += q / grid * drop * 1.3;
-        wet = drop;
+        vec2 P = vec2(uv.x * aspect, uv.y);
+        beads(lens, P, 28.0, drench * 0.65, 0.1, 0.3, 3.7);
+        beads(lens, P, 11.0, drench * 0.45, 0.1, 0.27, 11.3);
+        runners(lens, P, time, drench * 1.3 - 0.05, 21.0);
+        uv += lens.bend / vec2(aspect, 1.0) * lens.cover;
     }
 
     // ---- camera shudder
@@ -222,12 +299,15 @@ void main() {
         col = mix(col, smokeCol * (0.8 + 0.4 * swirl), thick);
     }
 
-    // ---- water on the lens: a cool, smeared look inside the drops
+    // ---- water on the lens: soft focus inside the water, the rims dark, the glints bright
     if (drench > 0.0) {
-        vec3 smear = (texture(InSampler, uv + vec2(0.003, 0.0)).rgb + texture(InSampler, uv - vec2(0.003, 0.0)).rgb
-            + texture(InSampler, uv + vec2(0.0, 0.004)).rgb + texture(InSampler, uv - vec2(0.0, 0.004)).rgb) * 0.25;
-        col = mix(col, smear * vec3(0.95, 1.0, 1.03), 0.12 * drench);
-        col += wet * 0.04 * drench;
+        vec3 smear = (texture(InSampler, uv + vec2(0.0025, 0.0)).rgb + texture(InSampler, uv - vec2(0.0025, 0.0)).rgb
+            + texture(InSampler, uv + vec2(0.0, 0.0035)).rgb + texture(InSampler, uv - vec2(0.0, 0.0035)).rgb) * 0.25;
+        float w = lens.cover;
+        col = mix(col, smear, 0.04 * drench + 0.55 * w);
+        col *= 1.0 - 0.42 * lens.rim * w;
+        col *= 1.0 + 0.06 * w;
+        col += vec3(0.92, 0.96, 1.0) * lens.glint * w * (0.12 + 0.45 * luma(smear));
     }
 
     // ---- shell shock: soft focus and washed-out colour while the ears ring
