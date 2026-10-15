@@ -67,7 +67,7 @@ public final class AkArms {
 	private static final float LEFT_UPPER = 0.6F;
 	/** Which way the elbows point (base space): down and out to the side, a little back. */
 	private static final Vector3f RIGHT_POLE = new Vector3f(0.65F, -1.0F, 0.25F);
-	private static final Vector3f LEFT_POLE = new Vector3f(-0.65F, -1.0F, 0.2F);
+	public static final Vector3f LEFT_POLE = new Vector3f(-0.65F, -1.0F, 0.2F);
 
 	/**
 	 * Both arms, with {@code poseStack} already in the held item's own space and the fists at
