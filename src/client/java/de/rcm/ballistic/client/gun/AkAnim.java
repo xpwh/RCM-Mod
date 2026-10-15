@@ -59,14 +59,14 @@ public final class AkAnim {
 
 	public float bolt;
 	public boolean magVisible;
-	public boolean magTracer;
+	public int magTracer;
 	/** Rounds showing in the feed lips. */
 	public boolean magLoaded;
 	public final Matrix4f mag = new Matrix4f();
 	/** A second magazine in the hand (the fresh one, during a magazine-to-magazine reload). */
 	public final Matrix4f mag2 = new Matrix4f();
 	public boolean mag2Visible;
-	public boolean mag2Tracer;
+	public int mag2Tracer;
 	public final Vector3f leftHand = new Vector3f();
 	public final Vector3f rightHand = new Vector3f();
 
@@ -186,7 +186,7 @@ public final class AkAnim {
 		magPose(rock, Mth.clamp(TAC_FRESH.at(r, 5), 0.0F, 1.0F), 0.0F);
 		fresh.mul(rock);
 		this.mag2Visible = r >= 5.5F && r < AkItem.T_TAC_IN;
-		this.mag2Tracer = state.reloadAmmo() == GunState.TRACER;
+		this.mag2Tracer = state.reloadAmmo();
 
 		// the old one: knocked out of the well, flying off forward and down, tumbling
 		Matrix4f old = this.mag;
@@ -208,7 +208,7 @@ public final class AkAnim {
 				this.mag.translate(0.0F, -0.006F * Mth.sin((r - AkItem.T_TAC_IN) / 3.0F * Mth.PI), 0.0F);
 			}
 			this.magVisible = true;
-			this.magTracer = state.reloadAmmo() == GunState.TRACER;
+			this.magTracer = state.reloadAmmo();
 		}
 
 		Matrix4f seated = new Matrix4f();
@@ -282,7 +282,7 @@ public final class AkAnim {
 		float shot = now - lastShot;
 		this.bolt = shot >= 0.0F && shot < AkItem.CYCLE ? Mth.sin(shot / AkItem.CYCLE * Mth.PI) : 0.0F;
 		this.magVisible = state.hasMag();
-		this.magTracer = state.ammo() == GunState.TRACER;
+		this.magTracer = state.ammo();
 		magPose(this.mag, 0.0F, 0.0F);
 		this.magLoaded = state.rounds() > 0;
 		this.leftHand.set(HANDGUARD);
@@ -343,7 +343,7 @@ public final class AkAnim {
 			}
 			this.magVisible = true;
 			this.magLoaded = true;
-			this.magTracer = state.reloadAmmo() == GunState.TRACER;
+			this.magTracer = state.reloadAmmo();
 		}
 		m.transformPosition(MAG_HOLD, hold);
 

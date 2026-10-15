@@ -801,5 +801,8 @@
 	"options.ballisticmissiles.target": "Ziel",
 	"options.ballisticmissiles.target.self": "Ich",
 	"options.ballisticmissiles.target.all": "Alle Spieler",
-	"options.ballisticmissiles.target.tooltip": "Auf wen die Verletzungen und „Unverwundbar“ wirken: du selbst, alle Spieler oder ein bestimmter Spieler, der gerade online ist."
+	"options.ballisticmissiles.target.tooltip": "Auf wen die Verletzungen und „Unverwundbar“ wirken: du selbst, alle Spieler oder ein bestimmter Spieler, der gerade online ist.",
+	"item.ballisticmissiles.ak_magazine_tracer_red": "AK-Magazin (Leuchtspur rot)",
+	"tooltip.ballisticmissiles.ak.tracer_red": "Leuchtspur rot",
+	"tooltip.ballisticmissiles.ak_mag.tracer_red": "7,62×39 Leuchtspur-Mischung: jede 4. Patrone rot leuchtend (brennt ~800 m), die letzten 3 alle Leuchtspur – zeigt an, dass das Magazin leer wird · Herstellen: Magazin + Redstone · Nachfüllen wie normales Magazin + Redstone"
 }

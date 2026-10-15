@@ -42,6 +42,8 @@ import org.jspecify.annotations.Nullable;
  */
 public class BulletEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> DATA_TRACER = SynchedEntityData.defineId(BulletEntity.class, EntityDataSerializers.BOOLEAN);
+	/** A red-burning tracer (otherwise green). */
+	private static final EntityDataAccessor<Boolean> DATA_RED = SynchedEntityData.defineId(BulletEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> DATA_SHOOTER = SynchedEntityData.defineId(BulletEntity.class, EntityDataSerializers.INT);
 	private static final double GRAVITY = 0.0245;
 	private static final double DRAG = 0.988;
@@ -68,18 +70,23 @@ public class BulletEntity extends Entity {
 	}
 
 	public static void fire(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, boolean tracer) {
-		launch(level, shooter, from, velocity, tracer, false, 1.0F);
+		fire(level, shooter, from, velocity, tracer, false);
+	}
+
+	public static void fire(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, boolean tracer, boolean red) {
+		launch(level, shooter, from, velocity, tracer, false, 1.0F, red);
 	}
 
 	/** One ball of a shotgun's load. */
 	public static void firePellet(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, float damageScale) {
-		launch(level, shooter, from, velocity, false, true, damageScale);
+		launch(level, shooter, from, velocity, false, true, damageScale, false);
 	}
 
-	private static void launch(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, boolean tracer, boolean pellet, float damageScale) {
+	private static BulletEntity launch(ServerLevel level, Entity shooter, Vec3 from, Vec3 velocity, boolean tracer, boolean pellet, float damageScale,
+		boolean red) {
 		BulletEntity b = ModRegistry.BULLET.create(level, EntitySpawnReason.TRIGGERED);
 		if (b == null) {
-			return;
+			return null;
 		}
 		b.pellet = pellet;
 		b.damageScale = damageScale;
@@ -87,6 +94,7 @@ public class BulletEntity extends Entity {
 		b.origin = from;
 		b.shooter = shooter;
 		b.entityData.set(DATA_TRACER, tracer);
+		b.entityData.set(DATA_RED, red);
 		b.entityData.set(DATA_SHOOTER, shooter.getId());
 		b.setPos(from);
 		b.setDeltaMovement(velocity);
@@ -96,16 +104,22 @@ public class BulletEntity extends Entity {
 		for (int i = 0; i < 6 && !b.isRemoved(); i++) {
 			b.flyServer(level);
 		}
+		return b;
 	}
 
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
 		builder.define(DATA_TRACER, false);
+		builder.define(DATA_RED, false);
 		builder.define(DATA_SHOOTER, -1);
 	}
 
 	public boolean isTracer() {
 		return this.entityData.get(DATA_TRACER);
+	}
+
+	public boolean isRed() {
+		return this.entityData.get(DATA_RED);
 	}
 
 	public int shooterId() {

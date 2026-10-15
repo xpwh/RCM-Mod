@@ -573,10 +573,15 @@ public final class ModRegistry {
 	);
 	public static final Item SHOTGUN_SHELL = registerItem("shotgun_shell", Item::new, new Item.Properties().stacksTo(25));
 	public static final Item AK_MAG = registerItem(
-		"ak_magazine", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, false), new Item.Properties().stacksTo(8)
+		"ak_magazine", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, de.rcm.ballistic.gun.GunState.BALL), new Item.Properties().stacksTo(8)
 	);
 	public static final Item AK_MAG_TRACER = registerItem(
-		"ak_magazine_tracer", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, true), new Item.Properties().stacksTo(8).rarity(Rarity.UNCOMMON)
+		"ak_magazine_tracer", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, de.rcm.ballistic.gun.GunState.TRACER),
+		new Item.Properties().stacksTo(8).rarity(Rarity.UNCOMMON)
+	);
+	public static final Item AK_MAG_TRACER_RED = registerItem(
+		"ak_magazine_tracer_red", props -> new de.rcm.ballistic.gun.AkMagazineItem(props, de.rcm.ballistic.gun.GunState.TRACER_RED),
+		new Item.Properties().stacksTo(8).rarity(Rarity.UNCOMMON)
 	);
 	public static final Item GRENADE = registerItem(
 		"grenade", de.rcm.ballistic.gun.GrenadeItem::new, new Item.Properties().stacksTo(8)
@@ -775,6 +780,7 @@ public final class ModRegistry {
 		output.accept(SHOTGUN_SHELL);
 		output.accept(AK_MAG);
 		output.accept(AK_MAG_TRACER);
+		output.accept(AK_MAG_TRACER_RED);
 		output.accept(GRENADE);
 		output.accept(ROCKET_LAUNCHER);
 		output.accept(RPG_ROCKET);

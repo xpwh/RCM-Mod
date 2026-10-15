@@ -11,7 +11,7 @@ import net.minecraft.network.codec.StreamCodec;
  * animations):
  *
  * @param rounds      cartridges in the gun (magazine plus the one in the chamber)
- * @param ammo        what the loaded magazine holds: {@link #BALL} or {@link #TRACER}
+ * @param ammo        what the loaded magazine holds: {@link #BALL}, {@link #TRACER} or {@link #TRACER_RED}
  * @param hasMag      whether a magazine is in the gun at all
  * @param mode        {@link #AUTO}, {@link #SEMI} or {@link #SAFE}
  * @param lastShot    game time of the last shot (recoil, bolt and muzzle flash animations)
@@ -22,6 +22,20 @@ import net.minecraft.network.codec.StreamCodec;
 public record GunState(int rounds, int ammo, boolean hasMag, int mode, long lastShot, long reloadStart, int reloadKind, int reloadAmmo) {
 	public static final int BALL = 0;
 	public static final int TRACER = 1;
+	/** Tracers that burn red (NATO-style), the same mix as {@link #TRACER}. */
+	public static final int TRACER_RED = 2;
+	/** The order R + sneak steps through the ammunition types. */
+	public static final int[] AMMO = {BALL, TRACER, TRACER_RED};
+
+	/** Whether this ammunition has tracers in it. */
+	public static boolean tracer(int ammo) {
+		return ammo == TRACER || ammo == TRACER_RED;
+	}
+
+	/** The durability-bar / HUD colour of an ammunition type. */
+	public static int colour(int ammo) {
+		return ammo == TRACER ? 0x66FF55 : ammo == TRACER_RED ? 0xFF4038 : 0xE0C060;
+	}
 	public static final int AUTO = 0;
 	public static final int SEMI = 1;
 	public static final int SAFE = 2;

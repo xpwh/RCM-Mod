@@ -801,5 +801,8 @@
 	"options.ballisticmissiles.target": "Target",
 	"options.ballisticmissiles.target.self": "Me",
 	"options.ballisticmissiles.target.all": "All players",
-	"options.ballisticmissiles.target.tooltip": "Who the injuries and 'Invulnerable' apply to: yourself, every player, or one player who is online."
+	"options.ballisticmissiles.target.tooltip": "Who the injuries and 'Invulnerable' apply to: yourself, every player, or one player who is online.",
+	"item.ballisticmissiles.ak_magazine_tracer_red": "AK Magazine (Red Tracer)",
+	"tooltip.ballisticmissiles.ak.tracer_red": "Red tracer",
+	"tooltip.ballisticmissiles.ak_mag.tracer_red": "7.62×39 tracer mix: every 4th round a red tracer (burns ~800 m), the last 3 all tracers – they warn you the magazine is running dry · Craft: magazine + redstone · Refill like a ball magazine + redstone"
 }

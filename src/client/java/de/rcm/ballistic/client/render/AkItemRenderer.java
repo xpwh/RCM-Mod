@@ -12,6 +12,7 @@ import static de.rcm.ballistic.client.render.StructureKit.GREEN_LAMP;
 import static de.rcm.ballistic.client.render.StructureKit.GUNMETAL;
 import static de.rcm.ballistic.client.render.StructureKit.HOT;
 import static de.rcm.ballistic.client.render.StructureKit.OLIVE;
+import static de.rcm.ballistic.client.render.StructureKit.RED_LAMP;
 import static de.rcm.ballistic.client.render.StructureKit.STEEL;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -59,10 +60,21 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 	static final BoxMesh HANDLE = handle();
 	static final BoxMesh CARRIER = carrier();
 	static final BoxMesh SELECTOR = selector();
-	static final BoxMesh MAG = magazine(false, true);
-	static final BoxMesh MAG_TRACER = magazine(true, true);
-	static final BoxMesh MAG_EMPTY = magazine(false, false);
-	static final BoxMesh MAG_TRACER_EMPTY = magazine(true, false);
+	static final BoxMesh MAG = magazine(GunState.BALL, true);
+	static final BoxMesh MAG_TRACER = magazine(GunState.TRACER, true);
+	static final BoxMesh MAG_TRACER_RED = magazine(GunState.TRACER_RED, true);
+	static final BoxMesh MAG_EMPTY = magazine(GunState.BALL, false);
+	static final BoxMesh MAG_TRACER_EMPTY = magazine(GunState.TRACER, false);
+	static final BoxMesh MAG_TRACER_RED_EMPTY = magazine(GunState.TRACER_RED, false);
+
+	/** The magazine model for an ammunition type (green or red tips on the top rounds of a tracer mix). */
+	static BoxMesh magazineMesh(int ammo, boolean loaded) {
+		return switch (ammo) {
+			case GunState.TRACER -> loaded ? MAG_TRACER : MAG_TRACER_EMPTY;
+			case GunState.TRACER_RED -> loaded ? MAG_TRACER_RED : MAG_TRACER_RED_EMPTY;
+			default -> loaded ? MAG : MAG_EMPTY;
+		};
+	}
 	private static final net.minecraft.client.renderer.rendertype.RenderType FLASH_TYPE = net.minecraft.client.renderer.rendertype.RenderTypes.eyes(
 		BallisticMissiles.id("textures/effect/muzzle_flash.png"));
 	private static final AkAnim ANIM = new AkAnim();
@@ -118,7 +130,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 
 		// ---- magazine
 		if (anim.magVisible) {
-			BoxMesh mag = anim.magLoaded ? (anim.magTracer ? MAG_TRACER : MAG) : (anim.magTracer ? MAG_TRACER_EMPTY : MAG_EMPTY);
+			BoxMesh mag = magazineMesh(anim.magTracer, anim.magLoaded);
 			poseStack.pushPose();
 			poseStack.mulPose(anim.mag);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> mag.emit(pose, consumer, light));
@@ -126,7 +138,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		}
 
 		if (anim.mag2Visible) {
-			BoxMesh mag2 = anim.mag2Tracer ? MAG_TRACER : MAG;
+			BoxMesh mag2 = magazineMesh(anim.mag2Tracer, true);
 			poseStack.pushPose();
 			poseStack.mulPose(anim.mag2);
 			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> mag2.emit(pose, consumer, light));
@@ -543,7 +555,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 	}
 
 	/** The curved 30-round magazine, top at the magazine well, with two rounds showing in the lips. */
-	private static BoxMesh magazine(boolean tracer, boolean loaded) {
+	private static BoxMesh magazine(int ammo, boolean loaded) {
 		BoxMesh.Builder b = new BoxMesh.Builder();
 		int n = 10;
 		Vector3f[] spine = arc(v(0, 0.036F, -0.06F), -1.0F, -0.12F, 1.9F, 0.31F, n);
@@ -575,19 +587,19 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunState> {
 		// front locking lug and the rear catch lug
 		b.box(-0.01F, 0.02F, -0.1F, 0.01F, 0.036F, -0.092F, AK_BLUED);
 		b.box(-0.008F, 0.022F, -0.028F, 0.008F, 0.032F, -0.02F, AK_BLUED);
-		// feed lips and the top two rounds: steel-cased 7.62x39, copper-washed bullets (green tip for tracers)
+		// feed lips and the top two rounds: steel-cased 7.62x39, copper-washed bullets (green or red tip for tracers)
 		b.box(-0.0145F, 0.034F, -0.092F, -0.009F, 0.042F, -0.03F, AK_BLUED);
 		b.box(0.009F, 0.034F, -0.092F, 0.0145F, 0.042F, -0.03F, AK_BLUED);
 		for (int k = 0; k < (loaded ? 2 : 0); k++) {
 			float x = k == 0 ? 0.0035F : -0.0035F;
 			float y = k == 0 ? 0.042F : 0.036F;
 			b.revolve(BRASS, v(x, y, -0.03F), v(0, -0.06F, -1), new float[][] {{0.0F, 0.0055F}, {0.04F, 0.0052F}, {0.046F, 0.0042F}}, 8);
-			b.revolve(tracer ? GREEN_LAMP : HOT, v(x, y - 0.0028F, -0.076F), v(0, -0.06F, -1), new float[][] {{0.0F, 0.0042F}, {0.012F, 0.0036F}, {0.022F, 0.0F}}, 8);
+			b.revolve(ammo == GunState.TRACER ? GREEN_LAMP : ammo == GunState.TRACER_RED ? RED_LAMP : HOT, v(x, y - 0.0028F, -0.076F), v(0, -0.06F, -1), new float[][] {{0.0F, 0.0042F}, {0.012F, 0.0036F}, {0.022F, 0.0F}}, 8);
 		}
-		if (tracer) {
-			// a strip of green tape round a magazine loaded with tracers
+		if (GunState.tracer(ammo)) {
+			// a strip of green (or red) tape round a magazine loaded with tracers
 			Vector3f[] band = {spine[3], new Vector3f(spine[3]).lerp(spine[4], 0.35F)};
-			sweep(b, GREEN_LAMP, band, new float[] {depth[3] + 0.002F, depth[3] + 0.002F}, new float[] {hw[3] + 0.0012F, hw[3] + 0.0012F}, 0.004F, 0.0F);
+			sweep(b, ammo == GunState.TRACER_RED ? RED_LAMP : GREEN_LAMP, band, new float[] {depth[3] + 0.002F, depth[3] + 0.002F}, new float[] {hw[3] + 0.0012F, hw[3] + 0.0012F}, 0.004F, 0.0F);
 		}
 		return b.build();
 	}

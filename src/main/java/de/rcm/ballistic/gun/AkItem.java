@@ -208,8 +208,8 @@ public class AkItem extends Item {
 		// a tracer magazine is loaded the way soldiers load them: every fourth round a tracer, and the
 		// last three all tracers - so the stream shows where the fire goes, and the magazine running dry
 		// shows in the shooter's own fire before the hammer falls on nothing
-		boolean tracer = state.ammo() == GunState.TRACER && (state.rounds() % 4 == 0 || state.rounds() <= 3);
-		shoot(level, player, eye, muzzle, dir, tracer, left == 0);
+		boolean tracer = GunState.tracer(state.ammo()) && (state.rounds() % 4 == 0 || state.rounds() <= 3);
+		shoot(level, player, eye, muzzle, dir, tracer, state.ammo() == GunState.TRACER_RED, left == 0);
 		if (left == 0) {
 			TRIGGERS.remove(player.getUUID()); // the bolt stays forward on an empty chamber: the next pull just clicks
 		}
@@ -221,10 +221,16 @@ public class AkItem extends Item {
 	 */
 	public static void shoot(ServerLevel level, net.minecraft.world.entity.LivingEntity shooter, Vec3 origin, Vec3 muzzle, Vec3 dir, boolean tracer,
 		boolean last) {
-		BulletEntity.fire(level, shooter, origin, dir.scale(MUZZLE_VELOCITY), tracer);
+		shoot(level, shooter, origin, muzzle, dir, tracer, false, last);
+	}
+
+	/** {@code red}: a red-burning tracer instead of a green one. */
+	public static void shoot(ServerLevel level, net.minecraft.world.entity.LivingEntity shooter, Vec3 origin, Vec3 muzzle, Vec3 dir, boolean tracer,
+		boolean red, boolean last) {
+		BulletEntity.fire(level, shooter, origin, dir.scale(MUZZLE_VELOCITY), tracer, red);
 		// everybody near hears it; the shooter gets it too, for the tracer on the bullet's true line
 		GunshotPayload shot = new GunshotPayload(shooter.getId(), muzzle.x, muzzle.y, muzzle.z, (float) dir.x, (float) dir.y, (float) dir.z,
-			(last ? GunshotPayload.LAST : 0) | (tracer ? GunshotPayload.TRACER : 0));
+			(last ? GunshotPayload.LAST : 0) | (tracer ? GunshotPayload.TRACER : 0) | (tracer && red ? GunshotPayload.RED : 0));
 		for (ServerPlayer p : level.players()) {
 			if (p.position().distanceToSqr(muzzle) < 900.0 * 900.0) {
 				ServerPlayNetworking.send(p, shot);
@@ -247,14 +253,22 @@ public class AkItem extends Item {
 		if (state.reloading()) {
 			return;
 		}
-		int want = switchType ? 1 - state.ammo() : state.ammo();
-		if (!state.hasMag()) {
-			want = switchType ? GunState.TRACER : GunState.BALL;
+		// R: the same kind again (or, with none left, the next kind there is); sneak + R: the next kind
+		// in the order ball -> green tracer -> red tracer
+		int want = state.hasMag() ? state.ammo() : GunState.BALL;
+		int at = 0;
+		for (int i = 0; i < GunState.AMMO.length; i++) {
+			if (GunState.AMMO[i] == want) {
+				at = i;
+			}
 		}
-		ItemStack mag = findMagazine(player, want);
-		if (mag.isEmpty()) {
-			want = 1 - want;
+		ItemStack mag = ItemStack.EMPTY;
+		for (int step = switchType ? 1 : 0; step < GunState.AMMO.length + (switchType ? 1 : 0) && mag.isEmpty(); step++) {
+			want = GunState.AMMO[(at + step) % GunState.AMMO.length];
 			mag = findMagazine(player, want);
+		}
+		if (mag.isEmpty()) {
+			want = GunState.AMMO[(at + (switchType ? 1 : 0)) % GunState.AMMO.length];
 		}
 		if (mag.isEmpty() && !player.getAbilities().instabuild) {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.ak_no_mags").withStyle(ChatFormatting.RED), true);
@@ -292,7 +306,7 @@ public class AkItem extends Item {
 		int bestRounds = 0;
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
-			if (s.getItem() instanceof AkMagazineItem mag && mag.tracer() == (type == GunState.TRACER)) {
+			if (s.getItem() instanceof AkMagazineItem mag && mag.ammo() == type) {
 				int r = AkMagazineItem.rounds(s);
 				if (r > bestRounds) {
 					best = s;
@@ -355,7 +369,7 @@ public class AkItem extends Item {
 		}
 		if (state.hasMag()) {
 			int inOld = state.rounds() > 0 ? state.rounds() - 1 : 0;
-			ItemStack old = new ItemStack(state.ammo() == GunState.TRACER ? ModRegistry.AK_MAG_TRACER : ModRegistry.AK_MAG);
+			ItemStack old = new ItemStack(AkMagazineItem.of(state.ammo()));
 			AkMagazineItem.setRounds(old, inOld);
 			if (!player.getAbilities().instabuild && !player.getInventory().add(old)) {
 				player.drop(old, false);
@@ -373,7 +387,7 @@ public class AkItem extends Item {
 		if (player.getAbilities().instabuild) {
 			return;
 		}
-		ItemStack old = new ItemStack(state.ammo() == GunState.TRACER ? ModRegistry.AK_MAG_TRACER : ModRegistry.AK_MAG);
+		ItemStack old = new ItemStack(AkMagazineItem.of(state.ammo()));
 		AkMagazineItem.setRounds(old, rounds);
 		Vec3 look = Vec3.directionFromRotation(0.0F, player.getYRot());
 		Vec3 right = new Vec3(-look.z, 0.0, look.x);
@@ -415,14 +429,15 @@ public class AkItem extends Item {
 
 	@Override
 	public int getBarColor(ItemStack stack) {
-		return state(stack).ammo() == GunState.TRACER ? 0x66FF55 : 0xE0C060;
+		return GunState.colour(state(stack).ammo());
 	}
 
 	@Override
 	public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
 		GunState s = state(stack);
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.ak.rounds", s.rounds(), MAG_CAPACITY,
-			Component.translatable(s.ammo() == GunState.TRACER ? "tooltip.ballisticmissiles.ak.tracer" : "tooltip.ballisticmissiles.ak.ball"),
+			Component.translatable(s.ammo() == GunState.TRACER ? "tooltip.ballisticmissiles.ak.tracer"
+				: s.ammo() == GunState.TRACER_RED ? "tooltip.ballisticmissiles.ak.tracer_red" : "tooltip.ballisticmissiles.ak.ball"),
 			Component.translatable("message.ballisticmissiles.ak_mode_" + s.mode())).withStyle(ChatFormatting.GOLD));
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.ak.1").withStyle(ChatFormatting.GRAY));
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.ak.2").withStyle(ChatFormatting.GRAY));

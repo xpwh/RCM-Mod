@@ -400,6 +400,8 @@ public final class ModNetworking {
 		public static final int LAST = 1;
 		public static final int TRACER = 2;
 		public static final int SHOTGUN = 4;
+		/** With {@link #TRACER}: it burns red. */
+		public static final int RED = 8;
 		public static final Type<GunshotPayload> TYPE = new Type<>(BallisticMissiles.id("gunshot"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunshotPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunshotPayload::shooter,

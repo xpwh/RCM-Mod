@@ -315,7 +315,7 @@ public final class AkClient {
 				Vec3 aimed = muzzle.add(dir.scale(120.0));
 				velocity = aimed.subtract(from).normalize().scale(de.rcm.ballistic.gun.AkItem.MUZZLE_VELOCITY);
 			}
-			TracerFx.fire(from, velocity, p.shooter());
+			TracerFx.fire(from, velocity, p.shooter(), (p.flags() & GunshotPayload.RED) != 0);
 		}
 		if (mc.player != null && p.shooter() == mc.player.getId()) {
 			return; // our own shot: heard and seen already
@@ -394,10 +394,13 @@ public final class AkClient {
 		GunState s = AkItem.state(gun);
 		int mags = 0;
 		int tracers = 0;
+		int reds = 0;
 		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
 			ItemStack st = player.getInventory().getItem(i);
 			if (st.getItem() instanceof AkMagazineItem m && AkMagazineItem.rounds(st) > 0) {
-				if (m.tracer()) {
+				if (m.ammo() == GunState.TRACER_RED) {
+					reds += st.getCount();
+				} else if (m.tracer()) {
 					tracers += st.getCount();
 				} else {
 					mags += st.getCount();
@@ -411,12 +414,13 @@ public final class AkClient {
 		};
 		String rounds = s.hasMag() ? String.valueOf(s.rounds()) : "--";
 		String line1 = rounds + " / " + AkItem.MAG_CAPACITY;
-		String line2 = mode + (s.ammo() == GunState.TRACER ? "  TRACER" : "  7.62") + "   " + mags + (tracers > 0 ? " + " + tracers + "T" : "");
+		String line2 = mode + (s.ammo() == GunState.TRACER ? "  TRACER" : s.ammo() == GunState.TRACER_RED ? "  TRACER R" : "  7.62") + "   " + mags
+			+ (tracers > 0 ? " + " + tracers + "T" : "") + (reds > 0 ? " + " + reds + "R" : "");
 		int w = g.guiWidth();
 		int h = g.guiHeight();
 		int color = s.rounds() == 0 ? 0xFFFF5040 : s.rounds() <= 5 ? 0xFFFFC040 : 0xFFF0F0F0;
 		g.drawString(mc.font, line1, w - 8 - mc.font.width(line1), h - 34, color, true);
-		g.drawString(mc.font, line2, w - 8 - mc.font.width(line2), h - 22, s.ammo() == GunState.TRACER ? 0xFF8CFF7A : 0xFFB8B8B8, true);
+		g.drawString(mc.font, line2, w - 8 - mc.font.width(line2), h - 22, s.ammo() == GunState.TRACER ? 0xFF8CFF7A : s.ammo() == GunState.TRACER_RED ? 0xFFFF6A5A : 0xFFB8B8B8, true);
 		if (s.reloading()) {
 			String r = "Nachladen...";
 			g.drawString(mc.font, r, w - 8 - mc.font.width(r), h - 46, 0xFFFFE080, true);

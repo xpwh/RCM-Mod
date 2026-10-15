@@ -26,7 +26,8 @@ import org.joml.Vector3f;
 
 /**
  * Tracer rounds as you see them. A tracer carries a pyrotechnic charge in its base, lit by the
- * propellant: it shows dim for the first few metres, then burns bright green (Soviet 7.62x39 T-45)
+ * propellant: it shows dim for the first few metres, then burns bright green (Soviet 7.62x39 T-45) - or red, a
+ * red-burning mix
  * along the bullet's real, dropping trajectory. The eye holds the light for a moment, so the moving
  * point is drawn out into a glowing dash that tapers off behind it - long at night, short and pale
  * by day. Tracers skip off hard ground and walls at shallow angles, often leaping steeply upward,
@@ -60,6 +61,8 @@ public final class TracerFx {
 		final List<double[]> path = new ArrayList<>();
 		boolean stopped;
 		int emberLife;
+		/** Burns red instead of green. */
+		boolean red;
 
 		Tracer(Vec3 muzzle, Vec3 vel, int shooter) {
 			this.pos = muzzle;
@@ -71,10 +74,16 @@ public final class TracerFx {
 	}
 
 	public static void fire(Vec3 muzzle, Vec3 velocity, int shooter) {
+		fire(muzzle, velocity, shooter, false);
+	}
+
+	public static void fire(Vec3 muzzle, Vec3 velocity, int shooter, boolean red) {
 		if (TRACERS.size() >= CAP) {
 			TRACERS.remove(0);
 		}
-		TRACERS.add(new Tracer(muzzle, velocity, shooter));
+		Tracer t = new Tracer(muzzle, velocity, shooter);
+		t.red = red;
+		TRACERS.add(t);
 	}
 
 	// ------------------------------------------------------------------ flight
@@ -90,7 +99,7 @@ public final class TracerFx {
 			t.age++;
 			// the burning pellet lights what it passes (the dynamic light only shows where it is dark)
 			if (t.age > 1 && (t.stopped ? t.emberLife > 4 : t.age < BURN)) {
-				de.rcm.ballistic.client.effect.DynamicLights.steady(t.pos, 0x8CFF6A, t.stopped ? 0.25F : 0.5F, t.stopped ? 3.0F : 6.0F);
+				de.rcm.ballistic.client.effect.DynamicLights.steady(t.pos, t.red ? 0xFF5A40 : 0x8CFF6A, t.stopped ? 0.25F : 0.5F, t.stopped ? 3.0F : 6.0F);
 			}
 			if (t.stopped) {
 				if (--t.emberLife <= 0) {
@@ -278,9 +287,10 @@ public final class TracerFx {
 		if (strength <= 0.02F) {
 			return;
 		}
-		// green while it burns hard, going yellow then red as it dies
-		int glow = burnLeft > 0.6F ? 0x62F040 : burnLeft > 0.3F ? 0xC8E040 : 0xFF6A30;
-		int core = burnLeft > 0.5F ? 0xF2FFE8 : 0xFFE0B0;
+		// green (or red) while it burns hard; a green one goes yellow then red as it dies, a red one dull orange-red
+		int glow = t.red ? (burnLeft > 0.6F ? 0xFF2A1A : burnLeft > 0.3F ? 0xFF4A20 : 0xD8401C)
+			: burnLeft > 0.6F ? 0x62F040 : burnLeft > 0.3F ? 0xC8E040 : 0xFF6A30;
+		int core = t.red ? (burnLeft > 0.5F ? 0xFFE6DC : 0xFFC0A0) : burnLeft > 0.5F ? 0xF2FFE8 : 0xFFE0B0;
 		Vector3f head = at(t, now, cam);
 		float dist = head.length();
 		// never smaller on screen than a burning point you can still pick out far downrange
