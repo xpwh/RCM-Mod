@@ -1782,5 +1782,44 @@
 				"name": "ballisticmissiles:glock/case6"
 			}
 		]
+	},
+	"silo.lid_drive": {
+		"subtitle": "subtitles.ballisticmissiles.silo_lid_drive",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:silo/lid_drive1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "ballisticmissiles:silo/lid_drive2",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"silo.lid_lock": {
+		"subtitle": "subtitles.ballisticmissiles.silo_lid_lock",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:silo/lid_lock1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "ballisticmissiles:silo/lid_lock2",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"silo.lid_seat": {
+		"subtitle": "subtitles.ballisticmissiles.silo_lid_seat",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:silo/lid_seat1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "ballisticmissiles:silo/lid_seat2",
+				"attenuation_distance": 48
+			}
+		]
 	}
 }

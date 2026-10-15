@@ -164,3 +164,9 @@ The heartbeat of the dying player is synthesized by `tools/gen_sounds_v13.py`.
 |---|---|---|---|
 | Pistol shots near / mid (Walther PPQ 9 mm, Bersa .380, Carl Gustav M45 9 mm) | https://opengameart.org/content/the-free-firearm-sound-library "Prepared SFX Library" | The Free Firearm Sound Library team | CC0 1.0 |
 | Slide racks, magazine seating, striker clicks, 9 mm cases on concrete | https://bigsoundbank.com sounds #1355-1360, #1984-1995 | Joseph Sardin (BigSoundBank) | CC0 1.0 |
+
+## Round silo lid (`tools/import_silo_sounds.py`)
+
+- `silo/lid_drive*`, `silo/lid_lock*`, `silo/lid_seat*`: NASA Johnson Space Center, "NASA's Johnson Space
+  Center Chamber A Door Closing B-Roll" (2017) - the 40 ft round door of the Chamber A vacuum chamber
+  running, locking and seating. https://svs.gsfc.nasa.gov/12757/ - NASA, public domain.

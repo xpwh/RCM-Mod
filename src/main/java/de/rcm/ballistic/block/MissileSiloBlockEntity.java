@@ -111,54 +111,45 @@ public class MissileSiloBlockEntity extends BlockEntity implements de.rcm.ballis
 		double y = pos.getY() + 1.2;
 		double z = pos.getZ() + 0.5;
 		boolean opening = to > from;
+		// the drive, locking gear and impacts are a real round door's (NASA's 40 t Chamber A door)
 		if (opening) {
 			if (passed(from, to, 0.0F)) {
-				// locking bolts drawn back, one after another round the rim
-				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_RETRACT, SoundSource.BLOCKS, 2.0F, 1.45F, false);
-				level.playLocalSound(x, y, z, ModRegistry.CHAIN_RATTLE, SoundSource.BLOCKS, 0.8F, 0.7F, false);
+				// locking bolts drawn back round the rim
+				level.playLocalSound(x, y, z, ModRegistry.SILO_LID_LOCK, SoundSource.BLOCKS, 2.5F, 0.95F, false);
+				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_RETRACT, SoundSource.BLOCKS, 1.0F, 1.3F, false);
 			}
 			if (passed(from, to, HatchSiloBlock.BOLTS_END - 0.01F)) {
-				level.playLocalSound(x, y, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 2.0F, 1.7F, false);
+				level.playLocalSound(x, y, z, ModRegistry.SILO_LID_LOCK, SoundSource.BLOCKS, 2.5F, 1.15F, false);
 			}
 			if (passed(from, to, HatchSiloBlock.BOLTS_END + 0.01F)) {
 				// the seal breaks: a hiss of the tube's overpressure and dust off the rim
 				level.playLocalSound(x, y, z, ModRegistry.AIR_RELEASE, SoundSource.BLOCKS, 2.5F, 0.75F, false);
-				level.playLocalSound(x, y, z, ModRegistry.DOOR_HEAVY_OPEN, SoundSource.BLOCKS, 3.0F, 0.55F, false);
 				rimDust(level, x, y - 0.1, z, 26, 0.06);
 			}
 			if (passed(from, to, HatchSiloBlock.CRACK_END)) {
-				// the hydraulic pump runs up and the rams start to haul
-				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 4.0F, 0.6F, false);
-				level.playLocalSound(x, y, z, ModRegistry.UPLINK_SERVO, SoundSource.BLOCKS, 2.5F, 0.5F, false);
-			}
-			if (passed(from, to, 0.55F)) {
-				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 4.0F, 0.55F, false);
-				level.playLocalSound(x, y, z, ModRegistry.UPLINK_SERVO, SoundSource.BLOCKS, 2.0F, 0.45F, false);
+				// the drive hauls the lid up on its hinge
+				level.playLocalSound(x, y, z, ModRegistry.SILO_LID_DRIVE, SoundSource.BLOCKS, 3.5F, 0.9F, false);
+				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 1.5F, 0.6F, false);
 			}
 			if (passed(from, to, 0.999F)) {
 				// against the stops
-				level.playLocalSound(x + 2.0, y + 1.0, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 4.0F, 0.5F, false);
-				level.playLocalSound(x, y, z, ModRegistry.AIR_RELEASE, SoundSource.BLOCKS, 1.2F, 1.3F, false);
+				level.playLocalSound(x + 2.0, y + 1.0, z, ModRegistry.SILO_LID_SEAT, SoundSource.BLOCKS, 4.0F, 1.0F, false);
 			}
 		} else {
 			if (passed(to, from, 0.999F)) {
-				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_RETRACT, SoundSource.BLOCKS, 4.0F, 0.6F, false);
-				level.playLocalSound(x, y, z, ModRegistry.UPLINK_SERVO, SoundSource.BLOCKS, 2.5F, 0.5F, false);
-			}
-			if (passed(to, from, 0.55F)) {
-				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_RETRACT, SoundSource.BLOCKS, 4.0F, 0.55F, false);
+				level.playLocalSound(x, y, z, ModRegistry.SILO_LID_DRIVE, SoundSource.BLOCKS, 3.5F, 0.85F, false);
+				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_RETRACT, SoundSource.BLOCKS, 1.5F, 0.6F, false);
 			}
 			if (passed(to, from, HatchSiloBlock.CRACK_END - 0.06F)) {
 				// the lid comes down on its seat
-				level.playLocalSound(x, y, z, ModRegistry.DOOR_HEAVY_CLOSE, SoundSource.BLOCKS, 4.0F, 0.5F, false);
-				level.playLocalSound(x, y, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 4.0F, 0.45F, false);
+				level.playLocalSound(x, y, z, ModRegistry.SILO_LID_SEAT, SoundSource.BLOCKS, 5.0F, 0.85F, false);
 				rimDust(level, x, y - 0.1, z, 20, 0.04);
 			}
 			if (passed(to, from, HatchSiloBlock.BOLTS_END - 0.02F)) {
-				level.playLocalSound(x, y, z, ModRegistry.HYDRAULIC_EXTEND, SoundSource.BLOCKS, 2.0F, 1.5F, false);
+				level.playLocalSound(x, y, z, ModRegistry.SILO_LID_LOCK, SoundSource.BLOCKS, 2.5F, 1.0F, false);
 			}
 			if (passed(to, from, 0.01F)) {
-				level.playLocalSound(x, y, z, ModRegistry.METAL_THUD, SoundSource.BLOCKS, 2.0F, 1.8F, false);
+				level.playLocalSound(x, y, z, ModRegistry.SILO_LID_LOCK, SoundSource.BLOCKS, 1.8F, 1.2F, false);
 			}
 		}
 	}

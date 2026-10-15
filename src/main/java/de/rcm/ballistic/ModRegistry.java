@@ -716,6 +716,9 @@ public final class ModRegistry {
 	public static final SoundEvent WATER_SPLASH = sound("water.splash");
 	public static final SoundEvent WATER_SPLASH_HUGE = sound("water.splash_huge");
 	public static final SoundEvent METAL_THUD = sound("metal.thud");
+	public static final SoundEvent SILO_LID_DRIVE = sound("silo.lid_drive");
+	public static final SoundEvent SILO_LID_LOCK = sound("silo.lid_lock");
+	public static final SoundEvent SILO_LID_SEAT = sound("silo.lid_seat");
 	public static final SoundEvent METAL_CRASH = sound("metal.crash");
 	public static final SoundEvent HYDRAULIC_EXTEND = sound("hydraulic.extend");
 	public static final SoundEvent HYDRAULIC_RETRACT = sound("hydraulic.retract");
