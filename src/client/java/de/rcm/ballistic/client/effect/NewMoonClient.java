@@ -17,8 +17,11 @@ public final class NewMoonClient {
 	private NewMoonClient() {
 	}
 
-	public static void receive(boolean value) {
+	public static void receive(boolean value, boolean cutscene) {
 		active = value;
+		if (cutscene) {
+			NewMoonCutscene.start(value);
+		}
 	}
 
 	public static boolean active() {
@@ -28,12 +31,23 @@ public final class NewMoonClient {
 	public static void clear() {
 		active = false;
 		shown = 0.0F;
+		NewMoonCutscene.clear();
 	}
 
 	public static void tick(Minecraft mc) {
 		boolean overworld = mc.level != null && mc.level.dimension() == Level.OVERWORLD;
+		if (NewMoonCutscene.playing()) {
+			// the cutscene sets the pace: the moon goes out (or comes back) on its cue
+			shown = NewMoonCutscene.darkness();
+			return;
+		}
 		float target = active && overworld ? 1.0F : 0.0F;
 		shown += Mth.clamp(target - shown, -0.01F, 0.01F);
+	}
+
+	/** How far the moon has gone out (0-1): at any hour, it is simply gone. */
+	public static float moonGone() {
+		return shown;
 	}
 
 	/** How pitch black it is now, 0-1: the event, as far as night has fallen (dusk darkens into it). */

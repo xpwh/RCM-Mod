@@ -23,6 +23,7 @@
 		"MinecraftMixin",
 		"ModelPartAccessor",
 		"PlayerModelMixin",
+		"SkyRendererMixin",
 		"SoundEngineMixin",
 		"TitleScreenMixin"
 	],

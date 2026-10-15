@@ -5,14 +5,13 @@ import net.minecraft.util.ARGB;
 import net.minecraft.world.attribute.EnvironmentAttribute;
 import net.minecraft.world.attribute.EnvironmentAttributeProbe;
 import net.minecraft.world.attribute.EnvironmentAttributes;
-import net.minecraft.world.level.MoonPhase;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * A new-moon night: no moon, no stars, no light from the sky - the camera's view of the world's
+ * A new-moon night: no stars, no light from the sky (the moon itself fades out in {@link SkyRendererMixin}) - the camera's view of the world's
  * environment is darkened as the night falls ({@link NewMoonClient}).
  */
 @Mixin(EnvironmentAttributeProbe.class)
@@ -31,8 +30,6 @@ public abstract class EnvironmentAttributeProbeMixin {
 			|| attribute == EnvironmentAttributes.CLOUD_COLOR) {
 			int c = (Integer) v;
 			out = ARGB.color(ARGB.alpha(c), ARGB.scaleRGB(c, 1.0F - e));
-		} else if (attribute == EnvironmentAttributes.MOON_PHASE && e > 0.3F) {
-			out = MoonPhase.NEW_MOON;
 		}
 		if (out != v) {
 			@SuppressWarnings("unchecked")

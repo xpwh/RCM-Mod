@@ -177,7 +177,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.WinterClient::tick);
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.WinterClient.clear());
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.NewMoonPayload.TYPE,
-			(payload, context) -> de.rcm.ballistic.client.effect.NewMoonClient.receive(payload.active()));
+			(payload, context) -> de.rcm.ballistic.client.effect.NewMoonClient.receive(payload.active(), payload.cutscene()));
+		de.rcm.ballistic.client.effect.NewMoonCutscene.init();
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.NewMoonClient::tick);
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.NewMoonClient.clear());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FalloutClient.clear());

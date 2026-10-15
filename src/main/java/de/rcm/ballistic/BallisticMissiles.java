@@ -42,6 +42,7 @@ public class BallisticMissiles implements ModInitializer {
 		net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry.register(ModRegistry.SOLDIER,
 			de.rcm.ballistic.ai.SoldierEntity.createAttributes());
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.gun.GunAttachments::tickPending);
+		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.NewMoon::tick);
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % 6000 == 0) {
 				RadiationManager.save(server);

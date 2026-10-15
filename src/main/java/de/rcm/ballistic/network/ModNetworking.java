@@ -396,11 +396,13 @@ public final class ModNetworking {
 		}
 	}
 
-	/** Server -> client: whether the new-moon night event is on (pitch-black nights). */
-	public record NewMoonPayload(boolean active) implements CustomPacketPayload {
+	/** Server -> client: whether the new-moon night event is on (pitch-black nights), and whether to play its cutscene now. */
+	public record NewMoonPayload(boolean active, boolean cutscene) implements CustomPacketPayload {
 		public static final Type<NewMoonPayload> TYPE = new Type<>(BallisticMissiles.id("new_moon"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, NewMoonPayload> CODEC = StreamCodec.of((buf, p) -> buf.writeBoolean(p.active),
-			buf -> new NewMoonPayload(buf.readBoolean()));
+		public static final StreamCodec<RegistryFriendlyByteBuf, NewMoonPayload> CODEC = StreamCodec.of((buf, p) -> {
+			buf.writeBoolean(p.active);
+			buf.writeBoolean(p.cutscene);
+		}, buf -> new NewMoonPayload(buf.readBoolean(), buf.readBoolean()));
 
 		@Override
 		public Type<? extends CustomPacketPayload> type() {

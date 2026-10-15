@@ -49,6 +49,18 @@ public abstract class CameraMixin {
 
 	private Quaternionf ballisticmissiles$cockpit;
 
+	@Shadow
+	protected abstract void setRotation(float yaw, float pitch);
+
+	/** The new-moon cutscene: the eyes go up to the sky and come back. */
+	@Inject(method = "setup", at = @At("TAIL"))
+	private void ballisticmissiles$cutsceneView(Level level, Entity entity, boolean detached, boolean mirrored, float partialTick, CallbackInfo ci) {
+		if (de.rcm.ballistic.client.effect.NewMoonCutscene.playing() && !detached) {
+			this.setRotation(de.rcm.ballistic.client.effect.NewMoonCutscene.yaw(entity.getViewYRot(partialTick), partialTick),
+				de.rcm.ballistic.client.effect.NewMoonCutscene.pitch(entity.getViewXRot(partialTick), partialTick));
+		}
+	}
+
 	@Inject(method = "setup", at = @At("TAIL"))
 	private void ballisticmissiles$cockpitView(Level level, Entity entity, boolean detached, boolean mirrored, float partialTick, CallbackInfo ci) {
 		Quaternionf q = this.ballisticmissiles$cockpit;

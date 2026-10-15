@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class KeyboardInputMixin extends ClientInput {
 	@Inject(method = "tick", at = @At("TAIL"))
 	private void ballisticmissiles$droneSticks(CallbackInfo ci) {
-		if (DroneClient.isFlying()) {
+		if (DroneClient.isFlying() || de.rcm.ballistic.client.effect.NewMoonCutscene.playing()) {
 			this.keyPresses = Input.EMPTY;
 			this.moveVector = Vec2.ZERO;
 			return;
