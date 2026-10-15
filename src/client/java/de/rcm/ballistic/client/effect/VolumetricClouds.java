@@ -42,8 +42,14 @@ import net.minecraft.world.phys.Vec3;
 public final class VolumetricClouds {
 	/** How far out the quad over the whole view is drawn (blocks). */
 	private static final float FAR = 500.0F;
-	/** How thick the cloud layer is (blocks). */
+	/** How thick the cloud layer is (blocks): the layered clouds, and the taller cumulus style. */
 	public static final int THICKNESS = 96;
+	public static final int CUMULUS_THICKNESS = 180;
+
+	/** How thick the layer is in the style chosen in the settings (blocks). */
+	public static int thickness() {
+		return ModConfig.cumulusClouds ? CUMULUS_THICKNESS : THICKNESS;
+	}
 	private static final int MAP = 256;
 	private static final int TEXEL = 4;
 	private static final Identifier MAP_ID = BallisticMissiles.id("textures/environment/cloud_disturbance");
@@ -142,6 +148,11 @@ public final class VolumetricClouds {
 	private static final double WIND_Z = 0.025;
 	/** Cloud base of the current dimension (blocks), or NaN where there are no clouds. */
 	private static float base = Float.NaN;
+	/** What the clouds were drawn with last frame, for {@link CloudDensity}: coverage, wind offset, storm. */
+	static float coverageNow;
+	static float windXNow;
+	static float windZNow;
+	static float stormNow;
 	/** A lightning flash lighting the storm clouds from inside (0-1), dying away in a few frames. */
 	private static float flash;
 	private static float prevFlash;
@@ -180,13 +191,20 @@ public final class VolumetricClouds {
 	}
 
 	/** Bottom of the cloud layer here, NaN if this dimension has none. */
+	/** How much the holes rockets punched have cleared the layer at (x, z) (0-1). */
+	static float hole(double x, double z) {
+		int tx = Math.floorMod((int) Math.floor(x / TEXEL), MAP);
+		int tz = Math.floorMod((int) Math.floor(z / TEXEL), MAP);
+		return HOLE[tz * MAP + tx];
+	}
+
 	public static float base() {
 		return base;
 	}
 
 	/** Whether {@code y} lies in (or just at the edges of) the cloud layer. */
 	public static boolean inLayer(double y) {
-		return !Float.isNaN(base) && y > base - 6.0 && y < base + THICKNESS + 6.0;
+		return !Float.isNaN(base) && y > base - 6.0 && y < base + thickness() + 6.0;
 	}
 
 	private static RenderType type() {
@@ -260,6 +278,26 @@ public final class VolumetricClouds {
 	private static final java.util.List<Puncture> PUNCTURES = new java.util.ArrayList<>();
 	private static final int MAX_PUNCTURES = 160;
 
+	private static final java.util.Map<Integer, Vec3> SMALL_ROCKETS = new java.util.HashMap<>();
+
+	/**
+	 * A small rocket (an RPG round, an interceptor, a rocket pod's rocket) at {@code at} this tick, {@code key}
+	 * telling one from another: up in the layer it bores a narrow hole and leaves a thin smoke column.
+	 */
+	public static void smallRocket(int key, Vec3 at, float width) {
+		if (Float.isNaN(base) || at.y < base - 80.0 || at.y > base + thickness() + 30.0) {
+			SMALL_ROCKETS.remove(key);
+			return;
+		}
+		if (SMALL_ROCKETS.size() > 256) {
+			SMALL_ROCKETS.clear();
+		}
+		Vec3 prev = SMALL_ROCKETS.put(key, at);
+		if (prev != null && prev.distanceToSqr(at) < 250.0 * 250.0) {
+			rocket(prev, at, 3.0F + width * 5.0F, 0.35F, 0.5F);
+		}
+	}
+
 	/**
 	 * A rocket moving from {@code from} to {@code to} this tick: where it is inside the layer it punches a
 	 * hole along its path and leaves a column of exhaust smoke; while its engine burns ({@code glow}) it
@@ -270,7 +308,7 @@ public final class VolumetricClouds {
 			return;
 		}
 		double lo = base - 4.0;
-		double hi = base + THICKNESS + 4.0;
+		double hi = base + thickness() + 4.0;
 		if (glow > 0.0F && to.y > base - 70.0 && to.y < hi + 20.0) {
 			float below = (float) Mth.clamp((to.y - (base - 70.0)) / 70.0, 0.0, 1.0);
 			stamp(GLOW, to.x, to.z, 26.0F + radius * 2.0F, glow * below, false);
@@ -295,7 +333,7 @@ public final class VolumetricClouds {
 
 	/** A blast big enough to reach the clouds: the shock blows a wide ring clear, the fireball lights them, its smoke rides up into the layer. */
 	public static void blast(Vec3 pos, float radius, float smoke) {
-		if (Float.isNaN(base) || pos.y > base + THICKNESS + radius || pos.y < base - radius * 6.0) {
+		if (Float.isNaN(base) || pos.y > base + thickness() + radius || pos.y < base - radius * 6.0) {
 			return;
 		}
 		puncture(pos.x, pos.z, radius * 0.45F, radius, 1.4F, 3600);
@@ -576,20 +614,24 @@ public final class VolumetricClouds {
 		double ticks = (time % 81920L) + partialTick;
 		float windX = (float) (ticks * 0.05 % 4096.0);
 		float windZ = (float) (ticks * 0.025 % 4096.0);
+		coverageNow = coverage;
+		windXNow = windX;
+		windZNow = windZ;
+		stormNow = thunder;
 
 		float bottom = base;
-		float top = base + THICKNESS;
+		float top = base + thickness();
 		double camY = cam.y;
 		float reach = Math.max(256.0F, mc.options.getEffectiveRenderDistance() * 16.0F * 4.0F);
 		PoseStack.Pose pose = context.matrices().last();
 		// alpha: quality level (Minecraft's "fast" clouds: the lowest)
 		ModConfig.Quality quality = mc.options.getCloudsType() == CloudStatus.FAST ? ModConfig.Quality.LOW : ModConfig.cloudQuality;
-		int color = (quality.ordinal() * 64 + (moonlit ? 32 : 0)) << 24 | Math.round(coverage * 255.0F) << 16 | Math.round(day * 255.0F) << 8
+		int color = (quality.ordinal() * 64 + (moonlit ? 32 : 0) + (ModConfig.cumulusClouds ? 16 : 0)) << 24 | Math.round(coverage * 255.0F) << 16 | Math.round(day * 255.0F) << 8
 			| Math.round(rain * 255.0F);
 		// thickness, and which parts of the light pass are wanted
 		boolean shadows = ModConfig.cloudShadows;
 		boolean shafts = ModConfig.lightShafts && quality != ModConfig.Quality.LOW;
-		int layer = THICKNESS | (shadows ? 256 : 0) | (shafts ? 512 : 0);
+		int layer = thickness() | (shadows ? 256 : 0) | (shafts ? 512 : 0);
 		// shadows only below the layer; the shafts also come from the hills and trees, so from anywhere
 		boolean light = (shadows && camY < bottom || shafts) && day > 0.05F;
 		if (light) {
@@ -643,7 +685,7 @@ public final class VolumetricClouds {
 		float sx, float sy) {
 		float[][] corners = {{-reach, -reach}, {reach, -reach}, {reach, reach}, {-reach, reach}};
 		for (float[] c : corners) {
-			consumer.addVertex(pose, c[0], y, c[1]).setColor(color).setUv(windX, windZ).setOverlay(OverlayTexture.pack((int) bottom, THICKNESS))
+			consumer.addVertex(pose, c[0], y, c[1]).setColor(color).setUv(windX, windZ).setOverlay(OverlayTexture.pack((int) bottom, thickness()))
 				.setLight((int) reach | storm << 16).setNormal(pose, sx, sy, 0.0F);
 		}
 	}

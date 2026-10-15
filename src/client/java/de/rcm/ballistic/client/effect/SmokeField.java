@@ -62,6 +62,9 @@ public final class SmokeField {
 	private static final int[] ESC_AGE = new int[CAP];
 	/** {@link SmokeCollision#shelter} of each puff, looked up every few ticks. */
 	private static final byte[] SHELTER = new byte[CAP];
+	/** How much of each puff shows through the cloud layer between it and the eye (1 all, 0 hidden). */
+	private static final float[] VEIL = new float[CAP];
+	private static int veilFrame;
 	private static final double[] MOVE = new double[3];
 	/** Smoke further than this from the camera is not collided (it is out of sight anyway). */
 	private static final double COLLIDE_RANGE = 160.0;
@@ -81,7 +84,15 @@ public final class SmokeField {
 			return new Style(1.6F * scale, 7.0F * scale, 3600, 0xEEEBE6, 0.8F, 0.9F, 0.0012F, 1.0F);
 		}
 
-		/** Small rocket or interceptor. */
+		/**
+		 * A solid motor small and fast (an interceptor, an air-to-air missile): a thin, dense pencil line close
+		 * behind it that widens only a little and frays away in a minute or so, not a fat white column.
+		 */
+		public static Style thinMotor(float width) {
+			return new Style(width, width * 3.2F, 900, 0xEEEBE6, 0.6F, 0.7F, 0.0006F, 1.0F);
+		}
+
+		/** Small rocket. */
 		public static Style smallRocket(float width) {
 			return new Style(width, width * 4.5F, 1800, 0xF0EEEA, 0.72F, 0.8F, 0.001F, 0.8F);
 		}
@@ -138,6 +149,7 @@ public final class SmokeField {
 		LIFT[i] = lift;
 		SEED[i] = ClientEffects.rand() * 1000.0F;
 		ESC_AGE[i] = 0;
+		VEIL[i] = 1.0F;
 		SHELTER[i] = 0;
 	}
 
@@ -163,7 +175,8 @@ public final class SmokeField {
 			return;
 		}
 		double crowd = Math.max(1.0, (double) count / BUDGET);
-		double spacing = Math.max(0.7, style.width() * style.spacing()) * crowd;
+		// thin trails need their puffs closer together, or they show as beads
+		double spacing = Math.max(Math.min(0.7, style.width() * 1.5), style.width() * style.spacing()) * crowd;
 		double length = from.distanceTo(now);
 		double pos = trail.carry;
 		float grow = (float) Math.sqrt(crowd);
@@ -221,6 +234,7 @@ public final class SmokeField {
 			ESC_Z[i] = ESC_Z[last];
 			ESC_AGE[i] = ESC_AGE[last];
 			SHELTER[i] = SHELTER[last];
+			VEIL[i] = VEIL[last];
 		}
 	}
 
@@ -305,7 +319,7 @@ public final class SmokeField {
 			}
 			// the cloud base is an inversion: rising smoke stops under it and spreads out along it, into the layer
 			float cloudBase = VolumetricClouds.base();
-			if (!Float.isNaN(cloudBase) && Y[i] > cloudBase - 14.0 && Y[i] < cloudBase + VolumetricClouds.THICKNESS) {
+			if (!Float.isNaN(cloudBase) && Y[i] > cloudBase - 14.0 && Y[i] < cloudBase + VolumetricClouds.thickness()) {
 				if (VY[i] > 0.0F) {
 					float spread = VY[i] * 0.45F;
 					VY[i] *= Y[i] > cloudBase ? 0.5F : 0.75F;
@@ -427,6 +441,18 @@ public final class SmokeField {
 		float theta = (float) Math.atan2(sr, su);
 		float day = daylight(mc);
 
+		// the clouds in the way: a puff on the far side of the layer only shows where the cloud is thin or holed
+		// (re-checked for an eighth of the puffs each frame; nothing to do with the eye and the puff on one side)
+		float cloudBase = VolumetricClouds.base();
+		if (!Float.isNaN(cloudBase)) {
+			float cloudTop = cloudBase + VolumetricClouds.thickness();
+			int slot = veilFrame++ & 7;
+			for (int i = slot; i < count; i += 8) {
+				boolean across = cam.y < cloudBase ? Y[i] > cloudBase : cam.y > cloudTop ? Y[i] < cloudTop : Math.abs(Y[i] - cam.y) > 4.0;
+				VEIL[i] = across ? CloudDensity.transmittance(cam, new Vec3(X[i], Y[i], Z[i]), 6) : 1.0F;
+			}
+		}
+
 		// back to front
 		int n = 0;
 		if (order.length < count) {
@@ -438,7 +464,7 @@ public final class SmokeField {
 			double dz = Z[i] - cam.z;
 			double along = dx * fwd.x + dy * fwd.y + dz * fwd.z;
 			double d2 = dx * dx + dy * dy + dz * dz;
-			if (along < -R1[i] || d2 > MAX_DISTANCE * MAX_DISTANCE) {
+			if (along < -R1[i] || d2 > MAX_DISTANCE * MAX_DISTANCE || VEIL[i] < 0.02F) {
 				continue;
 			}
 			order[n++] = (long) Float.floatToIntBits((float) d2) << 32 | i;
@@ -462,7 +488,7 @@ public final class SmokeField {
 		float age = clock - BORN[i] + partial;
 		float t = Math.min(1.0F, age / LIFE[i]);
 		float rad = radius(i, t);
-		float a = opacity(i, t, age);
+		float a = opacity(i, t, age) * VEIL[i];
 		double dx = X[i] - cam.x;
 		double dy = Y[i] - cam.y;
 		double dz = Z[i] - cam.z;

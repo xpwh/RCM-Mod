@@ -371,7 +371,7 @@ public final class FighterClient {
 		if (m.isBurning()) {
 			Vec3 v = m.getDeltaMovement();
 			Vec3 tail = m.position().subtract(v.lengthSqr() > 1.0E-6 ? v.normalize().scale(1.9) : Vec3.ZERO);
-			SmokeField.trail(9_000_000 + m.getId(), tail, SmokeField.Style.smallRocket(0.6F), 1.0F);
+			SmokeField.trail(9_000_000 + m.getId(), tail, SmokeField.Style.thinMotor(0.26F), 1.0F);
 			DynamicLights.steady(tail, 0xFFC070, 0.8F, 12.0F);
 		} else {
 			SmokeField.cut(9_000_000 + m.getId());

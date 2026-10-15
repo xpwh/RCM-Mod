@@ -47,6 +47,8 @@ public final class ModConfig {
 	public static int cloudAmount = 40;
 	public static Quality cloudQuality = Quality.HIGH;
 	public static boolean cloudShadows = true;
+	/** The cloud style: false the layered clouds, true realistic 3D cumulus heaps. */
+	public static boolean cumulusClouds = false;
 	public static boolean lightShafts = true;
 	public static boolean realSky = true;
 	public static boolean blood = true;
@@ -103,6 +105,7 @@ public final class ModConfig {
 			cloudAmount = percent(p, "cloudAmount", cloudAmount);
 			cloudQuality = Quality.parse(p.getProperty("cloudQuality"), cloudQuality);
 			cloudShadows = bool(p, "cloudShadows", cloudShadows);
+			cumulusClouds = "cumulus".equals(p.getProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer"));
 			lightShafts = bool(p, "lightShafts", lightShafts);
 			realSky = bool(p, "realSky", realSky);
 			blood = bool(p, "blood", blood);
@@ -126,6 +129,7 @@ public final class ModConfig {
 			p.setProperty("cloudAmount", Integer.toString(cloudAmount));
 			p.setProperty("cloudQuality", cloudQuality.name().toLowerCase(java.util.Locale.ROOT));
 			p.setProperty("cloudShadows", Boolean.toString(cloudShadows));
+			p.setProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer");
 			p.setProperty("lightShafts", Boolean.toString(lightShafts));
 			p.setProperty("realSky", Boolean.toString(realSky));
 			p.setProperty("blood", Boolean.toString(blood));

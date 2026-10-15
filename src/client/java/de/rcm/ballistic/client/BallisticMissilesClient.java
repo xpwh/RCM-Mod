@@ -187,8 +187,12 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientHooks.missileClientTick = MissileClientTicker::tick;
 		ClientHooks.projectileClientTick = MissileClientTicker::projectileTick;
 		ClientHooks.jetClientTick = JetClientTicker::tick;
-		ClientHooks.smokeTrail = (key, at, width, strength) ->
+		ClientHooks.smokeTrail = (key, at, width, strength) -> {
 			de.rcm.ballistic.client.effect.SmokeField.trail(key * 4 + 2, at, de.rcm.ballistic.client.effect.SmokeField.Style.smallRocket(width), strength);
+			if (strength > 0.02F) {
+				de.rcm.ballistic.client.effect.VolumetricClouds.smallRocket(key * 4 + 2, at, width); // through the clouds too
+			}
+		};
 		ClientHooks.smokeCloud = (at, drift, puffs, size) ->
 			de.rcm.ballistic.client.effect.SmokeField.burst(at, puffs, size * 0.8, drift, 0.35, 1500, size * 0.5F, size * 3.2F, 0xE4E0DA, 0.8F, 0.0015F);
 		ClientHooks.bombClientTick = bomb -> {

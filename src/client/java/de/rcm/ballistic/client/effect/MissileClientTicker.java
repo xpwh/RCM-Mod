@@ -508,9 +508,10 @@ public final class MissileClientTicker {
 					ClientEffects.canisterLaunch(pos.subtract(dir.scale(flown)), dir, interceptor.getLauncher());
 				}
 			}
-			// the interceptor's motor trail: a thin white column that hangs where it climbed
-			SmokeField.trail(entity.getId() * 4 + 1, pos.subtract(dir.scale(0.8)), SmokeField.Style.smallRocket(0.6F), 1.0F);
-			nozzleFire(pos.x, pos.y, pos.z, dir, 0.3F, 2);
+			// the interceptor's motor trail: a thin pencil line that hangs where it climbed and frays away
+			SmokeField.trail(entity.getId() * 4 + 1, pos.subtract(dir.scale(0.8)), SmokeField.Style.thinMotor(0.24F), 1.0F);
+			nozzleFire(pos.x, pos.y, pos.z, dir, 0.22F, 1);
+			VolumetricClouds.smallRocket(entity.getId() * 4 + 1, pos, 0.4F);
 			Contrails.trail(entity.getId() * 4, pos.subtract(dir.scale(0.8)), 1.0, Contrails.altitudeFactor(pos.y));
 		} else if (entity instanceof ReentryVehicleEntity) {
 			Vec3 v = entity.getDeltaMovement();

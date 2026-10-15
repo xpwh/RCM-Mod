@@ -33,6 +33,7 @@ void main() {
     bottom = float(vLayer.x);
     thick = float(vLayer.y & 255);
     coverage = cloudInfo.r;
+    cumulusStyle = isCumulus(cloudInfo.a);
     storm = vStorm;
     cloudWind = vWind;
     float day = cloudInfo.g;

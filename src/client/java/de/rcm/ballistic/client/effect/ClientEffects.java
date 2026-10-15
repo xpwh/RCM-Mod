@@ -606,13 +606,13 @@ public final class ClientEffects {
 			}
 		}
 		// motor smoke rolling forward out of the tube
-		for (int i = 0; i < 28; i++) {
+		for (int i = 0; i < 16; i++) {
 			double along = rand() * 4.0;
 			double sp = 0.1 + rand() * 0.35;
 			Vec3 p0 = mouth.add(dir.scale(along));
 			CloudParticle s = cloud(false, p0.x + gauss() * 0.3, p0.y + gauss() * 0.3, p0.z + gauss() * 0.3, dir.x * sp + gauss() * 0.05, dir.y * sp + 0.02, dir.z * sp + gauss() * 0.05);
 			if (s != null) {
-				s.configure(140 + RANDOM.nextInt(80), 1.0F * size, 5.5F * size, 0xF2F0EC, 0xB4B0AA, 0.85F).physics(0.9F, 0.003F).shade(0.8F + rand() * 0.2F).turbulence(0.02F);
+				s.configure(80 + RANDOM.nextInt(50), 0.6F * size, 3.0F * size, 0xF2F0EC, 0xB4B0AA, 0.7F).physics(0.9F, 0.003F).shade(0.8F + rand() * 0.2F).turbulence(0.02F);
 			}
 		}
 		// back blast out of the rear of the canister
@@ -623,14 +623,14 @@ public final class ClientEffects {
 				if (i < 5) {
 					s.configure(6 + RANDOM.nextInt(5), 0.8F * size, 2.0F * size, 0xFFE8B0, 0xFF6A10, 1.0F).physics(0.8F, 0.0F);
 				} else {
-					s.configure(110 + RANDOM.nextInt(70), 1.2F * size, 6.0F * size, 0xD8D4CE, 0x8E8A84, 0.8F).physics(0.9F, 0.004F).turbulence(0.03F);
+					s.configure(70 + RANDOM.nextInt(50), 0.7F * size, 3.4F * size, 0xD8D4CE, 0x8E8A84, 0.65F).physics(0.9F, 0.004F).turbulence(0.03F);
 				}
 			}
 		}
 		groundRing(mc, rear, 2.0, 20, 3.5F * size, 0.5, 0xB8A890);
 		// what stays: the motor smoke over the launcher and the back-blast dust behind it, for minutes
-		SmokeField.burst(mouth.add(dir.scale(2.0)), 6, 1.5 * size, dir.scale(0.3), 0.4, 1500, 1.2F * size, 7.0F * size, 0xEEECE8, 0.8F, 0.002F);
-		SmokeField.burst(rear, 5, 1.2 * size, dir.scale(-0.4), 0.5, 1200, 1.2F * size, 6.0F * size, 0xC8BCA8, 0.7F, 0.001F);
+		SmokeField.burst(mouth.add(dir.scale(2.0)), 4, 1.0 * size, dir.scale(0.3), 0.4, 700, 0.8F * size, 4.0F * size, 0xEEECE8, 0.65F, 0.002F);
+		SmokeField.burst(rear, 3, 0.8 * size, dir.scale(-0.4), 0.5, 600, 0.8F * size, 3.5F * size, 0xC8BCA8, 0.55F, 0.001F);
 	}
 
 	// ------------------------------------------------------------------ conventional blast

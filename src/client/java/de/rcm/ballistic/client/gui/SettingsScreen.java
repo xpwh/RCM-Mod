@@ -210,7 +210,11 @@ public class SettingsScreen extends Screen {
 				.withTooltip(q -> Tooltip.create(Component.translatable("options.ballisticmissiles.quality.tooltip")))
 				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.cloud_quality"), (b, v) -> ModConfig.cloudQuality = v),
 			toggle("cloud_shadows", ModConfig.cloudShadows, null, v -> ModConfig.cloudShadows = v));
-		this.list.row(toggle("light_shafts", ModConfig.lightShafts, "light_shafts", v -> ModConfig.lightShafts = v));
+		this.list.row(toggle("light_shafts", ModConfig.lightShafts, "light_shafts", v -> ModConfig.lightShafts = v),
+			CycleButton.booleanBuilder(Component.translatable("options.ballisticmissiles.cloud_style.cumulus"),
+					Component.translatable("options.ballisticmissiles.cloud_style.layer"), ModConfig.cumulusClouds)
+				.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.cloud_style.tooltip")))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.cloud_style"), (b, v) -> ModConfig.cumulusClouds = v));
 		this.list.header("options.ballisticmissiles.section.light", 0xFFFFE080);
 		this.list.row(toggle("real_sky", ModConfig.realSky, "real_sky", v -> ModConfig.realSky = v),
 			toggle("dynamic_lights", ModConfig.dynamicLights, "dynamic_lights", v -> ModConfig.dynamicLights = v));
