@@ -144,7 +144,7 @@ public final class WorldFx {
 		if (shade && camera.getFluidInCamera() == FogType.NONE) {
 			// underground or deep indoors the sun's shadows fade out (what is lit there, torches light)
 			float open = mc.player == null ? 1.0F : mc.level.getBrightness(net.minecraft.world.level.LightLayer.SKY, net.minecraft.core.BlockPos.containing(mc.player.getEyePosition())) / 15.0F;
-			float shadow = ModConfig.sunShadows ? 0.42F * sunlight(mc, sun, partial) * Mth.clamp((open - 0.3F) / 0.5F, 0.0F, 1.0F) : 0.0F;
+			float shadow = ModConfig.sunShadows ? 0.5F * sunlight(mc, sun, partial) * Mth.clamp((open - 0.3F) / 0.5F, 0.0F, 1.0F) : 0.0F;
 			float ao = ModConfig.ambientOcclusion ? 0.55F : 0.0F;
 			if (shadow > 0.01F || ao > 0.01F) {
 				int quality = Mth.clamp(ModConfig.lightQuality, 1, 3);

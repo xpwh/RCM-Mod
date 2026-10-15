@@ -285,7 +285,9 @@ public final class BlastShader {
 			float up = Mth.clamp((sun.y + 0.02F) / 0.12F, 0.0F, 1.0F);
 			float clear = (1.0F - mc.level.getRainLevel(partialTick)) * (1.0F - WinterClient.amount());
 			float edge = Mth.clamp(1.0F - (Math.max(Math.abs(sunScreen[0] - 0.5F), Math.abs(sunScreen[1] - 0.5F)) - 0.5F) / 0.25F, 0.0F, 1.0F);
-			flare = sunScreen[3] > 0.0F ? up * clear * edge : 0.0F;
+			// clouds across the sky dim the sun (they are not in the depth that hides it)
+			float clouds = VolumetricClouds.enabled() ? 1.0F - 0.7F * VolumetricClouds.amount() / 100.0F : 1.0F;
+			flare = sunScreen[3] > 0.0F ? up * clear * edge * clouds : 0.0F;
 		}
 		img.setPixel(9, 0, argb(255, Mth.clamp(sunScreen[0], 0.0F, 1.0F), Mth.clamp(sunScreen[1], 0.0F, 1.0F), flare));
 		// bloom (and what counts as bright enough: by day only the sun and the white-hot, at night every lamp),

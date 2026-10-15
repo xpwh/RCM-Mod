@@ -241,6 +241,8 @@ public class SettingsScreen extends Screen {
 		this.list.header("options.ballisticmissiles.section.screen", 0xFFFFC080);
 		this.list.row(new IntSlider(0, 100, "options.ballisticmissiles.screen_effects", ModConfig.screenEffects, v -> ModConfig.screenEffects = v),
 			new IntSlider(0, 100, "options.ballisticmissiles.explosion_volume", ModConfig.explosionVolume, v -> ModConfig.explosionVolume = v));
+		this.list.row(toggle("lens_flare", ModConfig.lensFlare, "lens_flare", v -> ModConfig.lensFlare = v),
+			new IntSlider(0, 100, "options.ballisticmissiles.bloom", ModConfig.bloom, v -> ModConfig.bloom = v));
 		this.list.header("options.ballisticmissiles.section.world", 0xFFC0C0C0);
 		this.list.row(new IntSlider(0, 100, "options.ballisticmissiles.smoke_amount", ModConfig.smokeAmount, v -> ModConfig.smokeAmount = v),
 			toggle("bullet_holes", ModConfig.bulletHoles, null, v -> ModConfig.bulletHoles = v));

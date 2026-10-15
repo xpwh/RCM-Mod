@@ -70,12 +70,14 @@ void main() {
     float shadowStrength = params.r;
     float aoStrength = params.g;
     int quality = data.x;
-    float jitter = hash(gl_FragCoord.xy);
+    // the same pattern for every pixel: a random one would leave a speckle of dots everywhere (there is no
+    // blur pass to smooth it out), this one gives clean, even shading
+    float jitter = 0.5;
     float shade = 1.0;
 
     // ---- ambient occlusion
     if (aoStrength > 0.0 && dist < 96.0) {
-        int samples = quality >= 3 ? 16 : quality == 2 ? 12 : 8;
+        int samples = quality >= 3 ? 16 : quality == 2 ? 14 : 10;
         float radius = 0.7;
         vec3 t = normalize(cross(n, abs(n.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
         vec3 b = cross(n, t);
@@ -95,47 +97,70 @@ void main() {
             float here = length(q);
             float gap = here - scene;
             // buried - but only by what is close, not by something far in front of it
-            occluded += step(0.02, gap) * (1.0 - smoothstep(radius, radius * 2.5, gap));
+            occluded += smoothstep(0.02, 0.12, gap) * (1.0 - smoothstep(radius, radius * 2.5, gap));
         }
         float ao = 1.0 - occluded / float(samples);
         shade *= 1.0 - aoStrength * (1.0 - ao) * (1.0 - smoothstep(48.0, 96.0, dist));
     }
 
-    // ---- sun shadows
+    // ---- sun shadows: several rays to points spread over the sun's disc (a little wider than the real
+    // one, so it shows), each a clean walk with no random start - the fraction that gets through gives a
+    // soft half-shadow that widens the further the shadow lies from what casts it, and no speckle
+    vec3 tint = vec3(1.0);
     if (shadowStrength > 0.0 && dist < 128.0) {
         float facing = dot(n, sunDir);
         float lit = 1.0;
         if (facing > 0.0) {
-            int steps = quality >= 3 ? 28 : quality == 2 ? 20 : 14;
+            int rays = quality >= 3 ? 5 : quality == 2 ? 3 : 1;
+            int steps = quality >= 3 ? 30 : quality == 2 ? 26 : 22;
+            float grow = quality >= 3 ? 1.15 : quality == 2 ? 1.16 : 1.2;
+            vec3 su = normalize(cross(sunDir, abs(sunDir.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+            vec3 sv = cross(sunDir, su);
+            const float SPREAD = 0.018; // radians: the disc the rays sample
             vec3 start = p + n * (0.05 + dist * 0.002);
-            float travelled = 0.0;
-            float stepLen = 0.08 + jitter * 0.08;
-            for (int i = 0; i < 28; i++) {
-                if (i >= steps) break;
-                travelled += stepLen;
-                stepLen *= 1.22;
-                vec3 q = start + sunDir * travelled;
-                vec3 s = project(q);
-                if (s.z < 0.0 || s.x < 0.0 || s.y < 0.0 || s.x > 1.0 || s.y > 1.0) break;
-                float scene = sceneDistance(s.xy);
-                float here = length(q);
-                float gap = here - scene;
-                // something solid in front of this point of the walk, and not far in front of it (the
-                // thickness of what casts the shadow is guessed: up to a couple of blocks)
-                if (gap > 0.06 + here * 0.004 && gap < 2.5 + travelled * 0.15) {
-                    lit = 0.0;
-                    break;
+            float through = 0.0;
+            for (int r = 0; r < 5; r++) {
+                if (r >= rays) break;
+                vec3 dir = sunDir;
+                if (r > 0) {
+                    float a = float(r - 1) * 6.2831853 / float(rays - 1) + 0.4;
+                    dir = normalize(sunDir + (su * cos(a) + sv * sin(a)) * SPREAD);
                 }
-                if (travelled > 40.0) break;
+                float travelled = 0.0;
+                float stepLen = 0.05;
+                float hit = 0.0;
+                for (int i = 0; i < 30; i++) {
+                    if (i >= steps) break;
+                    travelled += stepLen;
+                    stepLen *= grow;
+                    vec3 q = start + dir * travelled;
+                    vec3 sp = project(q);
+                    if (sp.z < 0.0 || sp.x < 0.0 || sp.y < 0.0 || sp.x > 1.0 || sp.y > 1.0) break;
+                    float scene = sceneDistance(sp.xy);
+                    float here = length(q);
+                    float gap = here - scene;
+                    // something solid in front of this point of the walk, and not far in front of it (how
+                    // thick what casts the shadow is can only be guessed: up to a couple of blocks)
+                    if (gap > 0.06 + here * 0.004 && gap < 2.5 + travelled * 0.15) {
+                        hit = 1.0;
+                        break;
+                    }
+                    if (travelled > 48.0) break;
+                }
+                through += 1.0 - hit;
             }
+            lit = through / float(rays);
         }
-        // faces turned from the sun are in their own shade, but softer than a cast shadow (the sky lights them)
+        // faces turned from the sun are in their own shade, softer than a cast shadow (the sky lights them)
         float face = mix(0.45, 1.0, smoothstep(-0.05, 0.25, facing));
         lit = min(lit, face);
-        shade *= 1.0 - shadowStrength * (1.0 - lit) * (1.0 - smoothstep(80.0, 128.0, dist));
+        float k = shadowStrength * (1.0 - lit) * (1.0 - smoothstep(80.0, 128.0, dist));
+        // what lights a shadow is the blue sky, not the sun: shadows are cool, more so the stronger they are
+        tint = vec3(1.0) - k * vec3(1.0, 0.9, 0.68);
     }
-    if (shade > 0.995) discard;
-    fragColor = vec4(vec3(shade), 1.0);
+    vec3 result = vec3(shade) * tint;
+    if (min(result.r, min(result.g, result.b)) > 0.995) discard;
+    fragColor = vec4(result, 1.0);
 }
 #endif
 
