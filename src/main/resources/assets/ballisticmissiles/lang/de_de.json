@@ -166,6 +166,7 @@
 	"message.ballisticmissiles.remote_refused": "Start verweigert (Ziel zu nah?)",
 	"message.ballisticmissiles.remote_idle": "kein laufender Start",
 	"message.ballisticmissiles.silo_empty": "Silo leer – Rakete in der Hand rechtsklicken zum Laden",
+	"message.ballisticmissiles.canister_fired": "Abschuss! Ziel %s, %s m",
 	"message.ballisticmissiles.canister_empty": "Kanister leer – erst eine schlanke Rakete laden",
 	"message.ballisticmissiles.silo_full": "Das Silo ist schon beladen.",
 	"message.ballisticmissiles.silo_counting": "☢ Silo: %s – COUNTDOWN LÄUFT",

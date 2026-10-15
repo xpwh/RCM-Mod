@@ -290,6 +290,8 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 	 * upright on a pad or in a silo).
 	 */
 	private @Nullable Vec3 rail;
+	/** Client: the canister launch burst has been shown. */
+	public boolean canisterBlast;
 
 	/** Laid in an inclined launcher's canister, pointing along {@code dir}. */
 	public void placeOnRail(Vec3 dir) {
@@ -487,7 +489,8 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 				entity.hurtServer(level, level.damageSources().inFire(), 4.0F);
 			}
 		}
-		if (++this.stateAge >= this.missileType.ignitionTicks) {
+		// out of a canister the booster throws it clear at once; on a pad it builds thrust first
+		if (++this.stateAge >= (this.rail != null ? 3 : this.missileType.ignitionTicks)) {
 			this.setState(FLIGHT);
 		}
 	}
@@ -1137,6 +1140,19 @@ public class MissileEntity extends Entity implements AirThreat, de.rcm.ballistic
 		this.entityData.set(DATA_TARGET, t);
 		this.surfaceTarget = target.surface();
 		this.trajectory = null;
+		if (this.rail != null && this.level() instanceof ServerLevel server) {
+			// a canister round has no countdown or siren: it fires the moment it is given its target
+			Vec3 pos = this.position();
+			this.entityData.set(DATA_LAUNCH, new Vector3f((float) pos.x, (float) pos.y, (float) pos.z));
+			this.applyJamming(server);
+			this.planMisfire(server, false);
+			this.setState(IGNITION);
+			if (player != null) {
+				player.displayClientMessage(Component.translatable("message.ballisticmissiles.canister_fired", target.describe(), (int) Math.sqrt(dx * dx + dz * dz))
+					.withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
+			}
+			return true;
+		}
 		this.setState(COUNTDOWN);
 		int distance = (int) Math.sqrt(dx * dx + dz * dz);
 		if (player != null) {

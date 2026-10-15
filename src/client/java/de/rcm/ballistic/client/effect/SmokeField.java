@@ -89,7 +89,7 @@ public final class SmokeField {
 		 * behind it that widens only a little and frays away in a minute or so, not a fat white column.
 		 */
 		public static Style thinMotor(float width) {
-			return new Style(width, width * 3.2F, 900, 0xEEEBE6, 0.6F, 0.7F, 0.0006F, 1.0F);
+			return new Style(width, width * 8.0F, 900, 0xEEEBE6, 0.55F, 0.7F, 0.0006F, 1.0F);
 		}
 
 		/** Small rocket. */
@@ -307,12 +307,21 @@ public final class SmokeField {
 			VY[i] = VY[i] * 0.92F + LIFT[i] * Math.max(0.0F, 1.0F - t * 2.0F);
 			int band = Mth.clamp((int) ((Y[i] - bandMin) / 8), 0, bands - 1);
 			float ramp = Math.min(1.0F, age / 60.0F);
-			// slow twisting that grows with age: trails kink and curl in the shear
+			// slow twisting that grows with age: trails kink and curl in the shear. The eddies are a smooth field
+			// in space and time, so neighbouring puffs move together and the trail bends as one band; only a
+			// small part is each puff's own, which frays the edges (all of it per puff scattered a trail into
+			// separate balls)
 			float s = SEED[i];
 			float twist = 0.012F + 0.03F * Math.min(1.0F, age / 400.0F);
-			double tx = Mth.sin(age * 0.011F + s) * twist + Mth.sin((float) (Y[i] * 0.05) + s * 0.3F) * twist * 0.6;
-			double tz = Mth.cos(age * 0.009F + s * 1.7F) * twist + Mth.cos((float) (Y[i] * 0.043) + s) * twist * 0.6;
-			double ty = Mth.sin(age * 0.007F + s * 2.3F) * twist * 0.3;
+			float fx = (float) X[i];
+			float fy = (float) Y[i];
+			float fz = (float) Z[i];
+			float ft = clock * 0.004F;
+			double tx = (Mth.sin(fz * 0.045F + fy * 0.031F + ft) + 0.6F * Mth.sin(fy * 0.05F - fx * 0.021F + ft * 1.3F)) * twist
+				+ Mth.sin(age * 0.011F + s) * twist * 0.15F;
+			double tz = (Mth.cos(fx * 0.041F + fy * 0.036F - ft * 0.8F) + 0.6F * Mth.cos(fy * 0.043F + fz * 0.024F + ft)) * twist
+				+ Mth.cos(age * 0.009F + s * 1.7F) * twist * 0.15F;
+			double ty = Mth.sin(fx * 0.033F + fz * 0.029F + ft * 1.1F) * twist * 0.3;
 			double windHere = sheltered ? 0.12 : 1.0;
 			if (SHELTER[i] == SmokeCollision.PIT && t > 0.2F) {
 				VY[i] *= 0.8F; // cooled, it no longer climbs out of the hole
@@ -321,10 +330,12 @@ public final class SmokeField {
 			float cloudBase = VolumetricClouds.base();
 			if (!Float.isNaN(cloudBase) && Y[i] > cloudBase - 14.0 && Y[i] < cloudBase + VolumetricClouds.thickness()) {
 				if (VY[i] > 0.0F) {
+					// it fans out along the base as a sheet: the way it goes is the same for its neighbours
 					float spread = VY[i] * 0.45F;
 					VY[i] *= Y[i] > cloudBase ? 0.5F : 0.75F;
-					VX[i] += Mth.sin(s * 2.7F) * spread;
-					VZ[i] += Mth.cos(s * 2.7F) * spread;
+					float fan = (float) (X[i] * 0.02 + Z[i] * 0.017) + s * 0.25F;
+					VX[i] += Mth.sin(fan) * spread;
+					VZ[i] += Mth.cos(fan) * spread;
 				}
 				if ((age + (int) (s * 7.0F)) % 10 == 0) {
 					VolumetricClouds.smoke(X[i], Z[i], Math.max(6.0F, radius(i, t) * 1.5F), ALPHA[i] * 0.12F);

@@ -119,7 +119,7 @@ public class MissileRenderer extends EntityRenderer<MissileEntity, MissileRender
 		state.engineOn = entity.isBoosterBurning();
 		state.jet = entity.isJetRunning() && !state.engineOn;
 		// a slim missile waiting in an inclined launcher's closed canister: out of sight until it fires
-		state.inCanister = entity.getState() < MissileEntity.IGNITION && entity.getNoseDirection(partialTick).y < 0.95;
+		state.inCanister = entity.getState() <= MissileEntity.IGNITION && entity.getNoseDirection(partialTick).y < 0.95;
 		state.ignition = entity.getState() == MissileEntity.IGNITION;
 		state.engineTime = entity.clientStateAge + partialTick;
 		if (state.ignition) {

@@ -284,6 +284,9 @@ public final class MissileClientTicker {
 		}
 	}
 
+	/** From the canister's rear end to its mouth, blocks. */
+	private static final double CANISTER_MOUTH = de.rcm.ballistic.block.InclinedLauncherBlock.CANISTER_LENGTH;
+
 	private static void ignition(MissileEntity missile, float scale) {
 		double x = missile.getX();
 		double y = missile.getY();
@@ -295,19 +298,20 @@ public final class MissileClientTicker {
 		}
 		Vec3 nose = missile.getNoseDirection(1.0F);
 		if (nose.y < 0.95) {
-			// in an inclined canister: the booster lights inside it - flame out of the back, a burst of white
-			// smoke billowing out of both ends, a little scorched dust kicked up under the rear
-			Vec3 tail = missile.position().subtract(nose.scale(0.8));
-			nozzleFire(tail.x, tail.y, tail.z, nose, scale * 0.45F, 2);
-			if (age % 2 == 0) {
-				for (int i = 0; i < 3; i++) {
-					double sp = 0.2 + ClientEffects.rand() * 0.4;
-					CloudParticle p = ClientEffects.cloud(false, tail.x, tail.y, tail.z, -nose.x * sp + ClientEffects.gauss() * 0.06, 0.02,
-						-nose.z * sp + ClientEffects.gauss() * 0.06);
-					if (p != null) {
-						p.configure(50 + (int) (ClientEffects.rand() * 40), 0.4F, 2.2F, 0xE8E4DE, 0xB0ACA6, 0.6F).physics(0.9F, 0.003F);
-					}
+			// in an inclined canister: the booster lights inside it and the gas bursts out of the canister's open
+			// rear end - one cohesive cloud of white smoke rolling back from there with a short flash, nothing
+			// scattered on the ground; the missile's own trail starts as it runs up the tube
+			Vec3 rear = missile.position().subtract(nose.scale(de.rcm.ballistic.block.InclinedLauncherBlock.TAIL_IN + 0.1));
+			if (!missile.canisterBlast) {
+				missile.canisterBlast = true;
+				Vec3 back = new Vec3(-nose.x, 0.0, -nose.z).normalize();
+				SmokeField.burst(rear.add(back.scale(0.8)), 10, 0.9, back.scale(0.18).add(0, 0.03, 0), 0.12, 300, 0.7F, 3.4F, 0xE8E4DE, 0.75F, 0.0008F);
+				SmokeField.burst(rear.add(nose.scale(CANISTER_MOUTH)), 4, 0.5, nose.scale(0.12), 0.08, 220, 0.5F, 2.4F, 0xEAE6E0, 0.55F, 0.0008F);
+				CloudParticle flash = ClientEffects.cloud(true, rear.x - nose.x * 0.4, rear.y - nose.y * 0.4, rear.z - nose.z * 0.4, 0, 0, 0);
+				if (flash != null) {
+					flash.configure(4, 1.6F * scale, 0.8F, 0xFFF0C0, 0xFF8030, 1.0F);
 				}
+				DynamicLights.flash(rear, 0xFFC080, 1.0F, 14.0F, 250.0F);
 			}
 			ClientEffects.addShake(0.12F);
 			return;
