@@ -230,15 +230,18 @@ public class AkItem extends Item {
 		BulletEntity.fire(level, shooter, origin, dir.scale(MUZZLE_VELOCITY), tracer, red);
 		// everybody near hears it; the shooter gets it too, for the tracer on the bullet's true line
 		GunshotPayload shot = new GunshotPayload(shooter.getId(), muzzle.x, muzzle.y, muzzle.z, (float) dir.x, (float) dir.y, (float) dir.z,
-			(last ? GunshotPayload.LAST : 0) | (tracer ? GunshotPayload.TRACER : 0) | (tracer && red ? GunshotPayload.RED : 0));
+			(last ? GunshotPayload.LAST : 0) | (tracer ? GunshotPayload.TRACER : 0) | (tracer && red ? GunshotPayload.RED : 0)
+				| (de.rcm.ballistic.gun.GunAttachments.suppressed(shooter) ? GunshotPayload.SUPPRESSED : 0));
 		for (ServerPlayer p : level.players()) {
 			if (p.position().distanceToSqr(muzzle) < 900.0 * 900.0) {
 				ServerPlayNetworking.send(p, shot);
 			}
 		}
 		level.gameEvent(shooter, net.minecraft.world.level.gameevent.GameEvent.PROJECTILE_SHOOT, muzzle);
-		de.rcm.ballistic.ai.SoldierEntity.flash(shooter);
-		de.rcm.ballistic.ai.Senses.noise(level, muzzle, de.rcm.ballistic.ai.Senses.GUNSHOT_RANGE, de.rcm.ballistic.ai.Senses.GUNSHOT, shooter);
+		if (!de.rcm.ballistic.gun.GunAttachments.suppressed(shooter)) {
+			de.rcm.ballistic.ai.SoldierEntity.flash(shooter); // a suppressor hides the flash too
+		}
+		de.rcm.ballistic.ai.Senses.noise(level, muzzle, de.rcm.ballistic.ai.Senses.shotRange(shooter), de.rcm.ballistic.ai.Senses.GUNSHOT, shooter);
 	}
 
 	// ------------------------------------------------------------------ reload and selector

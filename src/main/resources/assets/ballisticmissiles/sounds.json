@@ -2028,5 +2028,128 @@
 				"stream": true
 			}
 		]
+	},
+	"gun.suppressed_rifle": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressed_rifle",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressed_rifle1"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_rifle2"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_rifle3"
+			}
+		]
+	},
+	"gun.suppressed_pistol": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressed_pistol",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressed_pistol1"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_pistol2"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_pistol3"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_pistol4"
+			}
+		]
+	},
+	"gun.suppressed_shotgun": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressed_shotgun",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressed_shotgun1"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_shotgun2"
+			}
+		]
+	},
+	"gun.suppressed_far": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressed_far",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressed_far"
+			}
+		]
+	},
+	"gun.suppressor_on": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressor_on",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressor_on"
+			}
+		]
+	},
+	"workbench.open": {
+		"subtitle": "subtitles.ballisticmissiles.workbench_open",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:workbench/open"
+			}
+		]
+	},
+	"workbench.craft_metal": {
+		"subtitle": "subtitles.ballisticmissiles.workbench_craft_metal",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:workbench/craft_metal"
+			}
+		]
+	},
+	"workbench.craft_ammo": {
+		"subtitle": "subtitles.ballisticmissiles.workbench_craft_ammo",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:workbench/craft_ammo"
+			}
+		]
+	},
+	"workbench.craft_grenade": {
+		"subtitle": "subtitles.ballisticmissiles.workbench_craft_grenade",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:workbench/craft_grenade"
+			}
+		]
+	},
+	"soldier.drop_weapon": {
+		"subtitle": "subtitles.ballisticmissiles.soldier_drop_weapon",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:soldier/drop_weapon1"
+			},
+			{
+				"name": "ballisticmissiles:soldier/drop_weapon2"
+			},
+			{
+				"name": "ballisticmissiles:soldier/drop_weapon3"
+			},
+			{
+				"name": "ballisticmissiles:soldier/drop_weapon4"
+			}
+		]
+	},
+	"soldier.surrender": {
+		"subtitle": "subtitles.ballisticmissiles.soldier_surrender",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:soldier/surrender"
+			}
+		]
+	},
+	"soldier.zip_tie": {
+		"subtitle": "subtitles.ballisticmissiles.soldier_zip_tie",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:soldier/zip_tie"
+			}
+		]
 	}
 }

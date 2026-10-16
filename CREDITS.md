@@ -170,3 +170,21 @@ The heartbeat of the dying player is synthesized by `tools/gen_sounds_v13.py`.
 - `silo/lid_drive*`, `silo/lid_lock*`, `silo/lid_seat*`: NASA Johnson Space Center, "NASA's Johnson Space
   Center Chamber A Door Closing B-Roll" (2017) - the 40 ft round door of the Chamber A vacuum chamber
   running, locking and seating. https://svs.gsfc.nasa.gov/12757/ - NASA, public domain.
+
+## Suppressor, workbench, surrender (`tools/import_suppressed_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Suppressed rifle shots | https://freesound.org/s/182815/ "Silenced Sniper Rifle" (US Government video) | qubodup | CC0 1.0 |
+| Suppressed rifle shot | https://freesound.org/s/732250/ "Heckler & Koch MP7 Suppressed (Semi & Full Auto)" | areniporgen | CC0 1.0 |
+| Suppressed pistol shots | https://freesound.org/s/828790/ "SIG Sauer P226 (Suppressed)" | areniporgen | CC0 1.0 |
+| Suppressed pistol shot | https://freesound.org/s/701229/ "Welrod MK2 with slide reload sound" | areniporgen | CC0 1.0 |
+| Screwing on the suppressor | https://freesound.org/s/441807/ "180081 Rilfe Suppressor 01" | FST180081 | CC BY 4.0 |
+| Cable tie | https://freesound.org/s/487524/ "Cable tie zipping" | JonCon_Library | CC0 1.0 |
+| Rifle dropped | https://freesound.org/s/755987/ "A heavy battle rifle being dropped on the floor; 4 takes" | serøutōnin--deprivəd | CC0 1.0 |
+| Workbench lid | https://freesound.org/s/463673/ "toolbox close & open on wood" | alec_mackay | CC0 1.0 |
+| Workbench latch | https://freesound.org/s/767048/ "Plastic toolbox latch opening and closing" | ThabzMalik | CC0 1.0 |
+| Filing metal | https://freesound.org/s/414030/ "Metal Filing" | johnnydekk | CC0 1.0 |
+| Rounds into a magazine | https://freesound.org/s/855580/ "Pushing 50 Cal BMG Round into Magazine" | qubodup | CC0 1.0 |
+| Small metal parts | https://freesound.org/s/725813/ "small moving metallic part" | F3ather | CC0 1.0 |
+| Clothing movement | https://freesound.org/s/555307/ "Foley_Cloth_Movement_Jacket" | Nox_Sound | CC0 1.0 |

@@ -282,10 +282,14 @@ public final class AkClient {
 		player.setYRot(player.getYRot() + (ClientEffects.rand() - 0.45F) * 0.35F);
 		ClientEffects.addShake(0.12F);
 		Vec3 muzzle = muzzle(player, 1.0F);
-		GunAudio.shot(muzzle, true);
-		// the muzzle flash lights up the surroundings for an instant
-		de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(player.getLookAngle().scale(0.4)), 0xFFC878, 1.0F, 10.0F,
-			40.0F + ClientEffects.rand() * 20.0F);
+		if (de.rcm.ballistic.gun.GunAttachments.suppressed(player)) {
+			GunAudio.suppressed(muzzle, true, ModRegistry.SUPPRESSED_RIFLE); // and no flash to light anything
+		} else {
+			GunAudio.shot(muzzle, true);
+			// the muzzle flash lights up the surroundings for an instant
+			de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(player.getLookAngle().scale(0.4)), 0xFFC878, 1.0F, 10.0F,
+				40.0F + ClientEffects.rand() * 20.0F);
+		}
 		// smoke and brass from the rifle we see in our hands
 		Vec3 seen = mc.options.getCameraType().isFirstPerson() ? viewMuzzleInWorld(mc) : muzzle;
 		// the hole where the crosshair is, at once (the server's own replaces it a moment later)
@@ -331,8 +335,12 @@ public final class AkClient {
 		if (mc.player != null && p.shooter() == mc.player.getId()) {
 			return; // our own shot: heard and seen already
 		}
-		GunAudio.shot(muzzle, false);
-		de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(dir.scale(0.4)), 0xFFC878, 1.0F, 10.0F, 40.0F + ClientEffects.rand() * 20.0F);
+		if ((p.flags() & GunshotPayload.SUPPRESSED) != 0) {
+			GunAudio.suppressed(muzzle, false, ModRegistry.SUPPRESSED_RIFLE);
+		} else {
+			GunAudio.shot(muzzle, false);
+			de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(dir.scale(0.4)), 0xFFC878, 1.0F, 10.0F, 40.0F + ClientEffects.rand() * 20.0F);
+		}
 		Entity shooter = mc.level.getEntity(p.shooter());
 		if (shooter != null && muzzle.distanceTo(mc.gameRenderer.getMainCamera().position()) < 96.0) {
 			Entity other = shooter;

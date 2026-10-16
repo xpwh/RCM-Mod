@@ -43,7 +43,8 @@ public class AttachmentItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
-		String key = this.kind == GunAttachments.LIGHT ? "weapon_light" : this.kind == GunAttachments.IR_LASER ? "ir_laser_module" : "laser_module";
+		String key = this.kind == GunAttachments.LIGHT ? "weapon_light" : this.kind == GunAttachments.IR_LASER ? "ir_laser_module"
+			: this.kind == GunAttachments.SUPPRESSOR ? "suppressor" : "laser_module";
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles." + key).withStyle(ChatFormatting.GRAY));
 		tooltip.accept(Component.translatable("tooltip.ballisticmissiles.attachment_usage").withStyle(ChatFormatting.GOLD));
 	}

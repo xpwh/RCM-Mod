@@ -252,6 +252,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ClientHooks.openTargetScreen = hand -> Minecraft.getInstance().setScreen(new TargetScreen(hand));
 		ClientHooks.openBunkerMenu = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.gui.BunkerScreen(pos));
 		ClientHooks.openSunForge = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.sun.SunForgeScreen(pos));
+		ClientHooks.openWorkbench = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.gui.WorkbenchScreen(pos));
 		ClientHooks.designateLookedAtBlock = BallisticMissilesClient::designate;
 	}
 

@@ -135,7 +135,8 @@ public class ShotgunItem extends Item {
 		}
 		// the blast: each client works out how it sounds where they are (close, far, echoes, rooms)
 		var shot = new de.rcm.ballistic.network.ModNetworking.GunshotPayload(player.getId(), muzzle.x, muzzle.y, muzzle.z, (float) look.x, (float) look.y,
-			(float) look.z, de.rcm.ballistic.network.ModNetworking.GunshotPayload.SHOTGUN);
+			(float) look.z, de.rcm.ballistic.network.ModNetworking.GunshotPayload.SHOTGUN
+			| (GunAttachments.suppressed(player) ? de.rcm.ballistic.network.ModNetworking.GunshotPayload.SUPPRESSED : 0));
 		for (ServerPlayer p : level.players()) {
 			if (p.position().distanceToSqr(muzzle) < 900.0 * 900.0) {
 				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, shot);
@@ -146,8 +147,10 @@ public class ShotgunItem extends Item {
 		level.sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE, muzzle.x + look.x * 0.3, muzzle.y + look.y * 0.3, muzzle.z + look.z * 0.3,
 			8, 0.08, 0.08, 0.08, 0.02);
 		level.gameEvent(player, net.minecraft.world.level.gameevent.GameEvent.PROJECTILE_SHOOT, muzzle);
-		de.rcm.ballistic.ai.SoldierEntity.flash(player);
-		de.rcm.ballistic.ai.Senses.noise(level, muzzle, de.rcm.ballistic.ai.Senses.GUNSHOT_RANGE, de.rcm.ballistic.ai.Senses.GUNSHOT, player);
+		if (!de.rcm.ballistic.gun.GunAttachments.suppressed(player)) {
+			de.rcm.ballistic.ai.SoldierEntity.flash(player); // a suppressor hides the flash too
+		}
+		de.rcm.ballistic.ai.Senses.noise(level, muzzle, de.rcm.ballistic.ai.Senses.shotRange(player), de.rcm.ballistic.ai.Senses.GUNSHOT, player);
 	}
 
 	// ------------------------------------------------------------------ loading

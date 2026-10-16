@@ -472,6 +472,8 @@ public final class ModNetworking {
 		public static final int PISTOL = 16;
 		/** With {@link #TRACER}: it burns red. */
 		public static final int RED = 8;
+		/** Fired through a suppressor: a thump, no flash, heard a fraction as far. */
+		public static final int SUPPRESSED = 32;
 		public static final Type<GunshotPayload> TYPE = new Type<>(BallisticMissiles.id("gunshot"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GunshotPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, GunshotPayload::shooter,

@@ -315,6 +315,10 @@ public final class ModRegistry {
 		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(8.0F, 3600.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
 			.lightLevel(state -> 6)
 	);
+	public static final Block WEAPONS_WORKBENCH = registerBlock(
+		"weapons_workbench", de.rcm.ballistic.gun.Workbench.BenchBlock::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(4.0F, 12.0F).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
+	);
 	public static final Block REINFORCED_CONCRETE = registerBlock(
 		"reinforced_concrete",
 		Block::new,
@@ -516,6 +520,9 @@ public final class ModRegistry {
 	public static final Item AIRSTRIKE_RADIO = registerItem(
 		"airstrike_radio", AirstrikeRadioItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
 	);
+	public static final Item WEAPONS_WORKBENCH_ITEM = registerItem(
+		"weapons_workbench", props -> new BlockItem(WEAPONS_WORKBENCH, props), new Item.Properties().useBlockDescriptionPrefix()
+	);
 	public static final Item REINFORCED_CONCRETE_ITEM = registerItem(
 		"reinforced_concrete", props -> new BlockItem(REINFORCED_CONCRETE, props), new Item.Properties().useBlockDescriptionPrefix()
 	);
@@ -543,6 +550,11 @@ public final class ModRegistry {
 	);
 	public static final Item LASER_MODULE = registerItem(
 		"laser_module", props -> new de.rcm.ballistic.gun.AttachmentItem(props, de.rcm.ballistic.gun.GunAttachments.LASER), new Item.Properties().stacksTo(16)
+	);
+	/** A suppressor: threaded on the muzzle, it turns the report into a thump that carries a fraction as far. */
+	public static final Item SUPPRESSOR = registerItem(
+		"suppressor", props -> new de.rcm.ballistic.gun.AttachmentItem(props, de.rcm.ballistic.gun.GunAttachments.SUPPRESSOR),
+		new Item.Properties().stacksTo(4).rarity(Rarity.UNCOMMON)
 	);
 	/** An infrared aiming laser: its beam and dot are seen only through night vision. */
 	public static final Item IR_LASER_MODULE = registerItem(
@@ -829,6 +841,18 @@ public final class ModRegistry {
 	public static final SoundEvent UPLINK_SERVO = sound("uplink.servo");
 	public static final SoundEvent UPLINK_DATA = sound("uplink.data");
 	public static final SoundEvent UPLINK_CONFIRM = sound("uplink.confirm");
+	public static final SoundEvent SUPPRESSED_RIFLE = sound("gun.suppressed_rifle");
+	public static final SoundEvent SUPPRESSED_PISTOL = sound("gun.suppressed_pistol");
+	public static final SoundEvent SUPPRESSED_SHOTGUN = sound("gun.suppressed_shotgun");
+	public static final SoundEvent SUPPRESSED_FAR = sound("gun.suppressed_far");
+	public static final SoundEvent SUPPRESSOR_ON = sound("gun.suppressor_on");
+	public static final SoundEvent WORKBENCH_OPEN = sound("workbench.open");
+	public static final SoundEvent WORKBENCH_METAL = sound("workbench.craft_metal");
+	public static final SoundEvent WORKBENCH_AMMO = sound("workbench.craft_ammo");
+	public static final SoundEvent WORKBENCH_GRENADE = sound("workbench.craft_grenade");
+	public static final SoundEvent SOLDIER_DROP_WEAPON = sound("soldier.drop_weapon");
+	public static final SoundEvent SOLDIER_SURRENDER = sound("soldier.surrender");
+	public static final SoundEvent ZIP_TIE = sound("soldier.zip_tie");
 	public static final SoundEvent UPLINK_ALARM = sound("uplink.alarm");
 	public static final SoundEvent ROD_REENTRY = sound("rod.reentry");
 	public static final SoundEvent SUN_LOAD = sound("sun.load");
@@ -966,6 +990,8 @@ public final class ModRegistry {
 		output.accept(de.rcm.ballistic.gun.GlockItem.loaded(GLOCK, de.rcm.ballistic.gun.GlockMagazineItem.STANDARD));
 		output.accept(GLOCK_MAG);
 		output.accept(GLOCK_MAG_EXTENDED);
+		output.accept(WEAPONS_WORKBENCH_ITEM);
+		output.accept(SUPPRESSOR);
 		output.accept(WEAPON_LIGHT);
 		output.accept(LASER_MODULE);
 		output.accept(IR_LASER_MODULE);

@@ -24,12 +24,32 @@ public final class GunAttachmentModels {
 	}
 
 	/** Where a gun carries them: light and laser position (the front of the clamp) in the gun's model space. */
-	public record Mount(float lx, float ly, float lz, float zx, float zy, float zz) {
+	/** Where the light (l) and laser (z) sit, and the muzzle (height, end) a suppressor threads onto, with its size. */
+	public record Mount(float lx, float ly, float lz, float zx, float zy, float zz, float muzzleY, float muzzleZ, BoxMesh can, float canLength) {
 	}
 
-	public static final Mount AK = new Mount(0.047F, 0.071F, -0.30F, -0.046F, 0.079F, -0.29F);
-	public static final Mount GLOCK = new Mount(0.004F, 0.006F, -0.075F, -0.0135F, 0.012F, -0.072F);
-	public static final Mount SHOTGUN = new Mount(0.031F, 0.133F, -0.52F, -0.031F, 0.135F, -0.50F);
+	public static final Mount AK = new Mount(0.047F, 0.071F, -0.30F, -0.046F, 0.079F, -0.29F, 0.085F, -0.712F, suppressor(0.021F, 0.19F), 0.19F);
+	public static final Mount GLOCK = new Mount(0.004F, 0.006F, -0.075F, -0.0135F, 0.012F, -0.072F, 0.058F, -0.152F, suppressor(0.0165F, 0.15F), 0.15F);
+	public static final Mount SHOTGUN = new Mount(0.031F, 0.133F, -0.52F, -0.031F, 0.135F, -0.50F, 0.135F, -0.70F, suppressor(0.025F, 0.22F), 0.22F);
+
+	/**
+	 * A suppressor along -Z from the muzzle: the threaded collar, the tube (a touch wider), the end cap with
+	 * its bore; matt black, a band of bare steel at the collar.
+	 */
+	private static BoxMesh suppressor(float r, float length) {
+		Vector3f origin = new Vector3f(0.0F, 0.0F, 0.0F);
+		Vector3f axis = new Vector3f(0.0F, 0.0F, -1.0F);
+		return new BoxMesh.Builder()
+			.revolve(STEEL, origin, axis, new float[][] {{-0.012F, r * 0.62F}, {0.0F, r * 0.62F}, {0.004F, r * 0.92F}, {0.016F, r * 0.92F}}, 14)
+			.revolve(StructureKit.GUNMETAL, origin, axis, new float[][] {{0.016F, r}, {length - 0.008F, r}, {length - 0.002F, r * 0.9F}}, 14)
+			.revolve(BLACK, origin, axis, new float[][] {{length - 0.002F, r * 0.9F}, {length, r * 0.35F}, {length, 0.0F}}, 14)
+			.build();
+	}
+
+	/** The muzzle end (in the gun's space): at the suppressor's front when one is fitted. */
+	public static float muzzleEnd(GunAttachments att, Mount m) {
+		return att.suppressor() ? m.muzzleZ() - m.canLength() : m.muzzleZ();
+	}
 
 	private static final float LIGHT_LEN = 0.075F;
 	private static final float LIGHT_R = 0.0145F;
@@ -57,6 +77,12 @@ public final class GunAttachmentModels {
 
 	/** Draws what is mounted on a gun (in the gun's model space, already on {@code poseStack}). */
 	public static void submit(GunAttachments att, Mount m, boolean small, PoseStack poseStack, SubmitNodeCollector collector, int light, boolean firstPerson) {
+		if (att.suppressor()) {
+			poseStack.pushPose();
+			poseStack.translate(0.0F, m.muzzleY(), m.muzzleZ());
+			collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> m.can().emit(pose, consumer, light));
+			poseStack.popPose();
+		}
 		if (!att.any()) {
 			return;
 		}

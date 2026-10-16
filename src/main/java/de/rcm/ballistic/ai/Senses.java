@@ -20,6 +20,13 @@ public final class Senses {
 
 	/** How far each kind of noise carries, blocks. */
 	public static final double GUNSHOT_RANGE = 160.0;
+	/** A suppressed shot: still far from silent, but heard only close by. */
+	public static final double SUPPRESSED_RANGE = 28.0;
+
+	/** How far a shot from {@code shooter}'s gun carries. */
+	public static double shotRange(net.minecraft.world.entity.LivingEntity shooter) {
+		return de.rcm.ballistic.gun.GunAttachments.suppressed(shooter) ? SUPPRESSED_RANGE : GUNSHOT_RANGE;
+	}
 	public static final double RPG_RANGE = 220.0;
 	public static final double EXPLOSION_RANGE = 320.0;
 

@@ -17,19 +17,22 @@ import net.minecraft.world.item.ItemStack;
  * What is mounted on a gun's rails - a weapon light, a laser module - and whether each is switched on.
  * Kept on the gun's stack, so every player who sees the gun sees them (and their light).
  */
-public record GunAttachments(boolean light, boolean laser, boolean lightOn, boolean laserOn, boolean ir) {
-	public static final GunAttachments NONE = new GunAttachments(false, false, false, false, false);
+public record GunAttachments(boolean light, boolean laser, boolean lightOn, boolean laserOn, boolean ir, boolean suppressor) {
+	public static final GunAttachments NONE = new GunAttachments(false, false, false, false, false, false);
 	/** What goes on: a weapon light, a (visible red) laser, an infrared laser - only seen through night vision. */
 	public static final int LIGHT = 0;
 	public static final int LASER = 1;
 	public static final int IR_LASER = 2;
+	/** A suppressor on the muzzle. */
+	public static final int SUPPRESSOR = 3;
 
 	public static final Codec<GunAttachments> CODEC = RecordCodecBuilder.create(i -> i.group(
 		Codec.BOOL.optionalFieldOf("light", false).forGetter(GunAttachments::light),
 		Codec.BOOL.optionalFieldOf("laser", false).forGetter(GunAttachments::laser),
 		Codec.BOOL.optionalFieldOf("light_on", false).forGetter(GunAttachments::lightOn),
 		Codec.BOOL.optionalFieldOf("laser_on", false).forGetter(GunAttachments::laserOn),
-		Codec.BOOL.optionalFieldOf("ir", false).forGetter(GunAttachments::ir)
+		Codec.BOOL.optionalFieldOf("ir", false).forGetter(GunAttachments::ir),
+		Codec.BOOL.optionalFieldOf("suppressor", false).forGetter(GunAttachments::suppressor)
 	).apply(i, GunAttachments::new));
 
 	public static final StreamCodec<ByteBuf, GunAttachments> STREAM_CODEC = StreamCodec.composite(
@@ -38,6 +41,7 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 		ByteBufCodecs.BOOL, GunAttachments::lightOn,
 		ByteBufCodecs.BOOL, GunAttachments::laserOn,
 		ByteBufCodecs.BOOL, GunAttachments::ir,
+		ByteBufCodecs.BOOL, GunAttachments::suppressor,
 		GunAttachments::new
 	);
 
@@ -52,6 +56,11 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 
 	public boolean any() {
 		return this.light || this.laser;
+	}
+
+	/** Whether the gun {@code holder} holds wears a suppressor. */
+	public static boolean suppressed(net.minecraft.world.entity.LivingEntity holder) {
+		return of(holder.getMainHandItem()).suppressor;
 	}
 
 	public boolean lightShining() {
@@ -73,7 +82,7 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 			boolean l = (next & 1) != 0;
 			boolean z = (next & 2) != 0;
 			if ((!l || this.light) && (!z || this.laser)) {
-				return new GunAttachments(this.light, this.laser, l, z, this.ir);
+				return new GunAttachments(this.light, this.laser, l, z, this.ir, this.suppressor);
 			}
 		}
 		return this;
@@ -104,10 +113,13 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 			return;
 		}
 		GunAttachments a = of(gun);
-		if (!a.any()) {
+		if (!a.any() && !a.suppressor) {
 			return;
 		}
 		gun.remove(ModRegistry.GUN_ATTACHMENTS);
+		if (a.suppressor) {
+			player.getInventory().placeItemBackInInventory(new ItemStack(ModRegistry.SUPPRESSOR));
+		}
 		if (a.light) {
 			player.getInventory().placeItemBackInInventory(new ItemStack(ModRegistry.WEAPON_LIGHT));
 		}
@@ -129,14 +141,15 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 	 */
 	public static void startMount(ServerPlayer player, int kind) {
 		ItemStack gun = player.getMainHandItem();
-		if (!isGun(gun) || (kind == LIGHT ? of(gun).light : of(gun).laser)) {
+		if (!isGun(gun) || (kind == LIGHT ? of(gun).light : kind == SUPPRESSOR ? of(gun).suppressor : of(gun).laser)) {
 			return;
 		}
 		PENDING.put(player.getUUID(), new long[] {player.level().getGameTime() + MOUNT_TICKS, kind});
 	}
 
 	public static net.minecraft.world.item.Item device(int kind) {
-		return kind == LIGHT ? ModRegistry.WEAPON_LIGHT : kind == IR_LASER ? ModRegistry.IR_LASER_MODULE : ModRegistry.LASER_MODULE;
+		return kind == LIGHT ? ModRegistry.WEAPON_LIGHT : kind == IR_LASER ? ModRegistry.IR_LASER_MODULE : kind == SUPPRESSOR ? ModRegistry.SUPPRESSOR
+			: ModRegistry.LASER_MODULE;
 	}
 
 	/** Called every server tick: mounts what is due. */
@@ -176,12 +189,22 @@ public record GunAttachments(boolean light, boolean laser, boolean lightOn, bool
 			return false;
 		}
 		GunAttachments a = of(gun);
+		if (kind == SUPPRESSOR) {
+			if (a.suppressor) {
+				player.displayClientMessage(Component.translatable("message.ballisticmissiles.attachment_already").withStyle(ChatFormatting.YELLOW), true);
+				return false;
+			}
+			gun.set(ModRegistry.GUN_ATTACHMENTS, new GunAttachments(a.light, a.laser, a.lightOn, a.laserOn, a.ir, true));
+			player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.SUPPRESSOR_ON, SoundSource.PLAYERS, 0.8F, 1.0F);
+			player.displayClientMessage(Component.translatable("message.ballisticmissiles.attachment_suppressor_on").withStyle(ChatFormatting.GREEN), true);
+			return true;
+		}
 		if (light ? a.light : a.laser) {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.attachment_already").withStyle(ChatFormatting.YELLOW), true);
 			return false;
 		}
-		gun.set(ModRegistry.GUN_ATTACHMENTS, light ? new GunAttachments(true, a.laser, false, a.laserOn, a.ir)
-			: new GunAttachments(a.light, true, a.lightOn, false, kind == IR_LASER));
+		gun.set(ModRegistry.GUN_ATTACHMENTS, light ? new GunAttachments(true, a.laser, false, a.laserOn, a.ir, a.suppressor)
+			: new GunAttachments(a.light, true, a.lightOn, false, kind == IR_LASER, a.suppressor));
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_MAG_IN, SoundSource.PLAYERS, 0.5F, 1.5F);
 		player.displayClientMessage(Component.translatable(light ? "message.ballisticmissiles.attachment_light_on"
 			: kind == IR_LASER ? "message.ballisticmissiles.attachment_ir_on" : "message.ballisticmissiles.attachment_laser_on")

@@ -179,7 +179,12 @@ public final class GlockClient {
 		lastFire = now;
 		shotSeed = ClientEffects.rand() > 0.5F ? now * 7L : now * 13L + 5L;
 		Vec3 muzzle = muzzle(player, 1.0F);
-		GunAudio.pistol(muzzle, true);
+		boolean quiet = de.rcm.ballistic.gun.GunAttachments.suppressed(player);
+		if (quiet) {
+			GunAudio.suppressed(muzzle, true, ModRegistry.SUPPRESSED_PISTOL);
+		} else {
+			GunAudio.pistol(muzzle, true);
+		}
 		kickRoll = ClientEffects.rand() * 2.0F - 0.8F;
 		pendingKicks++;
 		// the muzzle flips and the view a little with it
@@ -188,7 +193,7 @@ public final class GlockClient {
 		player.setXRot(Mth.clamp(player.getXRot() - climb, -90.0F, 90.0F));
 		player.setYRot(player.getYRot() + (ClientEffects.rand() - 0.45F) * 0.5F);
 		ClientEffects.addShake(0.08F);
-		effects(player, muzzle, player.getLookAngle(), s.rounds() == 1);
+		effects(player, muzzle, player.getLookAngle(), s.rounds() == 1, quiet);
 	}
 
 	/** The muzzle, roughly where it is held (world space). */
@@ -200,8 +205,10 @@ public final class GlockClient {
 	}
 
 	/** Flash light, brass and smoke. */
-	private static void effects(Player player, Vec3 muzzle, Vec3 look, boolean last) {
-		de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(look.scale(0.3)), 0xFFC070, 0.9F, 8.0F, 30.0F + ClientEffects.rand() * 15.0F);
+	private static void effects(Player player, Vec3 muzzle, Vec3 look, boolean last, boolean quiet) {
+		if (!quiet) {
+			de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(look.scale(0.3)), 0xFFC070, 0.9F, 8.0F, 30.0F + ClientEffects.rand() * 15.0F);
+		}
 		Vec3 right = look.cross(new Vec3(0, 1, 0));
 		right = right.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : right.normalize();
 		Vec3 port = muzzle.subtract(look.scale(0.12)).add(right.scale(0.03)).add(0, 0.02, 0);
@@ -220,11 +227,16 @@ public final class GlockClient {
 		}
 		Vec3 muzzle = new Vec3(p.x(), p.y(), p.z());
 		Vec3 look = new Vec3(p.dx(), p.dy(), p.dz());
-		GunAudio.pistol(muzzle, false);
+		boolean quiet = (p.flags() & de.rcm.ballistic.network.ModNetworking.GunshotPayload.SUPPRESSED) != 0;
+		if (quiet) {
+			GunAudio.suppressed(muzzle, false, ModRegistry.SUPPRESSED_PISTOL);
+		} else {
+			GunAudio.pistol(muzzle, false);
+		}
 		var shooter = mc.level.getEntity(p.shooter());
 		if (shooter instanceof Player other && muzzle.distanceTo(mc.gameRenderer.getMainCamera().position()) < 96.0) {
-			effects(other, muzzle, look, (p.flags() & de.rcm.ballistic.network.ModNetworking.GunshotPayload.LAST) != 0);
-		} else {
+			effects(other, muzzle, look, (p.flags() & de.rcm.ballistic.network.ModNetworking.GunshotPayload.LAST) != 0, quiet);
+		} else if (!quiet) {
 			de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(look.scale(0.3)), 0xFFC070, 0.9F, 8.0F, 30.0F);
 		}
 	}

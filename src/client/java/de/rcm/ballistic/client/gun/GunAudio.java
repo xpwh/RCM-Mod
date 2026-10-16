@@ -116,6 +116,35 @@ public final class GunAudio {
 		report(muzzle, own, ModRegistry.GLOCK_SHOT, ModRegistry.GLOCK_SHOT_MID, ModRegistry.GLOCK_SHOT_FAR, 0.75F);
 	}
 
+	/**
+	 * A shot through a suppressor ({@code close}: the rifle's, pistol's or shotgun's recording): close by the
+	 * thump and the action's clatter, a little way off a dull clap, past a hundred and fifty blocks nothing.
+	 * No echoes off distant hills; a room or a cave still rings, softly.
+	 */
+	public static void suppressed(Vec3 muzzle, boolean own, net.minecraft.sounds.SoundEvent close) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level == null) {
+			return;
+		}
+		Vec3 ear = mc.gameRenderer.getMainCamera().position();
+		double d = own ? 0.0 : ear.distanceTo(muzzle);
+		if (d > 160.0) {
+			return;
+		}
+		int delay = (int) Math.round(d / SPEED_OF_SOUND);
+		float pitch = 0.96F + RANDOM.nextFloat() * 0.08F;
+		float loud = (float) Math.pow(1.0 + d / 10.0, -1.1);
+		double nearW = 1.0 - smooth(8.0, 55.0, d);
+		later(close, muzzle, loud * (float) Math.sqrt(nearW), pitch, delay);
+		later(ModRegistry.SUPPRESSED_FAR, muzzle, loud * 1.4F * (float) Math.sqrt(1.0 - nearW), pitch, delay);
+		switch (survey(mc.level, muzzle).space()) {
+			case ROOM -> later(ModRegistry.AK_TAIL_INDOOR, muzzle, loud * 0.3F, pitch, delay);
+			case CAVE -> later(ModRegistry.AK_TAIL_CAVE, muzzle, loud * 0.25F, pitch, delay);
+			default -> {
+			}
+		}
+	}
+
 	private static void report(Vec3 muzzle, boolean own, net.minecraft.sounds.SoundEvent close, net.minecraft.sounds.SoundEvent mid,
 		net.minecraft.sounds.SoundEvent far, float tailGain) {
 		Minecraft mc = Minecraft.getInstance();

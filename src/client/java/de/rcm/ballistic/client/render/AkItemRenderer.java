@@ -98,7 +98,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunAttachmentM
 		poseStack.translate(0.5F, 0.5F, 0.5F); // undo the item transform's corner offset
 		if (context.firstPerson()) {
 			// where the muzzle is on screen, in camera space: tracers of our own shots start there
-			poseStack.last().pose().transformPosition(0.0F, BORE_Y, MUZZLE_Z - 0.02F, VIEW_MUZZLE);
+			poseStack.last().pose().transformPosition(0.0F, BORE_Y, GunAttachmentModels.muzzleEnd(armed.att(), GunAttachmentModels.AK) - 0.02F, VIEW_MUZZLE);
 		}
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> BODY.emit(pose, consumer, light));
 
@@ -155,7 +155,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunAttachmentM
 
 		// ---- muzzle flash, for the first frame or two of each shot
 		float shot = now - lastShot;
-		if (shot >= 0.0F && shot < 1.4F) {
+		if (shot >= 0.0F && shot < 1.4F && !armed.att().suppressor()) {
 			muzzleFlash(poseStack, collector, shot, lastShot, ambient(light, mc), BORE_Y, MUZZLE_Z, 1.0F);
 		}
 		poseStack.popPose();

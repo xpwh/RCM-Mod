@@ -171,7 +171,12 @@ public final class ShotgunClient {
 			return;
 		}
 		lastFire = now;
-		GunAudio.shotgun(AkClient.muzzle(player, 1.0F), true);
+		boolean quiet = de.rcm.ballistic.gun.GunAttachments.suppressed(player);
+		if (quiet) {
+			GunAudio.suppressed(AkClient.muzzle(player, 1.0F), true, ModRegistry.SUPPRESSED_SHOTGUN);
+		} else {
+			GunAudio.shotgun(AkClient.muzzle(player, 1.0F), true);
+		}
 		kickRoll = ClientEffects.rand() * 2.0F - 0.7F;
 		pendingKicks++;
 		// the muzzle flips up and the view with it
@@ -181,7 +186,9 @@ public final class ShotgunClient {
 		ClientEffects.addShake(0.32F);
 		Vec3 muzzle = AkClient.muzzle(player, 1.0F);
 		Vec3 look = player.getLookAngle();
-		de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(look.scale(0.4)), 0xFFC070, 1.2F, 12.0F, 60.0F + ClientEffects.rand() * 20.0F);
+		if (!quiet) {
+			de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(look.scale(0.4)), 0xFFC070, 1.2F, 12.0F, 60.0F + ClientEffects.rand() * 20.0F);
+		}
 		Vec3 m = muzzle.add(look.scale(0.3));
 		SmokeField.puff(m.x, m.y, m.z, look.x * 0.18, look.y * 0.18 + 0.01, look.z * 0.18, 200 + (int) (ClientEffects.rand() * 80), 0.12F, 1.1F,
 			0xDAD6D0, 0.3F, 0.6F, 0.0008F);
@@ -195,8 +202,12 @@ public final class ShotgunClient {
 		}
 		Vec3 muzzle = new Vec3(p.x(), p.y(), p.z());
 		Vec3 look = new Vec3(p.dx(), p.dy(), p.dz());
-		GunAudio.shotgun(muzzle, false);
-		de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(look.scale(0.4)), 0xFFC070, 1.2F, 12.0F, 60.0F + ClientEffects.rand() * 20.0F);
+		if ((p.flags() & de.rcm.ballistic.network.ModNetworking.GunshotPayload.SUPPRESSED) != 0) {
+			GunAudio.suppressed(muzzle, false, ModRegistry.SUPPRESSED_SHOTGUN);
+		} else {
+			GunAudio.shotgun(muzzle, false);
+			de.rcm.ballistic.client.effect.DynamicLights.flash(muzzle.add(look.scale(0.4)), 0xFFC070, 1.2F, 12.0F, 60.0F + ClientEffects.rand() * 20.0F);
+		}
 		if (muzzle.distanceTo(mc.gameRenderer.getMainCamera().position()) < 96.0) {
 			Vec3 m = muzzle.add(look.scale(0.3));
 			SmokeField.puff(m.x, m.y, m.z, look.x * 0.18, look.y * 0.18 + 0.01, look.z * 0.18, 200 + (int) (ClientEffects.rand() * 80), 0.12F, 1.1F,

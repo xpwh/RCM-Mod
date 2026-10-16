@@ -159,15 +159,17 @@ public class GlockItem extends Item {
 		Vec3 dir = aim.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
 		BulletEntity.firePistol(level, player, eye, dir.scale(MUZZLE_VELOCITY));
 		GunshotPayload shot = new GunshotPayload(player.getId(), muzzle.x, muzzle.y, muzzle.z, (float) dir.x, (float) dir.y, (float) dir.z,
-			GunshotPayload.PISTOL | (left == 0 ? GunshotPayload.LAST : 0));
+			GunshotPayload.PISTOL | (left == 0 ? GunshotPayload.LAST : 0) | (GunAttachments.suppressed(player) ? GunshotPayload.SUPPRESSED : 0));
 		for (ServerPlayer p : level.players()) {
 			if (p.position().distanceToSqr(muzzle) < 900.0 * 900.0) {
 				ServerPlayNetworking.send(p, shot);
 			}
 		}
 		level.gameEvent(player, net.minecraft.world.level.gameevent.GameEvent.PROJECTILE_SHOOT, muzzle);
-		de.rcm.ballistic.ai.SoldierEntity.flash(player);
-		de.rcm.ballistic.ai.Senses.noise(level, muzzle, de.rcm.ballistic.ai.Senses.GUNSHOT_RANGE, de.rcm.ballistic.ai.Senses.GUNSHOT, player);
+		if (!de.rcm.ballistic.gun.GunAttachments.suppressed(player)) {
+			de.rcm.ballistic.ai.SoldierEntity.flash(player); // a suppressor hides the flash too
+		}
+		de.rcm.ballistic.ai.Senses.noise(level, muzzle, de.rcm.ballistic.ai.Senses.shotRange(player), de.rcm.ballistic.ai.Senses.GUNSHOT, player);
 	}
 
 	// ------------------------------------------------------------------ magazines

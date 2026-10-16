@@ -38,6 +38,7 @@
 		"ballisticmissiles:base_flag",
 		"ballisticmissiles:floodlight",
 		"ballisticmissiles:alarm_light",
-		"ballisticmissiles:barbed_wire"
+		"ballisticmissiles:barbed_wire",
+		"ballisticmissiles:weapons_workbench"
 	]
 }

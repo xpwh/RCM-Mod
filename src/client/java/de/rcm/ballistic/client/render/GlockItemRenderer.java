@@ -133,7 +133,7 @@ public final class GlockItemRenderer implements SpecialModelRenderer<GunAttachme
 			submitMagazine(poseStack, collector, light, p.dropKind(), p.drop());
 		}
 		// the muzzle flash: smaller than a rifle's, a quick orange-white bloom off the short barrel
-		if (p.flash() >= 0.0F && p.flash() < 1.2F) {
+		if (p.flash() >= 0.0F && p.flash() < 1.2F && (armed == null || !armed.att().suppressor())) {
 			AkItemRenderer.muzzleFlash(poseStack, collector, p.flash(), p.seed(), AkItemRenderer.ambient(light, net.minecraft.client.Minecraft.getInstance()),
 				BORE_Y, SLIDE_FRONT - 0.002F, 0.55F);
 		}
