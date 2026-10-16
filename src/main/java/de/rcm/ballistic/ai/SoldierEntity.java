@@ -102,6 +102,10 @@ public class SoldierEntity extends PathfinderMob {
 	private @Nullable Vec3 cover;
 	private long coverUntil;
 	private @Nullable Vec3 home;
+	/** How far from home a patrol wanders: below 0 the usual 3-12 blocks, 0 standing watch on the spot. */
+	private float postRadius = -1.0F;
+	/** The military base he guards (its flag), if any: he raises the alarm there. */
+	private net.minecraft.core.@Nullable BlockPos base;
 	private int patrolTimer;
 	private float strafeDir = 1.0F;
 	private int strafeTimer;
@@ -174,6 +178,17 @@ public class SoldierEntity extends PathfinderMob {
 
 	public void setTeam(int team) {
 		this.entityData.set(DATA_TEAM, team);
+	}
+
+	/** Posts him as a guard: home is his post, {@code radius} how far he walks about it. */
+	public void setPost(Vec3 home, float radius, net.minecraft.core.@Nullable BlockPos base) {
+		this.home = home;
+		this.postRadius = radius;
+		this.base = base;
+	}
+
+	public net.minecraft.core.@Nullable BlockPos base() {
+		return this.base;
 	}
 
 	public int aiState() {
@@ -765,8 +780,12 @@ public class SoldierEntity extends PathfinderMob {
 			this.patrolTimer = 120 + this.getRandom().nextInt(160);
 			Vec3 h = this.home;
 			double a = this.getRandom().nextDouble() * Math.PI * 2.0;
-			double r = 3.0 + this.getRandom().nextDouble() * 9.0;
-			this.go(h.x + Math.cos(a) * r, h.y, h.z + Math.sin(a) * r, 0.55);
+			double r = this.postRadius < 0.0F ? 3.0 + this.getRandom().nextDouble() * 9.0 : this.getRandom().nextDouble() * this.postRadius;
+			if (this.postRadius >= 0.0F && this.position().distanceToSqr(h) < 0.6 && this.postRadius < 0.5F) {
+				this.getNavigation().stop(); // standing watch: stays put and looks out
+			} else {
+				this.go(h.x + Math.cos(a) * r, h.y, h.z + Math.sin(a) * r, 0.55);
+			}
 		}
 		if (this.getNavigation().isDone()) {
 			this.lookAround();
@@ -950,6 +969,10 @@ public class SoldierEntity extends PathfinderMob {
 			output.putDouble("HomeY", this.home.y);
 			output.putDouble("HomeZ", this.home.z);
 		}
+		output.putFloat("PostRadius", this.postRadius);
+		if (this.base != null) {
+			output.putLong("Base", this.base.asLong());
+		}
 	}
 
 	@Override
@@ -961,6 +984,9 @@ public class SoldierEntity extends PathfinderMob {
 		if (!Double.isNaN(hx)) {
 			this.home = new Vec3(hx, input.getDoubleOr("HomeY", 0.0), input.getDoubleOr("HomeZ", 0.0));
 		}
+		this.postRadius = input.getFloatOr("PostRadius", -1.0F);
+		long b = input.getLongOr("Base", Long.MIN_VALUE);
+		this.base = b == Long.MIN_VALUE ? null : net.minecraft.core.BlockPos.of(b);
 	}
 
 	/** For the AI tool: a full report on what he knows. */

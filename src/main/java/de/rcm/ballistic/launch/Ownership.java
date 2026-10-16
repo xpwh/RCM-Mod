@@ -26,6 +26,9 @@ public final class Ownership {
 	/** Whether {@code player} may work {@code device} (claiming it if it has no owner yet). */
 	public static boolean claim(ServerPlayer player, Owned device) {
 		if (device.getOwner() == null) {
+			if (de.rcm.ballistic.base.BaseFlagBlockEntity.locked(player.level(), device)) {
+				return false; // the hardware of a base still held by its garrison
+			}
 			device.setOwner(player.getUUID());
 			return true;
 		}
@@ -37,7 +40,8 @@ public final class Ownership {
 		if (claim(player, device)) {
 			return false;
 		}
-		player.displayClientMessage(notYours(), true);
+		player.displayClientMessage(device.getOwner() == null
+			? Component.translatable("message.ballisticmissiles.base.locked").withStyle(ChatFormatting.RED) : notYours(), true);
 		return true;
 	}
 

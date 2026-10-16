@@ -153,6 +153,20 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		return jet;
 	}
 
+	/** A jet parked by world generation (a base's hangar): nobody's until the base is taken. */
+	public static @Nullable FighterEntity parked(ServerLevel level, Vec3 at, float yaw, FighterType type) {
+		FighterEntity jet = ModRegistry.FIGHTER.create(level, net.minecraft.world.entity.EntitySpawnReason.STRUCTURE);
+		if (jet == null) {
+			return null;
+		}
+		jet.entityData.set(DATA_TYPE, type.ordinal());
+		jet.entityData.set(DATA_AMMO, type.gunRounds);
+		jet.entityData.set(DATA_MISSILES, type.missiles);
+		jet.entityData.set(DATA_HEALTH, type.maxHealth);
+		jet.snapTo(at.x, at.y, at.z, yaw, 0.0F);
+		return jet;
+	}
+
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
 		builder.define(DATA_TYPE, 0);

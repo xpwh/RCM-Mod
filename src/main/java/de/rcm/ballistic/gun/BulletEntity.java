@@ -409,6 +409,12 @@ public class BulletEntity extends Entity {
 			this.discard();
 			return true;
 		}
+		if (state.is(de.rcm.ballistic.base.BaseRegistry.FUEL_DRUM) && this.random.nextFloat() < 0.3F) {
+			// a round through a fuel drum: sometimes the fumes catch
+			de.rcm.ballistic.base.BaseBlocks.FuelDrum.ignite(level, hit.getBlockPos(), true);
+			this.discard();
+			return true;
+		}
 		if (isGlass(state)) {
 			// straight through, leaving a star of cracks; a few rounds and the glass gives way
 			Vec3 out = this.crackGlass(level, hit, state, at, vel.normalize());

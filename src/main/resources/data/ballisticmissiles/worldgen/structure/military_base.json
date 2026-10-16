@@ -1,0 +1,7 @@
+{
+	"type": "ballisticmissiles:military_base",
+	"biomes": "#ballisticmissiles:has_structure/military_base",
+	"step": "surface_structures",
+	"terrain_adaptation": "beard_thin",
+	"spawn_overrides": {}
+}

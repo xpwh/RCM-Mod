@@ -26,6 +26,7 @@ public class BallisticMissiles implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModRegistry.init();
+		de.rcm.ballistic.base.BaseRegistry.init();
 		ModNetworking.init();
 		// charred wood still burns, just not as eagerly as fresh logs
 		net.fabricmc.fabric.api.registry.FlammableBlockRegistry.getDefaultInstance().add(ModRegistry.CHARRED_LOG, 3, 4);

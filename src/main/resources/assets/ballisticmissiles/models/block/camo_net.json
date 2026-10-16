@@ -1,0 +1,29 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "ballisticmissiles:block/camo_net",
+		"n": "ballisticmissiles:block/camo_net"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				13.5,
+				0
+			],
+			"to": [
+				16,
+				13.5,
+				16
+			],
+			"faces": {
+				"up": {
+					"texture": "#n"
+				},
+				"down": {
+					"texture": "#n"
+				}
+			}
+		}
+	]
+}

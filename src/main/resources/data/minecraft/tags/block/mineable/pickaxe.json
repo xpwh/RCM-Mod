@@ -27,6 +27,17 @@
 		"ballisticmissiles:runway_light",
 		"ballisticmissiles:runway",
 		"ballisticmissiles:inclined_launcher",
-		"ballisticmissiles:sun_forge"
+		"ballisticmissiles:sun_forge",
+		"ballisticmissiles:jersey_barrier",
+		"ballisticmissiles:chainlink_fence",
+		"ballisticmissiles:corrugated_olive",
+		"ballisticmissiles:corrugated_grey",
+		"ballisticmissiles:steel_grate",
+		"ballisticmissiles:fuel_drum",
+		"ballisticmissiles:field_generator",
+		"ballisticmissiles:base_flag",
+		"ballisticmissiles:floodlight",
+		"ballisticmissiles:alarm_light",
+		"ballisticmissiles:barbed_wire"
 	]
 }

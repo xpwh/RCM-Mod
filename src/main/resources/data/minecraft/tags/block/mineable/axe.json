@@ -1,5 +1,7 @@
 {
 	"values": [
-		"ballisticmissiles:charred_log"
+		"ballisticmissiles:charred_log",
+		"ballisticmissiles:military_crate",
+		"ballisticmissiles:camo_net"
 	]
 }
