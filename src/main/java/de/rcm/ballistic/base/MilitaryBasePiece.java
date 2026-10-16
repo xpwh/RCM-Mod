@@ -8,6 +8,13 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.StandingSignBlock;
+import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.level.block.entity.SignText;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BlockTags;
@@ -54,6 +61,13 @@ public class MilitaryBasePiece extends StructurePiece {
 	public static final int CHECKPOINT = 10;
 	public static final int SAM_SITE = 11;
 	public static final int CACHE = 12;
+	/** The large set pieces: a carrier at sea, a ruined town, a crash site, a submarine pen, a secret lab, a trench line. */
+	public static final int CARRIER = 13;
+	public static final int WARZONE = 14;
+	public static final int CRASH = 15;
+	public static final int SUB_PEN = 16;
+	public static final int LAB = 17;
+	public static final int TRENCH = 18;
 	/** Half the fence's side. */
 	private static final int F = 36;
 	private static final ResourceKey<LootTable> LOOT = ResourceKey.create(Registries.LOOT_TABLE, BallisticMissiles.id("chests/military_base"));
@@ -102,6 +116,12 @@ public class MilitaryBasePiece extends StructurePiece {
 			case CHECKPOINT -> new int[] {-22, 22, -26, 26};
 			case SAM_SITE -> new int[] {-25, 25, -25, 25};
 			case CACHE -> new int[] {-16, 16, -16, 16};
+			case CARRIER -> new int[] {-16, 16, -71, 67};
+			case WARZONE -> new int[] {-40, 40, -40, 40};
+			case CRASH -> new int[] {-20, 20, -24, 24};
+			case SUB_PEN -> new int[] {-18, 18, -46, 22};
+			case LAB -> new int[] {-20, 20, -20, 20};
+			case TRENCH -> new int[] {-48, 48, -30, 30};
 			default -> new int[] {-42, 42, -42, 50};
 		};
 	}
@@ -112,6 +132,9 @@ public class MilitaryBasePiece extends StructurePiece {
 			case CHECKPOINT -> 17;
 			case SAM_SITE -> 20;
 			case CACHE -> 12;
+			case LAB -> 10;
+			case SUB_PEN -> 16;
+			case WARZONE, CRASH, TRENCH, CARRIER -> -1;
 			default -> F;
 		};
 	}
@@ -122,8 +145,19 @@ public class MilitaryBasePiece extends StructurePiece {
 			case CHECKPOINT -> new int[] {-9, 0};
 			case SAM_SITE -> new int[] {-12, 12};
 			case CACHE -> new int[] {7, 7};
+			case CARRIER -> new int[] {5, 16};
+			case WARZONE -> new int[] {6, 6};
+			case CRASH -> new int[] {9, -7};
+			case SUB_PEN -> new int[] {10, 6};
+			case LAB -> new int[] {9, -9};
+			case TRENCH -> new int[] {-12, 14};
 			default -> new int[] {0, 0};
 		};
+	}
+
+	/** The height the flag stands at (its plinth is one below). */
+	private static int flagY(int variant) {
+		return variant == CARRIER ? 9 : 2;
 	}
 
 	private static BoundingBox box(BlockPos o, Rotation rot, int variant) {
@@ -337,7 +371,7 @@ public class MilitaryBasePiece extends StructurePiece {
 			s.snapTo(v.x, v.y, v.z, this.hash(x, z, 77) * 360.0F, 0.0F);
 			s.setTeam(SoldierEntity.TEAM_HOSTILE);
 			int[] f = flagAt(MilitaryBasePiece.this.variant);
-			s.setPost(v, radius, this.at(f[0], 2, f[1]));
+			s.setPost(v, radius, this.at(f[0], flagY(MilitaryBasePiece.this.variant), f[1]));
 			this.level.addFreshEntity(s);
 		}
 
@@ -345,14 +379,22 @@ public class MilitaryBasePiece extends StructurePiece {
 
 		void run() {
 			if (MilitaryBasePiece.this.variant >= CHECKPOINT) {
-				this.terrain();
+				if (MilitaryBasePiece.this.variant != CARRIER) {
+					this.terrain();
+				}
 				switch (MilitaryBasePiece.this.variant) {
 					case CHECKPOINT -> this.checkpoint();
 					case SAM_SITE -> this.samSite();
+					case CARRIER -> this.carrier();
+					case WARZONE -> this.warzone();
+					case CRASH -> this.crash();
+					case SUB_PEN -> this.subPen();
+					case LAB -> this.lab();
+					case TRENCH -> this.trench();
 					default -> this.cache();
 				}
 				int[] f = flagAt(MilitaryBasePiece.this.variant);
-				this.plinth(f[0], f[1]);
+				this.plinth(f[0], flagY(MilitaryBasePiece.this.variant) - 1, f[1]);
 				this.flag();
 				return;
 			}
@@ -411,7 +453,25 @@ public class MilitaryBasePiece extends StructurePiece {
 					if (lx < a[0] || lx > a[1] || lz < a[2] || lz > a[3]) {
 						continue;
 					}
+					if (MilitaryBasePiece.this.variant == SUB_PEN && lz < -15) {
+						this.channel(wx, wz, lx, oy);
+						continue;
+					}
 					this.column(wx, wz, lx, lz, oy);
+				}
+			}
+		}
+
+		/** Off the pen's sea face: the channel to the sea is dredged to seven deep; the shore either side is left alone. */
+		private void channel(int wx, int wz, int lx, int oy) {
+			if (Math.abs(lx) > 5) {
+				return;
+			}
+			for (int y = oy - 7; y <= oy + 26; y++) {
+				BlockState s = this.level.getBlockState(this.m.set(wx, y, wz));
+				BlockState want = y < oy ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState();
+				if (s != want && (y < oy || !s.isAir())) {
+					this.level.setBlock(this.m, want, Block.UPDATE_CLIENTS);
 				}
 			}
 		}
@@ -446,7 +506,7 @@ public class MilitaryBasePiece extends StructurePiece {
 				this.level.setBlock(this.m, y >= oy - 3 ? sub : Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS);
 			}
 			int yr = yard(MilitaryBasePiece.this.variant);
-			boolean yard = Math.abs(lx) <= yr && Math.abs(lz) <= yr;
+			boolean yard = yr >= 0 && Math.abs(lx) <= yr && Math.abs(lz) <= yr;
 			BlockState ground = top;
 			if (yard) {
 				float p = this.patch(lx, lz, 5, 1) * 0.75F + this.hash(lx, lz, 2) * 0.25F;
@@ -946,13 +1006,13 @@ public class MilitaryBasePiece extends StructurePiece {
 			this.set(x + 4, 2, z, Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true));
 		}
 
-		/** A small stone plinth for the flag (the flag stands on it at y = 2). */
-		void plinth(int x, int z) {
-			this.fill(x - 1, 1, z - 1, x + 1, 1, z + 1, Blocks.POLISHED_ANDESITE);
-			this.set(x - 1, 1, z - 1, Blocks.POLISHED_ANDESITE_SLAB);
-			this.set(x + 1, 1, z - 1, Blocks.POLISHED_ANDESITE_SLAB);
-			this.set(x - 1, 1, z + 1, Blocks.POLISHED_ANDESITE_SLAB);
-			this.set(x + 1, 1, z + 1, Blocks.POLISHED_ANDESITE_SLAB);
+		/** A small stone plinth for the flag (the flag stands on it, one above). */
+		void plinth(int x, int y, int z) {
+			this.fill(x - 1, y, z - 1, x + 1, y, z + 1, Blocks.POLISHED_ANDESITE);
+			this.set(x - 1, y, z - 1, Blocks.POLISHED_ANDESITE_SLAB);
+			this.set(x + 1, y, z - 1, Blocks.POLISHED_ANDESITE_SLAB);
+			this.set(x - 1, y, z + 1, Blocks.POLISHED_ANDESITE_SLAB);
+			this.set(x + 1, y, z + 1, Blocks.POLISHED_ANDESITE_SLAB);
 		}
 
 		/** A sandbagged gun nest (3 x 3, open at the back) with a guard in it. */
@@ -1152,6 +1212,1103 @@ public class MilitaryBasePiece extends StructurePiece {
 			this.guard(0, -10, -4, 3.0F);
 		}
 
+		// ------------------------------------------------------------------ helpers for the larger set pieces
+
+		/** A standing sign with a two-line warning on both faces, in red. */
+		void sign(int x, int y, int z, int rotation, String key) {
+			this.set(x, y, z, Blocks.OAK_SIGN.defaultBlockState().setValue(StandingSignBlock.ROTATION, rotation));
+			if (this.inside(x, y, z) && this.level.getBlockEntity(this.at(x, y, z)) instanceof SignBlockEntity sign) {
+				SignText text = new SignText().setMessage(1, Component.translatable(key + ".1")).setMessage(2, Component.translatable(key + ".2"))
+					.setColor(DyeColor.RED);
+				sign.setText(text, true);
+				sign.setText(text, false);
+			}
+		}
+
+		/** A column of smoke: a smouldering fire on a bale (a signal fire's smoke climbs high). */
+		void smoke(int x, int y, int z) {
+			this.set(x, y - 1, z, Blocks.HAY_BLOCK);
+			this.set(x, y, z, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, true).setValue(CampfireBlock.SIGNAL_FIRE, true));
+		}
+
+		/** Open flame that keeps burning (on netherrack). */
+		void blaze(int x, int y, int z) {
+			this.set(x, y - 1, z, Blocks.NETHERRACK);
+			this.set(x, y, z, Blocks.FIRE);
+		}
+
+		/** A barrel with the keycard in it (and nothing else). */
+		void keycard(int x, int y, int z) {
+			this.set(x, y, z, Blocks.BARREL.defaultBlockState().setValue(BarrelBlock.FACING, Direction.UP));
+			if (this.inside(x, y, z) && this.level.getBlockEntity(this.at(x, y, z)) instanceof net.minecraft.world.level.block.entity.BarrelBlockEntity b) {
+				b.setItem(13, new ItemStack(BaseRegistry.KEYCARD));
+			}
+		}
+
+		/** A shell crater: a scorched bowl, earth thrown up round the rim, ash on it. */
+		void crater(int cx, int cz, float r, int salt) {
+			int ir = (int) Math.ceil(r) + 2;
+			float depth = r * 0.55F;
+			for (int dx = -ir; dx <= ir; dx++) {
+				for (int dz = -ir; dz <= ir; dz++) {
+					int x = cx + dx;
+					int z = cz + dz;
+					float rr = r * (0.85F + 0.3F * this.patch(x, z, 2, salt));
+					float d = Mth.sqrt(dx * dx + dz * dz);
+					if (d <= rr) {
+						float u = d / rr;
+						int h = Math.max(1, Math.round(depth * (1.0F - u * u)));
+						this.air(x, 1 - h, z, x, 1, z);
+						this.set(x, -h, z, this.hash(x, z, salt + 1) < 0.18F ? ModRegistry.SMOLDERING_EARTH : ModRegistry.SCORCHED_EARTH);
+					} else if (d <= rr + 1.6F) {
+						this.set(x, 0, z, this.hash(x, z, salt + 2) < 0.55F ? ModRegistry.SCORCHED_EARTH.defaultBlockState() : Blocks.COARSE_DIRT.defaultBlockState());
+						if (this.hash(x, z, salt + 3) < 0.4F) {
+							this.set(x, 1, z, ModRegistry.ASH);
+						}
+					}
+				}
+			}
+		}
+
+		/** A burnt-out car, 2 x 4, along z (or x): a blackened shell, the cabin's frame, half its roof. */
+		void wreck(int x, int z, boolean alongZ, int salt) {
+			BlockState slab = Blocks.POLISHED_BLACKSTONE_SLAB.defaultBlockState();
+			for (int i = 0; i < 4; i++) {
+				for (int j = 0; j < 2; j++) {
+					int px = alongZ ? x + j : x + i;
+					int pz = alongZ ? z + i : z + j;
+					float h = this.hash(px, pz, salt);
+					this.set(px, 1, pz, h < 0.4F ? Blocks.BLACKSTONE : h < 0.75F ? Blocks.POLISHED_BLACKSTONE : Blocks.BROWN_TERRACOTTA);
+					if (i == 0 || i == 3) {
+						this.set(px, 2, pz, slab);
+					} else {
+						this.set(px, 2, pz, Blocks.IRON_BARS);
+						if (this.hash(px, pz, salt + 1) < 0.6F) {
+							this.set(px, 3, pz, slab);
+						}
+					}
+				}
+			}
+		}
+
+		/**
+		 * A ruined building, x0..x1 by z0..z1, {@code floors} storeys of four: walls broken off along a ragged
+		 * line and blown through by shells, the floors fallen in, the windows empty, rubble inside and spilled
+		 * out into the street, and a ladder up through it all. With {@code keepTop} the top floor stands.
+		 */
+		void ruin(int x0, int z0, int x1, int z1, int floors, BlockState wall, BlockState dark, int salt, boolean keepTop, int doorX, int doorZ) {
+			int top = floors * 4;
+			for (int k = 0; k <= floors; k++) {
+				int y = k * 4;
+				for (int x = x0 + 1; x < x1; x++) {
+					for (int z = z0 + 1; z < z1; z++) {
+						if (k == 0) {
+							this.set(x, 0, z, this.hash(x, z, salt) < 0.5F ? Blocks.STONE_BRICKS : Blocks.CRACKED_STONE_BRICKS);
+						} else if (k < floors && (this.patch(x, z, 3, salt + k) < 0.6F || keepTop && k == floors - 1)) {
+							this.set(x, y, z, this.hash(x, z, salt + k) < 0.15F ? dark : wall);
+						}
+					}
+				}
+			}
+			for (int x = x0; x <= x1; x++) {
+				for (int z = z0; z <= z1; z++) {
+					if (x != x0 && x != x1 && z != z0 && z != z1) {
+						continue;
+					}
+					boolean corner = (x == x0 || x == x1) && (z == z0 || z == z1);
+					int along = z == z0 || z == z1 ? x - x0 : z - z0;
+					int h = keepTop ? top - (int) (this.hash(x, z, salt + 7) * 2.0F)
+						: corner ? top - (int) (this.patch(x, z, 3, salt) * top * 0.6F)
+						: top - (int) (this.patch(x, z, 3, salt) * top * 0.95F);
+					for (int y = 1; y <= h; y++) {
+						boolean window = !corner && (y % 4 == 2 || y % 4 == 3) && along % 3 == 1 && y > 3;
+						boolean door = y <= 2 && (z == doorZ && x == x0 + (x1 - x0) / 2 || x == doorX && z == z0 + (z1 - z0) / 2);
+						if (window || door) {
+							continue;
+						}
+						this.set(x, y, z, this.hash(x * 7 + y, z, salt + 3) < 0.13F ? dark : wall);
+					}
+				}
+			}
+			// shell holes
+			int holes = 1 + (int) (this.hash(x0, z0, salt + 5) * 3.0F);
+			for (int i = 0; i < holes; i++) {
+				float a = this.hash(i, salt, 81);
+				boolean xWall = this.hash(i, salt, 82) < 0.5F;
+				int hx = xWall ? (this.hash(i, salt, 83) < 0.5F ? x0 : x1) : x0 + (int) (a * (x1 - x0));
+				int hz = xWall ? z0 + (int) (a * (z1 - z0)) : (this.hash(i, salt, 83) < 0.5F ? z0 : z1);
+				int hy = 2 + (int) (this.hash(i, salt, 84) * Math.max(1, top - 4));
+				float r = 1.8F + this.hash(i, salt, 85) * 1.8F;
+				int ir = (int) Math.ceil(r);
+				for (int dx = -ir; dx <= ir; dx++) {
+					for (int dy = -ir; dy <= ir; dy++) {
+						for (int dz = -ir; dz <= ir; dz++) {
+							int x = hx + dx;
+							int z = hz + dz;
+							if (dx * dx + dy * dy + dz * dz <= r * r && x >= x0 && x <= x1 && z >= z0 && z <= z1 && hy + dy >= 1) {
+								this.set(x, hy + dy, z, Blocks.AIR);
+							}
+						}
+					}
+				}
+			}
+			// a ladder all the way up, with its wall behind it kept standing
+			this.fill(x0, 1, z0 + 1, x0, top, z0 + 1, wall);
+			this.ladder(x0 + 1, 1, top - 1, z0 + 1, Direction.EAST);
+			// rubble: heaps inside and spilled out round the walls
+			for (int x = x0 - 3; x <= x1 + 3; x++) {
+				for (int z = z0 - 3; z <= z1 + 3; z++) {
+					boolean in = x > x0 && x < x1 && z > z0 && z < z1;
+					boolean wallCell = x >= x0 && x <= x1 && z >= z0 && z <= z1 && !in;
+					if (wallCell || in && x == x0 + 1 && z == z0 + 1) {
+						continue;
+					}
+					float p = this.patch(x, z, 2, salt + 9);
+					float edge = in ? 0.0F : Math.max(Math.max(x0 - x, x - x1), Math.max(z0 - z, z - z1)) * 0.08F;
+					if (p - edge > 0.55F) {
+						float h = this.hash(x, z, salt + 10);
+						BlockState rubble = h < 0.3F ? Blocks.GRAVEL.defaultBlockState() : h < 0.55F ? Blocks.COBBLESTONE.defaultBlockState()
+							: h < 0.75F ? wall : Blocks.ANDESITE.defaultBlockState();
+						this.set(x, 1, z, rubble);
+						if (p - edge > 0.72F) {
+							this.set(x, 2, z, h < 0.5F ? Blocks.GRAVEL : Blocks.COBBLESTONE_SLAB);
+						}
+					}
+				}
+			}
+		}
+
+		// ------------------------------------------------------------------ the aircraft carrier
+
+		/** Half the carrier's beam at the deck, along her length (bow at -z). */
+		private int beam(int z) {
+			if (z < -52) {
+				return Math.max(1, Math.round(11.0F * (float) Math.pow((z + 71) / 19.0, 0.55)));
+			}
+			return 11;
+		}
+
+		/**
+		 * A carrier at anchor: a grey hull with a red bottom and a black boot-top at the waterline, a hangar the
+		 * length of her, the flight deck with its angled landing area, catapults and arresting wires, the island
+		 * with the bridge, radar and mast. Jets on deck and in the hangar, guns on the corners, guards on watch.
+		 */
+		void carrier() {
+			BlockState hull = Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState();
+			BlockState grey = Blocks.GRAY_CONCRETE.defaultBlockState();
+			BlockState red = Blocks.RED_TERRACOTTA.defaultBlockState();
+			BlockState boot = Blocks.BLACK_CONCRETE.defaultBlockState();
+			BlockState deck = ModRegistry.RUNWAY_ASPHALT.defaultBlockState();
+			for (int z = -70; z <= 66; z++) {
+				int w = this.beam(z);
+				for (int y = -7; y <= 7; y++) {
+					int hw = y < 0 ? Math.max(1, w - Math.round(-y * 0.7F)) : w;
+					BlockState skin = y < -1 ? red : y < 1 ? boot : hull;
+					// the hull's skin
+					this.fill(-hw, y, z, -hw, y, z, skin);
+					this.fill(hw, y, z, hw, y, z, skin);
+					boolean hangar = y >= 1 && z >= -40 && z <= 50;
+					if (hangar) {
+						this.air(-hw + 2, y, z, hw - 2, y, z);
+						this.fill(-hw + 1, y, z, -hw + 1, y, z, grey);
+						this.fill(hw - 1, y, z, hw - 1, y, z, grey);
+					} else {
+						this.fill(-hw + 1, y, z, hw - 1, y, z, y == 0 && z >= -40 && z <= 50 ? grey : y < -1 ? red : grey);
+					}
+				}
+				// the flight deck
+				int port = z >= -6 && z <= 54 ? -w - 4 : -w;
+				int star = z >= -8 && z <= 14 ? w + 3 : w;
+				this.fill(port, 8, z, star, 8, z, deck);
+				if (port < -w) {
+					this.fill(port, 7, z, -w - 1, 7, z, grey);
+				}
+				if (star > w) {
+					this.fill(w + 1, 7, z, star, 7, z, grey);
+				}
+			}
+			// the angled deck's centreline and foul lines, the catapults, the wires
+			for (int z = -6; z <= 54; z++) {
+				int cx = Math.round(-2.0F - (z + 6) * 0.13F);
+				if (Math.floorMod(z, 6) < 3) {
+					this.set(cx, 8, z, ModRegistry.RUNWAY_MARKING);
+				}
+				this.set(cx - 6, 8, z, Blocks.YELLOW_CONCRETE);
+				this.set(cx + 6, 8, z, Blocks.YELLOW_CONCRETE);
+			}
+			for (int x = -4; x <= 4; x += 8) {
+				this.fill(x, 8, -66, x, 8, -30, BaseRegistry.STEEL_GRATE);
+				this.fill(x - 2, 9, -28, x + 2, 9, -28, Blocks.IRON_BLOCK);
+			}
+			BlockState wire = Blocks.IRON_CHAIN.defaultBlockState().setValue(BlockStateProperties.AXIS, Direction.Axis.X);
+			for (int z = 40; z <= 49; z += 3) {
+				int cx = Math.round(-2.0F - (z + 6) * 0.13F);
+				this.fill(cx - 5, 9, z, cx + 5, 9, z, wire);
+			}
+			BlockState edgeLight = ModRegistry.RUNWAY_LIGHT.defaultBlockState();
+			for (int z = -60; z <= 62; z += 8) {
+				this.set(-this.beam(z) - (z >= -6 && z <= 54 ? 4 : 0), 9, z, edgeLight);
+			}
+			// the island: three decks of rooms, the bridge on top with windows all round, radar and mast above
+			int x0 = 9;
+			int x1 = 13;
+			int z0 = -6;
+			int z1 = 12;
+			this.walls(x0, 9, z0, x1, 21, z1, hull);
+			this.fill(x0, 21, z0, x1, 21, z1, hull);
+			this.air(x0 + 1, 9, z0 + 1, x1 - 1, 20, z1 - 1);
+			this.fill(x0 + 1, 13, z0 + 1, x1 - 1, 13, z1 - 1, grey);
+			this.fill(x0 + 1, 17, z0 + 1, x1 - 1, 17, z1 - 1, grey);
+			BlockState glass = Blocks.GRAY_STAINED_GLASS.defaultBlockState();
+			this.walls(x0, 19, z0, x1, 19, z1, glass);
+			this.fill(x0, 18, z0, x1, 18, z0, glass);
+			for (int z = z0 + 2; z < z1; z += 3) {
+				this.set(x0, 11, z, glass);
+				this.set(x0, 15, z, glass);
+			}
+			this.door(x0, 9, 2, Blocks.IRON_DOOR, Direction.WEST, DoorHingeSide.LEFT);
+			this.set(x0, 10, 4, Blocks.STONE_BUTTON.defaultBlockState().setValue(net.minecraft.world.level.block.ButtonBlock.FACING, Direction.WEST));
+			this.ladder(x1 - 1, 9, 20, z1 - 1, Direction.WEST);
+			this.set(x1 - 1, 13, z1 - 1, Blocks.AIR);
+			this.set(x1 - 1, 17, z1 - 1, Blocks.AIR);
+			this.ladder(x1 - 1, 13, 13, z1 - 1, Direction.WEST);
+			this.ladder(x1 - 1, 17, 17, z1 - 1, Direction.WEST);
+			// the bridge
+			this.set(11, 18, -5, this.facing(ModRegistry.COMMAND_CENTER, Direction.NORTH));
+			this.set(11, 18, -3, Blocks.OAK_STAIRS.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH));
+			this.set(10, 18, -4, Blocks.CARTOGRAPHY_TABLE);
+			this.set(12, 18, -4, Blocks.LECTERN.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH));
+			this.barrel(10, 18, 8, Direction.UP);
+			this.set(11, 20, 3, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+			this.set(11, 16, 3, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+			this.set(11, 12, 3, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+			for (int z = z0 + 1; z <= z1 - 3; z += 3) {
+				this.bed(x1 - 1, 14, z, Direction.NORTH);
+			}
+			this.barrel(10, 10, 9, Direction.UP);
+			this.set(10, 10, -5, BaseRegistry.MILITARY_CRATE);
+			// on the roof
+			this.set(11, 22, 1, ModRegistry.RADAR);
+			this.fill(11, 22, 7, 11, 27, 7, Blocks.IRON_BARS);
+			this.set(11, 28, 7, Blocks.LIGHTNING_ROD);
+			this.fill(10, 25, 7, 12, 25, 7, Blocks.IRON_BARS.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true));
+			this.alarm(11, 22, 10);
+			this.floodlight(x0, 22, z0, Direction.NORTH);
+			this.floodlight(x0, 22, 3, Direction.WEST);
+			this.floodlight(x0, 22, z1, Direction.SOUTH);
+			// guns on the corners
+			this.set(-9, 9, -54, ModRegistry.CIWS);
+			this.set(9, 9, 62, ModRegistry.CIWS);
+			this.set(-14, 9, 50, ModRegistry.AIR_DEFENSE);
+			this.set(13, 9, -7, ModRegistry.CIWS);
+			// the hangar: a ladder down from the deck, lights, stores
+			this.fill(8, 1, -2, 8, 7, -2, grey);
+			this.set(7, 8, -2, Blocks.AIR);
+			this.ladder(7, 1, 8, -2, Direction.WEST);
+			for (int z = -36; z <= 48; z += 7) {
+				this.set(-4, 7, z, Blocks.SEA_LANTERN);
+				this.set(4, 7, z, Blocks.SEA_LANTERN);
+			}
+			for (int z = 38; z <= 48; z += 2) {
+				this.set(-8, 1, z, BaseRegistry.MILITARY_CRATE);
+				if (this.hash(-8, z, 5) < 0.6F) {
+					this.set(-8, 2, z, BaseRegistry.MILITARY_CRATE);
+				}
+				this.set(8, 1, z, BaseRegistry.FUEL_DRUM);
+			}
+			this.barrel(-8, 1, 30, Direction.UP);
+			this.barrel(-8, 1, 31, Direction.UP);
+			this.set(7, 1, 30, this.facing(ModRegistry.WEAPONS_WORKBENCH, Direction.WEST));
+			this.set(-8, 1, -30, this.facing(BaseRegistry.FIELD_GENERATOR, Direction.EAST));
+			this.generators.add(this.at(-8, 1, -30));
+			this.barracks = this.at(0, 1, 20);
+			// jets: two on the catapults, two parked aft of the island, one in the hangar
+			this.jet(4, 9, -42, 180.0F, 1);
+			this.jet(-4, 9, -48, 180.0F, 2);
+			this.jet(6, 9, 24, 135.0F, 3);
+			this.jet(6, 9, 36, 135.0F, 4);
+			this.jet(0, 1, 6, 180.0F, 5);
+			// the watch
+			this.guard(0, 9, -20, 6.0F);
+			this.guard(-8, 9, 10, 6.0F);
+			this.guard(3, 9, 44, 6.0F);
+			this.guard(11, 18, 0, 0.0F);
+			this.guard(0, 1, -10, 8.0F);
+			this.guard(-4, 1, 30, 6.0F);
+			this.guard(-9, 9, -52, 0.0F);
+		}
+
+		/** A fighter parked at (x, y, z), nose to {@code yaw} (local: 180 north, -90 east). */
+		void jet(int x, int y, int z, float yaw, int salt) {
+			if (!this.inside(x, y, z) || this.level.getLevel() == null) {
+				return;
+			}
+			var jet = de.rcm.ballistic.entity.FighterEntity.parked(this.level.getLevel(), Vec3.atBottomCenterOf(this.at(x, y, z)),
+				yaw + MilitaryBasePiece.this.rot.ordinal() * 90.0F,
+				this.hash(salt, 1, 3) < 0.5F ? de.rcm.ballistic.entity.FighterType.F35 : de.rcm.ballistic.entity.FighterType.F22);
+			if (jet != null) {
+				this.level.addFreshEntity(jet);
+			}
+		}
+
+		// ------------------------------------------------------------------ the war zone
+
+		/**
+		 * A town fought over: two streets crossing, the blocks round them shelled to ruins - walls broken off,
+		 * floors fallen in, rubble in the street - burnt-out cars, shell craters, fires still burning and smoke
+		 * rising. Snipers hold the top floors of the two tallest ruins.
+		 */
+		void warzone() {
+			// the streets and pavements, cracked and holed
+			this.fill(-5, 0, -40, 5, 0, 40, Blocks.SMOOTH_STONE);
+			this.fill(-40, 0, -5, 40, 0, 5, Blocks.SMOOTH_STONE);
+			this.fill(-3, 0, -40, 3, 0, 40, ModRegistry.RUNWAY_ASPHALT);
+			this.fill(-40, 0, -3, 40, 0, 3, ModRegistry.RUNWAY_ASPHALT);
+			for (int t = -40; t <= 40; t++) {
+				for (int w = -5; w <= 5; w++) {
+					if (this.hash(t, w, 51) < 0.08F) {
+						this.set(w, 0, t, this.hash(t, w, 52) < 0.5F ? Blocks.GRAVEL : Blocks.COARSE_DIRT);
+					}
+					if (this.hash(w, t, 53) < 0.08F) {
+						this.set(t, 0, w, this.hash(w, t, 54) < 0.5F ? Blocks.GRAVEL : Blocks.COARSE_DIRT);
+					}
+				}
+				if (Math.floorMod(t, 6) < 3 && Math.abs(t) > 6) {
+					this.set(0, 0, t, ModRegistry.RUNWAY_MARKING);
+					this.set(t, 0, 0, ModRegistry.RUNWAY_MARKING);
+				}
+			}
+			// the blocks: four plots in each quarter; most a ruined building, some a crater field or burnt garden
+			int[][] plots = {{7, 19, 7, 19}, {7, 19, 23, 37}, {23, 37, 7, 19}, {23, 37, 23, 37}};
+			BlockState[][] stone = {
+				{Blocks.BRICKS.defaultBlockState(), Blocks.BLACKSTONE.defaultBlockState()},
+				{Blocks.STONE_BRICKS.defaultBlockState(), Blocks.CRACKED_STONE_BRICKS.defaultBlockState()},
+				{Blocks.WHITE_CONCRETE.defaultBlockState(), Blocks.GRAY_CONCRETE.defaultBlockState()},
+				{Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState(), Blocks.GRAY_CONCRETE.defaultBlockState()},
+				{Blocks.SMOOTH_SANDSTONE.defaultBlockState(), Blocks.BROWN_TERRACOTTA.defaultBlockState()},
+			};
+			int[][] plan = new int[16][];
+			int best = -1;
+			int second = -1;
+			for (int q = 0; q < 16; q++) {
+				int qx = (q & 1) == 0 ? -1 : 1;
+				int qz = (q & 2) == 0 ? -1 : 1;
+				int[] p = plots[q >> 2];
+				int salt = 200 + q * 13;
+				int a = p[0] + (int) (this.hash(q, 1, salt) * 2.0F);
+				int b = p[1] - (int) (this.hash(q, 2, salt) * 2.0F);
+				int c = p[2] + (int) (this.hash(q, 3, salt) * 2.0F);
+				int d = p[3] - (int) (this.hash(q, 4, salt) * 2.0F);
+				int x0 = qx > 0 ? a : -b;
+				int x1 = qx > 0 ? b : -a;
+				int z0 = qz > 0 ? c : -d;
+				int z1 = qz > 0 ? d : -c;
+				float kind = this.hash(q, 5, salt);
+				int floors = 2 + (int) (this.hash(q, 6, salt) * 4.0F);
+				plan[q] = new int[] {x0, z0, x1, z1, kind < 0.74F ? 0 : kind < 0.87F ? 1 : 2, floors, salt, qx, qz};
+				if (plan[q][4] == 0) {
+					if (best < 0 || floors > plan[best][5]) {
+						second = best;
+						best = q;
+					} else if (second < 0 || floors > plan[second][5]) {
+						second = q;
+					}
+				}
+			}
+			for (int q = 0; q < 16; q++) {
+				int[] p = plan[q];
+				int x0 = p[0];
+				int z0 = p[1];
+				int x1 = p[2];
+				int z1 = p[3];
+				switch (p[4]) {
+					case 0 -> {
+						BlockState[] m = stone[(int) (this.hash(q, 7, p[6]) * stone.length)];
+						this.ruin(x0, z0, x1, z1, p[5], m[0], m[1], p[6], q == best || q == second, p[7] > 0 ? x0 : x1, p[8] > 0 ? z0 : z1);
+						this.barrel((x0 + x1) / 2, 1, (z0 + z1) / 2, Direction.UP);
+					}
+					case 1 -> {
+						this.crater((x0 + x1) / 2, (z0 + z1) / 2, 4.2F, p[6]);
+						this.crater(x0 + 2, z1 - 2, 2.4F, p[6] + 1);
+					}
+					default -> {
+						for (int x = x0; x <= x1; x++) {
+							for (int z = z0; z <= z1; z++) {
+								float h = this.hash(x, z, p[6]);
+								this.set(x, 0, z, h < 0.45F ? ModRegistry.SCORCHED_EARTH : Blocks.COARSE_DIRT);
+								if (h > 0.8F) {
+									this.set(x, 1, z, ModRegistry.ASH);
+								}
+								if (h < 0.025F) {
+									this.fill(x, 1, z, x, 2 + (int) (this.hash(z, x, p[6]) * 3.0F), z, ModRegistry.CHARRED_LOG);
+								}
+							}
+						}
+					}
+				}
+			}
+			// shell holes in the streets, burnt-out cars, a barricade
+			this.crater(0, -26, 3.4F, 61);
+			this.crater(-23, 1, 2.8F, 62);
+			this.crater(19, -1, 2.4F, 63);
+			this.wreck(-3, -35, true, 71);
+			this.wreck(1, 13, true, 72);
+			this.wreck(27, -3, false, 73);
+			this.wreck(-32, 1, false, 74);
+			this.wreck(-2, 30, true, 75);
+			this.fill(-3, 1, -9, -1, 2, -9, BaseRegistry.SANDBAGS);
+			this.fill(1, 1, -11, 3, 1, -11, this.facing(BaseRegistry.JERSEY_BARRIER, Direction.NORTH));
+			this.fill(9, 1, -3, 9, 1, -1, this.facing(BaseRegistry.JERSEY_BARRIER, Direction.EAST));
+			// fires that are still burning, and smoke
+			this.blaze(2, 1, 14);
+			this.blaze(-31, 1, 2);
+			this.blaze(-1, 1, -24);
+			this.smoke(-6, 1, -20);
+			this.smoke(6, 1, 25);
+			this.smoke(21, 1, -6);
+			this.smoke(-20, 1, 6);
+			// a supply point at the crossing
+			this.set(4, 1, -5, BaseRegistry.MILITARY_CRATE);
+			this.set(5, 1, -5, BaseRegistry.MILITARY_CRATE);
+			this.set(5, 2, -5, BaseRegistry.MILITARY_CRATE);
+			this.barrel(5, 1, -4, Direction.UP);
+			this.set(-4, 1, 5, BaseRegistry.FUEL_DRUM);
+			this.barracks = this.at(4, 1, 4);
+			this.floodlight(-5, 1, -9, Direction.NORTH);
+			// the snipers, and men in the streets
+			for (int q : new int[] {best, second}) {
+				if (q < 0) {
+					continue;
+				}
+				int[] p = plan[q];
+				int sx = p[7] > 0 ? p[0] + 1 : p[2] - 1;
+				int sz = p[8] > 0 ? p[1] + 2 : p[3] - 2;
+				this.guard(sx, (p[5] - 1) * 4 + 1, sz, 0.0F);
+			}
+			this.guard(-2, 1, -10, 0.0F);
+			this.guard(0, 1, -18, 4.0F);
+			this.guard(-18, 1, 0, 4.0F);
+			this.guard(18, 1, 1, 4.0F);
+			this.guard(1, 1, 20, 4.0F);
+		}
+
+		// ------------------------------------------------------------------ the crash site
+
+		/**
+		 * A helicopter (or a jet) come down hard: the furrow it ploughed, the wreck broken up with the tail torn
+		 * off, fires burning in it, black smoke climbing from the engine, debris strewn about - and the squad sent
+		 * to secure it, with their tent and a gun nest. Barrels of loot in and round the wreck.
+		 */
+		void crash() {
+			boolean heli = this.hash(3, 3, 90) < 0.55F;
+			// the furrow, coming in from the north
+			for (int z = -23; z <= -2; z++) {
+				int w = 1 + (z + 23) / 8;
+				for (int x = -w - 1; x <= w + 1; x++) {
+					if (Math.abs(x) <= w) {
+						boolean deep = z > -14 && Math.abs(x) < w;
+						if (deep) {
+							this.set(x, 0, z, Blocks.AIR);
+						}
+						this.set(x, deep ? -1 : 0, z, this.hash(x, z, 91) < 0.6F ? ModRegistry.SCORCHED_EARTH : Blocks.COARSE_DIRT);
+					} else if (this.hash(x, z, 92) < 0.6F) {
+						this.set(x, 1, z, this.hash(x, z, 93) < 0.5F ? Blocks.COARSE_DIRT : Blocks.DIRT);
+					}
+				}
+			}
+			// the scorched ground round the wreck
+			for (int x = -10; x <= 10; x++) {
+				for (int z = -6; z <= 14; z++) {
+					float d = Mth.sqrt(x * x + (z - 4) * (z - 4));
+					float p = this.patch(x, z, 3, 94);
+					if (d < 10.0F * (0.6F + 0.5F * p)) {
+						this.set(x, 0, z, this.hash(x, z, 95) < 0.65F ? ModRegistry.SCORCHED_EARTH : Blocks.COARSE_DIRT);
+						if (this.hash(x, z, 96) < 0.22F) {
+							this.set(x, 1, z, ModRegistry.ASH);
+						}
+					}
+				}
+			}
+			if (heli) {
+				this.helicopter();
+			} else {
+				this.jetWreck();
+			}
+			// debris along the furrow and round about
+			BlockState[] junk = {Blocks.IRON_BARS.defaultBlockState(), Blocks.POLISHED_BLACKSTONE_SLAB.defaultBlockState(),
+				Blocks.DAMAGED_ANVIL.defaultBlockState(), Blocks.IRON_CHAIN.defaultBlockState(), Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState(),
+				Blocks.BLACKSTONE_SLAB.defaultBlockState()};
+			for (int i = 0; i < 22; i++) {
+				int x = Math.round((this.hash(i, 0, 97) - 0.5F) * 22.0F);
+				int z = Math.round(this.hash(i, 1, 97) * 34.0F) - 22;
+				if (Math.abs(x) <= 3 && z >= -2 && z <= 12) {
+					continue;
+				}
+				this.set(x, 1, z, junk[(int) (this.hash(i, 2, 97) * junk.length)]);
+			}
+			this.set(5, 1, -2, BaseRegistry.FUEL_DRUM);
+			this.set(6, 1, -1, BaseRegistry.FUEL_DRUM);
+			this.blaze(-5, 1, 3);
+			this.blaze(4, 1, 9);
+			this.smoke(-3, 1, -7);
+			// the squad: a tent under netting, a gun nest, lights
+			for (int x = -16; x <= -11; x += 5) {
+				for (int z = 8; z <= 13; z += 5) {
+					this.fill(x, 1, z, x, 3, z, Blocks.SPRUCE_FENCE);
+				}
+			}
+			this.fill(-16, 4, 8, -11, 4, 13, BaseRegistry.CAMO_NET);
+			this.barrel(-15, 1, 10, Direction.UP);
+			this.barrel(-15, 1, 11, Direction.UP);
+			this.set(-13, 1, 12, BaseRegistry.MILITARY_CRATE);
+			this.set(-12, 1, 12, BaseRegistry.MILITARY_CRATE);
+			this.set(-12, 2, 12, BaseRegistry.MILITARY_CRATE);
+			this.set(-14, 1, 9, this.facing(BaseRegistry.FIELD_GENERATOR, Direction.EAST));
+			this.generators.add(this.at(-14, 1, 9));
+			this.barracks = this.at(-13, 1, 10);
+			this.nest(12, -4, Direction.SOUTH);
+			this.pole(-8, -10, 5, Direction.NORTH);
+			this.pole(9, 15, 5, Direction.SOUTH);
+			this.guard(-6, 1, 5, 3.0F);
+			this.guard(7, 1, 8, 3.0F);
+			this.guard(-13, 1, 10, 2.0F);
+			this.guard(0, 1, -17, 4.0F);
+		}
+
+		/** A transport helicopter on its belly, its doors open, rotor broken, tail torn off and lying behind. */
+		void helicopter() {
+			int[] half = {1, 2, 2, 2, 1};
+			for (int z = -1; z <= 8; z++) {
+				for (int y = 0; y <= 4; y++) {
+					int hw = half[y] - (z == -1 || z == 8 ? 1 : 0);
+					for (int x = -hw; x <= hw; x++) {
+						boolean shell = Math.abs(x) == hw || y == 0 || y == 4 || z == -1 || z == 8;
+						if (!shell) {
+							this.set(x, y, z, Blocks.AIR);
+							continue;
+						}
+						float h = this.hash(x * 5 + y, z, 98);
+						BlockState b;
+						if (z <= 0 && y >= 2) {
+							b = h < 0.5F ? Blocks.AIR.defaultBlockState() : Blocks.BLACK_STAINED_GLASS.defaultBlockState(); // the shattered canopy
+						} else {
+							b = h < 0.12F ? Blocks.POLISHED_BLACKSTONE.defaultBlockState() : BaseRegistry.CORRUGATED_OLIVE.defaultBlockState();
+						}
+						this.set(x, y, z, b);
+					}
+				}
+			}
+			// sliding doors open both sides
+			this.air(-2, 2, 2, -2, 3, 4);
+			this.air(2, 2, 2, 2, 3, 4);
+			this.barrel(0, 1, 6, Direction.UP);
+			this.barrel(-1, 1, 7, Direction.UP);
+			this.set(1, 1, 7, BaseRegistry.MILITARY_CRATE);
+			this.set(1, 1, 3, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH));
+			this.set(-1, 1, 3, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH));
+			// rotor head and what is left of the blades; two more lie in the field
+			this.set(0, 5, 4, Blocks.IRON_BLOCK);
+			BlockState blade = Blocks.POLISHED_BLACKSTONE_SLAB.defaultBlockState();
+			this.fill(1, 5, 4, 6, 5, 4, blade);
+			this.fill(0, 5, 5, 0, 5, 8, blade);
+			this.fill(-9, 1, -2, -5, 1, -2, blade);
+			this.fill(7, 1, 12, 7, 1, 17, blade);
+			// the engine is burning: black smoke from the top
+			this.smoke(1, 5, 1);
+			this.blaze(0, 1, 1);
+			// the tail boom, broken off at the root, its end lying further back
+			this.fill(0, 3, 9, 0, 3, 11, BaseRegistry.CORRUGATED_OLIVE);
+			this.fill(0, 2, 9, 0, 2, 10, BaseRegistry.CORRUGATED_OLIVE);
+			this.fill(3, 1, 14, 3, 1, 19, BaseRegistry.CORRUGATED_OLIVE);
+			this.fill(3, 2, 19, 3, 3, 19, BaseRegistry.CORRUGATED_OLIVE);
+			this.set(2, 2, 19, Blocks.IRON_BARS);
+			this.set(4, 2, 19, Blocks.IRON_BARS);
+			this.set(3, 4, 19, Blocks.IRON_BARS);
+		}
+
+		/** A fighter broken in two on landing: the nose and a wing in front, the rear with its fins behind. */
+		void jetWreck() {
+			BlockState skin = Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState();
+			BlockState dark = Blocks.GRAY_CONCRETE.defaultBlockState();
+			for (int z = -4; z <= 11; z++) {
+				if (z == 4 || z == 5) {
+					continue;
+				}
+				for (int x = -1; x <= 1; x++) {
+					for (int y = 0; y <= 1; y++) {
+						this.set(x, y, z, this.hash(x + y * 3, z, 99) < 0.15F ? Blocks.BLACKSTONE.defaultBlockState() : this.hash(x, z, 100) < 0.3F ? dark : skin);
+					}
+				}
+				this.set(0, 2, z, z >= -3 && z <= -1 ? (this.hash(0, z, 101) < 0.5F ? Blocks.AIR.defaultBlockState() : Blocks.BLACK_STAINED_GLASS.defaultBlockState()) : skin);
+			}
+			this.set(0, 1, -5, dark);
+			this.set(0, 0, -5, dark);
+			// the left wing, swept; the right broken off at the root, its outer part thrown ahead
+			for (int x = 2; x <= 7; x++) {
+				for (int z = 1 + (x - 2) / 2; z <= 3; z++) {
+					this.set(-x, 1, z, skin);
+				}
+			}
+			this.set(2, 1, 2, skin);
+			this.set(2, 1, 3, skin);
+			this.set(3, 1, 3, skin);
+			this.fill(8, 1, -4, 11, 1, -3, skin);
+			this.fill(9, 1, -2, 10, 1, -2, skin);
+			// the fins and nozzles
+			this.fill(-1, 2, 10, -1, 4, 11, skin);
+			this.fill(1, 2, 10, 1, 4, 11, skin);
+			this.set(-1, 1, 12, Blocks.BLACKSTONE);
+			this.set(1, 1, 12, Blocks.BLACKSTONE);
+			// burning in the break
+			this.blaze(0, 1, 4);
+			this.blaze(-1, 1, 5);
+			this.smoke(1, 1, 5);
+			this.barrel(3, 1, 7, Direction.UP);
+			this.barrel(-3, 1, -6, Direction.UP);
+			this.set(2, 1, -6, BaseRegistry.MILITARY_CRATE);
+		}
+
+		// ------------------------------------------------------------------ the submarine pen
+
+		/**
+		 * A submarine pen on the coast: a massive concrete hall over a flooded basin, its sea gate open onto a
+		 * dredged channel. A boat lies in the basin; quays either side with bollards, a gantry crane, torpedoes
+		 * on racks and stores; below the west quay an underwater observation room looks into the basin.
+		 */
+		void subPen() {
+			BlockState concrete = ModRegistry.REINFORCED_CONCRETE.defaultBlockState();
+			BlockState water = Blocks.WATER.defaultBlockState();
+			// the hall
+			this.fill(-14, -8, -14, 14, 13, 14, concrete);
+			this.air(-13, 1, -13, 13, 11, 13);
+			// the basin, open through the sea gate
+			this.fill(-5, -7, -14, 5, -1, 13, water);
+			this.air(-5, 0, -14, 5, 8, -14);
+			this.fill(-6, 0, -14, -6, 8, -14, concrete);
+			this.fill(6, 0, -14, 6, 8, -14, concrete);
+			this.fill(-5, -7, -15, 5, -1, -15, water);
+			// quays: concrete with a yellow edge, bollards
+			this.fill(-13, 0, -13, -6, 0, 13, Blocks.SMOOTH_STONE);
+			this.fill(6, 0, -13, 13, 0, 13, Blocks.SMOOTH_STONE);
+			this.fill(-6, 0, -13, -6, 0, 13, Blocks.YELLOW_CONCRETE);
+			this.fill(6, 0, -13, 6, 0, 13, Blocks.YELLOW_CONCRETE);
+			for (int z = -11; z <= 11; z += 5) {
+				this.set(-7, 1, z, Blocks.ANDESITE_WALL);
+				this.set(7, 1, z, Blocks.ANDESITE_WALL);
+			}
+			this.fill(-5, -1, 13, 5, 0, 13, concrete);
+			// the boat
+			this.set(0, -4, -5, ModRegistry.SUBMARINE.defaultBlockState().setValue(de.rcm.ballistic.block.SubmarineBlock.FACING, Direction.NORTH));
+			// a gantry crane across the basin
+			BlockState yellow = Blocks.YELLOW_CONCRETE.defaultBlockState();
+			for (int x = -9; x <= 9; x += 18) {
+				this.fill(x, 1, -4, x, 9, -4, yellow);
+				this.fill(x, 1, -2, x, 9, -2, yellow);
+				this.fill(x, 10, -4, x, 10, -2, yellow);
+			}
+			this.fill(-9, 10, -3, 9, 10, -3, yellow);
+			this.set(0, 9, -3, Blocks.IRON_BLOCK);
+			this.fill(0, 5, -3, 0, 8, -3, Blocks.IRON_CHAIN);
+			// torpedoes on racks, stores, the generator
+			for (int z = 2; z <= 10; z += 2) {
+				this.fill(9, 1, z, 12, 1, z, Blocks.SPRUCE_SLAB);
+				this.fill(9, 2, z, 12, 2, z, Blocks.POLISHED_ANDESITE);
+				this.set(12, 2, z, Blocks.GRAY_CONCRETE);
+			}
+			for (int z = -12; z <= -8; z++) {
+				this.set(12, 1, z, BaseRegistry.MILITARY_CRATE);
+				if (this.hash(12, z, 30) < 0.6F) {
+					this.set(12, 2, z, BaseRegistry.MILITARY_CRATE);
+				}
+			}
+			this.barrel(11, 1, -12, Direction.UP);
+			this.barrel(-12, 1, 11, Direction.UP);
+			this.barrel(-11, 1, 11, Direction.UP);
+			for (int z = 5; z <= 9; z++) {
+				this.set(-12, 1, z, BaseRegistry.FUEL_DRUM);
+			}
+			this.set(-12, 1, -11, this.facing(BaseRegistry.FIELD_GENERATOR, Direction.EAST));
+			this.generators.add(this.at(-12, 1, -11));
+			this.set(-10, 1, -12, this.facing(ModRegistry.WEAPONS_WORKBENCH, Direction.SOUTH));
+			// lights under the roof, floods on the sea face
+			for (int x = -9; x <= 9; x += 6) {
+				for (int z = -10; z <= 10; z += 5) {
+					this.set(x, 11, z, Blocks.SEA_LANTERN);
+				}
+			}
+			this.floodlight(-8, 9, -15, Direction.NORTH);
+			this.floodlight(8, 9, -15, Direction.NORTH);
+			this.alarm(0, 9, -13);
+			// ways in from the land: a door and a vehicle gate
+			this.door(10, 1, 14, Blocks.IRON_DOOR, Direction.NORTH, DoorHingeSide.LEFT);
+			this.set(11, 2, 15, Blocks.STONE_BUTTON.defaultBlockState().setValue(net.minecraft.world.level.block.ButtonBlock.FACING, Direction.SOUTH));
+			this.set(11, 2, 13, Blocks.STONE_BUTTON.defaultBlockState().setValue(net.minecraft.world.level.block.ButtonBlock.FACING, Direction.NORTH));
+			this.air(-11, 1, 14, -8, 4, 14);
+			this.fill(-11, 0, 15, -8, 0, 21, ModRegistry.RUNWAY_ASPHALT);
+			this.fill(9, 0, 15, 11, 0, 21, Blocks.GRAVEL);
+			// the underwater room below the west quay, looking into the basin
+			this.fill(-13, -8, -6, -6, -1, 3, concrete);
+			this.air(-12, -7, -5, -7, -3, 2);
+			this.fill(-6, -6, -4, -6, -4, 1, Blocks.GLASS);
+			this.set(-10, -3, -1, Blocks.SEA_LANTERN);
+			this.set(-10, -3, -4, Blocks.SEA_LANTERN);
+			this.fill(-11, -2, 2, -11, 0, 2, Blocks.AIR);
+			this.ladder(-11, -7, 0, 2, Direction.NORTH);
+			this.fill(-11, -7, 3, -11, 0, 3, concrete);
+			this.barrel(-12, -7, -5, Direction.UP);
+			this.set(-12, -7, -4, Blocks.CHEST);
+			this.set(-8, -7, -5, Blocks.LECTERN.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST));
+			// on the roof: two gun nests
+			this.walls(-14, 14, -14, 14, 14, 14, concrete);
+			this.walls(-10, 14, 4, -6, 15, 8, BaseRegistry.SANDBAGS.defaultBlockState());
+			this.walls(6, 14, -10, 10, 15, -6, BaseRegistry.SANDBAGS.defaultBlockState());
+			this.ladder(13, 1, 13, 13, Direction.WEST);
+			this.set(13, 13, 13, Blocks.AIR);
+			this.set(13, 12, 13, Blocks.AIR);
+			this.ladder(13, 12, 13, 13, Direction.WEST);
+			this.guard(-8, 14, 6, 0.0F);
+			this.guard(8, 14, -8, 0.0F);
+			this.barracks = this.at(10, 1, 12);
+			this.guard(-9, 1, -6, 4.0F);
+			this.guard(9, 1, 6, 4.0F);
+			this.guard(-8, 1, 10, 3.0F);
+			this.guard(10, 1, 18, 2.0F);
+			this.guard(-10, -7, -2, 1.5F);
+		}
+
+		// ------------------------------------------------------------------ the secret lab
+
+		/**
+		 * A secret laboratory: above ground a plain concrete blockhouse behind a fence, with a guard hut where
+		 * the keycard is kept; below, three floors deep in the rock - security, laboratories, the reactor and
+		 * the vault - reached by the lift (and an emergency ladder). The important rooms are behind iron doors
+		 * that only open to a keycard swiped at their reader.
+		 */
+		void lab() {
+			BlockState concrete = ModRegistry.REINFORCED_CONCRETE.defaultBlockState();
+			// the fence round the compound, a gate on the south side
+			BlockState chainX = this.chainlink(true, false);
+			BlockState chainZ = this.chainlink(false, true);
+			for (int t = -17; t <= 17; t++) {
+				this.set(t, 1, -17, chainX);
+				this.set(t, 2, -17, chainX);
+				this.set(-17, 1, t, chainZ);
+				this.set(-17, 2, t, chainZ);
+				this.set(17, 1, t, chainZ);
+				this.set(17, 2, t, chainZ);
+				if (Math.abs(t) > 2) {
+					this.set(t, 1, 17, chainX);
+					this.set(t, 2, 17, chainX);
+					this.set(t, 3, 17, BaseRegistry.BARBED_WIRE);
+				}
+				this.set(t, 3, -17, BaseRegistry.BARBED_WIRE);
+				this.set(-17, 3, t, BaseRegistry.BARBED_WIRE);
+				this.set(17, 3, t, BaseRegistry.BARBED_WIRE);
+			}
+			this.fill(-2, 0, 5, 2, 0, 20, ModRegistry.RUNWAY_ASPHALT);
+			this.sign(4, 1, 18, 0, "sign.ballisticmissiles.restricted");
+			// the blockhouse: a card reader at its only door
+			this.fill(-5, 0, -5, 5, 0, 5, Blocks.SMOOTH_STONE);
+			this.walls(-4, 1, -4, 4, 4, 4, concrete);
+			this.fill(-4, 5, -4, 4, 5, 4, concrete);
+			this.air(-3, 1, -3, 3, 4, 3);
+			this.door(0, 1, 4, Blocks.IRON_DOOR, Direction.NORTH, DoorHingeSide.LEFT);
+			this.set(1, 2, 4, this.facing(BaseRegistry.CARD_READER, Direction.SOUTH));
+			this.set(0, 4, -1, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+			this.floodlight(-1, 5, 4, Direction.SOUTH);
+			this.fill(3, 6, -3, 3, 9, -3, Blocks.IRON_BARS);
+			this.set(3, 10, -3, Blocks.LIGHTNING_ROD);
+			this.set(-2, 6, 2, ModRegistry.RADAR);
+			// the guard hut, where the keycard is
+			this.hut(9, 10);
+			this.keycard(10, 1, 8);
+			this.barracks = this.at(11, 1, 9);
+			this.pole(-15, -15, 5, Direction.NORTH);
+			this.pole(15, -15, 5, Direction.NORTH);
+			this.pole(-15, 15, 5, Direction.SOUTH);
+			// the lift's panel at every floor, and the emergency ladder beside it
+			this.set(2, 1, -3, this.facing(BaseRegistry.ELEVATOR_PANEL, Direction.SOUTH));
+			this.fill(-3, -28, -3, -1, -1, -1, concrete);
+			this.fill(-2, 1, -3, -2, 4, -3, concrete);
+			int[] floors = {-12, -20, -28};
+			for (int k = 0; k < floors.length; k++) {
+				this.labFloor(floors[k], k);
+			}
+			this.air(-2, -27, -2, -2, 0, -2);
+			this.ladder(-2, -27, 0, -2, Direction.SOUTH);
+			this.guard(0, 1, 8, 3.0F);
+			this.guard(11, 1, 8, 1.5F);
+			this.guard(-12, 1, 12, 5.0F);
+		}
+
+		/** One underground floor: a cross of corridors, four rooms off it, some behind keycard doors. */
+		void labFloor(int f, int k) {
+			BlockState concrete = ModRegistry.REINFORCED_CONCRETE.defaultBlockState();
+			BlockState white = Blocks.WHITE_CONCRETE.defaultBlockState();
+			this.fill(-16, f, -16, 16, f + 5, 16, concrete);
+			this.air(-15, f + 1, -15, 15, f + 4, 15);
+			this.fill(-15, f, -15, 15, f, 15, k == 1 ? white : Blocks.SMOOTH_STONE.defaultBlockState());
+			this.fill(-2, f, -15, 2, f, 15, Blocks.LIGHT_GRAY_CONCRETE);
+			this.fill(-15, f, -2, 15, f, 2, Blocks.LIGHT_GRAY_CONCRETE);
+			for (int t = -15; t <= 15; t++) {
+				if (Math.abs(t) > 2) {
+					this.fill(3, f + 1, t, 3, f + 4, t, white);
+					this.fill(-3, f + 1, t, -3, f + 4, t, white);
+					this.fill(t, f + 1, 3, t, f + 4, 3, white);
+					this.fill(t, f + 1, -3, t, f + 4, -3, white);
+				}
+			}
+			for (int x = -12; x <= 12; x += 6) {
+				for (int z = -12; z <= 12; z += 6) {
+					this.set(x, f + 5, z, Blocks.SEA_LANTERN);
+				}
+			}
+			this.alarm(0, f + 4, 0);
+			this.fill(-2, f + 1, -3, -2, f + 4, -3, concrete);
+			this.set(2, f + 1, -3, this.facing(BaseRegistry.ELEVATOR_PANEL, Direction.SOUTH));
+			// the rooms' doors: on the x walls at z = +-8; locked ones get a reader beside them
+			boolean[] locked = switch (k) {
+				case 0 -> new boolean[] {false, true, false, false}; // NE guard room, NW armoury, SE office, SW decontamination
+				case 1 -> new boolean[] {false, true, false, true};  // NE lab, NW isolation lab, SE cells, SW chemicals
+				default -> new boolean[] {false, true, false, false}; // NE servers, NW vault, SE reactor, SW control
+			};
+			int[][] doors = {{3, -8}, {-3, -8}, {3, 8}, {-3, 8}};
+			for (int i = 0; i < 4; i++) {
+				int x = doors[i][0];
+				int z = doors[i][1];
+				if (locked[i]) {
+					this.door(x, f + 1, z, Blocks.IRON_DOOR, x > 0 ? Direction.EAST : Direction.WEST, DoorHingeSide.LEFT);
+					this.set(x, f + 2, z + 2, this.facing(BaseRegistry.CARD_READER, x > 0 ? Direction.WEST : Direction.EAST));
+				} else {
+					this.air(x, f + 1, z, x, f + 2, z);
+				}
+			}
+			int y = f + 1;
+			switch (k) {
+				case 0 -> {
+					for (int z = -14; z <= -10; z += 2) {
+						this.bed(14, y, z, Direction.EAST);
+					}
+					this.barrel(5, y, -14, Direction.UP);
+					this.keycard(5, y, -5);
+					for (int z = -14; z <= -5; z++) {
+						this.set(-14, y, z, BaseRegistry.MILITARY_CRATE);
+						if (this.hash(-14, z, 40) < 0.6F) {
+							this.set(-14, y + 1, z, BaseRegistry.MILITARY_CRATE);
+						}
+					}
+					this.barrel(-5, y, -14, Direction.UP);
+					this.barrel(-6, y, -14, Direction.UP);
+					this.set(-9, y, -14, this.facing(ModRegistry.WEAPONS_WORKBENCH, Direction.SOUTH));
+					this.set(10, y, 10, Blocks.LECTERN.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST));
+					this.set(12, y, 12, Blocks.CARTOGRAPHY_TABLE);
+					this.fill(14, y, 5, 14, y + 2, 14, Blocks.BOOKSHELF);
+					for (int z = 6; z <= 14; z += 4) {
+						this.set(-10, y, z, Blocks.WATER_CAULDRON.defaultBlockState().setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, 3));
+					}
+					this.fill(-14, y, 4, -14, y + 2, 14, Blocks.LIGHT_BLUE_STAINED_GLASS);
+					this.guard(0, y, 10, 4.0F);
+					this.guard(9, y, -8, 2.0F);
+				}
+				case 1 -> {
+					for (int x = 6; x <= 14; x += 4) {
+						this.tank(x, y, -12);
+						this.set(x, y, -5, Blocks.BREWING_STAND);
+					}
+					this.fill(5, y, -7, 14, y, -7, Blocks.SMOOTH_QUARTZ_SLAB);
+					this.fill(-14, y, -14, -14, y + 3, -4, Blocks.GREEN_STAINED_GLASS);
+					this.set(-10, y, -10, Blocks.BREWING_STAND);
+					this.set(-8, y, -10, Blocks.CAULDRON);
+					this.tank(-10, y, -6);
+					this.barrel(-6, y, -14, Direction.UP);
+					// holding cells
+					for (int x = 6; x <= 14; x += 4) {
+						this.fill(x - 2, y, 10, x - 2, y + 3, 15, Blocks.IRON_BARS.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true));
+						this.fill(x - 1, y, 10, x + 1, y + 3, 10, Blocks.IRON_BARS.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true));
+						this.set(x, y + 3, 13, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+					}
+					for (int z = 5; z <= 14; z++) {
+						this.set(-14, y, z, z % 3 == 0 ? BaseRegistry.FUEL_DRUM.defaultBlockState() : Blocks.BARREL.defaultBlockState());
+					}
+					this.barrel(-6, y, 14, Direction.UP);
+					this.guard(0, y, -10, 4.0F);
+					this.guard(-9, y, 0, 3.0F);
+				}
+				default -> {
+					for (int x = 6; x <= 14; x += 2) {
+						for (int z = -14; z <= -6; z++) {
+							if (z != -10) {
+								this.set(x, y, z, z % 2 == 0 ? Blocks.OBSERVER.defaultBlockState()
+									: Blocks.REDSTONE_LAMP.defaultBlockState().setValue(BlockStateProperties.LIT, true));
+								this.set(x, y + 1, z, Blocks.OBSERVER);
+							}
+						}
+					}
+					// the vault
+					for (int x = -14; x <= -6; x += 2) {
+						this.barrel(x, y, -14, Direction.UP);
+					}
+					this.fill(-14, y, -12, -14, y, -10, Blocks.GOLD_BLOCK);
+					this.set(-13, y, -12, Blocks.DIAMOND_BLOCK);
+					this.set(-10, y, -10, BaseRegistry.MILITARY_CRATE);
+					// the reactor room
+					this.set(9, y, 9, this.facing(ModRegistry.EMERGENCY_GENERATOR, Direction.WEST).setValue(BlockStateProperties.LIT, true));
+					this.set(12, y, 12, this.facing(ModRegistry.AIR_FILTER, Direction.WEST));
+					this.set(13, y, 6, this.facing(BaseRegistry.FIELD_GENERATOR, Direction.WEST));
+					this.generators.add(this.at(13, y, 6));
+					this.fill(9, y + 1, 12, 9, y + 3, 12, Blocks.LIGHT_BLUE_STAINED_GLASS);
+					this.set(9, y, 12, Blocks.BEACON);
+					// the control room
+					this.set(-9, y, 14, this.facing(ModRegistry.COMMAND_CENTER, Direction.NORTH));
+					this.set(-12, y, 14, Blocks.LECTERN.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH));
+					this.guard(0, y, 10, 4.0F);
+					this.guard(-9, y, 9, 2.0F);
+				}
+			}
+		}
+
+		/** A specimen tank: a glass column of water with something in it, on a steel base under a steel cap. */
+		void tank(int x, int y, int z) {
+			this.set(x, y, z, Blocks.IRON_BLOCK);
+			this.set(x, y + 1, z, Blocks.ZOMBIE_HEAD);
+			this.set(x, y + 2, z, Blocks.WATER);
+			this.set(x, y + 3, z, Blocks.IRON_BLOCK);
+			for (Direction d : Direction.Plane.HORIZONTAL) {
+				this.set(x + d.getStepX(), y + 1, z + d.getStepZ(), Blocks.GLASS);
+				this.set(x + d.getStepX(), y + 2, z + d.getStepZ(), Blocks.GLASS);
+			}
+		}
+
+		// ------------------------------------------------------------------ the border trench line
+
+		/** The fire trench's line at x: bays and traverses, stepped back two blocks every eight. */
+		private int trenchZ(int x) {
+			return Math.floorMod(Math.floorDiv(x + 48, 8), 2) == 0 ? 0 : -2;
+		}
+
+		/**
+		 * A border held by a trench line: the fire trench in bays and traverses, revetted with planks, a fire
+		 * step and a sandbag parapet; communication trenches back to dug-outs; two concrete pillboxes in the
+		 * line; two belts of wire in front, then a minefield (with its warning signs), then the border itself -
+		 * striped posts and a fence - and a watchtower behind.
+		 */
+		void trench() {
+			BlockState plank = Blocks.SPRUCE_PLANKS.defaultBlockState();
+			BlockState post = Blocks.STRIPPED_SPRUCE_LOG.defaultBlockState();
+			BlockState concrete = ModRegistry.REINFORCED_CONCRETE.defaultBlockState();
+			// revetments and parapet first, then dig
+			for (int x = -46; x <= 46; x++) {
+				int zc = this.trenchZ(x);
+				int prev = this.trenchZ(x - 1);
+				int lo = Math.min(zc, x > -46 ? prev : zc);
+				int hi = Math.max(zc, x > -46 ? prev : zc);
+				BlockState side = x % 3 == 0 ? post : plank;
+				this.fill(x, -2, lo - 2, x, 0, lo - 2, side);
+				this.fill(x, -2, hi + 2, x, 0, hi + 2, side);
+				if (Math.floorMod(x, 5) != 0) {
+					this.set(x, 1, zc - 2, BaseRegistry.SANDBAGS);
+				}
+				this.set(x, 1, zc + 2, this.hash(x, 0, 20) < 0.5F ? BaseRegistry.SANDBAGS.defaultBlockState() : Blocks.COARSE_DIRT.defaultBlockState());
+			}
+			for (int x = -46; x <= 46; x++) {
+				int zc = this.trenchZ(x);
+				int prev = this.trenchZ(x - 1);
+				int lo = Math.min(zc, x > -46 ? prev : zc);
+				int hi = Math.max(zc, x > -46 ? prev : zc);
+				this.fill(x, -2, lo - 1, x, -2, hi + 1, plank);
+				this.air(x, -1, lo - 1, x, 0, hi + 1);
+				this.set(x, -1, zc - 1, Blocks.SPRUCE_SLAB);
+			}
+			this.fill(-47, -2, -4, -47, 0, 2, plank);
+			this.fill(47, -2, -4, 47, 0, 2, plank);
+			// communication trenches back to the dug-outs
+			for (int cx = -30; cx <= 30; cx += 30) {
+				int start = this.trenchZ(cx) + 2;
+				this.fill(cx - 1, -2, start, cx - 1, 0, 17, plank);
+				this.fill(cx + 2, -2, start, cx + 2, 0, 17, plank);
+				this.fill(cx, -2, start, cx + 1, -2, 17, plank);
+				this.air(cx, -1, start, cx + 1, 0, 17);
+				this.dugout(cx, 18);
+			}
+			// pillboxes in the line
+			for (int px = -20; px <= 20; px += 40) {
+				int zc = this.trenchZ(px);
+				this.fill(px - 2, -2, zc - 7, px + 2, 2, zc - 2, concrete);
+				this.air(px - 1, -1, zc - 6, px + 1, 1, zc - 3);
+				this.air(px - 1, 1, zc - 7, px + 1, 1, zc - 7);
+				this.air(px, -1, zc - 2, px, 0, zc - 2);
+				this.set(px, 1, zc - 4, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+				this.barrel(px + 1, -1, zc - 3, Direction.UP);
+				this.guard(px, -1, zc - 5, 0.0F);
+			}
+			// two belts of wire on pickets
+			for (int x = -47; x <= 47; x++) {
+				if (this.hash(x, 9, 31) > 0.08F) {
+					this.set(x, 1, -10, BaseRegistry.BARBED_WIRE);
+				}
+				if (this.hash(x, 12, 32) > 0.1F) {
+					this.set(x, 1, -13, BaseRegistry.BARBED_WIRE);
+				}
+				if (Math.floorMod(x, 2) == 0) {
+					this.set(x, 1, -11, BaseRegistry.BARBED_WIRE);
+				}
+				if (Math.floorMod(x, 6) == 0) {
+					this.set(x, 1, -12, Blocks.SPRUCE_FENCE);
+				}
+			}
+			// the minefield, signed on both sides
+			for (int x = -47; x <= 47; x++) {
+				for (int z = -26; z <= -16; z++) {
+					if (this.hash(x, z, 33) < 0.065F) {
+						this.set(x, 1, z, BaseRegistry.LANDMINE);
+					}
+				}
+			}
+			for (int x = -42; x <= 42; x += 12) {
+				this.sign(x, 1, -15, 0, "sign.ballisticmissiles.mines");
+				this.sign(x + 6, 1, -27, 8, "sign.ballisticmissiles.mines");
+			}
+			// the border: a fence with wire on top, striped posts
+			BlockState chainX = this.chainlink(true, false);
+			for (int x = -47; x <= 47; x++) {
+				this.set(x, 1, -29, chainX);
+				this.set(x, 2, -29, chainX);
+				this.set(x, 3, -29, BaseRegistry.BARBED_WIRE);
+			}
+			for (int x = -44; x <= 44; x += 11) {
+				for (int y = 1; y <= 3; y++) {
+					this.set(x, y, -28, y % 2 == 1 ? Blocks.RED_CONCRETE : Blocks.WHITE_CONCRETE);
+				}
+				this.set(x, 4, -28, Blocks.WHITE_CONCRETE);
+			}
+			// a watchtower behind the line, lights
+			this.tower(40, 14, 1, 1);
+			this.guard(41, 8, 15, 0.0F);
+			this.pole(-12, 9, 5, Direction.NORTH);
+			this.pole(14, 9, 5, Direction.NORTH);
+			this.barracks = this.at(0, -1, 21);
+			for (int x : new int[] {-40, -28, -10, 6, 24, 38}) {
+				this.guard(x, -1, this.trenchZ(x), 1.5F);
+			}
+		}
+
+		/** A dug-out: a concrete room under an earth mound at the end of a communication trench (x .. x+1). */
+		void dugout(int x, int z) {
+			BlockState concrete = ModRegistry.REINFORCED_CONCRETE.defaultBlockState();
+			this.fill(x - 4, -2, z, x + 5, 2, z + 7, concrete);
+			this.air(x - 3, -1, z + 1, x + 4, 1, z + 6);
+			this.air(x, -1, z, x + 1, 0, z);
+			this.fill(x - 4, 3, z, x + 5, 3, z + 7, Blocks.GRASS_BLOCK);
+			for (int bx = x - 3; bx <= x + 3; bx += 2) {
+				this.bed(bx, -1, z + 6, Direction.SOUTH);
+			}
+			this.set(x, 1, z + 3, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+			this.barrel(x + 4, -1, z + 1, Direction.UP);
+			this.set(x + 4, -1, z + 2, BaseRegistry.MILITARY_CRATE);
+			this.set(x - 3, -1, z + 1, BaseRegistry.MILITARY_CRATE);
+			this.guard(x + 1, -1, z + 3, 2.0F);
+		}
+
 		/** The guards: in the towers, the gun nests, round the yard and at each site. */
 		void garrison() {
 			for (int sx = -1; sx <= 1; sx += 2) {
@@ -1190,11 +2347,12 @@ public class MilitaryBasePiece extends StructurePiece {
 		/** The flag, set up with all the base's lights, beacons and generators. */
 		void flag() {
 			int[] f = flagAt(MilitaryBasePiece.this.variant);
-			if (!this.inside(f[0], 2, f[1])) {
+			int fy = flagY(MilitaryBasePiece.this.variant);
+			if (!this.inside(f[0], fy, f[1])) {
 				return;
 			}
-			this.set(f[0], 2, f[1], BaseRegistry.BASE_FLAG);
-			if (this.level.getBlockEntity(this.at(f[0], 2, f[1])) instanceof BaseFlagBlockEntity flag) {
+			this.set(f[0], fy, f[1], BaseRegistry.BASE_FLAG);
+			if (this.level.getBlockEntity(this.at(f[0], fy, f[1])) instanceof BaseFlagBlockEntity flag) {
 				flag.setup(MilitaryBasePiece.this.variant, this.lights, this.alarms, this.generators, this.barracks);
 			}
 		}

@@ -542,7 +542,17 @@ SITES = [
     ("checkpoint", "checkpoint", 16, 6, 1100421),
     ("sam_site", "sam_site", 20, 8, 1100533),
     ("weapons_cache", "cache", 14, 5, 1100647),
+    ("aircraft_carrier", "carrier", 36, 12, 1200113),
+    ("war_zone", "warzone", 34, 12, 1200227),
+    ("crash_site", "crash", 22, 8, 1200331),
+    ("submarine_pen", "sub_pen", 24, 8, 1200443),
+    ("secret_lab", "lab", 26, 9, 1200557),
+    ("border_trenches", "trench", 32, 12, 1200661),
 ]
+
+OCEANS = ["minecraft:ocean", "minecraft:deep_ocean", "minecraft:cold_ocean", "minecraft:deep_cold_ocean", "minecraft:lukewarm_ocean",
+          "minecraft:deep_lukewarm_ocean", "minecraft:warm_ocean"]
+COASTS = ["minecraft:beach", "minecraft:snowy_beach", "minecraft:stony_shore"]
 
 
 def worldgen():
@@ -550,14 +560,16 @@ def worldgen():
         write(os.path.join(D, "worldgen", "structure", name + ".json"), {
             "type": f"{NS}:military_base",
             "site": site,
-            "biomes": f"#{NS}:has_structure/military_base",
+            "biomes": f"#{NS}:has_structure/" + ("carrier" if site == "carrier" else "submarine_pen" if site == "sub_pen" else "military_base"),
             "step": "surface_structures",
-            "terrain_adaptation": "beard_thin",
+            "terrain_adaptation": "none" if site in ("carrier", "sub_pen") else "beard_thin",
             "spawn_overrides": {},
         })
         placement = {"type": "minecraft:random_spread", "salt": salt, "spacing": spacing, "separation": separation}
         if site == "base":
             placement["exclusion_zone"] = {"chunk_count": 6, "other_set": "minecraft:villages"}
+        elif site in ("carrier", "sub_pen"):
+            pass
         else:
             placement["exclusion_zone"] = {"chunk_count": 5, "other_set": f"{NS}:military_bases"}
         write(os.path.join(D, "worldgen", "structure_set", ("military_bases" if site == "base" else name) + ".json"), {
@@ -565,6 +577,8 @@ def worldgen():
             "structures": [{"structure": f"{NS}:{name}", "weight": 1}],
         })
     write(os.path.join(D, "tags", "worldgen", "biome", "has_structure", "military_base.json"), {"values": BIOMES})
+    write(os.path.join(D, "tags", "worldgen", "biome", "has_structure", "carrier.json"), {"values": OCEANS})
+    write(os.path.join(D, "tags", "worldgen", "biome", "has_structure", "submarine_pen.json"), {"values": BIOMES + COASTS})
     # every military site, for /locate structure #ballisticmissiles:military
     write(os.path.join(D, "tags", "worldgen", "structure", "military.json"), {"values": [f"{NS}:{n}" for n, *_ in SITES]})
 

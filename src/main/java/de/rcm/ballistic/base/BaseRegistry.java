@@ -59,6 +59,17 @@ public final class BaseRegistry {
 	public static final Block BASE_FLAG = block("base_flag", BaseBlocks.Flag::new,
 		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(6.0F, 1200.0F).sound(SoundType.METAL).noOcclusion());
 
+	public static final Block LANDMINE = block("landmine", SiteBlocks.Landmine::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(0.8F, 1.0F).sound(SoundType.METAL).noOcclusion().pushReaction(
+			net.minecraft.world.level.material.PushReaction.DESTROY));
+	public static final Block CARD_READER = block("card_reader", SiteBlocks.CardReader::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 1200.0F).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
+			.lightLevel(s -> 3));
+	public static final Block ELEVATOR_PANEL = block("elevator_panel", SiteBlocks.ElevatorPanel::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 1200.0F).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
+			.lightLevel(s -> 5));
+	public static final Item KEYCARD = item("keycard", new Item.Properties().stacksTo(1));
+
 	public static final BlockEntityType<BaseBlocks.LampBlockEntity> LAMP_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("base_lamp"),
 		FabricBlockEntityTypeBuilder.create(BaseBlocks.LampBlockEntity::new, FLOODLIGHT, ALARM_LIGHT).build()
@@ -90,6 +101,13 @@ public final class BaseRegistry {
 
 	public static void init() {
 		// Static initializers do the work.
+	}
+
+	private static Item item(String name, Item.Properties props) {
+		ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, BallisticMissiles.id(name));
+		Item item = Registry.register(BuiltInRegistries.ITEM, key, new Item(props.setId(key)));
+		ITEMS.add(item);
+		return item;
 	}
 
 	private static Block block(String name, Function<BlockBehaviour.Properties, Block> factory, BlockBehaviour.Properties props) {

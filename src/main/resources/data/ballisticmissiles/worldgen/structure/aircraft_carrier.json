@@ -1,0 +1,8 @@
+{
+	"type": "ballisticmissiles:military_base",
+	"site": "carrier",
+	"biomes": "#ballisticmissiles:has_structure/carrier",
+	"step": "surface_structures",
+	"terrain_adaptation": "none",
+	"spawn_overrides": {}
+}

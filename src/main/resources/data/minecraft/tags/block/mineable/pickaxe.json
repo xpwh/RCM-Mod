@@ -39,6 +39,9 @@
 		"ballisticmissiles:floodlight",
 		"ballisticmissiles:alarm_light",
 		"ballisticmissiles:barbed_wire",
-		"ballisticmissiles:weapons_workbench"
+		"ballisticmissiles:weapons_workbench",
+		"ballisticmissiles:landmine",
+		"ballisticmissiles:card_reader",
+		"ballisticmissiles:elevator_panel"
 	]
 }
