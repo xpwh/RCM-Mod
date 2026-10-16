@@ -41,8 +41,8 @@ public final class GoreWarningScreen extends Screen {
 	private static final int ROW_H = 20;
 	private static final int BUTTON_H = 26;
 	// the palette of the mod's other cards: near-black greys, off-white for what matters, colour only to say something
-	private static final int BACKDROP = 0x0B0B0D;
-	private static final int CARD = 0x161618;
+	private static final int BACKDROP = 0x0A0506;
+	private static final int CARD = 0x1A1213;
 	private static final int TEXT = 0xEDEDEF;
 	private static final int BODY = 0xB4B4BB;
 	private static final int MUTED = 0x8E8E95;
@@ -52,6 +52,7 @@ public final class GoreWarningScreen extends Screen {
 	private static final int BUTTON_INK = 0x111113;
 	private static final int DISABLED = 0x232326;
 	private static final int RED = 0xE5484D;
+	private static final int DEEP_RED = 0x8E1B1F;
 	private static final int AMBER = 0xF5A524;
 
 	private static boolean shown;
@@ -73,6 +74,8 @@ public final class GoreWarningScreen extends Screen {
 	private float hoverAdult;
 	private float hoverDont;
 	private float ready;
+	/** The two warning tones as it comes up. */
+	private int tones;
 	private List<FormattedCharSequence> body = List.of();
 	private List<FormattedCharSequence> alpha = List.of();
 
@@ -301,9 +304,27 @@ public final class GoreWarningScreen extends Screen {
 		this.hoverAdult = approach(this.hoverAdult, live && this.overAdult(mouseX, mouseY) ? 1.0F : 0.0F, dt * 12.0F);
 		this.hoverDont = approach(this.hoverDont, live && this.overDontShow(mouseX, mouseY) ? 1.0F : 0.0F, dt * 12.0F);
 
-		// ---- the backdrop: black over the menu, the card's own soft shadow under it
+		// two warning tones as it comes up
+		if (this.tones < 2 && t > 0.12F + this.tones * 0.32F) {
+			this.tones++;
+			Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BIT.value(), 0.62F, 0.45F));
+			Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BASS.value(), 0.6F, 0.5F));
+		}
+
+		// ---- the backdrop: near black, a red glow throbbing behind the card, hazard stripes along top and bottom
 		float bg = ease(Mth.clamp(t / 0.4F, 0.0F, 1.0F)) * (1.0F - ease(Mth.clamp((out - 0.35F) / 0.65F, 0.0F, 1.0F)));
 		g.fill(0, 0, this.width, this.height, argb(bg, BACKDROP));
+		float throb = 0.5F + 0.5F * Mth.sin(t * 3.4F);
+		UiKit.orb(g, this.width * 0.5F - this.width * 0.6F, this.height * 0.5F - this.height * 0.75F, this.width * 1.2F, this.height * 1.5F, DEEP_RED,
+			bg * (0.35F + 0.2F * throb));
+		float band = easeOutExpo(Mth.clamp((t - 0.1F) / 0.6F, 0.0F, 1.0F)) * bg;
+		this.hazard(g, 0, 0, this.width, 7, t, band);
+		this.hazard(g, 0, this.height - 7, this.width, 7, -t, band);
+		// a red flash as it slams up
+		float flash = t < 0.45F ? 1.0F - t / 0.45F : 0.0F;
+		if (flash > 0.0F) {
+			g.fill(0, 0, this.width, this.height, argb(0.35F * flash * flash, RED));
+		}
 
 		float enter = easeOutExpo(Mth.clamp(t / 0.7F, 0.0F, 1.0F));
 		float leave = ease(Mth.clamp(out / 0.8F, 0.0F, 1.0F));
@@ -317,32 +338,45 @@ public final class GoreWarningScreen extends Screen {
 		int cw = this.cardW();
 		int ch = this.cardH();
 		int textW = cw - 2 * PAD;
-		UiKit.orb(g, x0 - 30, y0 - 10, cw + 60, ch + 56, 0x000000, 0.65F * a);
+		// the card slams in with a jolt
+		float jolt = t < 0.5F ? (float) (Math.exp(-t * 9.0) * Math.sin(t * 60.0) * 5.0) : 0.0F;
+		x0 += Math.round(jolt);
+		UiKit.orb(g, x0 - 40, y0 - 20, cw + 80, ch + 70, 0x000000, 0.7F * a);
+		UiKit.orb(g, x0 - 24, y0 - 18, cw + 48, ch + 36, RED, (0.16F + 0.1F * throb) * a);
 		UiKit.round(g, UiKit.FILL, x0, y0, cw, ch, 12, argb(a, CARD));
-		UiKit.round(g, UiKit.EDGE, x0, y0, cw, ch, 12, argb(0.07F * a, 0xFFFFFF));
+		UiKit.round(g, UiKit.EDGE, x0, y0, cw, ch, 12, argb((0.45F + 0.3F * throb) * a, RED));
 
-		// ---- header: the red 18+ badge (a ring breathing out of it now and then), title and line under it
+		// ---- header: a red warning triangle (an outline pulsing out of it), the title in red, the 18+ tag
 		float s0 = stagger(t, 0);
 		int bx = x0 + PAD;
 		int by = y0 + PAD + Math.round((1.0F - s0) * 6.0F);
-		float pulse = (t % 2.8F) / 2.8F;
-		if (t > 0.8F && pulse < 0.7F) {
-			float p = pulse / 0.7F;
-			int grow = Math.round(easeOutExpo(p) * 7.0F);
-			UiKit.round(g, UiKit.EDGE, bx - grow, by - grow, 34 + 2 * grow, 34 + 2 * grow, 10 + grow, argb(0.45F * (1.0F - p) * a * s0, RED));
+		float pulse = (t % 1.6F) / 1.6F;
+		if (t > 0.6F) {
+			float grow = easeOutExpo(pulse) * 10.0F;
+			UiKit.triangle(g, bx - grow, by - 2 - grow, 38 + 2 * grow, 36 + 2 * grow, argb(0.35F * (1.0F - pulse) * a * s0, RED));
 		}
-		float pop = easeOutBack(Mth.clamp((t - 0.15F) / 0.45F, 0.0F, 1.0F));
-		int bs = Math.max(1, Math.round(34 * pop));
-		UiKit.round(g, UiKit.FILL, bx + (34 - bs) / 2, by + (34 - bs) / 2, bs, bs, 10, argb(a * s0, RED));
+		float pop = easeOutBack(Mth.clamp((t - 0.1F) / 0.4F, 0.0F, 1.0F));
+		float ts = 38.0F * pop;
+		UiKit.triangle(g, bx + (38 - ts) / 2.0F, by - 2 + (36 - ts * 36.0F / 38.0F) / 2.0F, ts, ts * 36.0F / 38.0F, argb(a * s0, lerpColor(RED, 0xFF6A6E, throb * 0.4F)));
 		if (pop > 0.6F) {
-			Component age = Component.literal("18+").withStyle(ChatFormatting.BOLD);
-			g.drawString(this.font, age, bx + 17 - this.font.width(age) / 2, by + 13, argb(a * s0 * Mth.clamp((pop - 0.6F) / 0.4F, 0.0F, 1.0F), 0xFFFFFF), false);
+			float k = Mth.clamp((pop - 0.6F) / 0.4F, 0.0F, 1.0F);
+			int ink = argb(a * s0 * k, 0x1A0607);
+			g.fill(bx + 18, by + 10, bx + 21, by + 23, ink); // the exclamation mark
+			g.fill(bx + 18, by + 25, bx + 21, by + 28, ink);
 		}
 		Component title = this.title.copy().withStyle(ChatFormatting.BOLD);
-		g.drawString(this.font, title, bx + 46, by + 7, argb(a * s0, TEXT), false);
-		g.drawString(this.font, Component.translatable("gore_warning.ballisticmissiles.subtitle"), bx + 46, by + 20, argb(a * stagger(t, 1), MUTED), false);
+		int tx = bx + 50;
+		int titleColor = lerpColor(0xFFFFFF, lerpColor(RED, 0xFF7A7E, throb * 0.5F), Mth.clamp((t - 0.2F) / 0.5F, 0.0F, 1.0F));
+		g.drawString(this.font, title, tx, by + 6, argb(a * s0, titleColor), false);
+		Component age = Component.literal("18+").withStyle(ChatFormatting.BOLD);
+		int pillX = tx + this.font.width(title) + 8;
+		if (pillX + this.font.width(age) + 10 < x0 + cw - PAD) {
+			UiKit.round(g, UiKit.FILL, pillX, by + 3, this.font.width(age) + 10, 14, 7, argb(a * s0, RED));
+			g.drawString(this.font, age, pillX + 5, by + 6, argb(a * s0, 0xFFFFFF), false);
+		}
+		g.drawString(this.font, Component.translatable("gore_warning.ballisticmissiles.subtitle"), tx, by + 20, argb(a * stagger(t, 1), TEXT), false);
 		float line = easeOutExpo(Mth.clamp((t - 0.35F) / 0.8F, 0.0F, 1.0F));
-		g.fill(x0 + PAD, y0 + PAD + 46, x0 + PAD + Math.round(textW * line), y0 + PAD + 47, argb(a, HAIRLINE));
+		g.fill(x0 + PAD, y0 + PAD + 46, x0 + PAD + Math.round(textW * line), y0 + PAD + 48, argb(a * (0.6F + 0.3F * throb), RED));
 
 		// ---- the warning and the alpha note, scrolling if the screen is too small for them
 		int vt = this.viewTop() + lift;
@@ -432,6 +466,25 @@ public final class GoreWarningScreen extends Screen {
 		float s7 = stagger(t, 7);
 		Component hint = Component.translatable("gore_warning.ballisticmissiles.hint");
 		g.drawString(this.font, hint, (this.width - this.font.width(hint)) / 2, Math.min(this.height - 11, y0 + ch + 8), argb(a * s7 * 0.9F, FAINT), false);
+	}
+
+	/** Diagonal red and black hazard stripes in a band, sliding along with {@code t}. */
+	private void hazard(GuiGraphics g, int x, int y, int w, int h, float t, float alpha) {
+		if (alpha <= 0.01F) {
+			return;
+		}
+		g.fill(x, y, x + w, y + h, argb(alpha, 0x120607));
+		g.enableScissor(x, y, x + w, y + h);
+		int step = 16;
+		float shift = (t * 12.0F) % step;
+		for (float sx = x - step * 2 + shift; sx < x + w + step; sx += step) {
+			g.pose().pushMatrix();
+			g.pose().translate(sx, y);
+			g.pose().mul(new org.joml.Matrix3x2f(1.0F, 0.0F, -1.0F, 1.0F, 0.0F, 0.0F)); // slanted
+			g.fill(0, 0, step / 2, h, argb(alpha * 0.85F, DEEP_RED));
+			g.pose().popMatrix();
+		}
+		g.disableScissor();
 	}
 
 	/** A check box with its label: the box fills with a little spring and the tick draws itself. */

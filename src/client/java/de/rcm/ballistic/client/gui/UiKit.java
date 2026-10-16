@@ -22,6 +22,8 @@ public final class UiKit {
 	public static final Identifier FILL = BallisticMissiles.id("dynamic/ui_round_fill");
 	public static final Identifier EDGE = BallisticMissiles.id("dynamic/ui_round_edge");
 	public static final Identifier DISC = BallisticMissiles.id("dynamic/ui_disc");
+	/** A warning triangle with softly rounded corners, point up, filling its square texture's width. */
+	public static final Identifier TRIANGLE = BallisticMissiles.id("dynamic/ui_triangle");
 	/** Rounded-rectangle textures: 64 px with a 24 px corner radius (nine-sliced), the edge 2 px wide. */
 	private static final int TEX = 64;
 	private static final int CORNER = 24;
@@ -94,11 +96,45 @@ public final class UiKit {
 			return f * f * (3.0 - 2.0 * f) * f;
 		}));
 		manager.register(DISC, smooth("ui disc", 128, (px, py) -> coverage(62.0 - Math.hypot(px - 64.0, py - 64.0))));
+		manager.register(TRIANGLE, smooth("ui triangle", 128, (px, py) -> coverage(-(triangle(px, py) - 9.0))));
 		manager.register(FILL, smooth("ui round fill", TEX, (px, py) -> coverage(-roundedBox(px, py))));
 		manager.register(EDGE, smooth("ui round edge", TEX, (px, py) -> {
 			double d = roundedBox(px, py);
 			return coverage(-d) - coverage(-(d + 2.2));
 		}));
+	}
+
+	/** Signed distance (texture pixels) to a triangle, point up, inset so its rounded version fills the texture. */
+	private static double triangle(double px, double py) {
+		double[][] v = {{64.0, 12.0}, {119.0, 112.0}, {9.0, 112.0}};
+		double best = Double.MAX_VALUE;
+		boolean inside = true;
+		for (int i = 0; i < 3; i++) {
+			double[] a = v[i];
+			double[] b = v[(i + 1) % 3];
+			double ex = b[0] - a[0];
+			double ey = b[1] - a[1];
+			double wx = px - a[0];
+			double wy = py - a[1];
+			double h = Mth.clamp((wx * ex + wy * ey) / (ex * ex + ey * ey), 0.0, 1.0);
+			best = Math.min(best, Math.hypot(wx - ex * h, wy - ey * h));
+			if (ex * wy - ey * wx < 0.0) {
+				inside = false;
+			}
+		}
+		return inside ? -best : best;
+	}
+
+	/** The warning triangle, stretched over a rectangle. */
+	public static void triangle(GuiGraphics g, float x, float y, float w, float h, int argb) {
+		if ((argb >>> 24) == 0) {
+			return;
+		}
+		g.pose().pushMatrix();
+		g.pose().translate(x, y);
+		g.pose().scale(w / 128.0F, h / 128.0F);
+		g.blit(RenderPipelines.GUI_TEXTURED, TRIANGLE, 0, 0, 0.0F, 0.0F, 128, 128, 128, 128, 128, 128, argb);
+		g.pose().popMatrix();
 	}
 
 	/** Signed distance (texture pixels) to the rounded square filling the texture, negative inside. */
