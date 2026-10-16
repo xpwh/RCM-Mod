@@ -403,9 +403,10 @@ public class BulletEntity extends Entity {
 		Vec3 at = hit.getLocation();
 		BlockState state = level.getBlockState(hit.getBlockPos());
 		if (!state.getFluidState().isEmpty()) {
-			// into water: a small spout, and it is slowed to nothing within a metre or two
-			level.sendParticles(ParticleTypes.SPLASH, at.x, at.y + 0.1, at.z, 10, 0.1, 0.05, 0.1, 0.2);
-			level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_DIRT, SoundSource.PLAYERS, 0.6F, 1.5F);
+			// into water: a spout and a crown of drops, rings spreading on the surface, and it is slowed to
+			// nothing within a metre or two (no hole: it is drawn by the clients as a splash)
+			hole(level, at, Direction.UP, HOLE_WATER, vel.normalize());
+			level.playSound(null, at.x, at.y, at.z, ModRegistry.WATER_SPLASH_SMALL, SoundSource.PLAYERS, 0.45F, 1.35F + this.random.nextFloat() * 0.35F);
 			this.discard();
 			return true;
 		}
@@ -606,6 +607,8 @@ public class BulletEntity extends Entity {
 	}
 
 	public static final int HOLE_GLASS = 4;
+	/** Not a hole: a round into water, drawn as a splash. */
+	public static final int HOLE_WATER = 5;
 
 	/** Glass a round goes through (cracking it), not tinted glass. */
 	public static boolean isGlass(BlockState state) {

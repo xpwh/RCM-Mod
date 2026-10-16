@@ -978,6 +978,10 @@ public final class ModRegistry {
 	public static final SimpleParticleType BURST = particle("burst");
 	/** Dust and grit thrown up off the ground. */
 	public static final SimpleParticleType DUST = particle("dust");
+	/** A drop of water thrown up where something struck the surface. */
+	public static final SimpleParticleType WATER_DROP = particle("water_drop");
+	/** A ring spreading out over a water surface (dx: how wide it gets). */
+	public static final SimpleParticleType WATER_RIPPLE = particle("water_ripple");
 
 	// ---------- Creative tabs ----------
 	/** Every missile and warhead. */

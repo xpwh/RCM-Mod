@@ -298,10 +298,11 @@ public final class AkClient {
 		// the hole where the crosshair is, at once (the server's own replaces it a moment later)
 		Vec3 eye = player.getEyePosition();
 		net.minecraft.world.phys.BlockHitResult sight = mc.level.clip(new net.minecraft.world.level.ClipContext(eye, eye.add(player.getLookAngle().scale(300.0)),
-			net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+			net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.WATER, player));
 		if (sight.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
 			var struck = mc.level.getBlockState(sight.getBlockPos());
-			if (!(struck.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) && !BulletEntity.isGlass(struck)
+			// into water there is no hole - the server sends the splash
+			if (struck.getFluidState().isEmpty() && !(struck.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) && !BulletEntity.isGlass(struck)
 				&& !(struck.getBlock() instanceof net.minecraft.world.level.block.IronBarsBlock)) {
 				de.rcm.ballistic.client.render.BulletHoles.predict(sight.getLocation(), sight.getDirection(), BulletEntity.holeKind(struck), sight.getLocation().subtract(muzzle));
 			}

@@ -53,6 +53,10 @@ public final class BulletHoles {
 	private static void add(BulletHolePayload p) {
 		Direction face = Direction.from3DDataValue(p.face());
 		Vec3 at = new Vec3(p.x(), p.y(), p.z());
+		if (p.kind() == de.rcm.ballistic.gun.BulletEntity.HOLE_WATER) {
+			de.rcm.ballistic.client.effect.WaterImpact.bullet(at, new Vec3(p.dx(), p.dy(), p.dz()));
+			return;
+		}
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level != null) {
 			// the server's hole replaces the one we drew the instant we fired

@@ -151,6 +151,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.BURST, CloudParticle.BurstProvider::new);
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.DUST, CloudParticle.DustProvider::new);
 		ParticleFactoryRegistry.getInstance().register(ModRegistry.SPARK, de.rcm.ballistic.client.particle.SparkParticle.Provider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.WATER_DROP, de.rcm.ballistic.client.particle.WaterDropParticle.Provider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.WATER_RIPPLE, de.rcm.ballistic.client.particle.WaterRippleParticle.Provider::new);
 
 		ClientPlayNetworking.registerGlobalReceiver(DetonationPayload.TYPE, (payload, context) ->
 			ClientEffects.detonation(payload.warhead(), new Vec3(payload.x(), payload.y(), payload.z()))
