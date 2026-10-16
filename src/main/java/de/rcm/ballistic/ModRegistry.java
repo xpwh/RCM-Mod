@@ -923,6 +923,8 @@ public final class ModRegistry {
 	public static final SoundEvent GRENADE_EXPLODE = sound("grenade.explode");
 	public static final SoundEvent FLASHBANG_BANG = sound("flashbang.bang");
 	public static final SoundEvent FLASHBANG_FAR = sound("flashbang.far");
+	public static final SoundEvent THUNDER_NEAR = sound("storm.thunder_near");
+	public static final SoundEvent THUNDER_FAR = sound("storm.thunder_far");
 	public static final SoundEvent GRENADE_EXPLODE_FAR = sound("grenade.explode_far");
 
 	// ---------- Particles ----------

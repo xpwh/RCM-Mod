@@ -1017,5 +1017,14 @@
 	"gore_warning.ballisticmissiles.alpha_label": "ALPHA",
 	"gore_warning.ballisticmissiles.scroll": "Bitte bis zum Ende lesen",
 	"gore_warning.ballisticmissiles.hint": "Enter zum Fortfahren · beides später in den Einstellungen änderbar",
-	"subtitles.ballisticmissiles.flashbang_bang": "Blendgranate knallt"
+	"subtitles.ballisticmissiles.flashbang_bang": "Blendgranate knallt",
+	"subtitles.ballisticmissiles.thunder": "Donner",
+	"options.ballisticmissiles.storms": "Gewitter-Effekte",
+	"options.ballisticmissiles.storms.tooltip": "Blitze in den Wolken und zum Boden, Donner mit Schallverzögerung, Starkregen, nasser Boden und Pfützen",
+	"options.ballisticmissiles.server_killcam": "Killcam (Zeitlupe)",
+	"options.ballisticmissiles.server_killcam.tooltip": "Für alle: Nach großen Explosionen läuft die Welt ein paar Sekunden in Zeitlupe, und wer nahe genug ist, sieht sie aus mehreren Kamerawinkeln. Leertaste überspringt",
+	"killcam.ballisticmissiles.replay": "REPLAY",
+	"killcam.ballisticmissiles.slowmo": "ZEITLUPE %s×",
+	"killcam.ballisticmissiles.camera": "KAMERA %s/3",
+	"killcam.ballisticmissiles.skip": "%s – überspringen"
 }

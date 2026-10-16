@@ -281,6 +281,7 @@ public final class SunDetonation {
 	// ------------------------------------------------------------------ the nova
 
 	private void nova() {
+		de.rcm.ballistic.explosion.Killcam.trigger(this.level, this.centre, SunTimeline.NOVA_REACH * 0.4F);
 		if (this.griefing) {
 			FlyingDebris.launch(this.level, this.centre.subtract(0.0, SunTimeline.RADIUS * 0.2, 0.0), SunTimeline.RADIUS * 1.4, 700, 3.6);
 			BlastPhysics.shatter(this.level, this.centre, SunTimeline.RADIUS, SunTimeline.NOVA_REACH * 1.6, 1400, 1.0F);

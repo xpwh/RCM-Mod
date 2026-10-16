@@ -45,6 +45,7 @@ public final class WorldFx {
 	private static final RenderPipeline SHADE_PIPELINE = pipeline("world_fx_shade", "SHADE");
 	private static final RenderPipeline WATER_PIPELINE = pipeline("world_fx_water", "WATER");
 	private static final RenderPipeline UNDER_PIPELINE = pipeline("world_fx_under", "UNDER");
+	private static final RenderPipeline WET_PIPELINE = pipeline("world_fx_wet", "WET");
 	private static final Identifier OPAQUE_DEPTH = BallisticMissiles.id("textures/environment/fx_opaque_depth");
 	private static final Identifier OPAQUE_COLOR = BallisticMissiles.id("textures/environment/fx_opaque_color");
 	/** The world's depth at the end of the main pass (also read by the blast post effect). */
@@ -57,6 +58,7 @@ public final class WorldFx {
 	private static RenderType shadeType;
 	private static RenderType waterType;
 	private static RenderType underType;
+	private static RenderType wetType;
 	/** Whether the opaque copies were taken this frame (the water needs them). */
 	private static boolean haveOpaque;
 
@@ -77,7 +79,7 @@ public final class WorldFx {
 		if (define.equals("SHADE")) {
 			// shade multiplies what is there; Sampler1: the heightmap the sun's shadows are traced over
 			b = b.withSampler("Sampler1").withBlend(new BlendFunction(SourceFactor.DST_COLOR, DestFactor.ZERO, SourceFactor.ZERO, DestFactor.ONE));
-		} else if (define.equals("UNDER")) {
+		} else if (define.equals("UNDER") || define.equals("WET")) {
 			b = b.withSampler("Sampler1").withSampler("Sampler2").withColorWrite(true, false);
 		} else {
 			b = b.withSampler("Sampler1").withSampler("Sampler2").withSampler("Sampler3").withColorWrite(true, false);
@@ -89,10 +91,11 @@ public final class WorldFx {
 		RenderPipelines.register(SHADE_PIPELINE);
 		RenderPipelines.register(WATER_PIPELINE);
 		RenderPipelines.register(UNDER_PIPELINE);
+		RenderPipelines.register(WET_PIPELINE);
 		WorldRenderEvents.BEFORE_TRANSLUCENT.register(WorldFx::beforeTranslucent);
 		WorldRenderEvents.END_MAIN.register(WorldFx::endMain);
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-			if ((ModConfig.sunShadows || ModConfig.realWater) && overworldView(mc)) {
+			if ((ModConfig.sunShadows || ModConfig.realWater || Storm.wetness() > 0.0F) && overworldView(mc)) {
 				SunHeightmap.update(mc);
 			}
 			underwaterMotes(mc);
@@ -131,6 +134,11 @@ public final class WorldFx {
 				.withTexture("Sampler1", SunHeightmap.ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
 				.withTexture("Sampler2", FULL_COLOR, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
 				.createRenderSetup());
+			wetType = RenderType.create("ballisticmissiles_world_fx_wet", RenderSetup.builder(WET_PIPELINE)
+				.withTexture("Sampler0", OPAQUE_DEPTH, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.withTexture("Sampler1", SunHeightmap.ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.withTexture("Sampler2", OPAQUE_COLOR, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
+				.createRenderSetup());
 		}
 	}
 
@@ -146,7 +154,8 @@ public final class WorldFx {
 		Minecraft mc = Minecraft.getInstance();
 		haveOpaque = false;
 		boolean shade = ModConfig.sunShadows || ModConfig.ambientOcclusion;
-		if (!overworldView(mc) || !(shade || ModConfig.realWater)) {
+		boolean wet = Storm.wetness() > 0.01F && SunHeightmap.ready();
+		if (!overworldView(mc) || !(shade || ModConfig.realWater || wet)) {
 			return;
 		}
 		var target = mc.getMainRenderTarget();
@@ -179,7 +188,31 @@ public final class WorldFx {
 			}
 		}
 		opaqueColor.copy(target.getColorTexture());
+		if (wet && camera.getFluidInCamera() == FogType.NONE) {
+			wet(context, mc, camera, buffers, sun, partial);
+			opaqueColor.copy(target.getColorTexture());
+		}
 		haveOpaque = true;
+	}
+
+	/** After rain: the wet ground, roofs and walls, and the puddles on the flat (see world_fx.fsh, WET). */
+	private static void wet(WorldRenderContext context, Minecraft mc, Camera camera, MultiBufferSource.BufferSource buffers, Vector3f sun, float partial) {
+		double[] zenith = Sky.toneMap(Sky.atmosphere(new double[] {0.0, 1.0, 0.0}, new double[] {sun.x, sun.y, sun.z}, 1.0, 8, 3));
+		float night = Mth.clamp(mc.level.getSkyDarken() / 11.0F, 0.0F, 1.0F);
+		float dim = (1.0F - 0.9F * night) * (1.0F - 0.55F * mc.level.getRainLevel(partial)) * (1.0F - NewMoonClient.amount());
+		int zr = Math.round(Mth.clamp((float) zenith[0] * dim, 0.0F, 1.0F) * 255.0F);
+		int zg = Math.round(Mth.clamp((float) zenith[1] * dim, 0.0F, 1.0F) * 255.0F);
+		int zb = Math.round(Mth.clamp((float) zenith[2] * dim, 0.0F, 1.0F) * 255.0F);
+		Vec3 cam = camera.position();
+		float hx = (float) (cam.x - SunHeightmap.originX());
+		float hz = (float) (cam.z - SunHeightmap.originZ());
+		int camY = Mth.clamp((int) Math.round((cam.y + 256.0) * 16.0), 0, 32767);
+		// where the heightmap lies within the 256-block repeat of the puddle pattern (its corner is a multiple of 16)
+		int ox = Math.floorMod(SunHeightmap.originX(), 256) >> 4;
+		int oz = Math.floorMod(SunHeightmap.originZ(), 256) >> 4;
+		screen(buffers.getBuffer(wetType), context.matrices().last(), camera,
+			argb(1.0F, Storm.wetness(), Storm.puddles(), Storm.rainHere(partial)), sun, zr | zg << 8, zb | ox << 8 | oz << 12, hx, hz, camY);
+		buffers.endBatch(wetType);
 	}
 
 	/** Makes sure the copies exist (registered), for the post effect that reads the world's depth. */

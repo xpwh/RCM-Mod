@@ -136,6 +136,8 @@ public final class VolumetricClouds {
 	/** Cloud piled up round the rims of the holes (0-1), and rocket engines / fireballs lighting the cloud (0-1). */
 	private static final float[] RING = new float[MAP * MAP];
 	private static final float[] GLOW = new float[MAP * MAP];
+	/** Lightning lighting the clouds from inside, round where it flashes: gone in a few ticks. */
+	private static final float[] BOLT = new float[MAP * MAP];
 	/** A fireball's light on the cloud base: it dies away over seconds, not the moment the rocket has gone. */
 	private static final float[] FIRE = new float[MAP * MAP];
 	private static boolean glowing;
@@ -345,6 +347,19 @@ public final class VolumetricClouds {
 		glowing = true;
 	}
 
+	/**
+	 * Lightning in or under the clouds at (x, z): it lights them from inside, round where it is, blue-white, for a
+	 * moment ({@code strength} 0-1; flickers when called again over the next ticks).
+	 */
+	public static void lightning(double x, double z, float radius, float strength) {
+		if (Float.isNaN(base)) {
+			return;
+		}
+		stamp(BOLT, x, z, radius, Mth.clamp(strength, 0.0F, 1.0F), false);
+		flash = Math.max(flash, Mth.clamp(strength, 0.0F, 1.0F));
+		glowing = true;
+	}
+
 	/** A big fireball far below: it lights the cloud base over it, without reaching it. */
 	public static void fireGlow(Vec3 pos, float radius) {
 		if (Float.isNaN(base) || pos.y > base + thickness() || pos.y < base - 400.0) {
@@ -445,6 +460,7 @@ public final class VolumetricClouds {
 				java.util.Arrays.fill(SMOKE, 0.0F);
 				java.util.Arrays.fill(RING, 0.0F);
 				java.util.Arrays.fill(GLOW, 0.0F);
+				java.util.Arrays.fill(BOLT, 0.0F);
 				java.util.Arrays.fill(FIRE, 0.0F);
 				PUNCTURES.clear();
 				disturbed = false;
@@ -456,28 +472,9 @@ public final class VolumetricClouds {
 		if (mc.isPaused()) {
 			return;
 		}
-		// lightning: the storm clouds lit up from inside - at every real bolt, and now and then within the clouds
+		// lightning (see Storm, which strikes it): the light inside the clouds dies away in a few ticks
 		prevFlash = flash;
 		flash *= 0.55F;
-		float thunder = mc.level.getThunderLevel(1.0F);
-		if (thunder > 0.2F && ModConfig.clouds) {
-			boolean bolt = false;
-			for (var e : mc.level.entitiesForRendering()) {
-				if (e instanceof net.minecraft.world.entity.LightningBolt && e.tickCount < 2) {
-					bolt = true;
-					break;
-				}
-			}
-			if (bolt) {
-				flash = 1.0F;
-			} else if (ClientEffects.rand() < 0.006F * thunder) {
-				flash = Math.max(flash, 0.45F + ClientEffects.rand() * 0.45F);
-			} else if (flash > 0.2F && ClientEffects.rand() < 0.25F) {
-				flash = Math.min(1.0F, flash + 0.35F); // it flickers
-			}
-		} else {
-			flash = 0.0F;
-		}
 		if (!disturbed) {
 			return;
 		}
@@ -502,6 +499,12 @@ public final class VolumetricClouds {
 					g = g * 0.72F - 0.01F;
 					GLOW[i] = g > 0.0F ? g : 0.0F;
 					lit |= g > 0.0F;
+				}
+				float b = BOLT[i];
+				if (b > 0.0F) {
+					b = b * 0.5F - 0.02F;
+					BOLT[i] = b > 0.0F ? b : 0.0F;
+					lit |= b > 0.0F;
 				}
 				float f = FIRE[i];
 				if (f > 0.0F) {
@@ -583,7 +586,7 @@ public final class VolumetricClouds {
 				int h = Math.round(Mth.clamp(HOLE[i], 0.0F, 1.0F) * 255.0F);
 				int s = Math.round(Mth.clamp(SMOKE[i], 0.0F, 1.0F) * 255.0F);
 				int r = Math.round(Mth.clamp(RING[i], 0.0F, 1.0F) * 255.0F);
-				int g = Math.round(Mth.clamp(Math.max(GLOW[i], FIRE[i]), 0.0F, 1.0F) * 255.0F);
+				int g = Math.round(Mth.clamp(Math.max(Math.max(GLOW[i], FIRE[i]), BOLT[i]), 0.0F, 1.0F) * 255.0F);
 				img.setPixel(x, z, g << 24 | h << 16 | s << 8 | r);
 			}
 		}

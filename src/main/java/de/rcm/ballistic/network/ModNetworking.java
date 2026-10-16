@@ -767,16 +767,17 @@ public final class ModNetworking {
 	 * World settings: server -> client to show them (on join and on every change), client -> server
 	 * when an operator changes them on the settings screen.
 	 */
-	public record ServerConfigPayload(int misfireChance, int gunDamage, boolean gore, boolean nukes) implements CustomPacketPayload {
+	public record ServerConfigPayload(int misfireChance, int gunDamage, boolean gore, boolean nukes, boolean killcam) implements CustomPacketPayload {
 		public static final Type<ServerConfigPayload> TYPE = new Type<>(BallisticMissiles.id("server_config"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, ServerConfigPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, ServerConfigPayload::misfireChance, ByteBufCodecs.VAR_INT, ServerConfigPayload::gunDamage,
-			ByteBufCodecs.BOOL, ServerConfigPayload::gore, ByteBufCodecs.BOOL, ServerConfigPayload::nukes, ServerConfigPayload::new);
+			ByteBufCodecs.BOOL, ServerConfigPayload::gore, ByteBufCodecs.BOOL, ServerConfigPayload::nukes, ByteBufCodecs.BOOL, ServerConfigPayload::killcam,
+			ServerConfigPayload::new);
 
 		/** The world settings as they are now. */
 		public static ServerConfigPayload current() {
 			return new ServerConfigPayload(de.rcm.ballistic.config.ServerConfig.misfireChance, de.rcm.ballistic.config.ServerConfig.gunDamage,
-				de.rcm.ballistic.config.ServerConfig.gore, de.rcm.ballistic.config.ServerConfig.nukes);
+				de.rcm.ballistic.config.ServerConfig.gore, de.rcm.ballistic.config.ServerConfig.nukes, de.rcm.ballistic.config.ServerConfig.killcam);
 		}
 
 		@Override
@@ -845,6 +846,7 @@ public final class ModNetworking {
 			de.rcm.ballistic.config.ServerConfig.gunDamage = net.minecraft.util.Mth.clamp(payload.gunDamage(), 0, 1000);
 			de.rcm.ballistic.config.ServerConfig.gore = payload.gore();
 			de.rcm.ballistic.config.ServerConfig.nukes = payload.nukes();
+			de.rcm.ballistic.config.ServerConfig.killcam = payload.killcam();
 			de.rcm.ballistic.config.ServerConfig.save();
 			broadcastServerConfig(player.level().getServer());
 		});

@@ -13,6 +13,7 @@ import net.minecraft.network.chat.Component;
  *   <li>{@code /bmserver fehlstarts <0-100>|aus} (or {@code misfires}) - the chance in percent that a launch goes wrong</li>
  *   <li>{@code /bmserver gore an|aus} - gore allowed on this server, or forbidden for everyone</li>
  *   <li>{@code /bmserver nukes erlauben|verbieten} - nuclear and antimatter weapons</li>
+ *   <li>{@code /bmserver killcam an|aus} - slow-motion replay after big explosions, for everyone</li>
  *   <li>{@code /bmgun schaden <0-1000>} - the guns' damage, percent of normal</li>
  * </ul>
  */
@@ -41,6 +42,10 @@ public final class ServerConfigCommand {
 			.executes(ctx -> report(ctx.getSource()))
 			.then(Commands.literal("erlauben").executes(ctx -> nukes(ctx.getSource(), true)))
 			.then(Commands.literal("verbieten").executes(ctx -> nukes(ctx.getSource(), false))));
+		root.then(Commands.literal("killcam")
+			.executes(ctx -> report(ctx.getSource()))
+			.then(Commands.literal("an").executes(ctx -> killcam(ctx.getSource(), true)))
+			.then(Commands.literal("aus").executes(ctx -> killcam(ctx.getSource(), false))));
 		dispatcher.register(root);
 		dispatcher.register(Commands.literal("bmgun").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 			.then(Commands.literal("schaden")
@@ -67,6 +72,14 @@ public final class ServerConfigCommand {
 		if (ServerConfig.nukes != on) {
 			ServerConfig.nukes = on;
 			announce(source, "Nuclear weapons", Announcement.state(on, "ALLOWED", "FORBIDDEN"));
+		}
+		return changed(source);
+	}
+
+	private static int killcam(CommandSourceStack source, boolean on) {
+		if (ServerConfig.killcam != on) {
+			ServerConfig.killcam = on;
+			announce(source, "Killcam", Announcement.state(on, "ON", "OFF"));
 		}
 		return changed(source);
 	}

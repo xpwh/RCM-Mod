@@ -32,6 +32,9 @@ public class BallisticMissiles implements ModInitializer {
 		ServerTickEvents.END_WORLD_TICK.register(DetonationManager::tick);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.sun.SunStrikes::tick);
 		de.rcm.ballistic.sun.SunNetwork.register();
+		de.rcm.ballistic.explosion.Killcam.register();
+		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.Killcam::tick);
+		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.Killcam::stop);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.CraterLog::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RemoteLaunch::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RadiationManager::tick);

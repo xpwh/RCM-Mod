@@ -77,6 +77,18 @@ public final class DetonationManager {
 			return;
 		}
 		broadcast(level, pos, warhead);
+		float replay = switch (warhead) {
+			case TSAR -> 320.0F;
+			case HYDROGEN -> 200.0F;
+			case NUCLEAR, MIRV -> 130.0F;
+			case MIRV_WARHEAD, TACTICAL_NUKE -> 80.0F;
+			case ANTIMATTER -> 60.0F;
+			case THERMOBARIC -> 32.0F;
+			default -> 0.0F;
+		};
+		if (replay > 0.0F) {
+			Killcam.trigger(level, pos, replay);
+		}
 		// ejecta first, before the blast and the crater remove the blocks
 		switch (warhead) {
 			case NUCLEAR, MIRV -> FlyingDebris.launch(level, pos, 18.0, 200, 2.8);
@@ -324,6 +336,7 @@ public final class DetonationManager {
 			fizzle(level, surface, source);
 			return;
 		}
+		Killcam.trigger(level, surface, 70.0F);
 		broadcast(level, surface, Warhead.EARTH_PENETRATOR);
 		FlyingDebris.launch(level, surface, 24.0, 300, 3.2);
 		NUKES.add(new NukeDetonation(level, surface, source, NukeDetonation.Yield.FISSION, NukeDetonation.Mode.UNDERGROUND));
@@ -339,6 +352,7 @@ public final class DetonationManager {
 			fizzle(level, pos, source);
 			return;
 		}
+		Killcam.trigger(level, pos, 110.0F);
 		broadcast(level, pos, Warhead.POSEIDON);
 		BlockPos.MutableBlockPos m = BlockPos.containing(pos).mutable();
 		for (int i = 0; i < 64 && !level.getFluidState(m).isEmpty(); i++) {
@@ -362,6 +376,7 @@ public final class DetonationManager {
 	 * a curtain of ejecta and a ground shock that throws everything around it.
 	 */
 	public static void detonateKineticRod(ServerLevel level, Vec3 pos, Vec3 dir, @Nullable Entity source) {
+		Killcam.trigger(level, pos, 45.0F);
 		broadcast(level, pos, Warhead.KINETIC_ROD);
 		FlyingDebris.launch(level, pos, 16.0, 260, 3.4);
 		Vec3 d = dir.lengthSqr() < 1.0E-6 ? new Vec3(0, -1, 0) : dir.normalize();
@@ -592,6 +607,7 @@ public final class DetonationManager {
 	 * radiation and only a shallow crater (it is an air blast weapon).
 	 */
 	public static void detonateMoab(ServerLevel level, Vec3 pos, @Nullable Entity source) {
+		Killcam.trigger(level, pos, 55.0F);
 		broadcast(level, pos, Warhead.MOAB);
 		FlyingDebris.launch(level, pos, 14.0, 220, 2.8);
 		highExplosive(level, pos.add(0, 2.0, 0), source, 15.0F, 8, 42, 0.18); // air burst: wide but shallow

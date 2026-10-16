@@ -57,6 +57,8 @@ public final class ModConfig {
 	public static boolean eyeAdaptation = true;
 	/** Water mirrors the sky and what is round it, with waves (screen-space reflections). */
 	public static boolean realWater = true;
+	/** Thunderstorms: lightning in the clouds and to the ground, delayed thunder, heavy rain, wet ground and puddles. */
+	public static boolean storms = true;
 	/** Sunlight casts shadows (traced through the depth of the picture). */
 	public static boolean sunShadows = true;
 	/** Soft darkening in corners and crevices (screen-space ambient occlusion). */
@@ -97,6 +99,7 @@ public final class ModConfig {
 	public static int serverGunDamage = 100;
 	public static boolean serverGore = true;
 	public static boolean serverNukes = true;
+	public static boolean serverKillcam = true;
 
 	/** Whether gore is shown: switched on here, and allowed by the server. */
 	public static boolean gore() {
@@ -132,6 +135,7 @@ public final class ModConfig {
 			nightSky = bool(p, "nightSky", nightSky);
 			eyeAdaptation = bool(p, "eyeAdaptation", eyeAdaptation);
 			realWater = bool(p, "realWater", realWater);
+			storms = bool(p, "storms", storms);
 			sunShadows = bool(p, "sunShadows", sunShadows);
 			ambientOcclusion = bool(p, "ambientOcclusion", ambientOcclusion);
 			lensFlare = bool(p, "lensFlare", lensFlare);
@@ -171,6 +175,7 @@ public final class ModConfig {
 			p.setProperty("nightSky", Boolean.toString(nightSky));
 			p.setProperty("eyeAdaptation", Boolean.toString(eyeAdaptation));
 			p.setProperty("realWater", Boolean.toString(realWater));
+			p.setProperty("storms", Boolean.toString(storms));
 			p.setProperty("sunShadows", Boolean.toString(sunShadows));
 			p.setProperty("ambientOcclusion", Boolean.toString(ambientOcclusion));
 			p.setProperty("lensFlare", Boolean.toString(lensFlare));

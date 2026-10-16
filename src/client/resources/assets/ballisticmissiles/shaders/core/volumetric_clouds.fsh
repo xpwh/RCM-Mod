@@ -83,7 +83,9 @@ void main() {
     vec3 skyTop = mix(vec3(0.035, 0.04, 0.065), vec3(0.62, 0.7, 0.84), day) * (1.0 - 0.9 * gloom);
     vec3 skyBottom = skyTop * mix(0.55, 0.32, storm) * mix(vec3(1.0), vec3(0.92, 0.95, 1.05), storm);
     // the flash of lightning inside the cloud
-    vec3 boltCol = vec3(0.75, 0.8, 1.0) * lightning * 0.9;
+    vec3 boltCol = vec3(0.75, 0.8, 1.0) * lightning * 0.18;
+    // the glow in the map is lightning's blue-white while a flash is on, an engine's or a fire's orange otherwise
+    vec3 glowCol = mix(vec3(1.0, 0.5, 0.2), vec3(1.6, 1.75, 2.2), clamp(lightning * 2.0, 0.0, 1.0));
     // storm clouds are thicker: they swallow more light
     float sigma = 0.11 * (1.0 + 0.6 * rain + 0.9 * storm);
     float cosTheta = dot(rd, sunDir);
@@ -115,7 +117,7 @@ void main() {
             lit += boltCol * (0.25 + 0.75 * (1.0 - h) * (1.0 - h)) * (0.4 + 0.6 * d);
             // a rocket engine (or a fireball) inside or under the cloud: it glows orange round it
             // (a big fireball's light reaches across the cloud base, lighting it from below)
-            lit += vec3(1.0, 0.5, 0.2) * glow * (0.5 + 1.2 * glow) * (0.3 + 0.7 * d);
+            lit += glowCol * glow * (0.5 + 1.2 * glow) * (0.3 + 0.7 * d) * mix(1.0, 0.4 + 1.2 * (1.0 - h), clamp(lightning * 2.0, 0.0, 1.0));
             // exhaust smoke: dingy grey-brown
             lit *= mix(vec3(1.0), vec3(0.62, 0.6, 0.58), smoke);
             float a = 1.0 - exp(-d * sigma * stepLen);

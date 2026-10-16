@@ -116,6 +116,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.SmokeVolume.init();
 		de.rcm.ballistic.client.render.JetExhaust.init();
 		de.rcm.ballistic.client.sun.SunClient.init(); // its star draws before the clouds and the smoke, which lie over it
+		de.rcm.ballistic.client.effect.Storm.init(); // its bolts too
+		de.rcm.ballistic.client.effect.KillcamClient.init();
 		de.rcm.ballistic.client.effect.VolumetricClouds.init();
 		de.rcm.ballistic.client.effect.VolCloudCommand.init();
 		de.rcm.ballistic.client.gui.SettingsCommand.init();
@@ -147,6 +149,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 			ModConfig.serverGunDamage = payload.gunDamage();
 			ModConfig.serverGore = payload.gore();
 			ModConfig.serverNukes = payload.nukes();
+			ModConfig.serverKillcam = payload.killcam();
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ModConfig.serverGore = true);
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.JammerPayload.TYPE, (payload, context) ->

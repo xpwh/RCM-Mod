@@ -1017,5 +1017,14 @@
 	"gore_warning.ballisticmissiles.alpha_label": "ALPHA",
 	"gore_warning.ballisticmissiles.scroll": "Please read to the end",
 	"gore_warning.ballisticmissiles.hint": "Enter to continue · both can be changed later in the settings",
-	"subtitles.ballisticmissiles.flashbang_bang": "Flashbang bangs"
+	"subtitles.ballisticmissiles.flashbang_bang": "Flashbang bangs",
+	"subtitles.ballisticmissiles.thunder": "Thunder",
+	"options.ballisticmissiles.storms": "Thunderstorm effects",
+	"options.ballisticmissiles.storms.tooltip": "Lightning in the clouds and to the ground, delayed thunder, heavy rain, wet ground and puddles",
+	"options.ballisticmissiles.server_killcam": "Killcam (slow motion)",
+	"options.ballisticmissiles.server_killcam.tooltip": "For everyone: after big explosions the world runs in slow motion for a few seconds, and whoever is close enough sees it from several camera angles. Space skips",
+	"killcam.ballisticmissiles.replay": "REPLAY",
+	"killcam.ballisticmissiles.slowmo": "SLOW MOTION %s×",
+	"killcam.ballisticmissiles.camera": "CAMERA %s/3",
+	"killcam.ballisticmissiles.skip": "%s – skip"
 }

@@ -24,6 +24,12 @@
 // where it leaves the screen; the mirror counts for more the flatter you look (Fresnel); the sun glitters;
 // below, the bottom is seen through the water - shifted by the waves, fading into the water's colour the
 // deeper it lies.
+//
+// WET (before the translucent terrain, replacing the picture where it is wet): after rain the ground, roofs and
+// the walls the rain is driven against are wet - only where the sky is open over them (the heightmap): darker,
+// a glossy sheen that mirrors the light at a glancing look; on flat ground water stands in puddles, more and
+// larger the longer and harder it rains, mirror-flat but for the rings the drops throw while it still rains.
+// Grass and leaves soak it up: puddles keep to stone, earth, sand, paths and concrete.
 
 uniform sampler2D Sampler0; // depth of the opaque world (before the translucent terrain)
 #ifdef SHADE
@@ -32,6 +38,10 @@ uniform sampler2D Sampler1; // heightmap of the world round the camera: per colu
 #ifdef UNDER
 uniform sampler2D Sampler1; // the heightmap: per column the first free block (the water's surface, or what is over it)
 uniform sampler2D Sampler2; // the picture
+#endif
+#ifdef WET
+uniform sampler2D Sampler1; // the heightmap: per column the first free block (what the sky reaches down to)
+uniform sampler2D Sampler2; // picture of the opaque world
 #endif
 #ifdef WATER
 uniform sampler2D Sampler1; // depth with the water
@@ -272,7 +282,7 @@ void main() {
 }
 #endif
 
-#ifdef WATER
+#if defined(WATER) || defined(WET)
 // rings spreading where raindrops strike: a little push of the surface normal outwards from each ring
 vec2 rainRings(vec2 x, float t, float density) {
     vec2 sum = vec2(0.0);
@@ -297,6 +307,36 @@ vec2 rainRings(vec2 x, float t, float density) {
     return sum;
 }
 
+// a mirrored ray walked through the picture of the opaque world (Sampler0 depth, Sampler2 colour); the sky where it
+// leaves the screen
+vec3 mirror(vec3 from, vec3 r, float dist, vec3 sky) {
+    vec3 reflected = sky;
+    float jitter = hash(gl_FragCoord.xy);
+    vec3 q = from + r * (0.2 + jitter * 0.3);
+    float stepLen = 0.4 + dist * 0.01;
+    for (int i = 0; i < 32; i++) {
+        q += r * stepLen;
+        stepLen *= 1.12;
+        vec3 s = project(q);
+        if (s.z < 0.0 || s.x < 0.0 || s.y < 0.0 || s.x > 1.0 || s.y > 1.0) break;
+        float d = textureLod(Sampler0, s.xy, 0.0).r;
+        if (d >= 1.0) continue;
+        float scene = length(unproject(s.xy, d));
+        float here = length(q);
+        float gap = here - scene;
+        if (gap > 0.0 && gap < stepLen * 2.5 + 0.5) {
+            // found: fade out towards the edges of the screen, where the walk runs out
+            vec2 edge = min(s.xy, 1.0 - s.xy);
+            float fade = smoothstep(0.0, 0.08, min(edge.x, edge.y));
+            reflected = mix(sky, textureLod(Sampler2, s.xy, 0.0).rgb, fade);
+            break;
+        }
+    }
+    return reflected;
+}
+#endif
+
+#ifdef WATER
 float waveHeight(vec2 x, float t) {
     float h = 0.0;
     h += sin(dot(x, vec2(0.8, 0.6)) * 1.1 + t * 1.3) * 0.5;
@@ -353,28 +393,7 @@ void main() {
     vec3 zenith = vec3(float(data.x & 255), float((data.x >> 8) & 255), float(data.y & 255)) / 255.0;
     vec3 horizon = FogColor.rgb;
     vec3 sky = mix(horizon, zenith, smoothstep(0.0, 0.6, r.y));
-    vec3 reflected = sky;
-    float jitter = hash(gl_FragCoord.xy);
-    vec3 q = pw + r * (0.2 + jitter * 0.3);
-    float stepLen = 0.4 + dist * 0.01;
-    for (int i = 0; i < 32; i++) {
-        q += r * stepLen;
-        stepLen *= 1.12;
-        vec3 s = project(q);
-        if (s.z < 0.0 || s.x < 0.0 || s.y < 0.0 || s.x > 1.0 || s.y > 1.0) break;
-        float d = textureLod(Sampler0, s.xy, 0.0).r;
-        if (d >= 1.0) continue;
-        float scene = length(unproject(s.xy, d));
-        float here = length(q);
-        float gap = here - scene;
-        if (gap > 0.0 && gap < stepLen * 2.5 + 0.5) {
-            // found: fade out towards the edges of the screen, where the walk runs out
-            vec2 edge = min(s.xy, 1.0 - s.xy);
-            float fade = smoothstep(0.0, 0.08, min(edge.x, edge.y));
-            reflected = mix(sky, textureLod(Sampler2, s.xy, 0.0).rgb, fade);
-            break;
-        }
-    }
+    vec3 reflected = mirror(pw, r, dist, sky);
 
     // ---- the sun glittering on the waves
     float glitter = params.r;
@@ -403,5 +422,103 @@ void main() {
     float far = smoothstep(FogRenderDistanceStart * 0.8, FogRenderDistanceEnd, length(pw.xz));
     col = mix(col, drawn, far);
     fragColor = vec4(col, 1.0);
+}
+#endif
+
+#ifdef WET
+float columnTop(vec2 hm) {
+    ivec2 c = ivec2(floor(hm));
+    if (c.x < 0 || c.y < 0 || c.x >= 256 || c.y >= 256) return -1.0e4;
+    vec4 h = texelFetch(Sampler1, c, 0);
+    return floor(h.r * 255.0 + 0.5) + floor(h.g * 255.0 + 0.5) * 256.0 - 64.0;
+}
+
+// value noise that repeats every 256 blocks (so it stays put when the heightmap moves on)
+float wrapNoise(vec2 x, float cells) {
+    vec2 g = x * cells / 256.0;
+    vec2 i = floor(g);
+    vec2 f = fract(g);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash(mod(i, cells));
+    float b = hash(mod(i + vec2(1.0, 0.0), cells));
+    float c = hash(mod(i + vec2(0.0, 1.0), cells));
+    float d = hash(mod(i + vec2(1.0, 1.0), cells));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / ScreenSize;
+    float depth = textureLod(Sampler0, uv, 0.0).r;
+    if (depth >= 1.0) discard;
+    vec3 p = unproject(uv, depth);
+    float dist = length(p);
+    if (dist > 128.0) discard;
+    vec3 n = cross(dFdx(p), dFdy(p));
+    vec3 v = p / max(dist, 1.0e-4);
+    n = dot(n, n) > 1.0e-12 ? normalize(n) : -v;
+    if (dot(n, v) > 0.0) n = -n;
+    float wetness = params.r;
+    float puddles = params.g;
+    float rain = params.b;
+
+    // ---- does the rain reach it? the top of an open column, or a wall the rain is driven against
+    vec2 hm = p.xz + cameraXZ;
+    float y = p.y + cameraY;
+    float exposed = 0.0;
+    if (n.y > 0.7) {
+        exposed = y >= columnTop(hm) - 0.35 ? 1.0 : 0.0;
+    } else if (abs(n.y) < 0.3) {
+        // a wall: wet where the column just in front of it lies below this point
+        float front = columnTop(hm + n.xz * 0.7);
+        exposed = y > front + 0.1 ? 0.45 : 0.0;
+    }
+    if (exposed <= 0.0) discard;
+    float fade = 1.0 - smoothstep(80.0, 128.0, dist);
+    float wet = wetness * exposed * fade;
+    if (wet < 0.01) discard;
+
+    vec3 col = textureLod(Sampler2, uv, 0.0).rgb;
+    // grass and leaves (green and saturated) drink the water: a little darker, no standing water
+    float green = clamp((col.g - max(col.r, col.b)) * 4.0, 0.0, 1.0);
+    // wet is darker and a little richer in colour
+    float lum = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 soaked = mix(vec3(lum), col, 1.15) * mix(1.0, 0.62, wet * (1.0 - 0.4 * green));
+
+    // ---- puddles on flat ground, more and larger the more it has rained
+    vec2 world = p.xz + cameraXZ + vec2(float(data.y >> 8 & 15), float(data.y >> 12 & 15)) * 16.0;
+    float pool = 0.0;
+    if (n.y > 0.9) {
+        float nz = wrapNoise(world, 32.0) * 0.6 + wrapNoise(world, 64.0) * 0.28 + wrapNoise(world, 128.0) * 0.12;
+        float level = 1.0 - puddles * 0.55;
+        pool = smoothstep(level, level + 0.06, nz) * (1.0 - green) * exposed * fade;
+    }
+
+    // ---- the sheen and the mirror
+    float t = GameTime * 1200.0;
+    vec3 nw = n;
+    if (pool > 0.0) {
+        nw = vec3(0.0, 1.0, 0.0);
+        if (rain > 0.01 && dist < 40.0) {
+            vec2 rings = rainRings(world, t, rain * 0.5);
+            nw = normalize(nw + vec3(rings.x, 0.0, rings.y) * 0.45 * (1.0 - smoothstep(20.0, 40.0, dist)));
+        }
+    } else {
+        // a wet surface is rough: the reflection is broken up
+        vec2 j = vec2(hash(floor(world * 8.0)), hash(floor(world * 8.0) + 7.1)) - 0.5;
+        nw = normalize(n + vec3(j.x, 0.0, j.y) * 0.12);
+    }
+    vec3 r = reflect(v, nw);
+    if (r.y < 0.02 && n.y > 0.7) r.y = 0.02;
+    r = normalize(r);
+    vec3 zenith = vec3(float(data.x & 255), float((data.x >> 8) & 255), float(data.y & 255)) / 255.0;
+    vec3 sky = mix(FogColor.rgb, zenith, smoothstep(0.0, 0.6, r.y));
+    vec3 reflected = mirror(p + n * 0.05, r, dist, sky);
+    float cosv = clamp(dot(-v, nw), 0.0, 1.0);
+    float fresnel = 0.02 + 0.98 * pow(1.0 - cosv, 5.0);
+    float gloss = mix(fresnel * 0.55 * wet * (1.0 - 0.7 * green), 0.08 + 0.92 * fresnel, pool);
+    // standing water darkens what lies under it a little more, and mirrors it
+    vec3 base = mix(soaked, soaked * 0.7, pool);
+    vec3 result = mix(base, reflected, clamp(gloss, 0.0, 1.0));
+    fragColor = vec4(result, 1.0);
 }
 #endif

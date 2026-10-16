@@ -237,7 +237,7 @@ public class SettingsScreen extends Screen {
 			toggle("lens_flare", ModConfig.lensFlare, "lens_flare", v -> ModConfig.lensFlare = v));
 		IntSlider bloom = new IntSlider(0, 100, "options.ballisticmissiles.bloom", ModConfig.bloom, v -> ModConfig.bloom = v);
 		bloom.setTooltip(Tooltip.create(Component.translatable("options.ballisticmissiles.bloom.tooltip")));
-		this.list.row(bloom);
+		this.list.row(bloom, toggle("storms", ModConfig.storms, "storms", v -> ModConfig.storms = v));
 	}
 
 	private void effects() {
@@ -386,6 +386,9 @@ public class SettingsScreen extends Screen {
 				.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.server_nukes.tooltip")))
 				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.server_nukes"),
 					(b, v) -> this.run("bmserver nukes " + (v ? "erlauben" : "verbieten")))));
+		this.list.row(command(CycleButton.onOffBuilder(ModConfig.serverKillcam)
+			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.server_killcam.tooltip")))
+			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.server_killcam"), (b, v) -> this.run("bmserver killcam " + (v ? "an" : "aus")))));
 
 		this.list.header("options.ballisticmissiles.section.events", 0xFF8080FF);
 		// 1-100: sent to the server once the slider is let go

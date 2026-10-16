@@ -99,7 +99,8 @@ public abstract class GameRendererMixin {
 	/** The new-moon cutscene: no hands in view while it plays. */
 	@Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$cutsceneHands(float partialTick, boolean sleeping, org.joml.Matrix4f view, CallbackInfo ci) {
-		if (de.rcm.ballistic.client.effect.NewMoonCutscene.playing() || de.rcm.ballistic.client.sun.SunCutscene.playing()) {
+		if (de.rcm.ballistic.client.effect.NewMoonCutscene.playing() || de.rcm.ballistic.client.sun.SunCutscene.playing()
+			|| de.rcm.ballistic.client.effect.KillcamClient.playing()) {
 			ci.cancel();
 		}
 	}

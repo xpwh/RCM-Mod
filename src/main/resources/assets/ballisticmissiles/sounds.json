@@ -1988,5 +1988,45 @@
 				"attenuation_distance": 16
 			}
 		]
+	},
+	"storm.thunder_near": {
+		"subtitle": "subtitles.ballisticmissiles.thunder",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:storm/thunder_near1",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_near2",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_near3",
+				"attenuation_distance": 16,
+				"stream": true
+			}
+		]
+	},
+	"storm.thunder_far": {
+		"subtitle": "subtitles.ballisticmissiles.thunder",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:storm/thunder_far1",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far2",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far3",
+				"attenuation_distance": 16,
+				"stream": true
+			}
+		]
 	}
 }

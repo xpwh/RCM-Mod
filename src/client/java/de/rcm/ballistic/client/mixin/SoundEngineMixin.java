@@ -18,6 +18,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class SoundEngineMixin {
 	@Inject(method = "calculateVolume(Lnet/minecraft/client/resources/sounds/SoundInstance;)F", at = @At("RETURN"), cancellable = true)
 	private void ballisticmissiles$deafness(SoundInstance sound, CallbackInfoReturnable<Float> cir) {
+		// Minecraft's own thunder, heard everywhere at once: the storm plays its own, when sound would arrive
+		if (de.rcm.ballistic.client.effect.Storm.enabled() && "minecraft".equals(sound.getIdentifier().getNamespace())
+			&& sound.getIdentifier().getPath().startsWith("entity.lightning_bolt.thunder")) {
+			cir.setReturnValue(0.0F);
+			return;
+		}
 		float muffle = ClientEffects.hearing();
 		if (muffle >= 0.999F) {
 			return;
