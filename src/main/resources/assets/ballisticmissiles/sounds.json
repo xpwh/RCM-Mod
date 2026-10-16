@@ -2249,5 +2249,90 @@
 				"attenuation_distance": 8
 			}
 		]
+	},
+	"knife.swish": {
+		"subtitle": "subtitles.ballisticmissiles.knife_swish",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/swish1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish2",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish3",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish4",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish5",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish6",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish7",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish8",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish9",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish10",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"knife.spin": {
+		"subtitle": "subtitles.ballisticmissiles.knife_spin",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/spin",
+				"attenuation_distance": 8
+			}
+		]
+	},
+	"knife.draw": {
+		"subtitle": "subtitles.ballisticmissiles.knife_draw",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/draw1",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:knife/draw2",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"knife.catch": {
+		"subtitle": "subtitles.ballisticmissiles.knife_catch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/catch",
+				"attenuation_distance": 8
+			}
+		]
+	},
+	"knife.hit": {
+		"subtitle": "subtitles.ballisticmissiles.knife_hit",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/hit",
+				"attenuation_distance": 12
+			}
+		]
 	}
 }

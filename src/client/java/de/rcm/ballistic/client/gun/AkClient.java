@@ -215,6 +215,9 @@ public final class AkClient {
 				if (GlockClient.holding(player)) {
 					GlockClient.inspect(player);
 				}
+				if (de.rcm.ballistic.client.item.KarambitClient.holding(player)) {
+					de.rcm.ballistic.client.item.KarambitClient.inspect(player);
+				}
 				if (state != null && !state.reloading() && !checking && aim <= 0.0F && inspectTime(now) < 0.0F && !triggerDown) {
 					inspectStart = now;
 					ClientPlayNetworking.send(new GunInputPayload(GunInputPayload.AK_INSPECT));

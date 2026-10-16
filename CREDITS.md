@@ -201,3 +201,17 @@ The heartbeat of the dying player is synthesized by `tools/gen_sounds_v13.py`.
 | Cigarette drawn from the pack | https://freesound.org/s/383857/ "Packing Opening New Pack of Cigarettes" | deleted_user_7146007 | CC0 1.0 |
 | Drags (ember crackle), exhaling | https://freesound.org/s/853043/ "Cigarette drag embers crackle - inhale - exhale (CC0)" | ATP2-kh | CC0 1.0 |
 | Drag, exhaling | https://freesound.org/s/157589/ "Having A Smoke.wav" | husky70 | CC0 1.0 |
+
+## Karambit (`tools/import_knife_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Swishes | https://freesound.org/s/344403/ "Knife Swish 1.wav", https://freesound.org/s/344408/ "Knife Swish 2.wav" | jawbutch | CC0 1.0 |
+| Swish | https://freesound.org/s/389690/ "Small Knife Whoosh.wav" | Shamewap | CC0 1.0 |
+| Swing | https://freesound.org/s/471097/ "Knife/sword swing" | spycrah | CC0 1.0 |
+| Swishes | https://freesound.org/s/427979/ "Short Whoosh, 13x" | Kinoton | CC0 1.0 |
+| Spin | https://freesound.org/s/240640/ "Metallic Whoosh.wav" | MissCellany | CC0 1.0 |
+| Drawn | https://freesound.org/s/466216/ "UnsheathingSmallKnife.wav" | Harrisando | CC0 1.0 |
+| Drawn | https://freesound.org/s/387957/ "Metal sound 9 (knife unsheathed)" | giddster | CC0 1.0 |
+| Caught | https://freesound.org/s/455437/ "flip knife.wav" | ExplosiveVFX | CC0 1.0 |
+| Cut | https://freesound.org/s/504610/ "Knife slice" | NeoSpica | CC0 1.0 |

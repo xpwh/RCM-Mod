@@ -570,6 +570,9 @@ public final class ModRegistry {
 	public static final Item CIGARETTES = registerItem(
 		"cigarettes", de.rcm.ballistic.item.CigarettesItem::new, new Item.Properties().durability(20)
 	);
+	public static final Item KARAMBIT = registerItem(
+		"karambit", de.rcm.ballistic.gun.KarambitItem::new, new Item.Properties().sword(net.minecraft.world.item.ToolMaterial.IRON, 2.0F, -1.6F)
+	);
 	public static final Item LIGHTER = registerItem("lighter", Item::new, new Item.Properties().stacksTo(1));
 	public static final Item AIR_FILTER_ITEM = registerItem("air_filter", props -> new BlockItem(AIR_FILTER, props), new Item.Properties().useBlockDescriptionPrefix());
 	public static final Item EMERGENCY_GENERATOR_ITEM = registerItem(
@@ -945,6 +948,11 @@ public final class ModRegistry {
 	public static final SoundEvent BULLET_IMPACT_FLESH = sound("bullet.impact_flesh");
 	public static final SoundEvent SHELL_DROP = sound("ak.shell");
 	public static final SoundEvent PLAYER_BREATH = sound("player.breath");
+	public static final SoundEvent KNIFE_SWISH = sound("knife.swish");
+	public static final SoundEvent KNIFE_SPIN = sound("knife.spin");
+	public static final SoundEvent KNIFE_DRAW = sound("knife.draw");
+	public static final SoundEvent KNIFE_CATCH = sound("knife.catch");
+	public static final SoundEvent KNIFE_HIT = sound("knife.hit");
 	public static final SoundEvent SMOKE_PACK_OPEN = sound("smoke.pack_open");
 	public static final SoundEvent SMOKE_PACK_PULL = sound("smoke.pack_pull");
 	public static final SoundEvent SMOKE_ZIPPO_LIGHT = sound("smoke.zippo_light");
@@ -1043,6 +1051,7 @@ public final class ModRegistry {
 		output.accept(BUNKER_ITEM);
 		output.accept(FIRST_AID_KIT);
 		output.accept(TOURNIQUET);
+		output.accept(KARAMBIT);
 		output.accept(CIGARETTES);
 		output.accept(LIGHTER);
 		output.accept(AIR_FILTER_ITEM);
