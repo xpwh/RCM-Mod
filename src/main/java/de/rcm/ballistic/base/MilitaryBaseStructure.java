@@ -16,36 +16,55 @@ import net.minecraft.world.level.levelgen.structure.StructureType;
  * a jet in the hangar) or a deep bunker. Guarded by soldiers; see {@link BaseFlagBlockEntity}.
  */
 public class MilitaryBaseStructure extends Structure {
-	public static final MapCodec<MilitaryBaseStructure> CODEC = simpleCodec(MilitaryBaseStructure::new);
+	public static final MapCodec<MilitaryBaseStructure> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(i -> i.group(
+		settingsCodec(i),
+		com.mojang.serialization.Codec.STRING.optionalFieldOf("site", "base").forGetter(s -> s.site)
+	).apply(i, MilitaryBaseStructure::new));
 
-	public MilitaryBaseStructure(StructureSettings settings) {
+	/** Which kind: "base" (the full compound, one of four variants), "checkpoint", "sam_site" or "cache". */
+	private final String site;
+
+	public MilitaryBaseStructure(StructureSettings settings, String site) {
 		super(settings);
+		this.site = site;
 	}
 
 	@Override
 	protected Optional<GenerationStub> findGenerationPoint(GenerationContext context) {
 		int x = context.chunkPos().getMiddleBlockX();
 		int z = context.chunkPos().getMiddleBlockZ();
-		int variant = context.random().nextInt(MilitaryBasePiece.VARIANTS);
+		int variant = switch (this.site) {
+			case "checkpoint" -> MilitaryBasePiece.CHECKPOINT;
+			case "sam_site" -> MilitaryBasePiece.SAM_SITE;
+			case "cache" -> MilitaryBasePiece.CACHE;
+			default -> context.random().nextInt(MilitaryBasePiece.VARIANTS);
+		};
 		Rotation rotation = Rotation.getRandom(context.random());
 		long seed = context.random().nextLong();
-		// level, dry ground under the whole compound
+		boolean big = variant < MilitaryBasePiece.CHECKPOINT;
+		int step = big ? 18 : 9;
+		// reasonably level ground; a pond or two is filled in, but not a lake or the sea
 		int[] heights = new int[25];
 		int n = 0;
+		int wet = 0;
 		for (int i = -2; i <= 2; i++) {
 			for (int j = -2; j <= 2; j++) {
-				int sx = x + i * 18;
-				int sz = z + j * 18;
+				int sx = x + i * step;
+				int sz = z + j * step;
 				int top = context.chunkGenerator().getFirstOccupiedHeight(sx, sz, Heightmap.Types.WORLD_SURFACE_WG, context.heightAccessor(), context.randomState());
 				int floor = context.chunkGenerator().getFirstOccupiedHeight(sx, sz, Heightmap.Types.OCEAN_FLOOR_WG, context.heightAccessor(), context.randomState());
-				if (top != floor) {
-					return Optional.empty(); // water
+				if (top - floor > 3 || top != floor && (i == 0 && j == 0)) {
+					return Optional.empty(); // deep water, or water right in the middle
 				}
-				heights[n++] = top;
+				if (top != floor) {
+					wet++;
+				}
+				heights[n++] = floor;
 			}
 		}
 		Arrays.sort(heights);
-		if (heights[22] - heights[2] > 10 || heights[24] - heights[0] > 18) {
+		int spread = heights[21] - heights[3];
+		if (wet > 4 || spread > (big ? 16 : 12) || heights[24] - heights[0] > (big ? 30 : 22)) {
 			return Optional.empty();
 		}
 		int y = heights[12];

@@ -527,23 +527,46 @@ def tags():
         write(path, data)
 
 
+BIOMES = [
+    "minecraft:plains", "minecraft:sunflower_plains", "minecraft:savanna", "minecraft:savanna_plateau", "minecraft:windswept_savanna",
+    "minecraft:desert", "minecraft:snowy_plains", "minecraft:taiga", "minecraft:snowy_taiga", "minecraft:old_growth_pine_taiga",
+    "minecraft:old_growth_spruce_taiga", "minecraft:meadow", "minecraft:badlands", "minecraft:wooded_badlands", "minecraft:eroded_badlands",
+    "minecraft:sparse_jungle", "minecraft:forest", "minecraft:birch_forest", "minecraft:flower_forest", "minecraft:cherry_grove",
+    "minecraft:dark_forest", "minecraft:pale_garden", "minecraft:swamp", "minecraft:windswept_hills", "minecraft:windswept_forest",
+    "minecraft:windswept_gravelly_hills", "minecraft:grove", "minecraft:snowy_slopes", "minecraft:ice_spikes",
+]
+
+# name, site, spacing, separation, salt (spacing/separation in chunks)
+SITES = [
+    ("military_base", "base", 30, 12, 1100317),
+    ("checkpoint", "checkpoint", 16, 6, 1100421),
+    ("sam_site", "sam_site", 20, 8, 1100533),
+    ("weapons_cache", "cache", 14, 5, 1100647),
+]
+
+
 def worldgen():
-    write(os.path.join(D, "worldgen", "structure", "military_base.json"), {
-        "type": f"{NS}:military_base",
-        "biomes": f"#{NS}:has_structure/military_base",
-        "step": "surface_structures",
-        "terrain_adaptation": "beard_thin",
-        "spawn_overrides": {},
-    })
-    write(os.path.join(D, "worldgen", "structure_set", "military_bases.json"), {
-        "placement": {"type": "minecraft:random_spread", "salt": 1100317, "spacing": 44, "separation": 18,
-                      "exclusion_zone": {"chunk_count": 8, "other_set": "minecraft:villages"}},
-        "structures": [{"structure": f"{NS}:military_base", "weight": 1}],
-    })
-    write(os.path.join(D, "tags", "worldgen", "biome", "has_structure", "military_base.json"), {"values": [
-        "minecraft:plains", "minecraft:sunflower_plains", "minecraft:savanna", "minecraft:savanna_plateau", "minecraft:desert",
-        "minecraft:snowy_plains", "minecraft:taiga", "minecraft:snowy_taiga", "minecraft:meadow", "minecraft:badlands",
-        "minecraft:wooded_badlands", "minecraft:sparse_jungle", "minecraft:windswept_savanna"]})
+    for name, site, spacing, separation, salt in SITES:
+        write(os.path.join(D, "worldgen", "structure", name + ".json"), {
+            "type": f"{NS}:military_base",
+            "site": site,
+            "biomes": f"#{NS}:has_structure/military_base",
+            "step": "surface_structures",
+            "terrain_adaptation": "beard_thin",
+            "spawn_overrides": {},
+        })
+        placement = {"type": "minecraft:random_spread", "salt": salt, "spacing": spacing, "separation": separation}
+        if site == "base":
+            placement["exclusion_zone"] = {"chunk_count": 6, "other_set": "minecraft:villages"}
+        else:
+            placement["exclusion_zone"] = {"chunk_count": 5, "other_set": f"{NS}:military_bases"}
+        write(os.path.join(D, "worldgen", "structure_set", ("military_bases" if site == "base" else name) + ".json"), {
+            "placement": placement,
+            "structures": [{"structure": f"{NS}:{name}", "weight": 1}],
+        })
+    write(os.path.join(D, "tags", "worldgen", "biome", "has_structure", "military_base.json"), {"values": BIOMES})
+    # every military site, for /locate structure #ballisticmissiles:military
+    write(os.path.join(D, "tags", "worldgen", "structure", "military.json"), {"values": [f"{NS}:{n}" for n, *_ in SITES]})
 
 
 if __name__ == "__main__":

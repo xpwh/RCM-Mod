@@ -50,6 +50,10 @@ public class MilitaryBasePiece extends StructurePiece {
 	public static final int SILO = 1;
 	public static final int AIRFIELD = 2;
 	public static final int BUNKER = 3;
+	/** The smaller sites: a road checkpoint, a SAM site, a hidden weapons cache. */
+	public static final int CHECKPOINT = 10;
+	public static final int SAM_SITE = 11;
+	public static final int CACHE = 12;
 	/** Half the fence's side. */
 	private static final int F = 36;
 	private static final ResourceKey<LootTable> LOOT = ResourceKey.create(Registries.LOOT_TABLE, BallisticMissiles.id("chests/military_base"));
@@ -93,7 +97,33 @@ public class MilitaryBasePiece extends StructurePiece {
 
 	/** The local area the base covers: x min, x max, z min, z max. */
 	private static int[] area(int variant) {
-		return variant == AIRFIELD ? new int[] {-42, 57, -66, 66} : new int[] {-42, 42, -42, 50};
+		return switch (variant) {
+			case AIRFIELD -> new int[] {-42, 57, -66, 66};
+			case CHECKPOINT -> new int[] {-22, 22, -26, 26};
+			case SAM_SITE -> new int[] {-25, 25, -25, 25};
+			case CACHE -> new int[] {-16, 16, -16, 16};
+			default -> new int[] {-42, 42, -42, 50};
+		};
+	}
+
+	/** Half the side of the gravelled yard. */
+	private static int yard(int variant) {
+		return switch (variant) {
+			case CHECKPOINT -> 17;
+			case SAM_SITE -> 20;
+			case CACHE -> 12;
+			default -> F;
+		};
+	}
+
+	/** Where the flag stands (local x, z). */
+	private static int[] flagAt(int variant) {
+		return switch (variant) {
+			case CHECKPOINT -> new int[] {-9, 0};
+			case SAM_SITE -> new int[] {-12, 12};
+			case CACHE -> new int[] {7, 7};
+			default -> new int[] {0, 0};
+		};
 	}
 
 	private static BoundingBox box(BlockPos o, Rotation rot, int variant) {
@@ -295,8 +325,8 @@ public class MilitaryBasePiece extends StructurePiece {
 		}
 
 		void guard(int x, int y, int z, float radius) {
-			if (!this.inside(x, y, z)) {
-				return;
+			if (!this.inside(x, y, z) || this.level.getLevel() == null) {
+				return; // (no world behind the level: an offline preview of the plan)
 			}
 			SoldierEntity s = ModRegistry.SOLDIER.create(this.level.getLevel(), EntitySpawnReason.STRUCTURE);
 			if (s == null) {
@@ -306,13 +336,26 @@ public class MilitaryBasePiece extends StructurePiece {
 			Vec3 v = Vec3.atBottomCenterOf(p);
 			s.snapTo(v.x, v.y, v.z, this.hash(x, z, 77) * 360.0F, 0.0F);
 			s.setTeam(SoldierEntity.TEAM_HOSTILE);
-			s.setPost(v, radius, this.at(0, 2, 0));
+			int[] f = flagAt(MilitaryBasePiece.this.variant);
+			s.setPost(v, radius, this.at(f[0], 2, f[1]));
 			this.level.addFreshEntity(s);
 		}
 
 		// ------------------------------------------------------------------ the plan
 
 		void run() {
+			if (MilitaryBasePiece.this.variant >= CHECKPOINT) {
+				this.terrain();
+				switch (MilitaryBasePiece.this.variant) {
+					case CHECKPOINT -> this.checkpoint();
+					case SAM_SITE -> this.samSite();
+					default -> this.cache();
+				}
+				int[] f = flagAt(MilitaryBasePiece.this.variant);
+				this.plinth(f[0], f[1]);
+				this.flag();
+				return;
+			}
 			this.terrain();
 			this.fence();
 			this.gate();
@@ -402,7 +445,8 @@ public class MilitaryBasePiece extends StructurePiece {
 				}
 				this.level.setBlock(this.m, y >= oy - 3 ? sub : Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS);
 			}
-			boolean yard = Math.abs(lx) <= F && Math.abs(lz) <= F;
+			int yr = yard(MilitaryBasePiece.this.variant);
+			boolean yard = Math.abs(lx) <= yr && Math.abs(lz) <= yr;
 			BlockState ground = top;
 			if (yard) {
 				float p = this.patch(lx, lz, 5, 1) * 0.75F + this.hash(lx, lz, 2) * 0.25F;
@@ -902,6 +946,212 @@ public class MilitaryBasePiece extends StructurePiece {
 			this.set(x + 4, 2, z, Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true));
 		}
 
+		/** A small stone plinth for the flag (the flag stands on it at y = 2). */
+		void plinth(int x, int z) {
+			this.fill(x - 1, 1, z - 1, x + 1, 1, z + 1, Blocks.POLISHED_ANDESITE);
+			this.set(x - 1, 1, z - 1, Blocks.POLISHED_ANDESITE_SLAB);
+			this.set(x + 1, 1, z - 1, Blocks.POLISHED_ANDESITE_SLAB);
+			this.set(x - 1, 1, z + 1, Blocks.POLISHED_ANDESITE_SLAB);
+			this.set(x + 1, 1, z + 1, Blocks.POLISHED_ANDESITE_SLAB);
+		}
+
+		/** A sandbagged gun nest (3 x 3, open at the back) with a guard in it. */
+		void nest(int cx, int cz, Direction back) {
+			this.walls(cx - 1, 1, cz - 1, cx + 1, 1, cz + 1, BaseRegistry.SANDBAGS.defaultBlockState());
+			this.set(cx + back.getStepX(), 1, cz + back.getStepZ(), Blocks.AIR);
+			Direction front = back.getOpposite();
+			for (int t = -1; t <= 1; t++) {
+				int x = cx + front.getStepX() + (front.getStepX() == 0 ? t : 0);
+				int z = cz + front.getStepZ() + (front.getStepZ() == 0 ? t : 0);
+				this.set(x, 2, z, BaseRegistry.SANDBAGS);
+			}
+			this.guard(cx, 1, cz, 0.0F);
+		}
+
+		/**
+		 * A road checkpoint: an asphalt road through a gate of concrete pillars, a chicane of barriers, a guard
+		 * hut, two gun nests, a watchtower, blast walls and razor wire either side.
+		 */
+		void checkpoint() {
+			BlockState concrete = ModRegistry.REINFORCED_CONCRETE.defaultBlockState();
+			this.fill(-3, 0, -26, 3, 0, 26, ModRegistry.RUNWAY_ASPHALT);
+			for (int z = -24; z <= 24; z += 4) {
+				this.fill(0, 0, z, 0, 0, z + 1, ModRegistry.RUNWAY_MARKING);
+			}
+			// the gate
+			for (int s = -1; s <= 1; s += 2) {
+				this.fill(s * 5, 1, 0, s * 5, 5, 0, concrete);
+			}
+			this.fill(-5, 6, 0, 5, 6, 0, BaseRegistry.CORRUGATED_OLIVE);
+			this.floodlight(-3, 7, 0, Direction.NORTH);
+			this.floodlight(3, 7, 0, Direction.SOUTH);
+			this.alarm(0, 7, 0);
+			// the chicane: staggered barriers on both approaches
+			BlockState jersey = this.facing(BaseRegistry.JERSEY_BARRIER, Direction.NORTH);
+			this.fill(-3, 1, -7, 0, 1, -7, jersey);
+			this.fill(0, 1, -12, 3, 1, -12, jersey);
+			this.fill(0, 1, 7, 3, 1, 7, jersey);
+			this.fill(-3, 1, 12, 0, 1, 12, jersey);
+			// guard hut east of the road
+			this.fill(7, 0, -3, 11, 0, 2, Blocks.SMOOTH_STONE);
+			this.walls(7, 1, -3, 11, 3, 2, BaseRegistry.CORRUGATED_OLIVE.defaultBlockState());
+			this.air(8, 1, -2, 10, 3, 1);
+			BlockState paneZ = Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true);
+			this.fill(7, 2, -2, 7, 2, -1, paneZ);
+			this.door(7, 1, 1, Blocks.SPRUCE_DOOR, Direction.EAST, DoorHingeSide.LEFT);
+			this.fill(6, 4, -4, 12, 4, 3, BaseRegistry.CORRUGATED_GREY);
+			this.set(9, 3, -1, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+			this.barrel(10, 1, -2, Direction.UP);
+			this.set(10, 1, 1, BaseRegistry.MILITARY_CRATE);
+			this.barracks = this.at(6, 1, 1);
+			this.guard(9, 1, 0, 1.5F);
+			// gun nests covering both approaches, a watchtower behind the hut
+			this.nest(-8, -8, Direction.SOUTH);
+			this.nest(-8, 8, Direction.NORTH);
+			this.tower(13, 11, 1, 1);
+			this.guard(14, 8, 12, 0.0F);
+			// blast walls and wire either side of the road
+			for (int s = -1; s <= 1; s += 2) {
+				this.fill(s * 18, 1, -14, s * 18, 2, -4, BaseRegistry.HESCO);
+				this.fill(s * 18, 1, 4, s * 18, 2, 7, BaseRegistry.HESCO);
+				this.fill(s * 6, 1, -20, s * 18, 1, -20, BaseRegistry.BARBED_WIRE);
+				this.fill(s * 6, 1, 20, s * 18, 1, 20, BaseRegistry.BARBED_WIRE);
+			}
+			// stores and lights
+			for (int z = 4; z <= 6; z++) {
+				this.set(11, 1, z, BaseRegistry.FUEL_DRUM);
+			}
+			this.set(12, 1, 5, BaseRegistry.FUEL_DRUM);
+			this.set(-11, 1, -1, BaseRegistry.MILITARY_CRATE);
+			this.set(-11, 1, 1, BaseRegistry.MILITARY_CRATE);
+			this.set(-11, 2, 1, BaseRegistry.MILITARY_CRATE);
+			this.pole(-5, -14, 6, Direction.NORTH);
+			this.pole(5, 14, 6, Direction.SOUTH);
+			this.guard(0, 1, -16, 3.0F);
+			this.guard(0, 1, 16, 3.0F);
+			this.guard(-6, 1, 3, 2.0F);
+		}
+
+		/**
+		 * A surface-to-air missile site: a radar on a concrete mound, two launchers and a CIWS in sandbagged pits,
+		 * a command hut and the generator that feeds it all, inside a ring of blast walls and wire.
+		 */
+		void samSite() {
+			BlockState concrete = ModRegistry.REINFORCED_CONCRETE.defaultBlockState();
+			// perimeter: blast walls with a way in on the south, razor wire outside
+			this.walls(-19, 1, -19, 19, 2, 19, BaseRegistry.HESCO.defaultBlockState());
+			this.air(-2, 1, 19, 2, 2, 19);
+			this.fill(-2, 0, 19, 2, 0, 25, ModRegistry.RUNWAY_ASPHALT);
+			for (int t = -21; t <= 21; t++) {
+				if (Math.abs(t) > 3) {
+					this.set(t, 1, 21, BaseRegistry.BARBED_WIRE);
+				}
+				this.set(t, 1, -21, BaseRegistry.BARBED_WIRE);
+				this.set(-21, 1, t, BaseRegistry.BARBED_WIRE);
+				this.set(21, 1, t, BaseRegistry.BARBED_WIRE);
+			}
+			// the radar on its mound
+			this.fill(-2, 1, -10, 2, 2, -6, concrete);
+			this.set(0, 3, -8, ModRegistry.RADAR);
+			this.ladder(0, 1, 2, -5, Direction.SOUTH);
+			this.floodlight(-2, 3, -10, Direction.NORTH);
+			this.floodlight(2, 3, -10, Direction.EAST);
+			// the guns
+			this.defence(-10, 4, ModRegistry.AIR_DEFENSE);
+			this.defence(10, 4, ModRegistry.AIR_DEFENSE);
+			this.defence(10, -12, ModRegistry.CIWS);
+			this.fill(-12, 4, 2, -8, 4, 6, BaseRegistry.CAMO_NET);
+			this.fill(8, 4, 2, 12, 4, 6, BaseRegistry.CAMO_NET);
+			// command hut and generator
+			this.hut(-16, -12);
+			this.barracks = this.at(-14, 1, -11);
+			this.fill(13, 0, 12, 17, 0, 16, Blocks.SMOOTH_STONE);
+			this.walls(12, 1, 11, 18, 1, 17, BaseRegistry.SANDBAGS.defaultBlockState());
+			this.air(12, 1, 14, 12, 1, 14);
+			this.set(15, 1, 14, this.facing(BaseRegistry.FIELD_GENERATOR, Direction.WEST));
+			this.generators.add(this.at(15, 1, 14));
+			this.set(16, 1, 16, BaseRegistry.FUEL_DRUM);
+			this.set(17 - 1, 1, 12, BaseRegistry.FUEL_DRUM);
+			// ammunition under a net
+			for (int x = 5; x <= 8; x++) {
+				this.set(x, 1, 14, BaseRegistry.MILITARY_CRATE);
+				if (this.hash(x, 14, 4) < 0.5F) {
+					this.set(x, 2, 14, BaseRegistry.MILITARY_CRATE);
+				}
+			}
+			this.fill(4, 3, 13, 9, 3, 15, BaseRegistry.CAMO_NET);
+			this.fill(-1, 0, -5, 1, 0, 18, Blocks.GRAVEL);
+			this.pole(-17, 17, 6, Direction.EAST);
+			this.pole(17, -17, 6, Direction.WEST);
+			this.pole(-17, -2, 6, Direction.EAST);
+			this.guard(0, 3, -9, 0.0F);
+			this.guard(-6, 1, 0, -1.0F);
+			this.guard(6, 1, 10, 4.0F);
+			this.guard(0, 1, 17, 2.0F);
+			this.guard(-14, 1, -9, 2.0F);
+		}
+
+		/**
+		 * A hidden weapons cache: a small concrete blockhouse under camouflage, a ladder down to a store room
+		 * stacked with crates, guarded by a few men.
+		 */
+		void cache() {
+			BlockState concrete = ModRegistry.REINFORCED_CONCRETE.defaultBlockState();
+			// the blockhouse
+			this.walls(-3, 1, -3, 3, 3, 3, concrete);
+			this.fill(-3, 4, -3, 3, 4, 3, concrete);
+			this.air(-2, 1, -2, 2, 3, 2);
+			this.door(0, 1, 3, ModRegistry.BLAST_DOOR, Direction.NORTH, DoorHingeSide.LEFT);
+			this.walls(-3, 5, -3, 3, 5, 3, BaseRegistry.SANDBAGS.defaultBlockState());
+			this.fill(-5, 6, -5, 5, 6, 5, BaseRegistry.CAMO_NET);
+			for (int sx = -5; sx <= 5; sx += 10) {
+				for (int sz = -5; sz <= 5; sz += 10) {
+					this.fill(sx, 1, sz, sx, 5, sz, Blocks.SPRUCE_FENCE);
+				}
+			}
+			this.fill(-2, 1, 4, -1, 2, 4, BaseRegistry.SANDBAGS);
+			this.fill(1, 1, 4, 2, 2, 4, BaseRegistry.SANDBAGS);
+			this.set(1, 3, 4, Blocks.AIR);
+			this.floodlight(-1, 3, 4, Direction.SOUTH);
+			this.set(0, 3, -1, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+			// the shaft and the store room under it
+			this.fill(-7, -11, -9, 7, -6, 0, concrete);
+			this.air(-6, -10, -8, 6, -7, -1);
+			this.fill(-1, -5, -2, 1, 0, 0, concrete);
+			this.fill(0, -10, -2, 0, -7, -2, concrete);
+			this.air(0, -10, -1, 0, 0, -1);
+			this.ladder(0, -10, 0, -1, Direction.SOUTH);
+			for (int x = -5; x <= 5; x++) {
+				for (int z = -8; z <= -6; z++) {
+					if (x == 0 && z == -6) {
+						continue;
+					}
+					if ((x + 6) % 3 != 2) {
+						this.set(x, -10, z, BaseRegistry.MILITARY_CRATE);
+						if (this.hash(x, z, 6) < 0.55F) {
+							this.set(x, -9, z, BaseRegistry.MILITARY_CRATE);
+						}
+					}
+				}
+			}
+			this.barrel(-6, -10, -3, Direction.UP);
+			this.barrel(6, -10, -3, Direction.UP);
+			this.barrel(-6, -10, -4, Direction.UP);
+			this.set(5, -10, -3, BaseRegistry.FUEL_DRUM);
+			this.set(4, -10, -3, BaseRegistry.FUEL_DRUM);
+			for (int x = -4; x <= 4; x += 4) {
+				this.set(x, -6, -5, Blocks.SEA_LANTERN);
+			}
+			// outside: sandbags, a fuel stack, a lamp post
+			this.nest(-9, 6, Direction.NORTH);
+			this.fill(8, 1, -6, 9, 1, -4, BaseRegistry.FUEL_DRUM);
+			this.pole(9, 2, 5, Direction.WEST);
+			this.barracks = this.at(0, 1, 5);
+			this.guard(2, 1, 7, 3.0F);
+			this.guard(-1, 1, 0, 1.5F);
+			this.guard(0, -10, -4, 3.0F);
+		}
+
 		/** The guards: in the towers, the gun nests, round the yard and at each site. */
 		void garrison() {
 			for (int sx = -1; sx <= 1; sx += 2) {
@@ -939,11 +1189,12 @@ public class MilitaryBasePiece extends StructurePiece {
 
 		/** The flag, set up with all the base's lights, beacons and generators. */
 		void flag() {
-			if (!this.inside(0, 2, 0)) {
+			int[] f = flagAt(MilitaryBasePiece.this.variant);
+			if (!this.inside(f[0], 2, f[1])) {
 				return;
 			}
-			this.set(0, 2, 0, BaseRegistry.BASE_FLAG);
-			if (this.level.getBlockEntity(this.at(0, 2, 0)) instanceof BaseFlagBlockEntity flag) {
+			this.set(f[0], 2, f[1], BaseRegistry.BASE_FLAG);
+			if (this.level.getBlockEntity(this.at(f[0], 2, f[1])) instanceof BaseFlagBlockEntity flag) {
 				flag.setup(MilitaryBasePiece.this.variant, this.lights, this.alarms, this.generators, this.barracks);
 			}
 		}
