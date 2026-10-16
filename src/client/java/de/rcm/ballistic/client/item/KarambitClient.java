@@ -37,17 +37,17 @@ public final class KarambitClient {
 	public static final int DRAW_LEN = 18;
 	public static final int INSPECT_LEN = 136;
 
-	private static final Vector3f REST = new Vector3f(0.17F, -0.12F, -0.36F);
-	private static final Vector3f LOW = new Vector3f(0.32F, -0.62F, -0.36F);
-	private static final Vector3f SHOW = new Vector3f(0.1F, -0.06F, -0.38F);
-	private static final Vector3f SPIN = new Vector3f(0.12F, -0.08F, -0.42F);
-	private static final Vector3f WIND = new Vector3f(0.32F, -0.04F, -0.4F);
-	private static final Vector3f CUT = new Vector3f(-0.12F, -0.24F, -0.46F);
+	private static final Vector3f REST = new Vector3f(0.26F, -0.28F, -0.6F);
+	private static final Vector3f LOW = new Vector3f(0.42F, -0.8F, -0.5F);
+	private static final Vector3f SHOW = new Vector3f(0.18F, -0.2F, -0.6F);
+	private static final Vector3f SPIN = new Vector3f(0.2F, -0.22F, -0.64F);
+	private static final Vector3f WIND = new Vector3f(0.4F, -0.18F, -0.6F);
+	private static final Vector3f CUT = new Vector3f(-0.04F, -0.38F, -0.7F);
 	private static final Vector3f REST_L = new Vector3f(-0.48F, -0.62F, -0.36F);
-	/** The shoulder for the knife arm (hand space): higher and further back than for a rifle, so the forearm runs forward like a punch. */
-	private static final Vector3f SHOULDER = HandSpace.hand(new Vector3f(0.3F, -0.34F, 0.42F));
-	/** The elbow out to the right, so the forearm comes in from the side of the view rather than up from below. */
-	private static final Vector3f POLE = new Vector3f(1.0F, -0.25F, 0.2F);
+	/** The shoulder for the knife arm (hand space): low and out to the right, so the upper arm stays out of view. */
+	static final Vector3f SHOULDER = HandSpace.hand(new Vector3f(0.62F, -0.86F, 0.1F));
+	/** The elbow out to the lower right, so the forearm comes in from the corner of the view. */
+	static final Vector3f POLE = new Vector3f(1.0F, -0.6F, 0.2F);
 	/** The knife a little larger in your own view than in the world, as viewmodels are. */
 	private static final float VIEW = 1.3F;
 	/** The wrist's tilt at rest: the claw tipped towards you so its curve shows. */
