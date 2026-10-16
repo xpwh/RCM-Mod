@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		" N ",
+		"IWI",
+		" G "
+	],
+	"key": {
+		"N": "minecraft:iron_nugget",
+		"I": "minecraft:iron_ingot",
+		"W": "minecraft:white_dye",
+		"G": "minecraft:gunpowder"
+	},
+	"result": {
+		"id": "ballisticmissiles:smoke_grenade",
+		"count": 2
+	}
+}

@@ -1,0 +1,312 @@
+package de.rcm.ballistic.client;
+
+import de.rcm.ballistic.BallisticMissiles;
+import de.rcm.ballistic.ClientHooks;
+import de.rcm.ballistic.ModRegistry;
+import de.rcm.ballistic.client.effect.ClientEffects;
+import de.rcm.ballistic.client.effect.JetClientTicker;
+import de.rcm.ballistic.client.effect.MissileClientTicker;
+import de.rcm.ballistic.client.particle.CloudParticle;
+import de.rcm.ballistic.client.render.AerialBombRenderer;
+import de.rcm.ballistic.client.render.AirDefenseRenderer;
+import de.rcm.ballistic.client.render.BombletRenderer;
+import de.rcm.ballistic.client.render.CiwsRenderer;
+import de.rcm.ballistic.client.render.JammerRenderer;
+import de.rcm.ballistic.client.render.JetRenderer;
+import de.rcm.ballistic.client.render.LaserRenderer;
+import de.rcm.ballistic.client.render.MeteorRenderer;
+import de.rcm.ballistic.client.render.LaunchPadRenderer;
+import de.rcm.ballistic.client.render.RadarRenderer;
+import de.rcm.ballistic.client.render.SiloRenderer;
+import de.rcm.ballistic.client.render.MissileRenderer;
+import de.rcm.ballistic.client.render.MobileLauncherRenderer;
+import de.rcm.ballistic.client.screen.RadarScreen;
+import de.rcm.ballistic.client.render.ProjectileRenderer;
+import de.rcm.ballistic.client.screen.TargetScreen;
+import de.rcm.ballistic.entity.MissileType;
+import de.rcm.ballistic.client.particle.CloudParticle;
+import de.rcm.ballistic.network.ModNetworking.DetonationPayload;
+import de.rcm.ballistic.network.ModNetworking.RadarDataPayload;
+import de.rcm.ballistic.network.ModNetworking.SetTargetPayload;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+
+public class BallisticMissilesClient implements ClientModInitializer {
+
+	@Override
+	public void onInitializeClient() {
+		for (MissileType type : MissileType.values()) {
+			EntityRendererRegistry.register(ModRegistry.missileEntity(type), MissileRenderer::new);
+		}
+		EntityRendererRegistry.register(ModRegistry.BOMBLET, BombletRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.REENTRY_VEHICLE, ctx -> new ProjectileRenderer<>(ctx, false));
+		EntityRendererRegistry.register(ModRegistry.SPENT_STAGE, de.rcm.ballistic.client.render.SpentStageRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.INTERCEPTOR, ctx -> new ProjectileRenderer<>(ctx, true));
+		EntityRendererRegistry.register(ModRegistry.MOBILE_LAUNCHER, MobileLauncherRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.JET, JetRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.AERIAL_BOMB, AerialBombRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.ROCKET, de.rcm.ballistic.client.render.RocketRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.METEOR, MeteorRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.EARTH_PENETRATOR, de.rcm.ballistic.client.render.B61Renderer::new);
+		EntityRendererRegistry.register(ModRegistry.POSEIDON, de.rcm.ballistic.client.render.PoseidonRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.SUPPLY_ROCKET, de.rcm.ballistic.client.render.SupplyRocketRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.KINETIC_ROD, de.rcm.ballistic.client.render.KineticRodRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.ORBITAL_UPLINK_BE, de.rcm.ballistic.client.render.OrbitalUplinkRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.SUN_FORGE_BE, de.rcm.ballistic.client.render.SunForgeRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.BULLET, de.rcm.ballistic.client.render.BulletRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.GRENADE_ENTITY, de.rcm.ballistic.client.render.GrenadeRenderers.EntityRendererImpl::new);
+		EntityRendererRegistry.register(ModRegistry.RPG_GRENADE, de.rcm.ballistic.client.render.RpgGrenadeRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.FPV_DRONE, de.rcm.ballistic.client.render.FpvDroneRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.SOLDIER, de.rcm.ballistic.client.ai.SoldierRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.FIGHTER, de.rcm.ballistic.client.render.FighterRenderer::new);
+		EntityRendererRegistry.register(ModRegistry.AIR_MISSILE, de.rcm.ballistic.client.render.AirMissileRenderer::new);
+		de.rcm.ballistic.client.fighter.FighterClient.init();
+		de.rcm.ballistic.client.gui.AlphaTag.init();
+		de.rcm.ballistic.client.effect.BloodClient.init();
+		de.rcm.ballistic.client.effect.MobWounds.init();
+		de.rcm.ballistic.client.effect.GibClient.init();
+		de.rcm.ballistic.client.effect.CorpseFx.init();
+		de.rcm.ballistic.client.effect.Heartbeat.init();
+		de.rcm.ballistic.client.effect.Stress.init();
+		de.rcm.ballistic.client.item.SmokingClient.init();
+		de.rcm.ballistic.client.item.KarambitClient.init();
+		de.rcm.ballistic.client.item.KarambitItemRenderer.register();
+		de.rcm.ballistic.client.gui.InjuryHud.init();
+		de.rcm.ballistic.client.ai.AiDebugClient.init();
+		de.rcm.ballistic.client.drone.DroneClient.init();
+		de.rcm.ballistic.client.item.RpgClient.init();
+		de.rcm.ballistic.client.gun.AkClient.init();
+		de.rcm.ballistic.client.gun.ShotgunClient.init();
+		de.rcm.ballistic.client.gun.GlockClient.init();
+		de.rcm.ballistic.client.gui.DyingOverlay.init();
+		de.rcm.ballistic.client.gui.GoreWarningScreen.register();
+		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
+			if (renderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> avatar) {
+				helper.register(new de.rcm.ballistic.client.render.StumpLayer(avatar));
+			}
+		});
+		de.rcm.ballistic.client.render.Rpg7ItemRenderer.register();
+		de.rcm.ballistic.client.render.AkItemRenderer.register();
+		de.rcm.ballistic.client.render.ShotgunItemRenderer.register();
+		de.rcm.ballistic.client.render.GlockItemRenderer.register();
+		de.rcm.ballistic.client.render.GrenadeRenderers.register();
+		de.rcm.ballistic.client.render.PropItemRenderer.register();
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.render.GroundProps::tick);
+		de.rcm.ballistic.client.render.FpvDroneItemRenderer.register();
+		de.rcm.ballistic.client.render.SmokeDebug.init();
+		de.rcm.ballistic.client.render.BulletHoles.init();
+		de.rcm.ballistic.client.effect.TsunamiWaves.init();
+		de.rcm.ballistic.client.render.Tracks.init();
+		ModConfig.load();
+		de.rcm.ballistic.client.render.ExhaustPlume.init();
+		de.rcm.ballistic.client.effect.WorldFx.init(); // before the dynamic lights: the water is drawn first, then lit
+		de.rcm.ballistic.client.effect.DynamicLights.init();
+		de.rcm.ballistic.client.effect.EyeAdaptation.init();
+		de.rcm.ballistic.client.effect.Sky.init();
+		de.rcm.ballistic.client.effect.NightSky.init();
+		de.rcm.ballistic.client.effect.SmokeVolume.init();
+		de.rcm.ballistic.client.render.JetExhaust.init();
+		de.rcm.ballistic.client.sun.SunClient.init(); // its star draws before the clouds and the smoke, which lie over it
+		de.rcm.ballistic.client.effect.Storm.init(); // its bolts too
+		de.rcm.ballistic.client.effect.KillcamClient.init();
+		de.rcm.ballistic.client.effect.VolumetricClouds.init();
+		de.rcm.ballistic.client.effect.VolCloudCommand.init();
+		de.rcm.ballistic.client.gui.SettingsCommand.init();
+		BlockEntityRenderers.register(ModRegistry.CIWS_BE, CiwsRenderer::new);
+		net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry.register(
+			ctx -> new de.rcm.ballistic.client.render.TitleScene.Renderer(ctx.vertexConsumers()));
+		BlockEntityRenderers.register(de.rcm.ballistic.base.BaseRegistry.LAMP_BE, de.rcm.ballistic.client.render.BaseRenderers.LampRenderer::new);
+		BlockEntityRenderers.register(de.rcm.ballistic.base.BaseRegistry.FLAG_BE, de.rcm.ballistic.client.render.BaseRenderers.FlagRenderer::new);
+		net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap.putBlocks(net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT,
+			de.rcm.ballistic.base.BaseRegistry.CHAINLINK_FENCE, de.rcm.ballistic.base.BaseRegistry.BARBED_WIRE, de.rcm.ballistic.base.BaseRegistry.CAMO_NET,
+			de.rcm.ballistic.base.BaseRegistry.STEEL_GRATE, de.rcm.ballistic.base.BaseRegistry.ALARM_LIGHT);
+		BlockEntityRenderers.register(ModRegistry.COMMAND_CENTER_BE, de.rcm.ballistic.client.render.CommandCenterRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.LAUNCH_PAD_BE, LaunchPadRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.INCLINED_LAUNCHER_BE, de.rcm.ballistic.client.render.InclinedLauncherRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.MISSILE_SILO_BE, SiloRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.RADAR_BE, RadarRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.AIR_DEFENSE_BE, AirDefenseRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.SEA_MINE_BE, de.rcm.ballistic.client.render.SeaMineRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.LASER_DEFENSE_BE, LaserRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.JAMMER_BE, JammerRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.IRON_DOME_BE, de.rcm.ballistic.client.render.IronDomeRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.DECOY_LAUNCHER_BE, de.rcm.ballistic.client.render.DecoyLauncherRenderer::new);
+
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.SMOKE, CloudParticle.SmokeProvider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.FIRE, CloudParticle.FireProvider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.BURST, CloudParticle.BurstProvider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.DUST, CloudParticle.DustProvider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.SPARK, de.rcm.ballistic.client.particle.SparkParticle.Provider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.WATER_DROP, de.rcm.ballistic.client.particle.WaterDropParticle.Provider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.WATER_RIPPLE, de.rcm.ballistic.client.particle.WaterRippleParticle.Provider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.WATER_JET, de.rcm.ballistic.client.particle.WaterJetParticle.Provider::new);
+		ParticleFactoryRegistry.getInstance().register(ModRegistry.WATER_MIST, de.rcm.ballistic.client.particle.WaterMistParticle.Provider::new);
+
+		ClientPlayNetworking.registerGlobalReceiver(DetonationPayload.TYPE, (payload, context) ->
+			ClientEffects.detonation(payload.warhead(), new Vec3(payload.x(), payload.y(), payload.z()))
+		);
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.ServerConfigPayload.TYPE, (payload, context) -> {
+			// only a mirror for the screen (and the server's gore rule): never the server's own values
+			ModConfig.serverMisfireChance = payload.misfireChance();
+			ModConfig.serverGunDamage = payload.gunDamage();
+			ModConfig.serverGore = payload.gore();
+			ModConfig.serverNukes = payload.nukes();
+			ModConfig.serverKillcam = payload.killcam();
+		});
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ModConfig.serverGore = true);
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.JammerPayload.TYPE, (payload, context) ->
+			context.client().setScreen(new de.rcm.ballistic.client.screen.JammerScreen(payload)));
+		ClientPlayNetworking.registerGlobalReceiver(RadarDataPayload.TYPE, (payload, context) -> {
+			Minecraft mc = context.client();
+			if (mc.screen instanceof RadarScreen scope && scope.radarPos().equals(payload.radar())) {
+				scope.update(payload);
+			} else if (payload.open()) {
+				mc.setScreen(new RadarScreen(payload));
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.CommandDataPayload.TYPE, (payload, context) -> {
+			Minecraft mc = context.client();
+			if (mc.screen instanceof de.rcm.ballistic.client.screen.CommandScreen screen && screen.centerPos().equals(payload.center())) {
+				screen.update(payload);
+			} else if (payload.open()) {
+				mc.setScreen(new de.rcm.ballistic.client.screen.CommandScreen(payload));
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.FarTrackPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.FarTrackClient.receive(payload));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.FarTrackClient::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FarTrackClient.clear());
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientEffects.clear());
+		ClientTickEvents.END_CLIENT_TICK.register(ClientEffects::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.Contrails::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.SmokeField::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.SmokeField.clear());
+		de.rcm.ballistic.client.effect.LatePass.register(de.rcm.ballistic.client.effect.SmokeField::render); // after the clouds and the particles
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.FalloutPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.FalloutClient.receive(payload));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.FalloutClient::tick);
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.WinterPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.WinterClient.receive(payload.soot()));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.WinterClient::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.WinterClient.clear());
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.NewMoonPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.NewMoonClient.receive(payload.active(), payload.cutscene(), payload.darkness()));
+		de.rcm.ballistic.client.effect.NewMoonCutscene.init();
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.NewMoonClient::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.NewMoonClient.clear());
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.AuroraPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.AuroraClient.receive(payload.active(), payload.forced(), payload.random()));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.AuroraClient::tick);
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.FlashbangPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.FlashbangClient.receive(payload.pos(), payload.blind(), payload.deaf()));
+		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.effect.FlashbangClient::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FlashbangClient.clear());
+		HudElementRegistry.addLast(BallisticMissiles.id("flashbang"), (graphics, tickCounter) -> {
+			float white = de.rcm.ballistic.client.effect.FlashbangClient.white(tickCounter.getGameTimeDeltaPartialTick(false));
+			if (white > 0.003F) {
+				graphics.fill(0, 0, graphics.guiWidth(), graphics.guiHeight(), (int) (Math.min(1.0F, white) * 255.0F) << 24 | 0xFFFFFF);
+			}
+		});
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.AuroraClient.clear());
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> de.rcm.ballistic.client.effect.FalloutClient.clear());
+		ClientTickEvents.END_CLIENT_TICK.register(BallisticMissilesClient::debrisTrails);
+
+		HudElementRegistry.addLast(BallisticMissiles.id("flash"), (graphics, tickCounter) -> {
+			float alpha = ClientEffects.flashAlpha(tickCounter.getGameTimeDeltaPartialTick(false));
+			if (alpha > 0.003F) {
+				int a = (int) (Math.min(1.0F, alpha) * 255.0F);
+				graphics.fill(0, 0, graphics.guiWidth(), graphics.guiHeight(), a << 24 | ClientEffects.flashColor());
+			}
+		});
+
+		ClientHooks.missileClientTick = MissileClientTicker::tick;
+		ClientHooks.projectileClientTick = MissileClientTicker::projectileTick;
+		ClientHooks.jetClientTick = JetClientTicker::tick;
+		ClientHooks.smokeTrail = (key, at, width, strength) -> {
+			de.rcm.ballistic.client.effect.SmokeField.trail(key * 4 + 2, at, de.rcm.ballistic.client.effect.SmokeField.Style.smallRocket(width), strength);
+			if (strength > 0.02F) {
+				de.rcm.ballistic.client.effect.VolumetricClouds.smallRocket(key * 4 + 2, at, width); // through the clouds too
+			}
+		};
+		// a smoke grenade: thick white smoke pouring from the canister, heaviest in the first seconds, rolling out
+		// along the ground and up into a screen several blocks across before it thins away
+		ClientHooks.smokeGrenade = (at, age) -> {
+			int n = age < 60 ? 4 : age < de.rcm.ballistic.gun.GrenadeEntity.SMOKE_TICKS - 80 ? 2 : age % 3 == 0 ? 1 : 0;
+			de.rcm.ballistic.client.effect.SmokeField.burst(at, n, 0.4, new net.minecraft.world.phys.Vec3(0.0, 0.01, 0.0), 0.17, 950, 0.5F, 6.8F,
+				0xDCDCD6, 0.9F, 0.0002F);
+		};
+		ClientHooks.smokeCloud = (at, drift, puffs, size) ->
+			de.rcm.ballistic.client.effect.SmokeField.burst(at, puffs, size * 0.8, drift, 0.35, 1500, size * 0.5F, size * 3.2F, 0xE4E0DA, 0.8F, 0.0015F);
+		ClientHooks.bombClientTick = bomb -> {
+			// every third bomb of a stick (and always the MOAB) whistles on the way down
+			if (bomb.tickCount == 1 && (bomb.isMoab() || bomb.getId() % 3 == 0)) {
+				float pitch = bomb.isMoab() ? 0.55F : 0.9F + (bomb.getId() % 5) * 0.05F;
+				Minecraft.getInstance().getSoundManager().play(new de.rcm.ballistic.client.sound.EntityFollowSound(bomb, ModRegistry.BOMB_WHISTLE, pitch, bomb.isMoab() ? 400.0 : 220.0));
+			}
+		};
+		ClientHooks.openTargetScreen = hand -> Minecraft.getInstance().setScreen(new TargetScreen(hand));
+		ClientHooks.openBunkerMenu = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.gui.BunkerScreen(pos));
+		ClientHooks.openSunForge = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.sun.SunForgeScreen(pos));
+		ClientHooks.openWorkbench = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.gui.WorkbenchScreen(pos));
+		ClientHooks.designateLookedAtBlock = BallisticMissilesClient::designate;
+	}
+
+	/**
+	 * Locks the block in the crosshair. Past the render distance the line of sight is extended until it
+	 * meets sea level, so far-away targets can be designated by just looking at the horizon.
+	 */
+	private static void designate(InteractionHand hand) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player == null || mc.level == null) {
+			return;
+		}
+		double range = mc.options.getEffectiveRenderDistance() * 16.0;
+		HitResult hit = mc.player.pick(range, 1.0F, false);
+		boolean offhand = hand == InteractionHand.OFF_HAND;
+		if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
+			ClientPlayNetworking.send(new SetTargetPayload(offhand, blockHit.getBlockPos(), false));
+			return;
+		}
+		Vec3 eye = mc.player.getEyePosition();
+		Vec3 look = mc.player.getViewVector(1.0F);
+		double seaLevel = mc.level.getSeaLevel();
+		if (look.y < -0.003 && eye.y > seaLevel) {
+			double t = Math.min((eye.y - seaLevel) / -look.y, 30000.0);
+			Vec3 p = eye.add(look.scale(t));
+			ClientPlayNetworking.send(new SetTargetPayload(offhand, net.minecraft.core.BlockPos.containing(p.x, seaLevel, p.z), true));
+			mc.player.displayClientMessage(Component.translatable("message.ballisticmissiles.long_range", (int) Math.hypot(p.x - eye.x, p.z - eye.z)).withStyle(ChatFormatting.GOLD), false);
+		} else {
+			mc.player.displayClientMessage(Component.translatable("message.ballisticmissiles.no_block").withStyle(ChatFormatting.YELLOW), true);
+		}
+	}
+
+	/** Dust trails behind blocks hurled away by explosions. */
+	private static void debrisTrails(Minecraft mc) {
+		if (mc.level == null || mc.isPaused()) {
+			return;
+		}
+		for (Entity e : mc.level.entitiesForRendering()) {
+			if (e instanceof FallingBlockEntity block && block.getDeltaMovement().lengthSqr() > 0.36) {
+				CloudParticle p = ClientEffects.cloud(false, e.getX(), e.getY() + 0.5, e.getZ(), 0, 0, 0);
+				if (p != null) {
+					p.configure(30 + (int) (ClientEffects.rand() * 30), 0.6F, 2.2F, 0x8A7C6A, 0x6A645C, 0.55F).physics(0.9F, 0.002F);
+				}
+			}
+		}
+	}
+}

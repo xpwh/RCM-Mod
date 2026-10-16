@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"PRP",
+		"PGP",
+		"PNP"
+	],
+	"key": {
+		"P": "minecraft:paper",
+		"R": "minecraft:red_dye",
+		"G": "minecraft:gunpowder",
+		"N": "minecraft:iron_nugget"
+	},
+	"result": {
+		"id": "ballisticmissiles:shotgun_shell",
+		"count": 8
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"  L",
+		"IPI",
+		"BMB"
+	],
+	"key": {
+		"L": "ballisticmissiles:launch_pad",
+		"I": "minecraft:iron_block",
+		"P": "minecraft:piston",
+		"B": "minecraft:blast_furnace",
+		"M": "minecraft:minecart"
+	},
+	"result": {
+		"id": "ballisticmissiles:mobile_launcher",
+		"count": 1
+	}
+}

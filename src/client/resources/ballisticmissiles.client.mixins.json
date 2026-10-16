@@ -1,0 +1,38 @@
+{
+	"required": true,
+	"package": "de.rcm.ballistic.client.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"AbstractClientPlayerMixin",
+		"AtmosphericFogMixin",
+		"AvatarRendererMixin",
+		"AvatarRenderStateMixin",
+		"CameraMixin",
+		"CloudRendererMixin",
+		"EntityRendererMixin",
+		"EntityRendererCullingMixin",
+		"EntityTurnMixin",
+		"EnvironmentAttributeProbeMixin",
+		"FogRendererMixin",
+		"GameRendererAccessor",
+		"GameRendererMixin",
+		"ItemEntityRendererMixin",
+		"ItemEntityRenderStateMixin",
+		"ItemInHandRendererMixin",
+		"KeyboardInputMixin",
+		"LivingEntityRendererMixin",
+		"LivingEntityRenderStateMixin",
+		"LevelRendererMixin",
+		"MinecraftMixin",
+		"ModelPartAccessor",
+		"PlayerModelMixin",
+		"SkyRendererMixin",
+		"SoundEngineMixin",
+		"ThermalEntityMixin",
+		"ThermalLivingMixin",
+		"TitleScreenMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

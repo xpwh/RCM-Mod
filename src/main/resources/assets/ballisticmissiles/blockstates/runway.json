@@ -1,0 +1,20 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "ballisticmissiles:block/runway",
+			"y": 0
+		},
+		"facing=east": {
+			"model": "ballisticmissiles:block/runway",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "ballisticmissiles:block/runway",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "ballisticmissiles:block/runway",
+			"y": 270
+		}
+	}
+}

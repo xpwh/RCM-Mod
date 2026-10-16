@@ -1,0 +1,18 @@
+{
+	"placement": {
+		"type": "minecraft:random_spread",
+		"salt": 1200227,
+		"spacing": 34,
+		"separation": 12,
+		"exclusion_zone": {
+			"chunk_count": 5,
+			"other_set": "ballisticmissiles:military_bases"
+		}
+	},
+	"structures": [
+		{
+			"structure": "ballisticmissiles:war_zone",
+			"weight": 1
+		}
+	]
+}

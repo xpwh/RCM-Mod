@@ -1,0 +1,387 @@
+package de.rcm.ballistic.client.effect;
+
+import com.mojang.blaze3d.platform.NativeImage;
+import de.rcm.ballistic.BallisticMissiles;
+import de.rcm.ballistic.client.mixin.GameRendererAccessor;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3fc;
+
+/**
+ * Drives the {@code blast} screen post effect (dust haze, heat haze, god rays, exposure flash, bloom,
+ * shell shock, weapon-specific looks). Post effect uniforms are fixed in their JSON, so the live
+ * values are written every frame into a tiny 4x1 texture the shader reads
+ * ({@code ballisticmissiles:blast_params}). A post effect that something else switched on
+ * (spectating a creeper, other mods) is never replaced.
+ */
+public final class BlastShader {
+	/** How the screen reacts, by weapon. */
+	public enum Kind {
+		FIRE,
+		NUCLEAR,
+		ANTIMATTER,
+		EMP,
+		/** Buried burst: brown, dusty, the picture shaken by the earthquake. */
+		UNDERGROUND,
+		/** Kinetic impact: dust and a hard shock, no flash. */
+		KINETIC,
+		/** Under the sea: cold white light and mist. */
+		WATER
+	}
+
+	private static final Identifier EFFECT = BallisticMissiles.id("blast");
+	private static final Identifier PARAMS = BallisticMissiles.id("textures/effect/blast_params.png");
+
+	private static DynamicTexture params;
+	/** Shock hitting the camera, flash exposure, fireball heat (0-1). */
+	private static float strength;
+	private static float exposure;
+	private static float heat;
+	/** Per-tick fade of the fireball glow: small blasts are gone in a second, nukes burn on. */
+	private static float heatDecay = 0.97F;
+	private static Kind kind = Kind.FIRE;
+	private static int tint = 0xFFB060;
+	private static Vec3 blastPos = Vec3.ZERO;
+	/** Dust and smoke haze kicked up by the shock wave (0-1), lingers a few seconds. */
+	private static float dust;
+	private static boolean active;
+	/** Earthquake: the picture bounces and rolls (0-1). */
+	private static float quake;
+	/** Water running down the lens after the spray or the wave (0-1). */
+	private static float drench;
+	/** Under fire: rounds cracking past close (0-1). */
+	private static float suppression;
+	/** Negative afterimage burnt into the eye by a flash, fixed on screen (0-1). */
+	private static float afterimage;
+	/** Blood lost (0-1): it rises while you bleed, and comes back only slowly once it has stopped. */
+	private static float bloodLost;
+	/** How far shock and blood loss have taken hold of what you see (0-1), smoothed. */
+	private static float loss;
+	/** The heart's beat, for the screen to throb with when its sound is not heard (dying, collapsing). */
+	private static float ownBeat;
+	private static float beatPeriod = 20.0F;
+	/** The player the blood loss belongs to: a new one (respawned, another world) starts whole. */
+	private static Object lossOwner;
+	/** Light bent round a collapsing core (Einstein radius, blocks) and the shimmer of a burning star round it. */
+	private static Vec3 lensPos = Vec3.ZERO;
+	private static float lensRadius;
+	private static float lensShimmer;
+	private static int lensAge = 100;
+	private static float afterX = 0.5F;
+	private static float afterY = 0.5F;
+
+	private BlastShader() {
+	}
+
+	/** A detonation somewhere: sets the look and the fireball's heat glow. */
+	public static void blast(Kind newKind, Vec3 pos, double scale, int color) {
+		// the shock of a really big one reaches the clouds: it blows a ring clear, and its smoke rises into the layer
+		if (newKind == Kind.NUCLEAR || newKind == Kind.ANTIMATTER) {
+			VolumetricClouds.blast(pos, (float) Math.min(450.0, 90.0 * scale), 0.9F);
+		} else if (scale >= 3.0) {
+			VolumetricClouds.blast(pos, (float) Math.min(160.0, 22.0 * scale), 0.5F);
+		} else if (newKind == Kind.FIRE && scale >= 0.75) {
+			// a MOAB's or a thermobaric's fireball: too low to tear the clouds, but it lights their base orange
+			VolumetricClouds.fireGlow(pos, (float) (80.0 * scale));
+		}
+		double distance = ClientEffects.distanceToCamera(Minecraft.getInstance(), pos);
+		double reach = 260.0 * Math.max(0.3, scale);
+		if (distance > reach * 3.0) {
+			return;
+		}
+		float near = (float) Mth.clamp(1.0 - distance / (reach * 3.0), 0.0, 1.0);
+		if (newKind == Kind.WATER && distance < 30.0 + 25.0 * scale) {
+			drench((float) (0.6 * (1.0 - distance / (30.0 + 25.0 * scale))) + 0.2F);
+		}
+		if (near * scale >= heat * 0.8 || heat < 0.05F) {
+			kind = newKind;
+			tint = color;
+			blastPos = pos;
+			heat = Math.max(heat, (float) Math.min(1.0, near * (0.35 + 0.45 * scale)));
+			heatDecay = (float) Mth.clamp(0.9 + 0.045 * scale, 0.9, 0.993);
+		}
+	}
+
+	/**
+	 * Light bending round {@code at}: {@code radius} (blocks) how far out the bending reaches, {@code shimmer} (0-1)
+	 * how hard the air boils round it. Holds while it is set again every tick.
+	 */
+	public static void lens(Vec3 at, float radius, float shimmer) {
+		lensPos = at;
+		lensRadius = radius;
+		lensShimmer = Mth.clamp(shimmer, 0.0F, 1.0F);
+		lensAge = 0;
+	}
+
+	/** Ground shock: the picture jolts and rolls. */
+	public static void quake(float amount) {
+		quake = Math.max(quake, Mth.clamp(amount, 0.0F, 1.0F));
+	}
+
+	/** Spray or the wave hitting the camera: drops run down the lens. */
+	/** A round cracking past close by: the picture closes in for a moment. */
+	public static void suppress(float amount) {
+		suppression = Math.min(1.0F, suppression + Mth.clamp(amount, 0.0F, 1.0F));
+	}
+
+	public static float suppression() {
+		return suppression;
+	}
+
+	/** How hard a blast is being felt right now (its heat and the ground shaking), 0..1. */
+	public static float shock() {
+		return Math.max(heat, quake);
+	}
+
+	public static void drench(float amount) {
+		drench = Math.max(drench, Mth.clamp(amount, 0.0F, 1.0F));
+	}
+
+	/** Shock arriving at the camera (from camera shake). */
+	public static void kick(float amount) {
+		float s = Mth.clamp((amount - 0.1F) / 0.9F, 0.0F, 1.0F);
+		strength = Math.max(strength, s);
+		dust = Math.max(dust, s * 0.9F);
+	}
+
+	/** A flash burnt into the eye where you were looking (a stun grenade): the negative afterimage. */
+	public static void burnIn(float amount) {
+		if (amount > afterimage) {
+			afterimage = Mth.clamp(amount, 0.0F, 1.0F);
+			afterX = 0.5F;
+			afterY = 0.5F;
+		}
+	}
+
+	/** Flash reaching the camera. */
+	public static void flash(float amount) {
+		exposure = Math.max(exposure, Mth.clamp(amount, 0.0F, 1.0F));
+	}
+
+	private static float shellShock() {
+		return Mth.clamp((1.0F - ClientEffects.hearing()) / 0.9F, 0.0F, 1.0F);
+	}
+
+	private static boolean wasUnderwater;
+
+	/** Surfacing (and going under): water runs off the lens. */
+	private static void surfacing(Minecraft mc) {
+		boolean under = mc.level != null && mc.gameRenderer.getMainCamera().getFluidInCamera() == net.minecraft.world.level.material.FogType.WATER;
+		if (wasUnderwater && !under && mc.level != null) {
+			drench(0.55F);
+		} else if (!wasUnderwater && under) {
+			drench(0.25F);
+		}
+		wasUnderwater = under;
+	}
+
+	public static void tick(Minecraft mc) {
+		surfacing(mc);
+		if (++lensAge > 2) {
+			lensRadius = 0.0F;
+			lensShimmer = 0.0F;
+		}
+		strength = Math.max(0.0F, strength * 0.93F - 0.004F);
+		exposure = Math.max(0.0F, exposure * 0.9F - 0.004F);
+		heat = Math.max(0.0F, heat * heatDecay - 0.0015F);
+		dust = Math.max(0.0F, dust * 0.985F - 0.002F);
+		quake = Math.max(0.0F, quake * 0.985F - 0.002F);
+		drench = Math.max(0.0F, drench * 0.985F - 0.0015F); // the drops run off in a few seconds
+		suppression = Math.max(0.0F, suppression * 0.96F - 0.006F);
+		afterimage = Math.max(0.0F, afterimage * 0.991F - 0.0008F);
+		bloodLoss(mc);
+		GameRenderer renderer = mc.gameRenderer;
+		Identifier current = renderer.currentPostEffect();
+		boolean ours = EFFECT.equals(current);
+		if (current != null && !ours) {
+			active = false;
+			return;
+		}
+		boolean wanted = mc.level != null && de.rcm.ballistic.client.ModConfig.screenEffects > 0 && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
+			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F || suppression > 0.01F || loss > 0.01F
+			|| Vision.any() > 0.01F || de.rcm.ballistic.client.ModConfig.bloom > 0 || de.rcm.ballistic.client.ModConfig.lensFlare
+			|| EyeAdaptation.overexposure(0.0F) > 0.01F || lensRadius > 0.0F || lensShimmer > 0.0F);
+		if (!wanted) {
+			if (ours) {
+				renderer.clearPostEffect();
+			}
+			active = false;
+			return;
+		}
+		if (params == null) {
+			// registered before the effect first loads, so the post chain picks this texture up
+			params = new DynamicTexture(() -> "Blast shader parameters", 12, 1, false);
+			mc.getTextureManager().register(PARAMS, params);
+			WorldFx.ensureTextures(mc);
+		}
+		if (!ours) {
+			((GameRendererAccessor) renderer).ballisticmissiles$setPostEffect(EFFECT);
+		}
+		active = true;
+	}
+
+	/**
+	 * Losing blood: the more is gone (and the lower your health), the more the world loses its colour, the edges
+	 * of the picture go black and throb with the heart, and the eyes stop holding it together - it doubles.
+	 */
+	private static void bloodLoss(Minecraft mc) {
+		var p = mc.player;
+		float target = 0.0F;
+		if (p != lossOwner || p == null || !p.isAlive() || p.isCreative() || p.isSpectator()) {
+			// dead, respawned, or out of it: the picture is clear again at once
+			lossOwner = p;
+			bloodLost = 0.0F;
+			loss = 0.0F;
+			if (p == null || !p.isAlive()) {
+				return;
+			}
+		}
+		if (p.isAlive() && !p.isCreative() && !p.isSpectator()) {
+			de.rcm.ballistic.injury.Wounds w = de.rcm.ballistic.injury.Injuries.get(p);
+			if (w.bleed() > 0) {
+				bloodLost = Math.min(1.0F, bloodLost + w.bleed() * (w.bleed() == de.rcm.ballistic.injury.Wounds.ARTERIAL ? 0.0011F : 0.0006F));
+			} else {
+				// the bleeding stopped: it comes back, quicker the better you are
+				float hp = p.getHealth() / Math.max(1.0F, p.getMaxHealth());
+				bloodLost = Math.max(0.0F, bloodLost - (hp > 0.9F ? 0.004F : hp > 0.5F ? 0.0012F : 0.0004F));
+			}
+			float health = p.getHealth() / Math.max(1.0F, p.getMaxHealth());
+			float low = Mth.clamp((0.6F - health) / 0.5F, 0.0F, 1.0F);
+			target = Math.max(bloodLost, low * 0.75F);
+			if (w.dying() > 0) {
+				target = Math.max(target, 0.88F);
+			} else if (w.collapse() > 0) {
+				target = Math.max(target, 0.6F);
+			}
+		} else {
+			bloodLost = 0.0F;
+		}
+		loss += (target - loss) * (target > loss ? 0.03F : 0.025F);
+		if (loss < 0.002F) {
+			loss = 0.0F;
+		}
+		// the heart racing as the blood goes - slowing again at the very end
+		float bpm = loss > 0.85F ? 120.0F - (loss - 0.85F) * 300.0F : 64.0F + 90.0F * loss;
+		beatPeriod = 1200.0F / Math.max(30.0F, bpm);
+		ownBeat += 1.0F / beatPeriod;
+		if (ownBeat >= 1.0F) {
+			ownBeat -= 1.0F;
+		}
+	}
+
+	/** The throb of a heartbeat (lub-dub) at {@code phase} 0..1 of the beat. */
+	private static float throb(float phase) {
+		float t = phase * beatPeriod / 20.0F; // seconds into the beat
+		float lub = (float) Math.exp(-t * 14.0F);
+		float dub = t > 0.2F ? 0.65F * (float) Math.exp(-(t - 0.2F) * 14.0F) : 0.0F;
+		return Mth.clamp(lub + dub, 0.0F, 1.0F);
+	}
+
+	/** Every frame: writes the current values into the parameter texture. */
+	public static void frame(Minecraft mc, float partialTick) {
+		if (!active || params == null) {
+			return;
+		}
+		NativeImage img = params.getPixels();
+		if (img == null) {
+			return;
+		}
+		int time = (int) ((System.nanoTime() / 10_000_000L) % 65536L); // centiseconds, 16 bit
+		int kindByte = kind.ordinal() * 36;
+		// how strong the screen effects are, as set in the settings
+		float k = de.rcm.ballistic.client.ModConfig.screenEffects / 100.0F;
+		img.setPixel(0, 0, argb(kindByte, strength * k, exposure * k, shellShock() * k));
+
+		Camera camera = mc.gameRenderer.getMainCamera();
+		double tanHalf = Math.tan(Math.toRadians(mc.options.fov().get()) * 0.5);
+		double aspect = (double) mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
+		float[] screen = project(camera, blastPos.add(0.0, 12.0, 0.0), tanHalf, aspect);
+		float sx = screen[0];
+		float sy = screen[1];
+		boolean onScreen = screen[2] > 0.5F;
+		// a flash looked at directly leaves its mark on the eye
+		if (onScreen && exposure > 0.5F && (kind == Kind.NUCLEAR || kind == Kind.ANTIMATTER || kind == Kind.WATER) && exposure > afterimage) {
+			afterimage = exposure;
+			afterX = Mth.clamp(sx, 0.0F, 1.0F);
+			afterY = Mth.clamp(sy, 0.0F, 1.0F);
+		}
+		// light streaming out of the fireball: only while it is in view and still glowing
+		float rays = onScreen ? Mth.clamp(heat * 1.3F + exposure * 0.6F, 0.0F, 1.0F) : exposure * 0.25F;
+		img.setPixel(1, 0, argb(byteOf(rays * k), (time & 0xFF) / 255.0F, ((time >> 8) & 0xFF) / 255.0F, heat * k));
+		img.setPixel(2, 0, byteOf(WinterClient.amount()) << 24 | (tint & 0xFFFFFF)); // alpha: nuclear winter
+		img.setPixel(3, 0, argb(byteOf(dust * k), Mth.clamp(sx, 0.0F, 1.0F), Mth.clamp(sy, 0.0F, 1.0F), onScreen ? 1.0F : 0.0F));
+		img.setPixel(4, 0, argb(byteOf(drench * k), suppression * k, 0.0F, quake * k));
+		img.setPixel(5, 0, byteOf(SmokeField.fog()) << 24 | (SmokeField.fogColor() & 0xFFFFFF)); // standing in thick smoke
+		img.setPixel(6, 0, argb(255, afterX, afterY, afterimage * k));
+		float heart = Heartbeat.phase();
+		float pulse = loss <= 0.0F ? 0.0F : throb(heart >= 0.0F ? heart : ownBeat);
+		img.setPixel(7, 0, argb(255, loss * k, pulse, Mth.clamp((loss - 0.35F) / 0.5F, 0.0F, 1.0F) * k));
+		// seeing in the dark: night vision (and how hard the tube amplifies: harder the darker it is), thermal
+		float night = mc.level == null ? 0.0F : Mth.clamp(mc.level.getSkyDarken() / 11.0F, 0.0F, 1.0F);
+		float sky = mc.level == null ? 0.0F : mc.level.getBrightness(net.minecraft.world.level.LightLayer.SKY, camera.blockPosition()) / 15.0F;
+		float gain = Mth.clamp(0.12F + 0.88F * Math.max(night, 1.0F - sky), 0.0F, 1.0F);
+		img.setPixel(8, 0, argb(byteOf(gain), Vision.nightVision(partialTick), Vision.thermal(partialTick), Vision.warmUp()));
+		// the sun: where it is on screen and how much of a flare it throws (by day, in clear weather)
+		org.joml.Vector3f sun = Sky.sun(mc, partialTick);
+		float flare = 0.0F;
+		float[] sunScreen = {0.5F, 0.5F, 0.0F, 0.0F};
+		if (de.rcm.ballistic.client.ModConfig.lensFlare && mc.level != null && mc.level.dimension() == net.minecraft.world.level.Level.OVERWORLD
+			&& camera.getFluidInCamera() == net.minecraft.world.level.material.FogType.NONE) {
+			sunScreen = project(camera, camera.position().add(sun.x * 1000.0, sun.y * 1000.0, sun.z * 1000.0), tanHalf, aspect);
+			float up = Mth.clamp((sun.y + 0.02F) / 0.12F, 0.0F, 1.0F);
+			float clear = (1.0F - mc.level.getRainLevel(partialTick)) * (1.0F - WinterClient.amount());
+			float edge = Mth.clamp(1.0F - (Math.max(Math.abs(sunScreen[0] - 0.5F), Math.abs(sunScreen[1] - 0.5F)) - 0.5F) / 0.25F, 0.0F, 1.0F);
+			// clouds across the sky dim the sun (they are not in the depth that hides it)
+			float clouds = VolumetricClouds.enabled() ? 1.0F - 0.7F * VolumetricClouds.amount() / 100.0F : 1.0F;
+			flare = sunScreen[3] > 0.0F ? up * clear * edge * clouds : 0.0F;
+		}
+		img.setPixel(9, 0, argb(255, Mth.clamp(sunScreen[0], 0.0F, 1.0F), Mth.clamp(sunScreen[1], 0.0F, 1.0F), flare));
+		// bloom (and what counts as bright enough: by day only the sun and the white-hot, at night every lamp),
+		// and how overexposed the picture is coming out of the dark
+		float bloomAmount = de.rcm.ballistic.client.ModConfig.bloom / 100.0F;
+		img.setPixel(10, 0, argb(255, bloomAmount, EyeAdaptation.overexposure(partialTick), Mth.lerp(night, 0.86F, 0.55F)));
+		// a star's core collapsing: where it is on screen, how far its bending of the light reaches, the shimmer
+		float[] lensScreen = lensRadius > 0.0F || lensShimmer > 0.0F ? project(camera, lensPos, tanHalf, aspect) : new float[] {0.5F, 0.5F, 0.0F, 0.0F};
+		float lensReach = lensScreen[3] > 0.0F ? (float) (lensRadius / (lensScreen[3] * tanHalf) * 0.5) : 0.0F;
+		boolean lensNear = lensScreen[0] > -0.5F && lensScreen[0] < 1.5F && lensScreen[1] > -0.5F && lensScreen[1] < 1.5F;
+		img.setPixel(11, 0, lensScreen[3] > 0.0F && lensNear
+			? argb(255, Mth.clamp(lensScreen[0] * 0.5F + 0.25F, 0.0F, 1.0F), Mth.clamp(lensScreen[1] * 0.5F + 0.25F, 0.0F, 1.0F), Mth.clamp(lensReach * 2.0F, 0.0F, 1.0F))
+			: argb(0, 0.0F, 0.0F, 0.0F));
+		img.setPixel(11, 0, img.getPixel(11, 0) & 0x00FFFFFF | byteOf(lensScreen[3] > 0.0F && lensNear ? lensShimmer * k : 0.0F) << 24);
+		params.upload();
+	}
+
+	/**
+	 * Screen position (0-1, may lie outside) of a world point: {sx, sy, on screen 1/0, depth along the
+	 * view direction or 0 if behind the camera}.
+	 */
+	private static float[] project(Camera camera, Vec3 pos, double tanHalf, double aspect) {
+		Vec3 d = pos.subtract(camera.position());
+		Vector3fc fwd = camera.forwardVector();
+		Vector3fc up = camera.upVector();
+		Vector3fc left = camera.leftVector();
+		double z = d.x * fwd.x() + d.y * fwd.y() + d.z * fwd.z();
+		double x = -(d.x * left.x() + d.y * left.y() + d.z * left.z());
+		double y = d.x * up.x() + d.y * up.y() + d.z * up.z();
+		if (z <= 0.5) {
+			return new float[] {0.5F, 0.5F, 0.0F, 0.0F};
+		}
+		float sx = (float) (0.5 + 0.5 * x / (z * tanHalf * aspect));
+		float sy = (float) (0.5 + 0.5 * y / (z * tanHalf));
+		boolean onScreen = sx > -0.1F && sx < 1.1F && sy > -0.1F && sy < 1.1F;
+		return new float[] {sx, sy, onScreen ? 1.0F : 0.0F, (float) z};
+	}
+
+	private static int byteOf(float v) {
+		return Math.round(Mth.clamp(v, 0.0F, 1.0F) * 255.0F);
+	}
+
+	private static int argb(int a, float r, float g, float b) {
+		return (a << 24) | (byteOf(r) << 16) | (byteOf(g) << 8) | byteOf(b);
+	}
+}

@@ -1,0 +1,8 @@
+{
+	"type": "ballisticmissiles:military_base",
+	"site": "crash",
+	"biomes": "#ballisticmissiles:has_structure/military_base",
+	"step": "surface_structures",
+	"terrain_adaptation": "beard_thin",
+	"spawn_overrides": {}
+}

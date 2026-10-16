@@ -1,0 +1,7 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "tools",
+	"pattern": [" R ", "ISG", " I "],
+	"key": {"R": "minecraft:redstone_torch", "I": "minecraft:iron_ingot", "S": "minecraft:spyglass", "G": "minecraft:glass_pane"},
+	"result": {"id": "ballisticmissiles:target_designator", "count": 1}
+}
