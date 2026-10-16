@@ -80,6 +80,13 @@ public class SoldierEntity extends PathfinderMob {
 
 	private static final EntityDataAccessor<Integer> DATA_TEAM = SynchedEntityData.defineId(SoldierEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Integer> DATA_STATE = SynchedEntityData.defineId(SoldierEntity.class, EntityDataSerializers.INT);
+	/** 0 fighting, 1 surrendered (hands up, on his knees), 2 taken prisoner (hands tied). */
+	private static final EntityDataAccessor<Integer> DATA_CAPTIVE = SynchedEntityData.defineId(SoldierEntity.class, EntityDataSerializers.INT);
+	/** When he gave up, or was tied (game time): the animations run from it. */
+	private static final EntityDataAccessor<Integer> DATA_CAPTIVE_SINCE = SynchedEntityData.defineId(SoldierEntity.class, EntityDataSerializers.INT);
+	public static final int FREE = 0;
+	public static final int SURRENDERED = 1;
+	public static final int CAPTURED = 2;
 
 	/** Something heard: where, what, when and how loud (0..1). */
 	public record Heard(Vec3 pos, int kind, long time, float loud) {
@@ -170,6 +177,8 @@ public class SoldierEntity extends PathfinderMob {
 		super.defineSynchedData(builder);
 		builder.define(DATA_TEAM, TEAM_HOSTILE);
 		builder.define(DATA_STATE, PATROL);
+		builder.define(DATA_CAPTIVE, FREE);
+		builder.define(DATA_CAPTIVE_SINCE, 0);
 	}
 
 	public int team() {
@@ -189,6 +198,24 @@ public class SoldierEntity extends PathfinderMob {
 
 	public net.minecraft.core.@Nullable BlockPos base() {
 		return this.base;
+	}
+
+	public int captive() {
+		return this.entityData.get(DATA_CAPTIVE);
+	}
+
+	public boolean isCaptive() {
+		return this.captive() != FREE;
+	}
+
+	/** Game time (as an int) when he gave up or was tied. */
+	public int captiveSince() {
+		return this.entityData.get(DATA_CAPTIVE_SINCE);
+	}
+
+	private void setCaptive(int captive) {
+		this.entityData.set(DATA_CAPTIVE, captive);
+		this.entityData.set(DATA_CAPTIVE_SINCE, (int) this.level().getGameTime());
 	}
 
 	public int aiState() {
@@ -223,8 +250,11 @@ public class SoldierEntity extends PathfinderMob {
 		if (e == this || !e.isAlive() || e.isRemoved()) {
 			return false;
 		}
+		if (this.isCaptive()) {
+			return false;
+		}
 		if (e instanceof SoldierEntity s) {
-			return s.team() != this.team();
+			return s.team() != this.team() && !s.isCaptive();
 		}
 		if (e instanceof Player p) {
 			return this.team() == TEAM_HOSTILE && !p.isSpectator() && !(ignoreCreative && p.isCreative());
@@ -238,6 +268,14 @@ public class SoldierEntity extends PathfinderMob {
 	protected void customServerAiStep(ServerLevel level) {
 		super.customServerAiStep(level);
 		long now = level.getGameTime();
+		if (this.isCaptive()) {
+			this.captiveTick(level);
+			return;
+		}
+		if (now % 20 == this.getId() % 20 && this.wantsToGiveUp(level)) {
+			this.surrender(level);
+			return;
+		}
 		if (this.home == null) {
 			this.home = this.position();
 		}
@@ -446,6 +484,113 @@ public class SoldierEntity extends PathfinderMob {
 			if (d < range) {
 				this.hear(e.position(), Senses.FOOTSTEP, (float) (1.0 - d / range), e);
 			}
+		}
+	}
+
+	// ------------------------------------------------------------------ giving up
+
+	private java.util.@Nullable UUID captor;
+	private boolean following = true;
+
+	/**
+	 * Badly hurt, his comrades gone and an enemy on him: he gives up. Only the hostile side does (and not
+	 * every man: some fight on to the end).
+	 */
+	private boolean wantsToGiveUp(ServerLevel level) {
+		if (this.team() != TEAM_HOSTILE || this.getHealth() > this.getMaxHealth() * 0.4F || this.target == null || !(this.target instanceof Player)) {
+			return false;
+		}
+		if (this.target.distanceTo(this) > 24.0F) {
+			return false;
+		}
+		boolean alone = level.getEntitiesOfClass(SoldierEntity.class, this.getBoundingBox().inflate(20.0),
+			s -> s != this && s.isAlive() && s.team() == this.team() && !s.isCaptive()).isEmpty();
+		return alone && this.getRandom().nextFloat() < 0.45F;
+	}
+
+	/** He gives up: the rifle goes down, hands go up, and he sinks to his knees. */
+	public void surrender(ServerLevel level) {
+		var gun = this.getMainHandItem();
+		if (!gun.isEmpty()) {
+			// the rifle tossed a little way in front of him
+			Vec3 f = Vec3.directionFromRotation(0.0F, this.getYRot());
+			var item = new net.minecraft.world.entity.item.ItemEntity(level, this.getX() + f.x * 0.6, this.getY() + 0.9, this.getZ() + f.z * 0.6, gun.copy());
+			item.setDeltaMovement(f.x * 0.18, 0.12, f.z * 0.18);
+			item.setPickUpDelay(20);
+			level.addFreshEntity(item);
+			this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.item.ItemStack.EMPTY);
+		}
+		this.getNavigation().stop();
+		this.target = null;
+		this.setCaptive(SURRENDERED);
+		this.reason = "ergibt sich";
+		level.playSound(null, this.getX(), this.getY(), this.getZ(), de.rcm.ballistic.ModRegistry.SOLDIER_DROP_WEAPON,
+			net.minecraft.sounds.SoundSource.HOSTILE, 1.0F, 1.0F);
+		level.playSound(null, this.getX(), this.getY(), this.getZ(), de.rcm.ballistic.ModRegistry.SOLDIER_SURRENDER,
+			net.minecraft.sounds.SoundSource.HOSTILE, 0.9F, 1.0F);
+		for (Player p : level.players()) {
+			if (p.distanceTo(this) < 48.0F) {
+				p.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.soldier.surrender")
+					.withStyle(net.minecraft.ChatFormatting.YELLOW), true);
+			}
+		}
+	}
+
+	/** A prisoner: he keeps still (or follows his captor, hands tied) and watches whoever is near. */
+	private void captiveTick(ServerLevel level) {
+		this.setState(PATROL, this.captive() == CAPTURED ? "gefangen" : "ergibt sich");
+		Player near = level.getNearestPlayer(this, 12.0);
+		if (this.captive() == CAPTURED && this.captor != null && this.following) {
+			Player boss = level.getPlayerByUUID(this.captor);
+			if (boss != null && boss.distanceTo(this) < 32.0F) {
+				if (boss.distanceTo(this) > 3.2F) {
+					this.getNavigation().moveTo(boss, boss.distanceTo(this) > 8.0F ? 0.75 : 0.55);
+				} else {
+					this.getNavigation().stop();
+				}
+				this.getLookControl().setLookAt(boss, 20.0F, 20.0F);
+				return;
+			}
+		}
+		this.getNavigation().stop();
+		if (near != null) {
+			this.getLookControl().setLookAt(near, 10.0F, 10.0F);
+		}
+	}
+
+	@Override
+	protected net.minecraft.world.InteractionResult mobInteract(Player player, net.minecraft.world.InteractionHand hand) {
+		if (!this.isCaptive() || hand != net.minecraft.world.InteractionHand.MAIN_HAND) {
+			return super.mobInteract(player, hand);
+		}
+		if (!(this.level() instanceof ServerLevel level)) {
+			return net.minecraft.world.InteractionResult.SUCCESS;
+		}
+		if (this.captive() == SURRENDERED) {
+			// his hands tied behind his back
+			this.captor = player.getUUID();
+			this.following = true;
+			this.setCaptive(CAPTURED);
+			level.playSound(null, this.getX(), this.getY(), this.getZ(), de.rcm.ballistic.ModRegistry.ZIP_TIE, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
+			player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.soldier.captured")
+				.withStyle(net.minecraft.ChatFormatting.GREEN), true);
+			this.talk(level, player);
+		} else if (player.getUUID().equals(this.captor)) {
+			this.following = !this.following;
+			player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+				this.following ? "message.ballisticmissiles.soldier.follow" : "message.ballisticmissiles.soldier.stay").withStyle(net.minecraft.ChatFormatting.GRAY), true);
+		}
+		return net.minecraft.world.InteractionResult.SUCCESS;
+	}
+
+	/** Under questioning he gives away the nearest military site. */
+	private void talk(ServerLevel level, Player player) {
+		var tag = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.STRUCTURE, de.rcm.ballistic.BallisticMissiles.id("military"));
+		net.minecraft.core.BlockPos site = level.findNearestMapStructure(tag, this.blockPosition().offset(0, 0, 0), 64, false);
+		if (site != null && site.distSqr(this.blockPosition()) > 80 * 80) {
+			int d = (int) Math.sqrt(site.distSqr(this.blockPosition()));
+			player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.soldier.intel", site.getX(), site.getZ(), d)
+				.withStyle(net.minecraft.ChatFormatting.AQUA), false);
 		}
 	}
 
@@ -970,6 +1115,11 @@ public class SoldierEntity extends PathfinderMob {
 			output.putDouble("HomeZ", this.home.z);
 		}
 		output.putFloat("PostRadius", this.postRadius);
+		output.putInt("Captive", this.captive());
+		output.putBoolean("Following", this.following);
+		if (this.captor != null) {
+			output.store("Captor", net.minecraft.core.UUIDUtil.CODEC, this.captor);
+		}
 		if (this.base != null) {
 			output.putLong("Base", this.base.asLong());
 		}
@@ -985,6 +1135,10 @@ public class SoldierEntity extends PathfinderMob {
 			this.home = new Vec3(hx, input.getDoubleOr("HomeY", 0.0), input.getDoubleOr("HomeZ", 0.0));
 		}
 		this.postRadius = input.getFloatOr("PostRadius", -1.0F);
+		this.entityData.set(DATA_CAPTIVE, input.getIntOr("Captive", FREE));
+		this.entityData.set(DATA_CAPTIVE_SINCE, -100000);
+		this.following = input.getBooleanOr("Following", true);
+		this.captor = input.read("Captor", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
 		long b = input.getLongOr("Base", Long.MIN_VALUE);
 		this.base = b == Long.MIN_VALUE ? null : net.minecraft.core.BlockPos.of(b);
 	}

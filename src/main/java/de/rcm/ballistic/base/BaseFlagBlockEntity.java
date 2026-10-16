@@ -129,7 +129,7 @@ public class BaseFlagBlockEntity extends BlockEntity {
 		}
 		AABB around = new AABB(pos).inflate(BASE_RANGE, 24.0, BASE_RANGE);
 		List<SoldierEntity> guards = level.getEntitiesOfClass(SoldierEntity.class, around,
-			s -> s.isAlive() && s.team() == SoldierEntity.TEAM_HOSTILE && pos.equals(s.base()));
+			s -> s.isAlive() && s.team() == SoldierEntity.TEAM_HOSTILE && !s.isCaptive() && pos.equals(s.base()));
 		boolean fight = guards.stream().anyMatch(s -> s.aiState() == SoldierEntity.COMBAT);
 		if (fight) {
 			this.alarmUntil = now + 500;
