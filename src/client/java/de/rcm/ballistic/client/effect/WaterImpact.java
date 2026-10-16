@@ -9,9 +9,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A round striking water: no hole, but a thin spout jumping up (leaning the way the round went when it came
- * in flat), a crown of drops thrown out round it, fine spray, rings spreading over the surface, and a
- * trail of bubbles where it went in.
+ * A round striking water: no hole, but a thin white column shooting up and collapsing back, drops flung
+ * off it and a crown of them thrown out round it (more the way the round went when it came in flat), fine
+ * spray hanging a moment, rings spreading over the surface and a trail of bubbles where it went in.
  */
 public final class WaterImpact {
 	private WaterImpact() {
@@ -31,25 +31,35 @@ public final class WaterImpact {
 		ahead = ahead.lengthSqr() < 1.0E-6 ? Vec3.ZERO : ahead.normalize();
 		double top = at.y + 0.02;
 
-		// the spout: a column of drops, the faster ones on top
-		int spout = 10 + random.nextInt(5);
+		// the spout: a thin white column shooting up and falling back in on itself
+		double height = (0.22 + 0.85 * steep) * (0.8 + 0.4 * random.nextDouble());
+		level.addParticle(ModRegistry.WATER_JET, at.x, top - 0.03, at.z, height, 0.032 + 0.016 * random.nextDouble(), 0.0);
+		// drops flung off the column, the fastest from its tip
+		double tipSpeed = Math.sqrt(2.0 * 0.04 * height);
+		int spout = 8 + random.nextInt(5);
 		for (int i = 0; i < spout; i++) {
-			double up = (0.18 + 0.32 * steep) * (0.45 + 0.55 * random.nextDouble());
-			double lean = (1.0 - steep) * 0.1 * random.nextDouble();
-			level.addParticle(ModRegistry.WATER_DROP, at.x + (random.nextDouble() - 0.5) * 0.04, top, at.z + (random.nextDouble() - 0.5) * 0.04,
-				ahead.x * lean + (random.nextDouble() - 0.5) * 0.025, up, ahead.z * lean + (random.nextDouble() - 0.5) * 0.025);
+			double up = tipSpeed * (0.55 + 0.5 * random.nextDouble());
+			double lean = (1.0 - steep) * 0.08 * random.nextDouble();
+			level.addParticle(ModRegistry.WATER_DROP, at.x + (random.nextDouble() - 0.5) * 0.04, top + random.nextDouble() * height * 0.3,
+				at.z + (random.nextDouble() - 0.5) * 0.04, ahead.x * lean + (random.nextDouble() - 0.5) * 0.04, up,
+				ahead.z * lean + (random.nextDouble() - 0.5) * 0.04);
 		}
-		// the crown: drops thrown out all round, low
-		int crown = 12 + random.nextInt(6);
+		// the crown: a ring of drops thrown out low all round, more of them the way the round was going
+		int crown = 14 + random.nextInt(8);
 		for (int i = 0; i < crown; i++) {
-			double a = Math.PI * 2.0 * (i + random.nextDouble() * 0.6) / crown;
-			double out = 0.04 + random.nextDouble() * 0.07;
-			level.addParticle(ModRegistry.WATER_DROP, at.x + Math.cos(a) * 0.05, top, at.z + Math.sin(a) * 0.05,
-				Math.cos(a) * out + ahead.x * 0.03, 0.08 + random.nextDouble() * 0.12, Math.sin(a) * out + ahead.z * 0.03);
+			double a = Math.PI * 2.0 * (i + random.nextDouble() * 0.7) / crown;
+			double out = 0.035 + random.nextDouble() * 0.06;
+			double cx = Math.cos(a);
+			double cz = Math.sin(a);
+			double bias = 1.0 + (1.0 - steep) * 0.8 * Math.max(0.0, cx * ahead.x + cz * ahead.z);
+			level.addParticle(ModRegistry.WATER_DROP, at.x + cx * 0.04, top, at.z + cz * 0.04, cx * out * bias, 0.07 + random.nextDouble() * 0.11,
+				cz * out * bias);
 		}
-		// fine spray settling back
-		for (int i = 0; i < 4; i++) {
-			level.addParticle(ParticleTypes.SPLASH, at.x + (random.nextDouble() - 0.5) * 0.2, top, at.z + (random.nextDouble() - 0.5) * 0.2, 0.0, 0.0, 0.0);
+		// fine spray hanging over it a moment
+		for (int i = 0; i < 6; i++) {
+			double h = i < 4 ? 0.04 : height * (0.3 + 0.4 * random.nextDouble());
+			level.addParticle(ModRegistry.WATER_MIST, at.x + (random.nextDouble() - 0.5) * 0.12, top + h, at.z + (random.nextDouble() - 0.5) * 0.12,
+				(random.nextDouble() - 0.5) * 0.04 + ahead.x * 0.02, 0.01 + random.nextDouble() * 0.02, (random.nextDouble() - 0.5) * 0.04 + ahead.z * 0.02);
 		}
 		// rings over the surface: a quick small one and a wide slow one
 		level.addParticle(ModRegistry.WATER_RIPPLE, at.x, top, at.z, 0.35 + random.nextDouble() * 0.1, 0.0, 0.0);

@@ -982,6 +982,10 @@ public final class ModRegistry {
 	public static final SimpleParticleType WATER_DROP = particle("water_drop");
 	/** A ring spreading out over a water surface (dx: how wide it gets). */
 	public static final SimpleParticleType WATER_RIPPLE = particle("water_ripple");
+	/** The thin column a bullet throws up out of water (dx: how high, dy: how wide). */
+	public static final SimpleParticleType WATER_JET = particle("water_jet");
+	/** Fine spray hanging over a splash. */
+	public static final SimpleParticleType WATER_MIST = particle("water_mist");
 
 	// ---------- Creative tabs ----------
 	/** Every missile and warhead. */
