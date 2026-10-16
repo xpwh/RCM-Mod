@@ -110,17 +110,20 @@ public final class Fatigue {
 		}
 		level = Mth.clamp(level, 0.0F, 1.0F);
 
-		// breathing: about one breath in four seconds at rest, four in five seconds when winded (each sound a whole breath, in and out)
+		// breathing: about one breath in four seconds at rest, four in five seconds when winded (each sound a whole breath, in and out);
+		// stressed you breathe quick and shallow too
+		float nerves = de.rcm.ballistic.client.effect.Stress.level();
+		float breathing = Math.max(level, nerves * 0.6F);
 		prevPhase = phase;
-		float rate = 0.25F + 0.55F * level;
+		float rate = 0.25F + 0.55F * breathing;
 		phase += Mth.TWO_PI * rate / 20.0F;
 		if (phase > Mth.TWO_PI * 64.0F) {
 			phase -= Mth.TWO_PI * 64.0F;
 			prevPhase -= Mth.TWO_PI * 64.0F;
 		}
-		if (level > 0.3F && (int) (phase / Mth.TWO_PI) != (int) (prevPhase / Mth.TWO_PI)) {
+		if (breathing > 0.3F && (int) (phase / Mth.TWO_PI) != (int) (prevPhase / Mth.TWO_PI)) {
 			// your own breath: there under everything else, not over it - quietest while you still run, the footsteps drowning it
-			float volume = (0.05F + 0.2F * (level - 0.3F) / 0.7F) * (player.isSprinting() ? 0.7F : 1.0F);
+			float volume = (0.05F + 0.2F * (breathing - 0.3F) / 0.7F) * (player.isSprinting() ? 0.7F : 1.0F);
 			GunAudio.play(ModRegistry.PLAYER_BREATH, player.getEyePosition(), volume, 0.97F + (float) Math.random() * 0.06F);
 		}
 
@@ -134,6 +137,12 @@ public final class Fatigue {
 		float fear = de.rcm.ballistic.client.effect.BlastShader.suppression() * (armed ? 1.6F : 0.8F);
 		yaw += fear * (Mth.sin(t * 7.3F) * 0.6F + Mth.sin(t * 13.1F + 0.7F) * 0.4F);
 		pitch += fear * (Mth.sin(t * 9.1F + 2.1F) * 0.55F + Mth.sin(t * 15.7F) * 0.35F);
+		// stress: a fine, restless tremor in the hands (worse holding a weapon) and now and then a jerk of the head
+		float jitter = nerves * nerves * (armed ? 0.9F : 0.3F);
+		yaw += jitter * (Mth.sin(t * 11.3F) * 0.5F + Mth.sin(t * 17.9F + 1.1F) * 0.3F + Mth.sin(t * 5.3F + 0.4F) * 0.2F);
+		pitch += jitter * (Mth.sin(t * 12.7F + 2.0F) * 0.5F + Mth.sin(t * 19.3F) * 0.3F + Mth.sin(t * 4.1F + 0.9F) * 0.2F);
+		yaw += de.rcm.ballistic.client.effect.Stress.twitchYaw();
+		pitch += de.rcm.ballistic.client.effect.Stress.twitchPitch();
 		player.setYRot(player.getYRot() + (yaw - swayYaw));
 		player.setXRot(Mth.clamp(player.getXRot() + (pitch - swayPitch), -90.0F, 90.0F));
 		swayYaw = yaw;

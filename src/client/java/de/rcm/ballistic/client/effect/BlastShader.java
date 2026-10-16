@@ -133,6 +133,11 @@ public final class BlastShader {
 		return suppression;
 	}
 
+	/** How hard a blast is being felt right now (its heat and the ground shaking), 0..1. */
+	public static float shock() {
+		return Math.max(heat, quake);
+	}
+
 	public static void drench(float amount) {
 		drench = Math.max(drench, Mth.clamp(amount, 0.0F, 1.0F));
 	}

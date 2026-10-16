@@ -2151,5 +2151,103 @@
 				"name": "ballisticmissiles:soldier/zip_tie"
 			}
 		]
+	},
+	"smoke.pack_open": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_pack",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/pack_open1",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:smoke/pack_open2",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"smoke.pack_pull": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_pack",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/pack_pull1",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:smoke/pack_pull2",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"smoke.zippo_light": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_zippo",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/zippo_light1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_light2",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_light3",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_light4",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_light5",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"smoke.zippo_close": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_zippo_close",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/zippo_close1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_close2",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"smoke.drag": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_drag",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/drag1",
+				"attenuation_distance": 6
+			},
+			{
+				"name": "ballisticmissiles:smoke/drag2",
+				"attenuation_distance": 6
+			},
+			{
+				"name": "ballisticmissiles:smoke/drag3",
+				"attenuation_distance": 6
+			}
+		]
+	},
+	"smoke.exhale": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_exhale",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/exhale1",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:smoke/exhale2",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:smoke/exhale3",
+				"attenuation_distance": 8
+			}
+		]
 	}
 }

@@ -64,6 +64,11 @@ public abstract class ItemInHandRendererMixin {
 			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
 				de.rcm.ballistic.client.drone.DroneHandClient.renderArms(player, base, poseStack, collector, light);
 			}
+		} else if (stack.is(ModRegistry.CIGARETTES)) {
+			// the pack in your hand, and lighting up
+			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
+				de.rcm.ballistic.client.item.CigaretteHands.render(player, new Matrix4f(poseStack.last().pose()), poseStack, collector, light, partialTick);
+			}
 		} else if (stack.is(ModRegistry.GRENADE)) {
 			Matrix4f base = new Matrix4f(poseStack.last().pose());
 			de.rcm.ballistic.client.gun.GrenadeClient.transform(poseStack, player, partialTick);

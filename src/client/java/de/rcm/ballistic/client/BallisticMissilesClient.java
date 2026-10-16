@@ -82,6 +82,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.GibClient.init();
 		de.rcm.ballistic.client.effect.CorpseFx.init();
 		de.rcm.ballistic.client.effect.Heartbeat.init();
+		de.rcm.ballistic.client.effect.Stress.init();
+		de.rcm.ballistic.client.item.SmokingClient.init();
 		de.rcm.ballistic.client.gui.InjuryHud.init();
 		de.rcm.ballistic.client.ai.AiDebugClient.init();
 		de.rcm.ballistic.client.drone.DroneClient.init();

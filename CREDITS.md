@@ -188,3 +188,16 @@ The heartbeat of the dying player is synthesized by `tools/gen_sounds_v13.py`.
 | Rounds into a magazine | https://freesound.org/s/855580/ "Pushing 50 Cal BMG Round into Magazine" | qubodup | CC0 1.0 |
 | Small metal parts | https://freesound.org/s/725813/ "small moving metallic part" | F3ather | CC0 1.0 |
 | Clothing movement | https://freesound.org/s/555307/ "Foley_Cloth_Movement_Jacket" | Nox_Sound | CC0 1.0 |
+
+## Cigarettes and the Zippo (`tools/import_smoking_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Zippo flicked open and struck | https://freesound.org/s/47988/ "zippo_light_5shots.wav" | vibe_crc | CC0 1.0 |
+| Zippo opened | https://freesound.org/s/42144/ "zippo.wav" | Vrezerino | CC0 1.0 |
+| Zippo snapped shut | https://freesound.org/s/85714/ "Zippo_close.aif" | tmkappelt | CC0 1.0 |
+| Zippo snapped shut | https://freesound.org/s/407429/ "zippoclose.wav" | DeezSoundzTho | CC0 1.0 |
+| Cigarette pack | https://freesound.org/s/125376/ "Cigarettes.wav" | thegoose09 | CC0 1.0 |
+| Cigarette drawn from the pack | https://freesound.org/s/383857/ "Packing Opening New Pack of Cigarettes" | deleted_user_7146007 | CC0 1.0 |
+| Drags (ember crackle), exhaling | https://freesound.org/s/853043/ "Cigarette drag embers crackle - inhale - exhale (CC0)" | ATP2-kh | CC0 1.0 |
+| Drag, exhaling | https://freesound.org/s/157589/ "Having A Smoke.wav" | husky70 | CC0 1.0 |

@@ -567,6 +567,10 @@ public final class ModRegistry {
 	public static final Item TOURNIQUET = registerItem(
 		"tourniquet", props -> new de.rcm.ballistic.injury.MedicalItem(true, props), new Item.Properties().stacksTo(16)
 	);
+	public static final Item CIGARETTES = registerItem(
+		"cigarettes", de.rcm.ballistic.item.CigarettesItem::new, new Item.Properties().durability(20)
+	);
+	public static final Item LIGHTER = registerItem("lighter", Item::new, new Item.Properties().stacksTo(1));
 	public static final Item AIR_FILTER_ITEM = registerItem("air_filter", props -> new BlockItem(AIR_FILTER, props), new Item.Properties().useBlockDescriptionPrefix());
 	public static final Item EMERGENCY_GENERATOR_ITEM = registerItem(
 		"emergency_generator", props -> new BlockItem(EMERGENCY_GENERATOR, props), new Item.Properties().useBlockDescriptionPrefix()
@@ -941,6 +945,12 @@ public final class ModRegistry {
 	public static final SoundEvent BULLET_IMPACT_FLESH = sound("bullet.impact_flesh");
 	public static final SoundEvent SHELL_DROP = sound("ak.shell");
 	public static final SoundEvent PLAYER_BREATH = sound("player.breath");
+	public static final SoundEvent SMOKE_PACK_OPEN = sound("smoke.pack_open");
+	public static final SoundEvent SMOKE_PACK_PULL = sound("smoke.pack_pull");
+	public static final SoundEvent SMOKE_ZIPPO_LIGHT = sound("smoke.zippo_light");
+	public static final SoundEvent SMOKE_ZIPPO_CLOSE = sound("smoke.zippo_close");
+	public static final SoundEvent SMOKE_DRAG = sound("smoke.drag");
+	public static final SoundEvent SMOKE_EXHALE = sound("smoke.exhale");
 	public static final SoundEvent GRENADE_PIN = sound("grenade.pin");
 	public static final SoundEvent GRENADE_SPOON = sound("grenade.spoon");
 	public static final SoundEvent GRENADE_BOUNCE = sound("grenade.bounce");
@@ -1033,6 +1043,8 @@ public final class ModRegistry {
 		output.accept(BUNKER_ITEM);
 		output.accept(FIRST_AID_KIT);
 		output.accept(TOURNIQUET);
+		output.accept(CIGARETTES);
+		output.accept(LIGHTER);
 		output.accept(AIR_FILTER_ITEM);
 		output.accept(EMERGENCY_GENERATOR_ITEM);
 		output.accept(REINFORCED_CONCRETE_ITEM);

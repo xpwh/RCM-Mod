@@ -63,7 +63,7 @@ public final class Heartbeat {
 		float health = p.getHealth() / Math.max(1.0F, p.getMaxHealth());
 		float low = Mth.clamp((0.65F - health) / 0.55F, 0.0F, 1.0F);
 		float bleeding = w.bleed() / 3.0F;
-		float target = Math.max(Math.max(low, bleeding * 0.9F), Math.max(shock * 0.85F, Fatigue.level() * 0.55F));
+		float target = Math.max(Math.max(low, bleeding * 0.9F), Math.max(shock * 0.85F, Math.max(Fatigue.level() * 0.55F, Stress.level() * 0.75F)));
 		if (w.lost() > 0 || w.armsLost() > 0) {
 			target = Math.max(target, 0.5F);
 		}
