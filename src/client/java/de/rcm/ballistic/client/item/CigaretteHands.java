@@ -65,22 +65,21 @@ public final class CigaretteHands {
 		return mouth().add(IN_MOUTH.transform(new Vector3f(0.0F, 0.0F, SmokeKit.tipAt(0.0F))));
 	}
 
-	public static void render(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, float partialTick) {
+	public static void render(AbstractClientPlayer player, PoseStack poseStack, SubmitNodeCollector collector, int light, float partialTick) {
+		Matrix4f base = HandSpace.enter(poseStack);
 		Minecraft mc = Minecraft.getInstance();
 		float t = player.isUsingItem() && player.getUseItem().getItem() instanceof CigarettesItem ? player.getTicksUsingItem() + partialTick : -1.0F;
 		float time = (player.level().getGameTime() + partialTick);
-		Matrix4f inv = new Matrix4f(base).invert();
-		Quaternionf undo = base.getNormalizedRotation(new Quaternionf()).conjugate();
 
 		Frame f = frame(t, time, Stress.level());
 
 		// the arms (positions in the renderer's hand space)
-		AkArms.draw(player, base, poseStack, collector, light, inv.transformPosition(new Vector3f(f.r())), inv.transformPosition(new Vector3f(f.l())),
+		AkArms.draw(player, base, poseStack, collector, light, HandSpace.hand(f.r()), HandSpace.hand(f.l()),
 			AkArms.RIGHT_SHOULDER, AkArms.LEFT_SHOULDER);
 
 		// what the right hand holds
 		Vector3f obj = new Vector3f(f.r()).add(0.0F, -GRIP, 0.0F);
-		place(poseStack, inv, undo, obj, f.zippo() ? ZIPPO_TURN : PACK_TURN);
+		place(poseStack, obj, f.zippo() ? ZIPPO_TURN : PACK_TURN);
 		if (f.zippo()) {
 			SmokeKit.zippo(poseStack, collector, light, f.lid(), f.flame(), time);
 		} else {
@@ -93,13 +92,14 @@ public final class CigaretteHands {
 
 		// the cigarette: in the pack's row, between the fingers, then between the lips
 		if (f.cigAt() != null) {
-			place(poseStack, inv, undo, f.cigAt(), f.cigQ());
+			place(poseStack, f.cigAt(), f.cigQ());
 			SmokeKit.submit(poseStack, collector, SmokeKit.cigarette(0.0F), light);
 			if (f.glow() > 0.0F) {
 				SmokeKit.ember(poseStack, collector, 0.0F, f.glow() * (0.9F + 0.1F * Mth.sin(time * 1.7F)));
 			}
 			poseStack.popPose();
 		}
+		poseStack.popPose();
 	}
 
 	/**
@@ -185,11 +185,11 @@ public final class CigaretteHands {
 	}
 
 	/** Pushes a pose that puts the origin at camera-space {@code at}, turned by camera-space {@code q}. */
-	private static void place(PoseStack poseStack, Matrix4f inv, Quaternionf undo, Vector3f at, Quaternionf q) {
-		Vector3f h = inv.transformPosition(new Vector3f(at));
+	static void place(PoseStack poseStack, Vector3f at, Quaternionf q) {
+		Vector3f h = HandSpace.hand(at);
 		poseStack.pushPose();
 		poseStack.translate(h.x, h.y, h.z);
-		poseStack.mulPose(new Quaternionf(undo).mul(q));
+		poseStack.mulPose(q);
 	}
 
 	/** The flame lights up the hands and whatever is near, in the world (from the camera-space flame). */

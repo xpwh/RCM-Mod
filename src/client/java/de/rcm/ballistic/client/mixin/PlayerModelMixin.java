@@ -20,6 +20,13 @@ public abstract class PlayerModelMixin {
 			this.ballisticmissiles$limp((PlayerModel) (Object) this, gore.ballisticmissiles$seed(), body.ballisticmissiles$flail(), state.ageInTicks);
 		}
 		PlayerModel self = (PlayerModel) (Object) this;
+		// smoking: the right hand holds the cigarette in front of the chest, and comes up to the face for a drag
+		float smoke = de.rcm.ballistic.client.item.SmokingClient.raise(state.id, net.minecraft.client.Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false));
+		if (smoke >= 0.0F && body.ballisticmissiles$corpseAge() < 0.0F) {
+			self.rightArm.xRot = net.minecraft.util.Mth.lerp(smoke, -0.75F, -1.95F + state.xRot * net.minecraft.util.Mth.DEG_TO_RAD * 0.5F);
+			self.rightArm.yRot = net.minecraft.util.Mth.lerp(smoke, -0.2F, -0.62F);
+			self.rightArm.zRot = net.minecraft.util.Mth.lerp(smoke, 0.05F, 0.12F);
+		}
 		// the jaw shot away, a hole right through: those parts are drawn by StumpLayer, with the piece cut out
 		int extra = de.rcm.ballistic.client.ModConfig.gore() ? gore.ballisticmissiles$extra() : 0;
 		boolean jaw = (extra & Wounds.JAW) != 0;

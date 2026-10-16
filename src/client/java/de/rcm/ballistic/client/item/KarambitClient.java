@@ -253,23 +253,23 @@ public final class KarambitClient {
 		return new Inspect(pos, q, finger);
 	}
 
-	public static void render(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, float partialTick) {
+	public static void render(AbstractClientPlayer player, PoseStack poseStack, SubmitNodeCollector collector, int light, float partialTick) {
+		Matrix4f base = HandSpace.enter(poseStack);
 		long now = player.level().getGameTime();
 		float time = now + partialTick;
 		float draw = now - drawStart + partialTick;
 		float inspect = inspectStart < 0 ? -1.0F : now - inspectStart + partialTick;
 		Frame f = frame(draw, inspect, player.getAttackAnim(partialTick), time, Stress.level());
-		Matrix4f inv = new Matrix4f(base).invert();
-		Quaternionf undo = base.getNormalizedRotation(new Quaternionf()).conjugate();
 		// the fist closes round the handle - or, while it spins, only the finger is in the ring
 		Vector3f hand = new Vector3f(f.ring()).add(f.q().transform(new Vector3f(KarambitModel.GRIP).mul(1.0F - f.onFinger())));
-		AkArms.draw(player, base, poseStack, collector, light, inv.transformPosition(hand), inv.transformPosition(new Vector3f(REST_L)), AkArms.RIGHT_SHOULDER,
+		AkArms.draw(player, base, poseStack, collector, light, HandSpace.hand(hand), HandSpace.hand(REST_L), AkArms.RIGHT_SHOULDER,
 			AkArms.LEFT_SHOULDER);
-		Vector3f h = inv.transformPosition(new Vector3f(f.ring()));
+		Vector3f h = HandSpace.hand(f.ring());
 		poseStack.pushPose();
 		poseStack.translate(h.x, h.y, h.z);
-		poseStack.mulPose(new Quaternionf(undo).mul(f.q()));
+		poseStack.mulPose(f.q());
 		KarambitModel.submit(poseStack, collector, light);
+		poseStack.popPose();
 		poseStack.popPose();
 	}
 }

@@ -28,6 +28,19 @@ public abstract class ItemInHandRendererMixin {
 			ci.cancel(); // goggles on, or hands on the stick and throttle
 		} else if (stack.is(ModRegistry.ROCKET_LAUNCHER) && de.rcm.ballistic.client.gun.AimOverlay.scope(partialTick) > 0.9F) {
 			ci.cancel(); // the eye at the optical sight: the launcher is out of view
+		} else if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
+			// our own animated hands, drawn in the hand space vanilla has set up so far (bob and arm sway, no item transform)
+			boolean lighting = player.isUsingItem() && player.getUseItem().is(ModRegistry.CIGARETTES);
+			if (de.rcm.ballistic.client.item.SmokingClient.isSmoking(player) && !lighting) {
+				de.rcm.ballistic.client.item.SmokingClient.renderHand(player, poseStack, collector, light, partialTick); // the hand is busy smoking
+				ci.cancel();
+			} else if (stack.is(ModRegistry.KARAMBIT)) {
+				de.rcm.ballistic.client.item.KarambitClient.render(player, poseStack, collector, light, partialTick);
+				ci.cancel();
+			} else if (stack.is(ModRegistry.CIGARETTES)) {
+				de.rcm.ballistic.client.item.CigaretteHands.render(player, poseStack, collector, light, partialTick);
+				ci.cancel();
+			}
 		}
 	}
 
@@ -63,15 +76,6 @@ public abstract class ItemInHandRendererMixin {
 			de.rcm.ballistic.client.drone.DroneHandClient.transform(poseStack, player, partialTick);
 			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
 				de.rcm.ballistic.client.drone.DroneHandClient.renderArms(player, base, poseStack, collector, light);
-			}
-		} else if (stack.is(ModRegistry.KARAMBIT)) {
-			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
-				de.rcm.ballistic.client.item.KarambitClient.render(player, new Matrix4f(poseStack.last().pose()), poseStack, collector, light, partialTick);
-			}
-		} else if (stack.is(ModRegistry.CIGARETTES)) {
-			// the pack in your hand, and lighting up
-			if (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT) {
-				de.rcm.ballistic.client.item.CigaretteHands.render(player, new Matrix4f(poseStack.last().pose()), poseStack, collector, light, partialTick);
 			}
 		} else if (stack.is(ModRegistry.GRENADE)) {
 			Matrix4f base = new Matrix4f(poseStack.last().pose());

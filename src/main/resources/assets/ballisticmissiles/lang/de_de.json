@@ -1070,6 +1070,7 @@
 	"tooltip.ballisticmissiles.cigarettes.use": "Gedrückt halten zum Anzünden (Feuerzeug nötig). Beruhigt die Nerven.",
 	"message.ballisticmissiles.cigarettes.no_lighter": "Du brauchst ein Feuerzeug",
 	"message.ballisticmissiles.cigarettes.already": "Du rauchst schon eine",
+	"message.ballisticmissiles.cigarettes.flicked": "Zigarette weggeschnippt",
 	"subtitles.ballisticmissiles.smoke_pack": "Zigarettenschachtel",
 	"subtitles.ballisticmissiles.smoke_zippo": "Feuerzeug schnappt auf",
 	"subtitles.ballisticmissiles.smoke_zippo_close": "Feuerzeug klappt zu",

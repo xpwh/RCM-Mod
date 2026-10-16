@@ -1070,6 +1070,7 @@
 	"tooltip.ballisticmissiles.cigarettes.use": "Hold use to light one (needs a lighter). Steadies the nerves.",
 	"message.ballisticmissiles.cigarettes.no_lighter": "You need a lighter",
 	"message.ballisticmissiles.cigarettes.already": "You are already smoking one",
+	"message.ballisticmissiles.cigarettes.flicked": "Cigarette flicked away",
 	"subtitles.ballisticmissiles.smoke_pack": "Cigarette pack",
 	"subtitles.ballisticmissiles.smoke_zippo": "Lighter flicks open",
 	"subtitles.ballisticmissiles.smoke_zippo_close": "Lighter snaps shut",
