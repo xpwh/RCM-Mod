@@ -21,21 +21,28 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The radioactive tsunami of a Poseidon burst. A ring-shaped wave runs out from ground zero over the
- * sea; where it reaches land it rears up and floods inland as a wall of water, tearing out weak
- * buildings, trees and anything standing in the open, until the slope and friction of the ground
- * have used up its height. Hills and cliffs stop it. A little later the water drains back to the sea.
+ * The radioactive tsunami of a Poseidon burst. Not one wave but a train of them: a ring-shaped wave runs
+ * out from ground zero over the sea (the clients draw it as a moving wall of water), steepening as the
+ * sea shallows; where it reaches land it rears up and floods inland as a bore, tearing out weak
+ * buildings, trees and anything standing in the open, until the slope and friction of the ground have
+ * used up its height. Hills and cliffs stop it. Behind it the water level falls again and the backwash
+ * drags what is in it out to sea - and then the next, smaller wave comes in.
  * <p>
  * Heights are tracked per compass direction, so a headland shadows the coast behind it.
  */
 public final class Tsunami {
 	/** How fast the wave front runs, blocks per tick. */
-	public static final double SPEED = 1.15;
+	public static final double SPEED = 1.3;
 	/** Where the wave forms (the crater and the water column are inside this). */
 	public static final double START_RADIUS = 30.0;
-	public static final double MAX_RADIUS = 230.0;
+	public static final double MAX_RADIUS = 400.0;
+	/** The train of waves: each one's height against the first, and how many ticks after the burst it sets out. */
+	public static final float[] AMPLITUDE = {1.0F, 0.68F, 0.42F};
+	public static final int[] DELAY = {0, 160, 330};
+	/** How much a wave rears up where the sea runs shallow against the coast. */
+	public static final float SHOAL = 1.45F;
 	private static final int BINS = 1440;
-	private static final int MAX_PLACEMENTS_PER_TICK = 5000;
+	private static final int MAX_PLACEMENTS_PER_TICK = 9000;
 	private static final int MAX_REMOVALS_PER_TICK = 6000;
 
 	private final ServerLevel level;
@@ -51,10 +58,17 @@ public final class Tsunami {
 	private final LongArrayList flooded = new LongArrayList();
 	private final LongArrayList drainAt = new LongArrayList();
 	private int drained;
+	private final LongOpenHashSet wet = new LongOpenHashSet();
 	private double radius = START_RADIUS;
 	private int age;
+	private final float amplitude;
+	private final int delay;
+	private int waited;
 
-	public Tsunami(ServerLevel level, Vec3 pos, int sea) {
+	/** @param wave which of the train it is (0 the first, biggest) */
+	public Tsunami(ServerLevel level, Vec3 pos, int sea, int wave) {
+		this.amplitude = AMPLITUDE[wave];
+		this.delay = DELAY[wave];
 		this.level = level;
 		this.cx = pos.x;
 		this.cz = pos.z;
@@ -69,11 +83,15 @@ public final class Tsunami {
 
 	/** Height of the wave above the sea at distance {@code r}: it spreads its energy on an ever longer front. */
 	public static double height(double r) {
-		return Math.max(3.0, 17.0 * Math.sqrt(START_RADIUS / Math.max(START_RADIUS, r)));
+		return Math.max(4.0, 24.0 * Math.sqrt(START_RADIUS / Math.max(START_RADIUS, r)));
 	}
 
 	/** @return true when the wave has run its course and the water has drained */
 	public boolean tick() {
+		if (this.waited < this.delay) {
+			this.waited++; // the later waves of the train are still out at sea
+			return false;
+		}
 		this.age++;
 		if (this.radius < MAX_RADIUS) {
 			double from = this.radius;
@@ -86,11 +104,14 @@ public final class Tsunami {
 			this.sweepEntities(from, this.radius);
 		}
 		this.drain();
+		if (this.age % 5 == 0) {
+			this.backwash();
+		}
 		return this.radius >= MAX_RADIUS && this.drained >= this.flooded.size();
 	}
 
 	private void advance(double from, double to) {
-		double h = height(to);
+		double h = height(to) * this.amplitude;
 		int placed = 0;
 		for (int b = 0; b < BINS; b++) {
 			if (this.energy[b] <= 0.0F) {
@@ -122,14 +143,16 @@ public final class Tsunami {
 		if (ground <= this.sea) {
 			return 0; // open water: the wave just passes through
 		}
-		// running up the land: its height drains away with every block of slope and of distance
-		float left = (float) Math.min(waveHeight, this.energy[b]);
-		int top = this.sea + Math.round(left);
-		if (ground > top) {
+		// running up the land: reared up off the shallows, its height then drains away with every block of
+		// slope and of distance
+		float left = (float) Math.min(waveHeight * SHOAL, this.energy[b]);
+		if (ground > this.sea + Math.round(left)) {
 			this.energy[b] = 0.0F; // a hill or a cliff stops it here
 			return 0;
 		}
-		this.energy[b] = left - 0.18F - Math.max(0, ground - this.sea - 1) * 0.06F;
+		// the bore over the land is not the full height of the wave deep: a few blocks of racing water
+		int top = Math.min(this.sea + Math.round(left), ground + Math.round(2.0F + left * 0.45F));
+		this.energy[b] = left - 0.14F - Math.max(0, ground - this.sea - 1) * 0.05F;
 		if (saturated) {
 			return 0;
 		}
@@ -141,16 +164,16 @@ public final class Tsunami {
 			pos.set(x, y, z);
 			BlockState state = this.level.getBlockState(pos);
 			if (weak(state) && this.random.nextFloat() < force * 0.55F) {
-				count += this.flood(pos, state);
+				count += this.flood(pos, state, top - y);
 			}
 		}
 		for (int y = ground; y <= top; y++) {
 			pos.set(x, y, z);
 			BlockState state = this.level.getBlockState(pos);
 			if (state.isAir() || state.canBeReplaced() && state.getFluidState().isEmpty()) {
-				count += this.flood(pos, state);
+				count += this.flood(pos, state, top - y);
 			} else if (weak(state) && this.random.nextFloat() < force) {
-				count += this.flood(pos, state);
+				count += this.flood(pos, state, top - y);
 			}
 		}
 		return count;
@@ -171,7 +194,8 @@ public final class Tsunami {
 			|| state.getBlock().getExplosionResistance() < 1.0F;
 	}
 
-	private int flood(BlockPos.MutableBlockPos pos, BlockState old) {
+	/** @param below how far under the surface of the flood this block is: the water level falls from the top down */
+	private int flood(BlockPos.MutableBlockPos pos, BlockState old, int below) {
 		if (old.getDestroySpeed(this.level, pos) < 0.0F) {
 			return 0;
 		}
@@ -180,7 +204,9 @@ public final class Tsunami {
 		}
 		CraterLog.set(this.level, pos, Blocks.WATER.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS);
 		this.flooded.add(pos.asLong());
-		this.drainAt.add(this.age + 30L + this.random.nextInt(25));
+		this.wet.add(pos.asLong());
+		// it stands a while, then the level drops, a block every few ticks
+		this.drainAt.add(this.age + 50L + below * 4L + this.random.nextInt(8));
 		return 1;
 	}
 
@@ -195,6 +221,7 @@ public final class Tsunami {
 			pos.set(this.flooded.getLong(this.drained));
 			this.drained++;
 			n++;
+			this.wet.remove(pos.asLong());
 			BlockState state = this.level.getBlockState(pos);
 			if (state.is(Blocks.WATER)) {
 				CraterLog.set(this.level, pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
@@ -202,9 +229,35 @@ public final class Tsunami {
 		}
 	}
 
+	/** Once the wave has passed, what is caught in the flood is dragged back out to sea with it. */
+	private void backwash() {
+		if (this.wet.isEmpty() || this.drained == 0) {
+			return;
+		}
+		double r = this.radius;
+		AABB box = new AABB(this.cx - r, this.sea - 2, this.cz - r, this.cx + r, this.sea + 40, this.cz + r);
+		for (Entity e : this.level.getEntities((Entity) null, box, e -> e instanceof LivingEntity || e instanceof AbstractBoat
+			|| e instanceof net.minecraft.world.entity.item.ItemEntity)) {
+			if (e instanceof Player p && (p.isCreative() || p.isSpectator())) {
+				continue;
+			}
+			if (!this.wet.contains(e.blockPosition().asLong())) {
+				continue;
+			}
+			double dx = this.cx - e.getX();
+			double dz = this.cz - e.getZ();
+			double d = Math.sqrt(dx * dx + dz * dz);
+			if (d < 1.0) {
+				continue;
+			}
+			e.push(dx / d * 0.35, 0.0, dz / d * 0.35);
+			e.hurtMarked = true;
+		}
+	}
+
 	/** People, animals and boats caught by the front are swept inland and battered. */
 	private void sweepEntities(double from, double to) {
-		double h = height(to);
+		double h = height(to) * this.amplitude;
 		AABB box = new AABB(this.cx - to - 2, this.sea - 4, this.cz - to - 2, this.cx + to + 2, this.sea + h + 3, this.cz + to + 2);
 		for (Entity e : this.level.getEntities((Entity) null, box, e -> e instanceof LivingEntity || e instanceof AbstractBoat
 			|| e instanceof net.minecraft.world.entity.item.ItemEntity)) {
@@ -220,7 +273,7 @@ public final class Tsunami {
 			int b = Mth.floor(Math.atan2(dz, dx) / Mth.TWO_PI * BINS);
 			b = Math.floorMod(b, BINS);
 			int ground = this.level.getHeight(Heightmap.Types.OCEAN_FLOOR, Mth.floor(e.getX()), Mth.floor(e.getZ()));
-			double reach = ground <= this.sea ? h : Math.min(h, this.energy[b]);
+			double reach = ground <= this.sea ? h : Math.min(h * SHOAL, this.energy[b]);
 			if (e.getY() > this.sea + reach + 1.0 || reach <= 0.5) {
 				continue;
 			}

@@ -440,7 +440,7 @@
 	"message.ballisticmissiles.poseidon_away": "Poseidon gestartet – Ziel %s / %s, %s Blöcke",
 	"message.ballisticmissiles.poseidon_cruise": "Poseidon auf Marschtiefe – noch %s Blöcke, ca. %s s",
 	"message.ballisticmissiles.poseidon_detonated": "Poseidon hat bei %s / %s gezündet!",
-	"message.ballisticmissiles.tsunami": "Ein radioaktiver Tsunami rollt auf die Küste zu!",
+	"message.ballisticmissiles.tsunami": "Ein radioaktiver Tsunami rollt auf die Küste zu – mehrere Wellen kommen!",
 	"block.ballisticmissiles.orbital_uplink": "Orbitale Bodenstation (Wolframstab)",
 	"tooltip.ballisticmissiles.orbital_uplink.1": "Steuert die Waffenplattform im Orbit; Rechtsklick mit Wolframstab: Stab in den Orbit (max. 6)",
 	"tooltip.ballisticmissiles.orbital_uplink.2": "Rechtsklick mit Zielmarkierer: Schlag aufs Ziel · Schleichen: für Fernstart verknüpfen",

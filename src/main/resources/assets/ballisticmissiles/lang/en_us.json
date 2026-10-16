@@ -440,7 +440,7 @@
 	"message.ballisticmissiles.poseidon_away": "Poseidon away – target %s / %s, %s blocks",
 	"message.ballisticmissiles.poseidon_cruise": "Poseidon at cruising depth – %s blocks to go, about %s s",
 	"message.ballisticmissiles.poseidon_detonated": "Poseidon detonated at %s / %s!",
-	"message.ballisticmissiles.tsunami": "A radioactive tsunami is rolling towards the coast!",
+	"message.ballisticmissiles.tsunami": "A radioactive tsunami is rolling towards the coast - more waves are coming!",
 	"block.ballisticmissiles.orbital_uplink": "Orbital Ground Station (Tungsten Rod)",
 	"tooltip.ballisticmissiles.orbital_uplink.1": "Controls the weapons platform in orbit; right-click with a tungsten rod: send it up (max. 6)",
 	"tooltip.ballisticmissiles.orbital_uplink.2": "Right-click with a target designator: strike its target · sneak: link for remote launch",

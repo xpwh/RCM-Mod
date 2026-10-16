@@ -360,7 +360,9 @@ public final class DetonationManager {
 		}
 		int sea = level.getFluidState(BlockPos.containing(pos)).isEmpty() ? level.getSeaLevel() - 1 : m.getY() - 1;
 		NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.FISSION, NukeDetonation.Mode.UNDERWATER));
-		TSUNAMIS.add(new Tsunami(level, pos, sea));
+		for (int wave = 0; wave < Tsunami.AMPLITUDE.length; wave++) {
+			TSUNAMIS.add(new Tsunami(level, pos, sea, wave));
+		}
 		Component msg = Component.literal("\uD83C\uDF0A ").append(Component.translatable("message.ballisticmissiles.tsunami")).withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.BOLD);
 		for (ServerPlayer player : level.players()) {
 			if (player.position().distanceToSqr(pos) < 600.0 * 600.0) {

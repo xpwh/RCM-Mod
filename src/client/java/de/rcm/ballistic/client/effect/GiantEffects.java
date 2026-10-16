@@ -183,7 +183,6 @@ final class GiantEffects {
 		private final double sea;
 		private final double distance;
 		private final int soundDelay;
-		private boolean roared;
 		private int age;
 
 		Poseidon(Vec3 pos) {
@@ -199,6 +198,7 @@ final class GiantEffects {
 			this.distance = distanceToCamera(mc, pos);
 			this.soundDelay = (int) (this.distance / SPEED_OF_SOUND);
 			BlastShader.blast(BlastShader.Kind.WATER, new Vec3(pos.x, this.sea, pos.z), 1.8, 0xD8F0FF);
+			TsunamiWaves.start(pos, this.sea);
 			setFlash((float) Mth.clamp(0.75 - this.distance / 4000.0, 0.1, 0.75), 0xE8F4FF);
 		}
 
@@ -278,45 +278,47 @@ final class GiantEffects {
 					}
 				}
 			}
-			// ---- the tsunami front: breaking white water racing outward
-			double front = Tsunami.START_RADIUS + Tsunami.SPEED * t;
-			if (front < Tsunami.MAX_RADIUS) {
-				double h = Tsunami.height(front);
-				Vec3 cam = mc.gameRenderer.getMainCamera().position();
-				for (int i = 0; i < 110; i++) {
+			// ---- the tsunami fronts (the waves themselves are drawn by TsunamiWaves): spray blown off their crests
+			Vec3 cam = mc.gameRenderer.getMainCamera().position();
+			double toCam = Math.hypot(cam.x - cx, cam.z - cz);
+			for (int wave = 0; wave < Tsunami.AMPLITUDE.length; wave++) {
+				double tw = t - Tsunami.DELAY[wave];
+				double front = TsunamiWaves.front(tw);
+				if (tw < 0 || front >= Tsunami.MAX_RADIUS) {
+					continue;
+				}
+				double h = Tsunami.height(front) * Tsunami.AMPLITUDE[wave];
+				for (int i = 0; i < 50; i++) {
 					double a = rand() * Mth.TWO_PI;
 					double x = cx + Math.cos(a) * front;
 					double z = cz + Math.sin(a) * front;
-					if (Math.abs(x - cam.x) > 260 || Math.abs(z - cam.z) > 260) {
+					if (Math.abs(x - cam.x) > 220 || Math.abs(z - cam.z) > 220) {
 						continue;
 					}
 					double ground = groundY(mc, x, s, z);
-					if (ground > s + h + 1) {
+					if (ground > s + h * Tsunami.SHOAL + 1) {
 						continue; // the land stops it here
 					}
-					double crest = Math.max(s, ground) + h * (0.6 + 0.4 * rand());
-					CloudParticle p = cloud(false, x, crest, z, Math.cos(a) * 0.9, 0.15, Math.sin(a) * 0.9);
+					double crest = Math.max(s, ground) + h * (0.75 + 0.3 * rand());
+					CloudParticle p = cloud(false, x, crest, z, Math.cos(a) * 0.7, 0.12, Math.sin(a) * 0.7);
 					if (p != null) {
-						p.configure(life(30, 25), 2.5F, 6.0F, 0xFFFFFF, 0xD6E4E8, 0.85F).physics(0.9F, -0.05F).wind(0.0F);
+						p.configure(life(26, 20), 1.8F, 4.5F, 0xFFFFFF, 0xDCE8EC, 0.55F).physics(0.9F, -0.04F).wind(0.3F);
 					}
-					vanilla(ParticleTypes.SPLASH, x, crest, z, Math.cos(a) * 0.6, 0.4, Math.sin(a) * 0.6);
-					if (i % 3 == 0) {
-						vanilla(ParticleTypes.FALLING_WATER, x - Math.cos(a) * 2, crest + 1, z - Math.sin(a) * 2, 0, 0, 0);
+					if (i % 2 == 0) {
+						vanilla(ParticleTypes.FALLING_WATER, x - Math.cos(a) * 1.5, crest, z - Math.sin(a) * 1.5, 0, 0, 0);
 					}
 				}
-				double toCam = Math.hypot(cam.x - cx, cam.z - cz);
-				if (!this.roared && toCam - front < 60 && toCam > front - 10) {
-					this.roared = true;
+				if (Math.abs(toCam - front - 50) < Tsunami.SPEED * 0.5 + 0.01) {
 					// the roar of the wall of water coming in
-					playDistant(mc, ModRegistry.NUKE_WIND, new Vec3(cx, s, cz), 1.0F, 0.55F);
-					playDistant(mc, de.rcm.ballistic.ModRegistry.WATER_SPLASH_HUGE, cam, 1.0F, 0.65F);
-					addShake(1.5F);
+					playDistant(mc, ModRegistry.NUKE_WIND, new Vec3(cx, s, cz), Tsunami.AMPLITUDE[wave], 0.55F);
+					playDistant(mc, de.rcm.ballistic.ModRegistry.WATER_SPLASH_HUGE, cam, Tsunami.AMPLITUDE[wave], 0.65F);
+					addShake(1.5F * Tsunami.AMPLITUDE[wave]);
 				}
-				if (Math.abs(toCam - front) < 6 && cam.y < s + h + 2) {
-					BlastShader.drench(0.8F);
+				if (Math.abs(toCam - front) < 6 && cam.y < s + h * Tsunami.SHOAL + 2) {
+					BlastShader.drench(0.8F * Tsunami.AMPLITUDE[wave]);
 				}
 			}
-			return t > Math.max(this.soundDelay + 2, (int) ((Tsunami.MAX_RADIUS - Tsunami.START_RADIUS) / Tsunami.SPEED) + 10);
+			return t > Math.max(this.soundDelay + 2, Tsunami.DELAY[Tsunami.DELAY.length - 1] + (int) ((Tsunami.MAX_RADIUS - Tsunami.START_RADIUS) / Tsunami.SPEED) + 10);
 		}
 	}
 
