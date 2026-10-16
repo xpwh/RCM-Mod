@@ -1069,5 +1069,7 @@
 	"subtitles.ballisticmissiles.workbench_craft_grenade": "Grenade assembled",
 	"subtitles.ballisticmissiles.soldier_drop_weapon": "Weapon dropped",
 	"subtitles.ballisticmissiles.soldier_surrender": "Soldier surrenders",
-	"subtitles.ballisticmissiles.soldier_zip_tie": "Cable tie pulled tight"
+	"subtitles.ballisticmissiles.soldier_zip_tie": "Cable tie pulled tight",
+	"options.ballisticmissiles.tracks": "Footprints & tyre tracks",
+	"options.ballisticmissiles.tracks.tooltip": "Footprints and tyre tracks in snow, sand and mud (and earth soaked by rain); they fade with time"
 }

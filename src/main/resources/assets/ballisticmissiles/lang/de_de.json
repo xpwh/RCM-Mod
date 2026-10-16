@@ -1069,5 +1069,7 @@
 	"subtitles.ballisticmissiles.workbench_craft_grenade": "Granate wird zusammengesetzt",
 	"subtitles.ballisticmissiles.soldier_drop_weapon": "Waffe fällt zu Boden",
 	"subtitles.ballisticmissiles.soldier_surrender": "Soldat ergibt sich",
-	"subtitles.ballisticmissiles.soldier_zip_tie": "Kabelbinder wird zugezogen"
+	"subtitles.ballisticmissiles.soldier_zip_tie": "Kabelbinder wird zugezogen",
+	"options.ballisticmissiles.tracks": "Fuß- und Reifenspuren",
+	"options.ballisticmissiles.tracks.tooltip": "Fußabdrücke und Reifenspuren in Schnee, Sand und Schlamm (auch auf vom Regen aufgeweichter Erde); sie verblassen mit der Zeit"
 }

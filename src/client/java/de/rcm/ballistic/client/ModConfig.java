@@ -89,6 +89,8 @@ public final class ModConfig {
 	/** Loudness of explosions and other big bangs, percent. */
 	public static int explosionVolume = 100;
 	public static boolean bulletHoles = true;
+	/** Footprints and tyre tracks in snow, sand and mud. */
+	public static boolean tracks = true;
 	/** Muzzle flashes, rocket motors and explosions light up the world round them. */
 	public static boolean dynamicLights = true;
 	/** Dynamic light quality: 0 off, 1 low (few lights, hard shadows), 2 high, 3 ultra (many, soft shadows). */
@@ -149,6 +151,7 @@ public final class ModConfig {
 			fastSmoke = "fast".equals(p.getProperty("smokeFade", fastSmoke ? "fast" : "long"));
 			explosionVolume = percent(p, "explosionVolume", explosionVolume);
 			bulletHoles = bool(p, "bulletHoles", bulletHoles);
+			tracks = bool(p, "tracks", tracks);
 			dynamicLights = bool(p, "dynamicLights", dynamicLights);
 			try {
 				lightQuality = net.minecraft.util.Mth.clamp(Integer.parseInt(p.getProperty("lightQuality", dynamicLights ? "2" : "0").trim()), 0, 3);
@@ -189,6 +192,7 @@ public final class ModConfig {
 			p.setProperty("smokeFade", fastSmoke ? "fast" : "long");
 			p.setProperty("explosionVolume", Integer.toString(explosionVolume));
 			p.setProperty("bulletHoles", Boolean.toString(bulletHoles));
+			p.setProperty("tracks", Boolean.toString(tracks));
 			p.setProperty("dynamicLights", Boolean.toString(dynamicLights));
 			p.setProperty("lightQuality", Integer.toString(lightQuality));
 			Files.createDirectories(FILE.getParent());

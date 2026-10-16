@@ -249,6 +249,7 @@ public class SettingsScreen extends Screen {
 		this.list.header("options.ballisticmissiles.section.world", 0xFFC0C0C0);
 		this.list.row(new IntSlider(0, 100, "options.ballisticmissiles.smoke_amount", ModConfig.smokeAmount, v -> ModConfig.smokeAmount = v),
 			toggle("bullet_holes", ModConfig.bulletHoles, null, v -> ModConfig.bulletHoles = v));
+		this.list.row(toggle("tracks", ModConfig.tracks, "tracks", v -> ModConfig.tracks = v));
 		this.list.row(CycleButton.booleanBuilder(Component.translatable("options.ballisticmissiles.smoke_fade.fast"),
 				Component.translatable("options.ballisticmissiles.smoke_fade.long"), ModConfig.fastSmoke)
 			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.smoke_fade.tooltip")))
