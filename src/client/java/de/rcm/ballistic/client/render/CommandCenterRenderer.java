@@ -123,6 +123,17 @@ public class CommandCenterRenderer implements BlockEntityRenderer<CommandCenterB
 			statusLamps(ps, consumer, t, alarm);
 			beacon(ps, consumer, t, alarm);
 		});
+		// the screens light the room in front of them; the beacon flashes red over it in an alarm
+		for (int i = 0; i < SCREENS.length; i++) {
+			float[] s = SCREENS[i];
+			poseStack.pushPose();
+			poseStack.translate(s[0], s[1], s[2] + 0.3F);
+			StructureKit.light(state, camera, poseStack, i, StructureKit.POINT, alarm ? 0xFF6040 : 0x8CC8FF, 0.35F, 6.0F);
+			poseStack.popPose();
+		}
+		if (alarm && Mth.sin(t * 0.9F) > 0.0F) {
+			StructureKit.light(state, camera, poseStack, 4, BEACON_DOME, 0xFF2010, 0.8F, 12.0F);
+		}
 		poseStack.popPose();
 	}
 

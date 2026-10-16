@@ -80,9 +80,11 @@ public class JammerRenderer implements BlockEntityRenderer<JammerBlockEntity, Ja
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> TRUCK.emit(pose, consumer, light));
 		if (state.active && Mth.sin(state.time * 0.6F) > -0.2F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> BEACON.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 0, BEACON, 0xFF9A20, 0.7F, 10.0F);
 		}
 		if (state.deploy > 0.98F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> READY.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 1, READY, 0x40FF60, 0.3F, 5.0F);
 		}
 		// hydraulic lift: the column extends, the antenna swings from lying flat (facing up) to upright
 		// (facing out the back), then sweeps the sector

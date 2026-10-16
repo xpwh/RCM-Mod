@@ -35,8 +35,8 @@ public final class Flashbang {
 	}
 
 	public static void detonate(ServerLevel level, Vec3 pos, @Nullable Entity thrower) {
-		level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.GRENADE_EXPLODE, SoundSource.PLAYERS, 3.0F, 1.55F);
-		level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.GRENADE_EXPLODE_FAR, SoundSource.PLAYERS, 6.0F, 1.4F);
+		level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.FLASHBANG_BANG, SoundSource.PLAYERS, 4.0F, 0.95F + level.getRandom().nextFloat() * 0.1F);
+		level.playSound(null, pos.x, pos.y, pos.z, ModRegistry.FLASHBANG_FAR, SoundSource.PLAYERS, 8.0F, 1.0F);
 		level.sendParticles(ParticleTypes.EXPLOSION, pos.x, pos.y, pos.z, 1, 0.0, 0.0, 0.0, 0.0);
 		level.sendParticles(ParticleTypes.END_ROD, pos.x, pos.y, pos.z, 24, 0.1, 0.1, 0.1, 0.25);
 		level.sendParticles(ParticleTypes.POOF, pos.x, pos.y, pos.z, 10, 0.25, 0.15, 0.25, 0.02);

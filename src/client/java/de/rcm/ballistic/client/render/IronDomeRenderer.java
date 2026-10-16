@@ -118,6 +118,7 @@ public class IronDomeRenderer implements BlockEntityRenderer<IronDomeBlockEntity
 			poseStack.pushPose();
 			poseStack.translate(RADAR_X, 4.75F, 0.4F);
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> LAMP.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 0, LAMP, 0xFF2A18, 0.6F, 9.0F);
 			poseStack.popPose();
 		}
 

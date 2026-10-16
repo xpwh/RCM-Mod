@@ -103,6 +103,7 @@ public class LaserRenderer implements BlockEntityRenderer<LaserDefenseBlockEntit
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> CONTAINER.emit(pose, consumer, light));
 		BoxMesh lamp = state.powered ? READY_LAMP : FAULT_LAMP;
 		collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> lamp.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+		StructureKit.light(state, camera, poseStack, 0, lamp, state.powered ? 0x40FF60 : 0xFF3020, 0.3F, 5.0F);
 
 		Vector3f target = state.target;
 		if (target != null) {
@@ -126,6 +127,15 @@ public class LaserRenderer implements BlockEntityRenderer<LaserDefenseBlockEntit
 				.box(target.x - spot, target.y - spot, target.z - spot, target.x + spot, target.y + spot, target.z + spot, HOT)
 				.build();
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> beam.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			// the exit window and the burn spot glare on what is round them
+			poseStack.pushPose();
+			poseStack.translate(start.x, start.y, start.z);
+			StructureKit.light(state, camera, poseStack, 1, StructureKit.POINT, 0x9FE0FF, 0.6F, 8.0F);
+			poseStack.popPose();
+			poseStack.pushPose();
+			poseStack.translate(target.x, target.y, target.z);
+			StructureKit.light(state, camera, poseStack, 2, StructureKit.POINT, 0xFFB050, 0.9F, 6.0F + 6.0F * state.heat);
+			poseStack.popPose();
 		}
 
 		poseStack.mulPose(new Quaternionf().rotationY(state.yaw));

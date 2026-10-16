@@ -12,7 +12,7 @@ import net.minecraft.world.phys.Vec3;
  * hangs while the grenade pours, and thins out over half a minute after it is spent.
  */
 public final class SmokeScreens {
-	private static final double FULL_RADIUS = 6.5;
+	private static final double FULL_RADIUS = 9.0;
 	private static final int GROW = 120;
 	private static final int LINGER = 600;
 

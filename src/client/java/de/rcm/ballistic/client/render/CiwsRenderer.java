@@ -115,6 +115,11 @@ public class CiwsRenderer implements BlockEntityRenderer<CiwsBlockEntity, CiwsRe
 				muzzle.emit(pose, consumer, glow);
 				streaks.emit(pose, consumer, glow);
 			});
+			// the muzzle flash flickering over the mount and the ground round it
+			poseStack.pushPose();
+			poseStack.translate(0.0F, 0.0F, MUZZLE + 0.4F);
+			StructureKit.light(state, camera, poseStack, 0, StructureKit.POINT, 0xFFC060, 0.6F + 0.4F * Mth.sin(t * 9.0F), 12.0F);
+			poseStack.popPose();
 		}
 		poseStack.popPose();
 	}

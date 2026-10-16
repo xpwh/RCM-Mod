@@ -1970,5 +1970,23 @@
 				"stream": true
 			}
 		]
+	},
+	"flashbang.bang": {
+		"subtitle": "subtitles.ballisticmissiles.flashbang_bang",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/flashbang_bang",
+				"attenuation_distance": 40
+			}
+		]
+	},
+	"flashbang.far": {
+		"subtitle": "subtitles.ballisticmissiles.flashbang_bang",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/flashbang_far",
+				"attenuation_distance": 16
+			}
+		]
 	}
 }

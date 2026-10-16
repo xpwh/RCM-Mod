@@ -226,9 +226,9 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		// a smoke grenade: thick white smoke pouring from the canister, heaviest in the first seconds, rolling out
 		// along the ground and up into a screen several blocks across before it thins away
 		ClientHooks.smokeGrenade = (at, age) -> {
-			int n = age < 40 ? 3 : age < de.rcm.ballistic.gun.GrenadeEntity.SMOKE_TICKS - 80 ? 2 : age % 3 == 0 ? 1 : 0;
-			de.rcm.ballistic.client.effect.SmokeField.burst(at, n, 0.2, new net.minecraft.world.phys.Vec3(0.0, 0.012, 0.0), 0.12, 700, 0.35F, 4.2F,
-				0xDCDCD6, 0.92F, 0.0002F);
+			int n = age < 60 ? 4 : age < de.rcm.ballistic.gun.GrenadeEntity.SMOKE_TICKS - 80 ? 2 : age % 3 == 0 ? 1 : 0;
+			de.rcm.ballistic.client.effect.SmokeField.burst(at, n, 0.4, new net.minecraft.world.phys.Vec3(0.0, 0.01, 0.0), 0.17, 950, 0.5F, 6.8F,
+				0xDCDCD6, 0.9F, 0.0002F);
 		};
 		ClientHooks.smokeCloud = (at, drift, puffs, size) ->
 			de.rcm.ballistic.client.effect.SmokeField.burst(at, puffs, size * 0.8, drift, 0.35, 1500, size * 0.5F, size * 3.2F, 0xE4E0DA, 0.8F, 0.0015F);

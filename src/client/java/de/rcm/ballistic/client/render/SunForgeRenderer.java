@@ -153,6 +153,7 @@ public class SunForgeRenderer implements BlockEntityRenderer<SunForgeBlockEntity
 		ModelPick.part(state, poseStack, camera, PICK);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> SITE.emit(pose, consumer, light));
 		collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> SITE_GLOW.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+		StructureKit.light(state, camera, poseStack, 0, SITE_GLOW, 0xFFF0D8, 0.6F, 22.0F); // the floodlights and the bunker's windows
 
 		// ---- the shaft doors: they grind apart before the lift comes up, and close once it is down again
 		float open = busy ? ease(t, 45.0F, 92.0F) - ease(t, fire + 110.0F, fire + 170.0F) : 0.0F;
@@ -195,6 +196,17 @@ public class SunForgeRenderer implements BlockEntityRenderer<SunForgeBlockEntity
 					g = t < pass ? 1.0F : 1.0F + 1.5F * (float) Math.exp(-(t - pass) * 1.5F);
 					g *= (float) Math.exp(-(t - fire) / 18.0F);
 				}
+				if (g > 0.01F && i % 2 == 0) {
+					// the coils' blue-white glow on the tower, the lattice and the ground
+					float y = SunTimeline.RING_BASE + (i + 0.5F) * SunTimeline.RING_STEP;
+					for (int side = -1; side <= 1; side += 2) {
+						poseStack.pushPose();
+						poseStack.translate(0.0F, y, side * 4.8F);
+						StructureKit.light(state, camera, poseStack, 1 + i + (side > 0 ? 1 : 0), StructureKit.POINT, g > 1.0F ? 0xFFFFFF : 0x9CC4FF,
+							Mth.clamp(g, 0.0F, 1.0F), 9.0F + 4.0F * Mth.clamp(g - 1.0F, 0.0F, 1.0F));
+						poseStack.popPose();
+					}
+				}
 				if (g > 0.01F) {
 					int argb = Math.round(Mth.clamp(g, 0.0F, 1.0F) * 255.0F) << 24 | (g > 1.0F ? 0xFFFFFF : 0xC8E4FF);
 					BoxMesh ring = RING_GLOW[i];
@@ -223,6 +235,10 @@ public class SunForgeRenderer implements BlockEntityRenderer<SunForgeBlockEntity
 			int argb = Math.round(k * 255.0F) << 24 | 0xFFFFFF;
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> MUZZLE_GLOW.emit(pose, consumer, LightTexture.FULL_BRIGHT, argb));
 			poseStack.popPose();
+			poseStack.pushPose();
+			poseStack.translate(0.0F, SunTimeline.MUZZLE + 2.0F, 0.0F);
+			StructureKit.light(state, camera, poseStack, 20, StructureKit.POINT, 0xDCEBFF, k, 60.0F);
+			poseStack.popPose();
 		}
 
 		// ---- the crane: its jib over the tower for servicing, swung clear for the shot
@@ -233,20 +249,24 @@ public class SunForgeRenderer implements BlockEntityRenderer<SunForgeBlockEntity
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> CRANE_TOP.emit(pose, consumer, light));
 		if ((state.time % 40.0F) < 20.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> CRANE_GLOW.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 21, CRANE_GLOW, 0xFF2A18, 0.5F, 9.0F);
 		}
 		poseStack.popPose();
 
 		// ---- lamps: the aviation lights, the turning beacons while it counts down, the ready lamp
 		if ((state.time % 40.0F) < 20.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> AVIATION.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 23, AVIATION, 0xFF2A18, 0.5F, 9.0F);
 		}
 		if (busy && t < fire + 60.0F) {
 			boolean a = (state.time % 16.0F) < 8.0F;
 			BoxMesh beacon = a ? BEACON_A : BEACON_B;
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> beacon.emit(pose, consumer, LightTexture.FULL_BRIGHT, 0xFFFFA020));
+			StructureKit.light(state, camera, poseStack, 24, beacon, 0xFFA020, 0.8F, 12.0F);
 		}
 		if (state.loaded && !busy) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> READY.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 25, READY, 0x40FF60, 0.3F, 5.0F);
 		}
 		poseStack.popPose();
 	}

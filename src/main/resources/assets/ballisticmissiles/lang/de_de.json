@@ -1016,5 +1016,6 @@
 	"screen.ballisticmissiles.sun.armed": "Scharf – zum Feuern erneut drücken",
 	"gore_warning.ballisticmissiles.alpha_label": "ALPHA",
 	"gore_warning.ballisticmissiles.scroll": "Bitte bis zum Ende lesen",
-	"gore_warning.ballisticmissiles.hint": "Enter zum Fortfahren · beides später in den Einstellungen änderbar"
+	"gore_warning.ballisticmissiles.hint": "Enter zum Fortfahren · beides später in den Einstellungen änderbar",
+	"subtitles.ballisticmissiles.flashbang_bang": "Blendgranate knallt"
 }

@@ -108,12 +108,15 @@ public class OrbitalUplinkRenderer implements BlockEntityRenderer<OrbitalUplinkB
 		boolean busy = state.phase != OrbitalUplinkBlockEntity.IDLE;
 		if (busy && Mth.sin(state.time * 0.9F) > 0.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> BEACON.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 0, BEACON, 0xFF2010, 0.7F, 10.0F);
 		}
 		if (!busy) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> READY.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 1, READY, 0x40FF60, 0.25F, 4.0F);
 		}
 		if ((state.time % 40.0F) < 20.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> AVIATION.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 2, AVIATION, 0xFF2A18, 0.45F, 8.0F);
 		}
 		poseStack.popPose();
 		// azimuth: the whole head turns on the kingpost (world azimuth, 0 = +Z)

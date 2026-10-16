@@ -122,19 +122,25 @@ void main() {
     }
 
     // ---- march through all of them at once: their densities add up into one body of smoke
+    // fine steps through the front, where the smoke is seen (big even steps showed as shells round the camera),
+    // coarser ones through what lies behind
     int steps = samples * 6;
-    float dt = (tMax - tMin) / float(steps);
+    float range = tMax - tMin;
+    float dtFine = min(range / float(steps), 0.45);
+    float dtCoarse = max(dtFine, range / float(steps)) * 1.5;
     // interleaved gradient noise: a fine, even dither of where the steps fall, so no slices show
     float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
     vec3 light = vec3(0.0);
     float trans = 1.0;
     float t = seconds;
     vec3 drift = vec3(t * 0.35, t * 0.12, -t * 0.28);
-    for (int k = 0; k < 48; k++) {
-        if (k >= steps || trans < 0.01) {
+    float tt = tMin + jitter * dtFine;
+    for (int k = 0; k < 72; k++) {
+        if (tt > tMax || trans < 0.01) {
             break;
         }
-        float tt = tMin + (float(k) + jitter) * dt;
+        float dt = k < steps ? dtFine : dtCoarse;
+        float tNext = tt + dt;
         vec3 p = rd * tt;
         float cover = 0.0;
         float sigma = 0.0;
@@ -172,6 +178,7 @@ void main() {
             up += q.y * w;
         }
         if (sigma <= 0.0) {
+            tt = tNext;
             continue;
         }
         base /= sigma;
@@ -186,10 +193,15 @@ void main() {
         vec3 warp = vec3(vnoise(wq * 0.5 + 3.1), vnoise(wq * 0.5 + 7.3), vnoise(wq * 0.5 + 1.9)) - 0.5;
         vec3 nq = wq + warp * 1.6;
         float n = vnoise(nq) * 0.55 + vnoise(nq * 2.1 + 5.2) * 0.3 + vnoise(nq * 4.6 + 9.1) * 0.15;
+        // and the big, slow billows of a large cloud
+        n = mix(n, vnoise(nq * 0.27 + 2.7), 0.35);
         n = smoothstep(0.22, 0.78, n);
         float erode = mix(0.8, 1.0, age);
-        float d = clamp((min(cover, 1.0) * 0.85 + 0.12 - (1.0 - n) * erode) / 0.3, 0.0, 1.0);
+        // eaten away hardest at its edges, so they fray into wisps instead of ending as a smooth dome
+        float shape = min(cover, 1.0);
+        float d = clamp((shape * 0.95 + 0.06 - (1.0 - n) * erode * (1.2 - 0.5 * shape)) / 0.35, 0.0, 1.0);
         if (d <= 0.0) {
+            tt = tNext;
             continue;
         }
         float ext = sigma / max(cover, 1.0e-3) * d;
@@ -202,6 +214,7 @@ void main() {
         col += vec3(1.0, 0.5, 0.18) * glow * 1.6 + base * emit * 1.4;
         light += trans * a * col;
         trans *= 1.0 - a;
+        tt = tNext;
     }
     float alpha = 1.0 - trans;
     if (alpha < 0.003) {

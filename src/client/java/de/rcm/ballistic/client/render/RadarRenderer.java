@@ -99,6 +99,7 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 		ModelPick.part(state, poseStack, camera, STATION);
 		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> STATION.emit(pose, consumer, light));
 		collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> WINDOWS.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+		StructureKit.light(state, camera, poseStack, 0, WINDOWS, 0xFFE6B0, 0.35F, 6.0F);
 		// height-finder: slow turn, nodding through the elevation sector
 		poseStack.pushPose();
 		poseStack.translate(FINDER[0], 2.4F, FINDER[1]);
@@ -109,6 +110,7 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 		poseStack.popPose();
 		if (state.alert && Mth.sin(state.time * 1.3F) > 0.0F) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> ALERT_BEACON.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 1, ALERT_BEACON, 0xFF2010, 0.8F, 12.0F);
 		}
 
 		poseStack.translate(0.0F, TURNTABLE, 0.0F);
@@ -118,6 +120,7 @@ public class RadarRenderer implements BlockEntityRenderer<RadarBlockEntity, Rada
 		boolean blink = state.alert ? Mth.sin(state.time * 1.3F) > 0.0F : Mth.sin(state.time * 0.2F) > 0.3F;
 		if (blink) {
 			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE, (pose, consumer) -> BEACON.emit(pose, consumer, LightTexture.FULL_BRIGHT));
+			StructureKit.light(state, camera, poseStack, 2, BEACON, 0xFF2A18, 0.5F, 9.0F);
 		}
 		poseStack.popPose();
 	}

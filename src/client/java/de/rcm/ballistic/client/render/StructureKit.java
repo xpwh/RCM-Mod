@@ -82,6 +82,57 @@ final class StructureKit {
 	private StructureKit() {
 	}
 
+	/** One lamp at the pose's origin, for {@link #light}. */
+	static final BoxMesh POINT = new BoxMesh.Builder().box(-0.01F, -0.01F, -0.01F, 0.01F, 0.01F, 0.01F, LAMP).build();
+
+	/** The separate lamps of each glow mesh: the centres of its clusters of vertices. */
+	private static final java.util.Map<BoxMesh, java.util.List<Vector3f>> LAMPS = new java.util.WeakHashMap<>();
+
+	/**
+	 * Makes the glowing parts of {@code mesh}, as drawn now with {@code poseStack}, real lights: each separate lamp in
+	 * it (vertices further apart than a block and a half count as different lamps) shines on what is round it with
+	 * the dynamic lights, while this is called every frame.
+	 */
+	static void light(net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState state, net.minecraft.client.renderer.state.CameraRenderState camera,
+		com.mojang.blaze3d.vertex.PoseStack poseStack, int index, BoxMesh mesh, int rgb, float strength, float radius) {
+		java.util.List<Vector3f> lamps = LAMPS.computeIfAbsent(mesh, StructureKit::clusters);
+		org.joml.Matrix4f m = poseStack.last().pose();
+		long key = state.blockPos.asLong() * 7919L + index * 64L;
+		for (int i = 0; i < lamps.size() && i < 64; i++) {
+			Vector3f p = m.transformPosition(new Vector3f(lamps.get(i)));
+			de.rcm.ballistic.client.effect.DynamicLights.lamp(key + i, camera.pos.add(p.x, p.y, p.z), rgb, strength, radius);
+		}
+	}
+
+	private static java.util.List<Vector3f> clusters(BoxMesh mesh) {
+		float[] d = mesh.vertices();
+		java.util.List<Vector3f> sums = new java.util.ArrayList<>();
+		java.util.List<Integer> counts = new java.util.ArrayList<>();
+		for (int i = 0; i < d.length; i += BoxMesh.STRIDE) {
+			Vector3f v = new Vector3f(d[i], d[i + 1], d[i + 2]);
+			int found = -1;
+			for (int k = 0; k < sums.size(); k++) {
+				Vector3f c = new Vector3f(sums.get(k)).div(counts.get(k));
+				if (c.distanceSquared(v) < 1.5F * 1.5F) {
+					found = k;
+					break;
+				}
+			}
+			if (found < 0) {
+				sums.add(v);
+				counts.add(1);
+			} else {
+				sums.get(found).add(v);
+				counts.set(found, counts.get(found) + 1);
+			}
+		}
+		java.util.List<Vector3f> out = new java.util.ArrayList<>();
+		for (int k = 0; k < sums.size(); k++) {
+			out.add(sums.get(k).div(counts.get(k)));
+		}
+		return out;
+	}
+
 	static Vector3f v(float x, float y, float z) {
 		return new Vector3f(x, y, z);
 	}

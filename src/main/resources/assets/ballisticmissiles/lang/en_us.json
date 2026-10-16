@@ -1016,5 +1016,6 @@
 	"screen.ballisticmissiles.sun.armed": "Armed – press again to fire",
 	"gore_warning.ballisticmissiles.alpha_label": "ALPHA",
 	"gore_warning.ballisticmissiles.scroll": "Please read to the end",
-	"gore_warning.ballisticmissiles.hint": "Enter to continue · both can be changed later in the settings"
+	"gore_warning.ballisticmissiles.hint": "Enter to continue · both can be changed later in the settings",
+	"subtitles.ballisticmissiles.flashbang_bang": "Flashbang bangs"
 }
