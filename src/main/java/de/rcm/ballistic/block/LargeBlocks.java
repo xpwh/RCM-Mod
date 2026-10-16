@@ -31,6 +31,7 @@ public final class LargeBlocks {
 			m.put(ModRegistry.IRON_DOME, 10.0);
 			m.put(ModRegistry.AIR_DEFENSE, 8.0);
 			m.put(ModRegistry.ORBITAL_UPLINK, 7.0);
+			m.put(ModRegistry.SUN_FORGE, 26.0);
 			m.put(ModRegistry.DECOY_LAUNCHER, 4.0);
 			m.put(ModRegistry.CIWS, 4.0);
 			m.put(ModRegistry.SEA_MINE, 1.5);

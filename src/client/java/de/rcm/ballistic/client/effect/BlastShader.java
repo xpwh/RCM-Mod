@@ -67,6 +67,11 @@ public final class BlastShader {
 	private static float beatPeriod = 20.0F;
 	/** The player the blood loss belongs to: a new one (respawned, another world) starts whole. */
 	private static Object lossOwner;
+	/** Light bent round a collapsing core (Einstein radius, blocks) and the shimmer of a burning star round it. */
+	private static Vec3 lensPos = Vec3.ZERO;
+	private static float lensRadius;
+	private static float lensShimmer;
+	private static int lensAge = 100;
 	private static float afterX = 0.5F;
 	private static float afterY = 0.5F;
 
@@ -100,6 +105,17 @@ public final class BlastShader {
 			heat = Math.max(heat, (float) Math.min(1.0, near * (0.35 + 0.45 * scale)));
 			heatDecay = (float) Mth.clamp(0.9 + 0.045 * scale, 0.9, 0.993);
 		}
+	}
+
+	/**
+	 * Light bending round {@code at}: {@code radius} (blocks) how far out the bending reaches, {@code shimmer} (0-1)
+	 * how hard the air boils round it. Holds while it is set again every tick.
+	 */
+	public static void lens(Vec3 at, float radius, float shimmer) {
+		lensPos = at;
+		lensRadius = radius;
+		lensShimmer = Mth.clamp(shimmer, 0.0F, 1.0F);
+		lensAge = 0;
 	}
 
 	/** Ground shock: the picture jolts and rolls. */
@@ -161,6 +177,10 @@ public final class BlastShader {
 
 	public static void tick(Minecraft mc) {
 		surfacing(mc);
+		if (++lensAge > 2) {
+			lensRadius = 0.0F;
+			lensShimmer = 0.0F;
+		}
 		strength = Math.max(0.0F, strength * 0.93F - 0.004F);
 		exposure = Math.max(0.0F, exposure * 0.9F - 0.004F);
 		heat = Math.max(0.0F, heat * heatDecay - 0.0015F);
@@ -180,7 +200,7 @@ public final class BlastShader {
 		boolean wanted = mc.level != null && de.rcm.ballistic.client.ModConfig.screenEffects > 0 && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
 			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F || suppression > 0.01F || loss > 0.01F
 			|| Vision.any() > 0.01F || de.rcm.ballistic.client.ModConfig.bloom > 0 || de.rcm.ballistic.client.ModConfig.lensFlare
-			|| EyeAdaptation.overexposure(0.0F) > 0.01F);
+			|| EyeAdaptation.overexposure(0.0F) > 0.01F || lensRadius > 0.0F || lensShimmer > 0.0F);
 		if (!wanted) {
 			if (ours) {
 				renderer.clearPostEffect();
@@ -320,7 +340,14 @@ public final class BlastShader {
 		// and how overexposed the picture is coming out of the dark
 		float bloomAmount = de.rcm.ballistic.client.ModConfig.bloom / 100.0F;
 		img.setPixel(10, 0, argb(255, bloomAmount, EyeAdaptation.overexposure(partialTick), Mth.lerp(night, 0.86F, 0.55F)));
-		img.setPixel(11, 0, argb(255, 0.0F, 0.0F, 0.0F));
+		// a star's core collapsing: where it is on screen, how far its bending of the light reaches, the shimmer
+		float[] lensScreen = lensRadius > 0.0F || lensShimmer > 0.0F ? project(camera, lensPos, tanHalf, aspect) : new float[] {0.5F, 0.5F, 0.0F, 0.0F};
+		float lensReach = lensScreen[3] > 0.0F ? (float) (lensRadius / (lensScreen[3] * tanHalf) * 0.5) : 0.0F;
+		boolean lensNear = lensScreen[0] > -0.5F && lensScreen[0] < 1.5F && lensScreen[1] > -0.5F && lensScreen[1] < 1.5F;
+		img.setPixel(11, 0, lensScreen[3] > 0.0F && lensNear
+			? argb(255, Mth.clamp(lensScreen[0] * 0.5F + 0.25F, 0.0F, 1.0F), Mth.clamp(lensScreen[1] * 0.5F + 0.25F, 0.0F, 1.0F), Mth.clamp(lensReach * 2.0F, 0.0F, 1.0F))
+			: argb(0, 0.0F, 0.0F, 0.0F));
+		img.setPixel(11, 0, img.getPixel(11, 0) & 0x00FFFFFF | byteOf(lensScreen[3] > 0.0F && lensNear ? lensShimmer * k : 0.0F) << 24);
 		params.upload();
 	}
 

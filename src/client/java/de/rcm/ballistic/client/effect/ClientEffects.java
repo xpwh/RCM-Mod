@@ -241,7 +241,7 @@ public final class ClientEffects {
 		Minecraft.getInstance().particleEngine.createParticle(type, x, y, z, dx, dy, dz);
 	}
 
-	static void setFlash(float strength, int color) {
+	public static void setFlash(float strength, int color) {
 		BlastShader.flash(strength * 0.8F);
 		if (strength > flash) {
 			flash = Math.min(1.0F, strength);
@@ -299,7 +299,7 @@ public final class ClientEffects {
 		return mc.gameRenderer.getMainCamera().position().distanceTo(pos);
 	}
 
-	static double gauss() {
+	public static double gauss() {
 		return RANDOM.nextGaussian();
 	}
 
@@ -307,7 +307,7 @@ public final class ClientEffects {
 		return RANDOM.nextFloat();
 	}
 
-	static double groundY(Minecraft mc, double x, double fallback, double z) {
+	public static double groundY(Minecraft mc, double x, double fallback, double z) {
 		if (mc.level == null) {
 			return fallback;
 		}
@@ -324,7 +324,7 @@ public final class ClientEffects {
 		return state.isAir() ? null : state;
 	}
 
-	static int mix(int a, int b, float t) {
+	public static int mix(int a, int b, float t) {
 		t = Mth.clamp(t, 0, 1);
 		int r = (int) Mth.lerp(t, a >> 16 & 255, b >> 16 & 255);
 		int g = (int) Mth.lerp(t, a >> 8 & 255, b >> 8 & 255);
@@ -346,7 +346,7 @@ public final class ClientEffects {
 	// ------------------------------------------------------------------ building blocks
 
 	/** Fireball whose puffs burn for a moment, then cool into black, sun-lit smoke that keeps rising. */
-	static void fireball(Vec3 c, double radius, int count, float size, double speed, int life) {
+	public static void fireball(Vec3 c, double radius, int count, float size, double speed, int life) {
 		for (int i = 0; i < count; i++) {
 			Vec3 v = new Vec3(gauss(), Math.abs(gauss()) * 0.9 + 0.25, gauss()).normalize();
 			double r = radius * Math.sqrt(rand());
@@ -403,7 +403,7 @@ public final class ClientEffects {
 	}
 
 	/** Glowing embers raining back down. */
-	static void embers(Vec3 c, int count, double speed) {
+	public static void embers(Vec3 c, int count, double speed) {
 		for (int i = 0; i < count; i++) {
 			Vec3 v = new Vec3(gauss(), Math.abs(gauss()) + 0.4, gauss()).normalize().scale(speed * (0.4 + rand()));
 			CloudParticle p = cloud(true, c.x, c.y + 1, c.z, v.x, v.y, v.z);
@@ -414,7 +414,7 @@ public final class ClientEffects {
 	}
 
 	/** Brief condensation shell racing outward right after the blast. */
-	static void shockSphere(Vec3 c, double radius, int count) {
+	public static void shockSphere(Vec3 c, double radius, int count) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null || !mc.level.isRaining()) {
 			return; // the condensation shell only forms in humid air

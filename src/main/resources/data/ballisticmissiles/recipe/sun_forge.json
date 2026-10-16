@@ -1,0 +1,20 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": [
+		"CNC",
+		"ORO",
+		"BBB"
+	],
+	"key": {
+		"C": "minecraft:copper_block",
+		"N": "minecraft:nether_star",
+		"O": "ballisticmissiles:orbital_uplink",
+		"R": "minecraft:redstone_block",
+		"B": "ballisticmissiles:reinforced_concrete"
+	},
+	"result": {
+		"id": "ballisticmissiles:sun_forge",
+		"count": 1
+	}
+}

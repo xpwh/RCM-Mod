@@ -30,6 +30,8 @@ public class BallisticMissiles implements ModInitializer {
 		// charred wood still burns, just not as eagerly as fresh logs
 		net.fabricmc.fabric.api.registry.FlammableBlockRegistry.getDefaultInstance().add(ModRegistry.CHARRED_LOG, 3, 4);
 		ServerTickEvents.END_WORLD_TICK.register(DetonationManager::tick);
+		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.sun.SunStrikes::tick);
+		de.rcm.ballistic.sun.SunNetwork.register();
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.CraterLog::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RemoteLaunch::tick);
 		ServerTickEvents.END_WORLD_TICK.register(RadiationManager::tick);
@@ -73,10 +75,14 @@ public class BallisticMissiles implements ModInitializer {
 				de.rcm.ballistic.explosion.NuclearWinter.sync(handler.player);
 				de.rcm.ballistic.explosion.NewMoon.sync(handler.player);
 				de.rcm.ballistic.explosion.Aurora.sync(handler.player);
+				de.rcm.ballistic.sun.SunStrikes.sync(handler.player);
 				de.rcm.ballistic.injury.Injuries.rejoin(handler.player);
 			});
 		net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
-			(player, origin, destination) -> RadiationManager.sync(destination, player));
+			(player, origin, destination) -> {
+				RadiationManager.sync(destination, player);
+				de.rcm.ballistic.sun.SunStrikes.sync(player);
+			});
 		ServerLifecycleEvents.SERVER_STOPPING.register(RadiationManager::save);
 		// each world starts from the saved settings, not from what a server visited before left behind
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> de.rcm.ballistic.config.ServerConfig.load());
@@ -90,6 +96,7 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.explosion.NuclearWinter.clear();
 			RemoteLaunch.clear();
 			de.rcm.ballistic.explosion.DetonationManager.clear();
+			de.rcm.ballistic.sun.SunStrikes.clear();
 			de.rcm.ballistic.gun.MagazineLanding.clear();
 			de.rcm.ballistic.entity.FpvDroneEntity.clearPilots();
 			de.rcm.ballistic.gun.AkItem.release(null);

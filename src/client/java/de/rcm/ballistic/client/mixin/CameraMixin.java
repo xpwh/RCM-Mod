@@ -61,6 +61,16 @@ public abstract class CameraMixin {
 		}
 	}
 
+	/** The Sun Destroyer's cutscene: the camera is wherever the shot is, far from you. */
+	@Inject(method = "setup", at = @At("TAIL"))
+	private void ballisticmissiles$sunCutscene(Level level, Entity entity, boolean detached, boolean mirrored, float partialTick, CallbackInfo ci) {
+		double[] view = de.rcm.ballistic.client.sun.SunCutscene.camera(partialTick);
+		if (view != null) {
+			this.setPosition(new Vec3(view[0], view[1], view[2]));
+			this.setRotation((float) view[3], (float) view[4]);
+		}
+	}
+
 	@Inject(method = "setup", at = @At("TAIL"))
 	private void ballisticmissiles$cockpitView(Level level, Entity entity, boolean detached, boolean mirrored, float partialTick, CallbackInfo ci) {
 		Quaternionf q = this.ballisticmissiles$cockpit;

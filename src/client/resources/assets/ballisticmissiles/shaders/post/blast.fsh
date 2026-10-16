@@ -187,6 +187,26 @@ void main() {
         uv += n * column * 0.006;
     }
 
+    // ---- a star's core collapsing: the light bent round it as round a black hole (the picture behind it
+    // pulled into a ring at the edge of its reach), and a burning star's hot air boiling round it
+    vec4 p11 = param(11);
+    if (p11.b > 0.0 || p11.a > 0.0) {
+        vec2 core = (p11.rg - 0.25) * 2.0;
+        float reach = p11.b * 0.5;
+        vec2 d = (uv - core) * vec2(aspect, 1.0);
+        float r2 = max(dot(d, d), reach * reach * 0.09);
+        // the thin-lens deflection: what is seen at d comes from d - reach^2 d / |d|^2
+        vec2 bend = -d * reach * reach / r2 * smoothstep(reach * 6.0, reach * 1.5, sqrt(r2));
+        uv += bend / vec2(aspect, 1.0);
+        float shimmer = p11.a;
+        if (shimmer > 0.0) {
+            float rr = length(d);
+            float ring = exp(-rr * rr * 7.0);
+            vec2 n = vec2(noise(uv * vec2(14.0, 26.0) + vec2(0.0, -time * 3.1)), noise(uv * vec2(14.0, 26.0) + vec2(5.3, -time * 3.4))) - 0.5;
+            uv += n * ring * shimmer * 0.012;
+        }
+    }
+
     // ---- earthquake: the ground (and the camera on it) bounces and rolls
     if (quake > 0.0) {
         float bounce = sin(time * 31.0) * 0.6 + sin(time * 17.0 + 1.3) * 0.4;

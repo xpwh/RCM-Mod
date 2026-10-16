@@ -15,6 +15,9 @@ public final class ClientHooks {
 	public static Consumer<InteractionHand> designateLookedAtBlock = hand -> {};
 	/** Asks the player which bunker the kit at this position should build. */
 	public static Consumer<net.minecraft.core.BlockPos> openBunkerMenu = pos -> {};
+	/** Opens the Helios launch complex's console. */
+	public static Consumer<net.minecraft.core.BlockPos> openSunForge = pos -> {};
+	public static Consumer<de.rcm.ballistic.sun.SunForgeBlockEntity> sunForgeClientTick = forge -> {};
 	public static Consumer<MissileEntity> missileClientTick = missile -> {};
 	public static Consumer<Entity> projectileClientTick = entity -> {};
 	public static Consumer<JetEntity> jetClientTick = jet -> {};

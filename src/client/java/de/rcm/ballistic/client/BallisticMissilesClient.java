@@ -67,6 +67,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModRegistry.SUPPLY_ROCKET, de.rcm.ballistic.client.render.SupplyRocketRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.KINETIC_ROD, de.rcm.ballistic.client.render.KineticRodRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.ORBITAL_UPLINK_BE, de.rcm.ballistic.client.render.OrbitalUplinkRenderer::new);
+		BlockEntityRenderers.register(ModRegistry.SUN_FORGE_BE, de.rcm.ballistic.client.render.SunForgeRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.BULLET, de.rcm.ballistic.client.render.BulletRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.GRENADE_ENTITY, de.rcm.ballistic.client.render.GrenadeRenderers.EntityRendererImpl::new);
 		EntityRendererRegistry.register(ModRegistry.RPG_GRENADE, de.rcm.ballistic.client.render.RpgGrenadeRenderer::new);
@@ -114,6 +115,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.NightSky.init();
 		de.rcm.ballistic.client.effect.SmokeVolume.init();
 		de.rcm.ballistic.client.render.JetExhaust.init();
+		de.rcm.ballistic.client.sun.SunClient.init(); // its star draws before the clouds and the smoke, which lie over it
 		de.rcm.ballistic.client.effect.VolumetricClouds.init();
 		de.rcm.ballistic.client.effect.VolCloudCommand.init();
 		de.rcm.ballistic.client.gui.SettingsCommand.init();
@@ -239,6 +241,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		};
 		ClientHooks.openTargetScreen = hand -> Minecraft.getInstance().setScreen(new TargetScreen(hand));
 		ClientHooks.openBunkerMenu = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.gui.BunkerScreen(pos));
+		ClientHooks.openSunForge = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.sun.SunForgeScreen(pos));
 		ClientHooks.designateLookedAtBlock = BallisticMissilesClient::designate;
 	}
 
