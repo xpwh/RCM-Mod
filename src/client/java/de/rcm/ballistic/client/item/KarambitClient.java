@@ -18,50 +18,42 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
- * The karambit in your own hand. Index finger through the ring, the handle in the fist, the claw curving
- * out under the little finger, edge forward.
+ * The karambit in your own hand. Index finger through the ring, the handle across the fist, the claw curving out
+ * under the little finger and away from the wrist, edge leading. The knife is always laid in the fist from the
+ * way the forearm actually runs (the same elbow the arms are drawn with), so it never cuts through the hand or
+ * the arm; for the spins the index finger comes out to the side and the knife wheels round it clear of the arm.
  * <ul>
- *   <li>Drawn: it comes up from the hip spinning once round the finger and is caught in the fist.</li>
- *   <li>Idle: it rides your breathing, sways a little, and every so often the wrist turns it to glance at
- *       the edge.</li>
- *   <li>Swung (attack): a backhand slash across from the right, the edge leading.</li>
- *   <li>Inspected (the inspect key): brought up to show one flat, turned to show the other, then two
- *       spins round the ring finger, one back the other way, a twirl round the handle, a last spin and
- *       caught.</li>
+ *   <li>Drawn: up from the hip, a spin backwards round the finger, snapped into the fist.</li>
+ *   <li>Idle: it rides your breathing, the wrist drifts a little, and now and then it turns to look at the edge.</li>
+ *   <li>Swung (attack): cocked back, then a fast backhand slash across and down, the edge leading, and back.</li>
+ *   <li>Inspected (the inspect key): raised into the light, one flat then a flick over to the other and back,
+ *       the finger comes out - two spins round it, one back the other way - tossed up off the finger turning
+ *       over, caught on the finger, and snapped back into the fist.</li>
  * </ul>
- * Everything is laid out in camera space (x right, y up, -z ahead) and carried into the renderer's hand
- * space, as for the cigarettes.
+ * Poses are laid out in camera space (x right, y up, -z ahead) and drawn in the hand space vanilla sets up, so
+ * they sway and bob like any held item. Every move is eased in and out, the spins whip and the catches give.
  */
 public final class KarambitClient {
-	public static final int DRAW_LEN = 16;
-	public static final int INSPECT_LEN = 112;
+	public static final int DRAW_LEN = 18;
+	public static final int INSPECT_LEN = 136;
 
-	private static final Vector3f REST = new Vector3f(0.24F, -0.17F, -0.31F);
-	private static final Vector3f LOW = new Vector3f(0.34F, -0.66F, -0.34F);
-	private static final Vector3f SHOW = new Vector3f(0.15F, -0.07F, -0.38F);
-	private static final Vector3f SHOW2 = new Vector3f(-0.02F, -0.07F, -0.38F);
-	private static final Vector3f SPIN = new Vector3f(0.1F, -0.02F, -0.42F);
-	private static final Vector3f WIND = new Vector3f(0.36F, -0.08F, -0.38F);
-	private static final Vector3f CUT = new Vector3f(-0.1F, -0.27F, -0.42F);
+	private static final Vector3f REST = new Vector3f(0.17F, -0.12F, -0.36F);
+	private static final Vector3f LOW = new Vector3f(0.32F, -0.62F, -0.36F);
+	private static final Vector3f SHOW = new Vector3f(0.1F, -0.06F, -0.38F);
+	private static final Vector3f SPIN = new Vector3f(0.12F, -0.08F, -0.42F);
+	private static final Vector3f WIND = new Vector3f(0.32F, -0.04F, -0.4F);
+	private static final Vector3f CUT = new Vector3f(-0.12F, -0.24F, -0.46F);
 	private static final Vector3f REST_L = new Vector3f(-0.48F, -0.62F, -0.36F);
-
-	/** Held: the handle runs away from you, the claw curving down ahead of the fist, edge down and in. */
-	private static final Quaternionf Q_REST = axes(new Vector3f(0.3F, 0.45F, 0.85F), new Vector3f(-0.2F, -1.0F, 0.3F));
-	/** Shown side on, the way it lies in a photograph: ring to the right, claw to the left, edge down. */
-	private static final Quaternionf Q_SHOW = axes(new Vector3f(1.0F, 0.0F, 0.0F), new Vector3f(0.0F, -1.0F, 0.0F));
-	/** Turned round to show the other flat: ring to the left. */
-	private static final Quaternionf Q_SHOW2 = axes(new Vector3f(-1.0F, 0.0F, 0.15F), new Vector3f(0.0F, -1.0F, 0.0F));
-	/** Cocked back for the slash, and at its end: the edge leading across. */
-	private static final Quaternionf Q_WIND = axes(new Vector3f(0.2F, 0.35F, 1.0F), new Vector3f(-0.6F, 0.75F, 0.0F));
-	private static final Quaternionf Q_CUT = axes(new Vector3f(-0.15F, 0.25F, 1.0F), new Vector3f(-1.0F, -0.3F, 0.0F));
-
-	/** The turn that lays the knife's +y (from the blade up to the ring) along {@code y} and its edge side along {@code z} (camera space). */
-	private static Quaternionf axes(Vector3f y, Vector3f z) {
-		Vector3f ay = new Vector3f(y).normalize();
-		Vector3f az = new Vector3f(z).sub(new Vector3f(ay).mul(ay.dot(z))).normalize();
-		Vector3f ax = new Vector3f(ay).cross(az);
-		return new Quaternionf().setFromNormalized(new org.joml.Matrix3f(ax, ay, az));
-	}
+	/** The shoulder for the knife arm (hand space): higher and further back than for a rifle, so the forearm runs forward like a punch. */
+	private static final Vector3f SHOULDER = HandSpace.hand(new Vector3f(0.3F, -0.34F, 0.42F));
+	/** The elbow out to the right, so the forearm comes in from the side of the view rather than up from below. */
+	private static final Vector3f POLE = new Vector3f(1.0F, -0.25F, 0.2F);
+	/** The knife a little larger in your own view than in the world, as viewmodels are. */
+	private static final float VIEW = 1.3F;
+	/** The wrist's tilt at rest: the claw tipped towards you so its curve shows. */
+	private static final float BEND_REST = 0.3F;
+	/** The wrist's turn about the forearm at rest: the claw a little towards you so its curve shows. */
+	private static final float ROLL_REST = 1.0F;
 
 	private static long drawStart = -1000L;
 	private static long inspectStart = -1000L;
@@ -109,7 +101,7 @@ public final class KarambitClient {
 		long d = now - drawStart;
 		if (d == 4) {
 			sound(ModRegistry.KNIFE_SPIN, p, 0.4F);
-		} else if (d == 12) {
+		} else if (d == 13) {
 			sound(ModRegistry.KNIFE_CATCH, p, 0.45F);
 		}
 		// the swing: whoosh as it starts (and it breaks off any inspecting)
@@ -125,9 +117,9 @@ public final class KarambitClient {
 				return;
 			}
 			switch ((int) t) {
-				case 2, 28, 82 -> sound(ModRegistry.KNIFE_SWISH, p, 0.3F);
-				case 47, 53, 59, 65, 72, 98 -> sound(ModRegistry.KNIFE_SPIN, p, 0.4F);
-				case 80, 94, 109 -> sound(ModRegistry.KNIFE_CATCH, p, 0.4F);
+				case 3, 37, 59, 108 -> sound(ModRegistry.KNIFE_SWISH, p, 0.3F);
+				case 75, 81, 87, 93, 99 -> sound(ModRegistry.KNIFE_SPIN, p, 0.4F);
+				case 46, 120, 132 -> sound(ModRegistry.KNIFE_CATCH, p, 0.4F);
 				default -> {
 				}
 			}
@@ -140,21 +132,49 @@ public final class KarambitClient {
 
 	private static float smooth(float x) {
 		x = Mth.clamp(x, 0.0F, 1.0F);
-		return x * x * (3.0F - 2.0F * x);
+		return x * x * x * (x * (6.0F * x - 15.0F) + 10.0F);
 	}
 
 	private static float span(float t, float a, float b) {
 		return smooth((t - a) / (b - a));
 	}
 
-	/** Eases in and out harder than smooth: for the spins, which whip round and stop dead in the fist. */
+	/** Eases in and out harder: for spins, which whip round and stop dead. */
 	private static float whip(float t, float a, float b) {
 		float x = Mth.clamp((t - a) / (b - a), 0.0F, 1.0F);
 		return x < 0.5F ? 4.0F * x * x * x : 1.0F - (float) Math.pow(-2.0F * x + 2.0F, 3.0) / 2.0F;
 	}
 
-	/** Where the ring sits, how the knife is turned, and how far the hand has opened to let it spin round the finger (camera space). */
-	record Frame(Vector3f ring, Quaternionf q, float onFinger) {
+	/** Overshoots a little and settles: for things snapping into place. */
+	private static float snap(float t, float a, float b) {
+		float x = Mth.clamp((t - a) / (b - a), 0.0F, 1.0F);
+		float c = 1.6F;
+		return 1.0F + (c + 1.0F) * (float) Math.pow(x - 1.0F, 3.0) + c * (float) Math.pow(x - 1.0F, 2.0);
+	}
+
+	/** 0 .. 1 .. 0 between a and b, smooth at both ends. */
+	private static float bump(float t, float a, float b) {
+		float x = Mth.clamp((t - a) / (b - a), 0.0F, 1.0F);
+		return Mth.sin(x * Mth.PI) * Mth.sin(x * Mth.PI);
+	}
+
+	/** Where the fist is, where the ring is, and how the knife is turned (camera space). */
+	record Frame(Vector3f hand, Vector3f ring, Quaternionf q) {
+	}
+
+	/** One moment of a move: the fist, how far the knife faces you, the wrist's extra turn and tilt, the spin round the finger, the finger out, a toss. */
+	private static final class Move {
+		Vector3f hand;
+		float face;
+		float roll;
+		float bend;
+		float spin;
+		float finger;
+		float toss;
+
+		Move(Vector3f hand) {
+			this.hand = hand;
+		}
 	}
 
 	/**
@@ -163,94 +183,93 @@ public final class KarambitClient {
 	 * @param swing   the attack swing, 0..1 (0: not swinging)
 	 */
 	static Frame frame(float draw, float inspect, float swing, float time, float stress) {
-		Vector3f pos = new Vector3f(REST);
-		Quaternionf q = new Quaternionf(Q_REST);
-		float finger = 0.0F;
-		// idle: breathing, a slow sway, and now and then a turn of the wrist to look at the edge
-		pos.add(0.003F * Mth.sin(time * 0.08F), 0.005F * Mth.sin(time * 0.13F), 0.0F);
-		q.rotateZ(0.035F * Mth.sin(time * 0.07F)).rotateY(0.05F * Mth.sin(time * 0.05F));
-		float glance = (time % 260.0F) / 260.0F;
-		if (glance > 0.88F) {
-			float u = (glance - 0.88F) / 0.12F;
-			q.rotateY(0.75F * Mth.sin(u * Mth.PI) * (1.0F - 0.3F * u)).rotateX(-0.15F * Mth.sin(u * Mth.PI));
-		}
+		Move m = new Move(new Vector3f(REST));
+		// idle: breathing, the wrist drifting, and now and then a turn to look at the edge
+		m.hand.add(0.003F * Mth.sin(time * 0.08F), 0.005F * Mth.sin(time * 0.13F), 0.002F * Mth.sin(time * 0.05F));
+		m.roll += 0.06F * Mth.sin(time * 0.06F);
+		m.bend += 0.04F * Mth.sin(time * 0.045F + 1.0F);
+		float glance = time % 300.0F;
+		m.roll += 0.85F * bump(glance, 260.0F, 300.0F);
+		m.bend -= 0.25F * bump(glance, 262.0F, 298.0F);
 		if (draw < DRAW_LEN) {
-			// up from the hip, spinning once round the finger, and caught
-			float u = span(draw, 0.0F, 11.0F);
-			pos = new Vector3f(LOW).lerp(pos, u);
-			q.rotateX(-Mth.TWO_PI * whip(draw, 1.0F, 12.0F));
-			finger = Mth.clamp(Math.min((draw - 1.0F) / 2.0F, (13.0F - draw) / 2.0F), 0.0F, 1.0F);
+			// up from the hip spinning back round the finger, snapped into the fist
+			m.hand = new Vector3f(LOW).lerp(m.hand, snap(draw, 0.0F, 13.0F));
+			m.spin = -Mth.TWO_PI * whip(draw, 1.0F, 13.0F);
+			m.finger = bump(draw, 0.5F, 14.0F);
 		} else if (inspect >= 0.0F && inspect < INSPECT_LEN) {
-			Inspect in = inspect(inspect, pos, q);
-			pos = in.pos;
-			q = in.q;
-			finger = in.finger;
+			inspect(inspect, m);
 		}
 		if (swing > 0.0F) {
-			// a backhand slash: drawn back to the right, then hard across and down to the left, and back
-			Vector3f p;
-			Quaternionf r;
-			if (swing < 0.18F) {
-				float u = smooth(swing / 0.18F);
-				p = new Vector3f(pos).lerp(WIND, u);
-				r = new Quaternionf(q).slerp(Q_WIND, u);
-			} else if (swing < 0.5F) {
-				float u = whip(swing, 0.18F, 0.5F);
-				p = new Vector3f(WIND).lerp(CUT, u);
-				r = new Quaternionf(Q_WIND).slerp(Q_CUT, u);
-			} else {
-				float u = smooth((swing - 0.5F) / 0.5F);
-				p = new Vector3f(CUT).lerp(pos, u);
-				r = new Quaternionf(Q_CUT).slerp(q, u);
-			}
-			pos = p;
-			q = r;
+			slash(swing, m);
 		}
 		float nerves = stress * stress * 0.004F;
-		pos.add(nerves * Mth.sin(time * 1.9F), nerves * Mth.sin(time * 2.7F + 1.0F), 0.0F);
-		return new Frame(pos, q, finger);
+		m.hand.add(nerves * Mth.sin(time * 1.9F), nerves * Mth.sin(time * 2.7F + 1.0F), 0.0F);
+		return assemble(m);
 	}
 
-	private record Inspect(Vector3f pos, Quaternionf q, float finger) {
+	private static void slash(float p, Move m) {
+		// cocked back and up, then hard across and down to the left, the wrist rolling the edge round to lead, and back
+		float wind = smooth(p / 0.2F) * (1.0F - smooth((p - 0.2F) / 0.3F));
+		float cut = whip(p, 0.18F, 0.5F) * (1.0F - smooth((p - 0.55F) / 0.45F));
+		Vector3f h = new Vector3f(m.hand);
+		h.lerp(WIND, wind);
+		h.lerp(CUT, cut);
+		m.hand = h;
+		m.roll += 0.6F * wind - 0.9F * cut;
+		m.bend += -0.35F * wind + 0.45F * cut;
 	}
 
-	private static Inspect inspect(float t, Vector3f rest, Quaternionf qRest) {
-		Vector3f pos;
-		Quaternionf q;
-		float finger = 0.0F;
-		if (t < 26.0F) {
-			// up into the light, one flat towards you, turned a little this way and that
-			float u = span(t, 0.0F, 12.0F);
-			pos = new Vector3f(rest).lerp(SHOW, u);
-			q = new Quaternionf(qRest).slerp(Q_SHOW, u).rotateY(0.18F * Mth.sin(Math.max(0.0F, t - 10.0F) * 0.35F) * span(t, 10.0F, 16.0F));
-		} else if (t < 38.0F) {
-			// the wrist turns it over: the other flat
-			float u = span(t, 26.0F, 38.0F);
-			pos = new Vector3f(SHOW).lerp(SHOW2, u);
-			q = new Quaternionf(Q_SHOW).slerp(Q_SHOW2, u);
-		} else if (t < 80.0F) {
-			// back square to you, the hand opens, and it spins round the finger: twice over, then once back
-			float u = span(t, 38.0F, 46.0F);
-			pos = new Vector3f(SHOW2).lerp(SPIN, u);
-			q = new Quaternionf(Q_SHOW2).slerp(Q_SHOW, u);
-			float spin = 2.0F * Mth.TWO_PI * whip(t, 46.0F, 69.0F) - Mth.TWO_PI * whip(t, 70.0F, 79.0F);
-			q.rotateX(spin);
-			finger = span(t, 42.0F, 46.0F);
-			pos.add(0.0F, 0.012F * Mth.sin(whip(t, 46.0F, 69.0F) * Mth.PI), 0.0F);
-		} else if (t < 94.0F) {
-			// a flick up and a twirl round the handle, caught again
-			float u = Mth.sin(span(t, 80.0F, 94.0F) * Mth.PI);
-			pos = new Vector3f(SPIN).add(0.0F, 0.045F * u, 0.02F * u);
-			q = new Quaternionf(Q_SHOW).rotateY(Mth.TWO_PI * whip(t, 81.0F, 93.0F));
-			finger = 1.0F;
-		} else {
-			// home: one last spin on the way back down into the fist
-			float u = span(t, 94.0F, 110.0F);
-			pos = new Vector3f(SPIN).lerp(rest, u);
-			q = new Quaternionf(Q_SHOW).slerp(qRest, u).rotateX(-Mth.TWO_PI * whip(t, 95.0F, 108.0F));
-			finger = Mth.clamp((110.0F - t) / 4.0F, 0.0F, 1.0F);
+	private static void inspect(float t, Move m) {
+		// up into the light, the flat turned to you, tilted to catch it
+		float up = span(t, 0.0F, 18.0F) * (1.0F - span(t, 122.0F, 136.0F));
+		m.hand = new Vector3f(m.hand).lerp(SHOW, up);
+		m.face = up;
+		m.bend -= 0.22F * up;
+		m.roll += 0.2F * Mth.sin(Math.max(0.0F, t - 16.0F) * 0.22F) * span(t, 16.0F, 22.0F) * (1.0F - span(t, 30.0F, 36.0F));
+		// a flick of the wrist to the other flat, and back over
+		m.roll += Mth.PI * snap(t, 36.0F, 46.0F) + Mth.PI * snap(t, 58.0F, 67.0F);
+		m.roll += 0.12F * Mth.sin(Math.max(0.0F, t - 46.0F) * 0.3F) * span(t, 46.0F, 48.0F) * (1.0F - span(t, 54.0F, 58.0F));
+		// the finger comes out, a little wind-up, two spins round it and one back
+		float spinPose = span(t, 64.0F, 72.0F) * (1.0F - span(t, 122.0F, 136.0F));
+		m.hand.lerp(SPIN, spinPose);
+		// held out on the finger to show it off, then right out for the spins
+		m.finger = Math.max(0.6F * up, span(t, 64.0F, 71.0F) * (1.0F - span(t, 124.0F, 132.0F)));
+		m.spin = -0.35F * bump(t, 66.0F, 76.0F) + 2.0F * Mth.TWO_PI * whip(t, 72.0F, 96.0F) - Mth.TWO_PI * whip(t, 96.0F, 106.0F);
+		// the hand circles a little with the spinning knife
+		float circling = span(t, 72.0F, 76.0F) * (1.0F - span(t, 102.0F, 106.0F));
+		m.hand.add(0.01F * Mth.sin(t * 0.55F) * circling, 0.01F * Mth.cos(t * 0.55F) * circling, 0.0F);
+		// tossed up off the finger, turning over once, and caught
+		m.hand.add(0.0F, -0.016F * bump(t, 105.0F, 110.0F) - 0.014F * bump(t, 118.0F, 124.0F), 0.0F);
+		m.toss = 0.13F * Mth.sin(Mth.clamp((t - 109.0F) / 10.0F, 0.0F, 1.0F) * Mth.PI);
+		m.spin += Mth.TWO_PI * smooth((t - 109.0F) / 10.0F);
+		// caught with a little give, then snapped back into the fist
+		m.spin += 0.3F * bump(t, 119.0F, 126.0F) - 0.15F * bump(t, 126.0F, 134.0F);
+	}
+
+	/** The turn about the forearm that brings the knife's flat square to the camera. */
+	private static float faceRoll(Vector3f x0, Vector3f y0) {
+		return (float) Math.atan2(y0.z, x0.z);
+	}
+
+	private static Frame assemble(Move m) {
+		Vector3f d = AkArms.rightForearm(HandSpace.hand(m.hand), SHOULDER, POLE);
+		Vector3f y = new Vector3f(0.0F, 1.0F, 0.0F).sub(new Vector3f(d).mul(d.y));
+		if (y.lengthSquared() < 1.0E-4F) {
+			y.set(0.0F, 0.0F, 1.0F).sub(new Vector3f(d).mul(d.z));
 		}
-		return new Inspect(pos, q, finger);
+		y.normalize();
+		Vector3f x = new Vector3f(y).cross(d);
+		float roll = Mth.lerp(m.face, ROLL_REST, faceRoll(x, y)) + m.roll;
+		Quaternionf fist = new Quaternionf().setFromNormalized(new org.joml.Matrix3f(x, y, d)).rotateZ(roll).rotateX(BEND_REST + m.bend);
+		Vector3f center = new Vector3f(m.hand).add(new Vector3f(d).mul(0.03F));
+		Vector3f ring = new Vector3f(center).sub(fist.transform(new Vector3f(KarambitModel.GRIP).mul(VIEW)));
+		// the finger out to the side, towards you, clear of the arm
+		Vector3f side = fist.transform(new Vector3f(1.0F, 0.0F, 0.0F));
+		if (side.z < 0.0F) {
+			side.negate();
+		}
+		ring.add(side.mul(0.09F * m.finger)).add(new Vector3f(d).mul(0.035F * m.finger)).add(0.0F, m.toss, 0.0F);
+		return new Frame(m.hand, ring, new Quaternionf(fist).rotateX(m.spin));
 	}
 
 	public static void render(AbstractClientPlayer player, PoseStack poseStack, SubmitNodeCollector collector, int light, float partialTick) {
@@ -260,14 +279,13 @@ public final class KarambitClient {
 		float draw = now - drawStart + partialTick;
 		float inspect = inspectStart < 0 ? -1.0F : now - inspectStart + partialTick;
 		Frame f = frame(draw, inspect, player.getAttackAnim(partialTick), time, Stress.level());
-		// the fist closes round the handle - or, while it spins, only the finger is in the ring
-		Vector3f hand = new Vector3f(f.ring()).add(f.q().transform(new Vector3f(KarambitModel.GRIP).mul(1.0F - f.onFinger())));
-		AkArms.draw(player, base, poseStack, collector, light, HandSpace.hand(hand), HandSpace.hand(REST_L), AkArms.RIGHT_SHOULDER,
-			AkArms.LEFT_SHOULDER);
+		AkArms.draw(player, base, poseStack, collector, light, HandSpace.hand(f.hand()), HandSpace.hand(REST_L), SHOULDER, AkArms.LEFT_SHOULDER, POLE,
+			AkArms.LEFT_POLE);
 		Vector3f h = HandSpace.hand(f.ring());
 		poseStack.pushPose();
 		poseStack.translate(h.x, h.y, h.z);
 		poseStack.mulPose(f.q());
+		poseStack.scale(VIEW, VIEW, VIEW);
 		KarambitModel.submit(poseStack, collector, light);
 		poseStack.popPose();
 		poseStack.popPose();

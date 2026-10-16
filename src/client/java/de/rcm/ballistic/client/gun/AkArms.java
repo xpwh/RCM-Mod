@@ -121,6 +121,21 @@ public final class AkArms {
 	}
 
 	/**
+	 * Which way the right forearm runs (from the elbow to the fist) with the fist at {@code hand} (hand space, the
+	 * default shoulder and elbow pole): for things held in the fist to sit square in it.
+	 */
+	public static Vector3f rightForearm(Vector3f hand) {
+		return rightForearm(hand, RIGHT_SHOULDER, RIGHT_POLE);
+	}
+
+	/** The same from another shoulder (hand space) and with the elbow towards another pole. */
+	public static Vector3f rightForearm(Vector3f hand, Vector3f shoulder, Vector3f pole) {
+		Vector3f e = elbow(shoulder, hand, RIGHT_UPPER, FOREARM, pole);
+		Vector3f d = new Vector3f(hand).sub(e);
+		return d.lengthSquared() < 1.0E-8F ? new Vector3f(0.0F, 0.0F, -1.0F) : d.normalize();
+	}
+
+	/**
 	 * Where the elbow is (two-bone inverse kinematics): upper arm {@code upper} long from the shoulder,
 	 * forearm {@code fore} long to the hand, bent towards {@code pole}. Out of reach, the arm is straight.
 	 */
