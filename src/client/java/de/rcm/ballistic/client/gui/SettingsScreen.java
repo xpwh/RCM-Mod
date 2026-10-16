@@ -264,6 +264,7 @@ public class SettingsScreen extends Screen {
 		this.list.header("options.ballisticmissiles.section.display", 0xFFFF7070);
 		this.list.row(toggle("blood", ModConfig.blood, "blood", v -> ModConfig.blood = v), toggle("gore", ModConfig.gore, "gore", v -> ModConfig.gore = v));
 		this.list.row(toggle("gore_warning", ModConfig.goreWarning, null, v -> ModConfig.goreWarning = v));
+		this.list.row(toggle("update_notice", ModConfig.updateNotice, null, v -> ModConfig.updateNotice = v));
 		this.list.header("options.ballisticmissiles.section.gore_test", 0xFFFF7070);
 		this.list.note("options.ballisticmissiles.gore_test.note");
 		List<String> targets = new ArrayList<>(List.of("@s", "@a"));

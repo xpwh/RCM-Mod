@@ -74,6 +74,8 @@ public final class ModConfig {
 	public static boolean gore = true;
 	/** The 18+ warning on the title screen at every start. */
 	public static boolean goreWarning = true;
+	/** The note after it that updates come now and then, when the developer wants. */
+	public static boolean updateNotice = true;
 	// ---- effects
 	/** The screen effects of blasts (flash, haze, god rays, shell shock...), percent. */
 	public static int screenEffects = 100;
@@ -146,6 +148,7 @@ public final class ModConfig {
 			blood = bool(p, "blood", blood);
 			gore = bool(p, "gore", gore);
 			goreWarning = bool(p, "goreWarning", goreWarning);
+			updateNotice = bool(p, "updateNotice", updateNotice);
 			screenEffects = percent(p, "screenEffects", screenEffects);
 			smokeAmount = percent(p, "smokeAmount", smokeAmount);
 			fastSmoke = "fast".equals(p.getProperty("smokeFade", fastSmoke ? "fast" : "long"));
@@ -187,6 +190,7 @@ public final class ModConfig {
 			p.setProperty("blood", Boolean.toString(blood));
 			p.setProperty("gore", Boolean.toString(gore));
 			p.setProperty("goreWarning", Boolean.toString(goreWarning));
+			p.setProperty("updateNotice", Boolean.toString(updateNotice));
 			p.setProperty("screenEffects", Integer.toString(screenEffects));
 			p.setProperty("smokeAmount", Integer.toString(smokeAmount));
 			p.setProperty("smokeFade", fastSmoke ? "fast" : "long");

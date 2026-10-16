@@ -84,13 +84,17 @@ public final class GoreWarningScreen extends Screen {
 		this.next = next;
 	}
 
-	/** Puts the warning up the first time the title screen appears (unless it was turned off). */
+	/** Puts the warning up the first time the title screen appears (unless it was turned off), then the update note. */
 	public static void register() {
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			if (!shown && mc.screen instanceof TitleScreen title) {
 				shown = true;
+				// then the note on how updates come, unless that was turned off too
+				Screen after = ModConfig.updateNotice ? new UpdateNoticeScreen(title) : title;
 				if (ModConfig.goreWarning) {
-					mc.setScreen(new GoreWarningScreen(title));
+					mc.setScreen(new GoreWarningScreen(after));
+				} else if (after != title) {
+					mc.setScreen(after);
 				}
 			}
 		});

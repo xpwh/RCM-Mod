@@ -803,7 +803,7 @@
 	"options.ballisticmissiles.gore_warning": "18+-Warnung beim Start",
 	"gore_warning.ballisticmissiles.title": "WARNUNG – NUR FÜR ERWACHSENE",
 	"gore_warning.ballisticmissiles.text": "Ballistic Missiles zeigt extreme, sehr realistische und verstörende Gewalt: offene Schusswunden, abgerissene Arme und Beine mit freiliegenden Knochen, aufgesprengte Schädel mit Gehirnmasse, Menschen und Tiere, die von Explosionen in Stücke gerissen werden, herumliegende Organe, langsames Verbluten und Sterben.\n\nDiese Inhalte sind ausschließlich für Erwachsene ab 18 Jahren bestimmt. Sie können belastend oder schockierend sein – auch für Erwachsene. Wenn du jünger als 18 bist, dich so etwas belastet oder du dir unsicher bist, schalte Gore jetzt aus. Das Spiel funktioniert auch ohne.\n\nGore kann jederzeit in den Mod-Einstellungen ein- und ausgeschaltet werden.",
-	"gore_warning.ballisticmissiles.alpha": "Dieser Mod ist noch sehr früh in Arbeit: Vieles ist unfertig, kann sich ändern oder fehlerhaft sein, und es kommen noch viele Updates. Das Gore-System ist sogar erst in der Pre-Alpha – rechne mit Fehlern, Darstellungsproblemen und großen Änderungen.",
+	"gore_warning.ballisticmissiles.alpha": "Dieser Mod ist noch sehr früh in Arbeit: Vieles ist unfertig, kann sich ändern oder fehlerhaft sein. Es kommen noch Updates – aber nicht ständig, sondern ab und zu. Das Gore-System ist sogar erst in der Pre-Alpha – rechne mit Fehlern, Darstellungsproblemen und großen Änderungen.",
 	"gore_warning.ballisticmissiles.dont_show": "Diese Warnung nicht mehr anzeigen",
 	"gore_warning.ballisticmissiles.continue": "Ich bin 18+ – weiter",
 	"gore_warning.ballisticmissiles.disable": "Gore ausschalten",
@@ -1105,5 +1105,13 @@
 	"subtitles.ballisticmissiles.soldier_surrender": "Soldat ergibt sich",
 	"subtitles.ballisticmissiles.soldier_zip_tie": "Kabelbinder wird zugezogen",
 	"options.ballisticmissiles.tracks": "Fuß- und Reifenspuren",
-	"options.ballisticmissiles.tracks.tooltip": "Fußabdrücke und Reifenspuren in Schnee, Sand und Schlamm (auch auf vom Regen aufgeweichter Erde); sie verblassen mit der Zeit"
+	"options.ballisticmissiles.tracks.tooltip": "Fußabdrücke und Reifenspuren in Schnee, Sand und Schlamm (auch auf vom Regen aufgeweichter Erde); sie verblassen mit der Zeit",
+	"options.ballisticmissiles.update_notice": "Update-Hinweis beim Start",
+	"update_notice.ballisticmissiles.title": "HINWEIS ZU UPDATES",
+	"update_notice.ballisticmissiles.subtitle": "Kurz lesen – dauert nur ein paar Sekunden.",
+	"update_notice.ballisticmissiles.text": "Updates für Ballistic Missiles kommen nicht ständig, sondern ab und zu – wann und wie oft, entscheidet allein der Entwickler.\n\nEs gibt keinen festen Zeitplan: Manchmal kommen mehrere Updates kurz hintereinander, manchmal tut sich eine ganze Weile gar nichts. Das heißt nicht, dass der Mod aufgegeben ist.\n\nBitte habt Geduld und drängelt nicht nach neuen Versionen. Danke!",
+	"update_notice.ballisticmissiles.dont_show": "Diesen Hinweis nicht mehr anzeigen",
+	"update_notice.ballisticmissiles.continue": "Verstanden",
+	"update_notice.ballisticmissiles.continue_wait": "Bitte lesen … %s s",
+	"update_notice.ballisticmissiles.hint": "Enter zum Fortfahren · später in den Einstellungen änderbar"
 }
