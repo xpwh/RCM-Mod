@@ -143,9 +143,12 @@ public final class GunLightClient {
 				}
 				// the dot sits a hair off the surface, towards the gun, so it is not swallowed by it
 				end = end.subtract(aim.normalize().scale(0.012));
-				LASERS.add(new double[] {from.x, from.y, from.z, end.x, end.y, end.z, a.ir() ? 1.0 : 0.0});
+				LASERS.add(new double[] {from.x, from.y, from.z, end.x, end.y, end.z, a.ir() ? 1.0 : 0.0, ownView ? 1.0 : 0.0});
 				if (!a.ir()) {
 					DynamicLights.lamp(player.getId() * 8L + 2L, end.subtract(aim.normalize().scale(0.08)), 0xFF2410, 0.3F, 1.6F);
+				} else {
+					// through the goggles the spot lights up what it lands on (only this viewer sees it at all)
+					DynamicLights.lamp(player.getId() * 8L + 2L, end.subtract(aim.normalize().scale(0.1)), 0xE8FFE8, 0.7F, 2.6F);
 				}
 			}
 		}
@@ -160,22 +163,69 @@ public final class GunLightClient {
 		for (double[] l : LASERS) {
 			Vec3 a = new Vec3(l[0], l[1], l[2]).subtract(cam);
 			Vec3 b = new Vec3(l[3], l[4], l[5]).subtract(cam);
-			// an infrared beam through the tube: a bright thread whatever the air (the goggles turn it green)
-			float air = l[6] > 0.5 ? Math.max(airBase, 0.55F) : airBase;
+			double d = b.length();
+			float shimmer = 0.82F + 0.18F * (float) Math.random();
+			if (l[6] > 0.5) {
+				infrared(consumer, pose, camera, a, b, shimmer, l[7] > 0.5);
+				continue;
+			}
 			// a 650 nm beam, a few millimetres across: a thin bright thread where the air scatters it, a fainter
 			// haze round it in smoke
-			ribbon(consumer, pose, a, b, 0.0025F, Math.round(air * 255.0F) << 24 | 0xFF2A18);
-			ribbon(consumer, pose, a, b, 0.009F, Math.round(air * 0.3F * 255.0F) << 24 | 0xFF2010);
+			ribbon(consumer, pose, a, b, 0.0025F, 0.0025F, Math.round(airBase * 255.0F) << 24 | 0xFF2A18);
+			ribbon(consumer, pose, a, b, 0.009F, 0.009F, Math.round(airBase * 0.3F * 255.0F) << 24 | 0xFF2010);
 			// the dot where it strikes: tiny and blinding at its heart (the beam spreads about a millimetre per
 			// metre), with the glare of it round it - bigger in the dark - and the shimmer of laser speckle
-			double d = b.length();
 			float r = (float) (0.004 + d * 0.0006);
-			float shimmer = 0.82F + 0.18F * (float) Math.random();
 			float glare = 0.35F + 0.65F * (1.0F - day);
 			dot(consumer, pose, camera, b, r, Math.round(255.0F * shimmer) << 24 | 0xFFE0D8);
 			dot(consumer, pose, camera, b, r * 2.2F, Math.round(220.0F * shimmer) << 24 | 0xFF3020);
 			dot(consumer, pose, camera, b, (float) (r * 6.0 + 0.01 * glare), Math.round(70.0F * glare * shimmer) << 24 | 0xFF1808);
 		}
+	}
+
+	/**
+	 * An infrared laser as night vision shows it - the way a PEQ beam looks through the tubes: not a faint
+	 * thread but a solid bar of light from the gun to the target, brightest at the muzzle and fading with
+	 * distance, with the tube's bloom round it; the emitter itself a glaring star, and where it lands a big
+	 * blooming spot that lights up the patch it hits. It keeps the same width on screen however far it reaches,
+	 * because the intensifier smears every bright point over a few pixels.
+	 */
+	private static void infrared(VertexConsumer consumer, PoseStack.Pose pose, Camera camera, Vec3 a, Vec3 b, float shimmer, boolean own) {
+		double da = a.length();
+		double db = b.length();
+		// a few segments, so the beam can fade along its length
+		int n = 12;
+		for (int i = 0; i < n; i++) {
+			double t0 = i / (double) n;
+			double t1 = (i + 1) / (double) n;
+			// the fade is by distance from the emitter along the beam: most light is scattered near the muzzle
+			t0 = t0 * t0;
+			t1 = t1 * t1;
+			Vec3 p0 = a.lerp(b, t0);
+			Vec3 p1 = a.lerp(b, t1);
+			double len = b.subtract(a).length();
+			float f0 = (float) (1.0 / (1.0 + len * t0 * 0.02));
+			float f1 = (float) (1.0 / (1.0 + len * t1 * 0.02));
+			float f = (f0 + f1) * 0.5F;
+			float w0 = (float) p0.length();
+			float w1 = (float) p1.length();
+			// core: about two pixels across, near white; bloom: a soft halo several times wider
+			ribbon(consumer, pose, p0, p1, 0.004F + w0 * 0.0016F, 0.004F + w1 * 0.0016F, Math.round(Math.min(1.0F, 0.95F * f) * 255.0F) << 24 | 0xF4FFF0);
+			ribbon(consumer, pose, p0, p1, 0.012F + w0 * 0.0045F, 0.012F + w1 * 0.0045F, Math.round(0.45F * f * 255.0F) << 24 | 0xC8FFD0);
+			ribbon(consumer, pose, p0, p1, 0.03F + w0 * 0.012F, 0.03F + w1 * 0.012F, Math.round(0.16F * f * 255.0F) << 24 | 0x90FFA0);
+		}
+		// the emitter: a glaring point at the gun (blinding to anyone it points at)
+		float e = (float) (0.02 + da * 0.006);
+		if (!own) {
+			dot(consumer, pose, camera, a, e, Math.round(255.0F * shimmer) << 24 | 0xFFFFFF);
+			dot(consumer, pose, camera, a, e * 3.0F, Math.round(110.0F * shimmer) << 24 | 0xD0FFD8);
+		}
+		// the spot: a hard bright centre and a wide bloom that washes over the surface
+		float r = (float) (0.02 + db * 0.004);
+		dot(consumer, pose, camera, b, r, Math.round(255.0F * shimmer) << 24 | 0xFFFFFF);
+		dot(consumer, pose, camera, b, r * 2.5F, Math.round(200.0F * shimmer) << 24 | 0xE0FFE4);
+		dot(consumer, pose, camera, b, r * 7.0F, Math.round(70.0F * shimmer) << 24 | 0xA0FFB0);
+		dot(consumer, pose, camera, b, r * 16.0F, Math.round(22.0F * shimmer) << 24 | 0x80FF90);
 	}
 
 	/** Where the line of sight meets the world, or the player it is aimed at (up to 150 blocks). */
@@ -215,17 +265,17 @@ public final class GunLightClient {
 	}
 
 	/** A thin band from a to b (camera-relative), turned to face the eye. */
-	private static void ribbon(VertexConsumer consumer, PoseStack.Pose pose, Vec3 a, Vec3 b, float width, int argb) {
+	private static void ribbon(VertexConsumer consumer, PoseStack.Pose pose, Vec3 a, Vec3 b, float wa, float wb, int argb) {
 		Vec3 along = b.subtract(a);
 		Vec3 mid = a.add(b).scale(0.5);
-		Vec3 side = along.cross(mid).normalize().scale(width);
+		Vec3 side = along.cross(mid).normalize();
 		if (!Double.isFinite(side.x)) {
 			return;
 		}
-		vertex(consumer, pose, a.add(side), argb);
-		vertex(consumer, pose, a.subtract(side), argb);
-		vertex(consumer, pose, b.subtract(side), argb);
-		vertex(consumer, pose, b.add(side), argb);
+		vertex(consumer, pose, a.add(side.scale(wa)), argb);
+		vertex(consumer, pose, a.subtract(side.scale(wa)), argb);
+		vertex(consumer, pose, b.subtract(side.scale(wb)), argb);
+		vertex(consumer, pose, b.add(side.scale(wb)), argb);
 	}
 
 	private static void dot(VertexConsumer consumer, PoseStack.Pose pose, Camera camera, Vec3 at, float r, int argb) {
