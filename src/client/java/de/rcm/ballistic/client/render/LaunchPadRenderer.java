@@ -61,39 +61,39 @@ import org.jspecify.annotations.Nullable;
  * countdown and launch.
  */
 public class LaunchPadRenderer implements BlockEntityRenderer<LaunchPadBlockEntity, LaunchPadRenderer.State> {
-	private static final float TOWER_X = -3.2F;
-	private static final float TOWER_TOP = 22.0F;
-	private static final float TABLE = (float) LaunchPadBlock.TOP_HEIGHT;
-	private static final float[] ARM_HEIGHTS = {4.6F, 8.6F, 12.6F, 16.6F};
+	static final float TOWER_X = -3.2F;
+	static final float TOWER_TOP = 22.0F;
+	static final float TABLE = (float) LaunchPadBlock.TOP_HEIGHT;
+	static final float[] ARM_HEIGHTS = {4.6F, 8.6F, 12.6F, 16.6F};
 	private static final float[] PLATFORMS = {4.4F, 8.4F, 12.4F, 16.4F, 20.4F, TOWER_TOP};
-	private static final float[][] FLOODLIGHTS = {{-4.2F, -4.2F}, {4.2F, -4.2F}, {-4.2F, 4.2F}, {4.2F, 4.2F}};
+	static final float[][] FLOODLIGHTS = {{-4.2F, -4.2F}, {4.2F, -4.2F}, {-4.2F, 4.2F}, {4.2F, 4.2F}};
 	/** Lightning masts north and south of the pad. */
 	private static final float MAST_HEIGHT = 30.0F;
 	private static final float[][] LIGHTNING_MASTS = {{0.5F, -10.0F}, {0.5F, 10.0F}};
 	private static final float[] WATER_TOWER = {-9.5F, 8.5F};
-	private static final float[] LOX_SPHERE = {-9.5F, -8.5F};
+	static final float[] LOX_SPHERE = {-9.5F, -8.5F};
 	private static final float[] FUEL_SPHERE = {9.0F, -9.0F};
 
 	/** Arms swing about a hinge on the tower face; built around that hinge, reaching along +X to the missile. */
-	private static final float ARM_HINGE_X = TOWER_X + 0.65F;
+	static final float ARM_HINGE_X = TOWER_X + 0.65F;
 	private static final float ARM_LENGTH = -1.05F - ARM_HINGE_X;
 	/** Swing of a fully retracted arm, radians. */
-	private static final float ARM_SWING = 1.35F;
+	static final float ARM_SWING = 1.35F;
 	/** Hold-down clamp pivots on the table corners. */
-	private static final float CLAMP_PIVOT = 0.42F;
+	static final float CLAMP_PIVOT = 0.42F;
 
-	private static final BoxMesh COMPLEX = buildComplex();
-	private static final BoxMesh GLOW = buildGlow();
-	private static final BoxMesh BEACON = new BoxMesh.Builder()
+	static final BoxMesh COMPLEX = buildComplex();
+	static final BoxMesh GLOW = buildGlow();
+	static final BoxMesh BEACON = new BoxMesh.Builder()
 		.box(TOWER_X - 0.12F, TOWER_TOP + 3.0F, -0.12F, TOWER_X + 0.12F, TOWER_TOP + 3.25F, 0.12F, RED_LAMP)
 		.box(LIGHTNING_MASTS[0][0] - 0.15F, MAST_HEIGHT, LIGHTNING_MASTS[0][1] - 0.15F, LIGHTNING_MASTS[0][0] + 0.15F, MAST_HEIGHT + 0.3F, LIGHTNING_MASTS[0][1] + 0.15F, RED_LAMP)
 		.box(LIGHTNING_MASTS[1][0] - 0.15F, MAST_HEIGHT, LIGHTNING_MASTS[1][1] - 0.15F, LIGHTNING_MASTS[1][0] + 0.15F, MAST_HEIGHT + 0.3F, LIGHTNING_MASTS[1][1] + 0.15F, RED_LAMP)
 		.build();
-	private static final BoxMesh[] ARMS = buildArms();
-	private static final BoxMesh CLAMP = buildClamp();
-	private static final BoxMesh ELEVATOR = buildElevator();
-	private static final BoxMesh READY_LIGHT = statusLight(GREEN_LAMP);
-	private static final BoxMesh COUNT_LIGHT = statusLight(RED_LAMP);
+	static final BoxMesh[] ARMS = buildArms();
+	static final BoxMesh CLAMP = buildClamp();
+	static final BoxMesh ELEVATOR = buildElevator();
+	static final BoxMesh READY_LIGHT = statusLight(GREEN_LAMP);
+	static final BoxMesh COUNT_LIGHT = statusLight(RED_LAMP);
 
 	public LaunchPadRenderer(BlockEntityRendererProvider.Context context) {
 	}

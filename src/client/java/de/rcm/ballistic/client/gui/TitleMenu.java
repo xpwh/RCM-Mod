@@ -11,26 +11,14 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 
 /**
- * The mod's title screen: real photographs of Minuteman III ICBM test launches from Vandenberg at night
- * (U.S. Air Force / Space Force, public domain) instead of the panorama, as a slow slideshow - each
- * picture drifts and zooms a little ("Ken Burns"), then dissolves into the next; the mouse adds a touch
- * of parallax. The Minecraft logo makes way for the mod's own, the splash for a radio call.
+ * The mod's title screen: a live 3D scene of the launch complex at night instead of the panorama (see
+ * {@link de.rcm.ballistic.client.render.TitleScene}). The Minecraft logo makes way for the mod's own, the
+ * splash for a radio call.
  */
 public final class TitleMenu {
-	private static final int TW = 1600;
-	private static final int TH = 900;
-	private static final Identifier[] SLIDES = {
-		BallisticMissiles.id("textures/gui/title/launch1.png"),
-		BallisticMissiles.id("textures/gui/title/launch2.png"),
-		BallisticMissiles.id("textures/gui/title/launch3.png")
-	};
-	/** Which way each picture drifts while it is shown (x, y; -1..1). */
-	private static final float[][] DRIFT = {{0.6F, -0.4F}, {-0.7F, 0.3F}, {0.4F, 0.5F}};
 	private static final Identifier LOGO = BallisticMissiles.id("textures/gui/title/logo.png");
 	private static final int LOGO_W = 1024;
 	private static final int LOGO_H = 300;
-	private static final float SHOW = 12.0F;
-	private static final float FADE = 2.5F;
 	private static final String[] CALLS = {
 		"FOX THREE", "DANGER CLOSE", "LAUNCH CODES ACCEPTED", "DEFCON 1", "SPLASH ONE", "WEAPONS FREE", "FIRE FOR EFFECT",
 		"BROKEN ARROW", "BANDITS, BANDITS", "TALLY HO", "RIFLE, RIFLE", "BINGO FUEL", "MISSILE AWAY", "GOOD LOCK, SHOOT"
@@ -42,52 +30,11 @@ public final class TitleMenu {
 	private TitleMenu() {
 	}
 
-	/** The slideshow, darkened at the top and bottom so the title and the menu read clearly. */
+	/** The live 3D scene (see {@link de.rcm.ballistic.client.render.TitleScene}), darkened at the top and bottom for the title and menu. */
 	public static void background(GuiGraphics g, int w, int h) {
-		float t = (Util.getMillis() - START) / 1000.0F;
-		int n = SLIDES.length;
-		int cur = (int) (t / SHOW) % n;
-		float into = t % SHOW;
-		if (into < FADE && t >= SHOW) {
-			int prev = (cur + n - 1) % n;
-			slide(g, w, h, prev, into + SHOW, 1.0F);
-			slide(g, w, h, cur, into, smooth(into / FADE));
-		} else {
-			slide(g, w, h, cur, into, 1.0F);
-		}
-		g.fillGradient(0, 0, w, h / 3, 0xB0000000, 0x00000000);
-		g.fillGradient(0, h - h / 3, w, h, 0x00000000, 0xC0000000);
-		g.fillGradient(0, h / 3, w, h - h / 3, 0x20000000, 0x20000000);
-	}
-
-	/** One picture, cover-fitted, drifting and zooming with its age {@code age} seconds. */
-	private static void slide(GuiGraphics g, int w, int h, int index, float age, float alpha) {
-		Minecraft mc = Minecraft.getInstance();
-		float life = Mth.clamp(age / (SHOW + FADE), 0.0F, 1.0F);
-		float zoom = 1.04F + 0.08F * life;
-		// the part of the picture that covers the screen at this zoom
-		float aspect = w / (float) h;
-		float uw = aspect > TW / (float) TH ? TW : TH * aspect;
-		float vh = uw / aspect;
-		uw /= zoom;
-		vh /= zoom;
-		float mx = (float) (mc.mouseHandler.xpos() / Math.max(1, mc.getWindow().getScreenWidth()) - 0.5);
-		float my = (float) (mc.mouseHandler.ypos() / Math.max(1, mc.getWindow().getScreenHeight()) - 0.5);
-		float[] drift = DRIFT[index];
-		float px = Mth.clamp(0.5F + drift[0] * (life - 0.5F) * 0.8F + mx * 0.12F, 0.0F, 1.0F);
-		float py = Mth.clamp(0.5F + drift[1] * (life - 0.5F) * 0.8F + my * 0.12F, 0.0F, 1.0F);
-		float u = (TW - uw) * px;
-		float v = (TH - vh) * py;
-		int a = Mth.clamp((int) (alpha * 255.0F), 0, 255);
-		if (a == 0) {
-			return;
-		}
-		g.blit(RenderPipelines.GUI_TEXTURED, SLIDES[index], 0, 0, u, v, w, h, Math.round(uw), Math.round(vh), TW, TH, a << 24 | 0xFFFFFF);
-	}
-
-	private static float smooth(float x) {
-		x = Mth.clamp(x, 0.0F, 1.0F);
-		return x * x * (3.0F - 2.0F * x);
+		de.rcm.ballistic.client.render.TitleScene.draw(g, w, h);
+		g.fillGradient(0, 0, w, h / 3, 0x90000000, 0x00000000);
+		g.fillGradient(0, h - h / 3, w, h, 0x00000000, 0xA0000000);
 	}
 
 	/** The mod's title in place of the Minecraft logo. */

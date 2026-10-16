@@ -113,6 +113,11 @@ public final class MissileMesh {
 		}
 	}
 
+	/** The raw vertex data (x y z u v nx ny nz, four to a face): read only. */
+	float[] vertices() {
+		return this.data;
+	}
+
 	public float length() {
 		return this.length;
 	}

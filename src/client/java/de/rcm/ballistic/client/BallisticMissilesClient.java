@@ -122,6 +122,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.VolCloudCommand.init();
 		de.rcm.ballistic.client.gui.SettingsCommand.init();
 		BlockEntityRenderers.register(ModRegistry.CIWS_BE, CiwsRenderer::new);
+		net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry.register(
+			ctx -> new de.rcm.ballistic.client.render.TitleScene.Renderer(ctx.vertexConsumers()));
 		BlockEntityRenderers.register(de.rcm.ballistic.base.BaseRegistry.LAMP_BE, de.rcm.ballistic.client.render.BaseRenderers.LampRenderer::new);
 		BlockEntityRenderers.register(de.rcm.ballistic.base.BaseRegistry.FLAG_BE, de.rcm.ballistic.client.render.BaseRenderers.FlagRenderer::new);
 		net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap.putBlocks(net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT,
