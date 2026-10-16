@@ -31,8 +31,10 @@ public final class SunDetonation {
 	/** How long the server has work after impact. */
 	public static final int LENGTH = SunTimeline.NOVA + 60;
 	private static final int QUIET = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
-	private static final float PULL_REACH = 110.0F;
-	private static final float HEAT_REACH = SunTimeline.RADIUS * 3.2F;
+	private static final float PULL_REACH = SunTimeline.RADIUS * 3.2F;
+	private static final float HEAT_REACH = SunTimeline.RADIUS * 2.6F;
+	/** Most blocks turned over in one tick by the star's growth, so the server keeps up with a star this size. */
+	private static final int BLOCKS_PER_TICK = 24000;
 
 	private final ServerLevel level;
 	private final Vec3 target;
@@ -81,7 +83,7 @@ public final class SunDetonation {
 		if (d == SunTimeline.NOVA) {
 			this.nova();
 		}
-		if (d > SunTimeline.NOVA && d < SunTimeline.NOVA + 50) {
+		if (d > SunTimeline.NOVA && d < SunTimeline.NOVA + 150) {
 			this.shock(SunTimeline.shockRadius(d - 1), SunTimeline.shockRadius(d));
 		}
 	}
@@ -104,7 +106,7 @@ public final class SunDetonation {
 				continue;
 			}
 			double f = strength * (1.0 - dist / PULL_REACH);
-			Vec3 v = to.scale(1.0 / dist).scale(0.14 * f);
+			Vec3 v = to.scale(1.0 / dist).scale(0.2 * f);
 			e.setDeltaMovement(e.getDeltaMovement().add(v.x, v.y + 0.02 * f, v.z));
 			e.hurtMarked = true;
 			e.fallDistance = 0.0;
@@ -113,36 +115,72 @@ public final class SunDetonation {
 
 	/** Eats out the sphere it fills, shell by shell as it grows: what it swallows is gone. */
 	private void carve(float radius) {
-		int to = Mth.floor(radius);
-		if (to <= this.carved) {
-			return;
+		int target = Mth.floor(radius);
+		int done = 0;
+		while (this.carved < target && done < BLOCKS_PER_TICK) {
+			int r = this.carved + 1;
+			done += this.shell(r - 0.5, r + 0.5, null);
+			this.carved = r;
 		}
-		int from = this.carved + 1;
-		// at most a few shells a tick, so the server keeps up when it grows fast
-		to = Math.min(to, from + 2);
-		double inner = Math.max(0, from - 1) + 0.5;
-		double outer = to + 0.5;
+	}
+
+	/**
+	 * Works through the shell between {@code inner} and {@code outer} blocks from the centre, column by column (only
+	 * the blocks in the shell are looked at): with {@code rule} null they are vaporised, else the rule says what each
+	 * becomes. Returns how many blocks were looked at.
+	 */
+	private int shell(double inner, double outer, java.util.function.@org.jspecify.annotations.Nullable BiFunction<BlockPos, Double, BlockState> rule) {
+		int o = Mth.ceil(outer);
+		int looked = 0;
+		for (int dx = -o; dx <= o; dx++) {
+			looked += this.shellSlice(dx, inner, outer, rule);
+		}
+		return looked;
+	}
+
+	private int shellSlice(int dx, double inner, double outer, java.util.function.@org.jspecify.annotations.Nullable BiFunction<BlockPos, Double, BlockState> rule) {
+		int o = Mth.ceil(outer);
+		int looked = 0;
 		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-		for (int dx = -to; dx <= to; dx++) {
-			for (int dy = -to; dy <= to; dy++) {
-				for (int dz = -to; dz <= to; dz++) {
-					int d2 = dx * dx + dy * dy + dz * dz;
-					if (d2 <= inner * inner || d2 > outer * outer) {
-						continue;
-					}
-					pos.set(this.origin.getX() + dx, this.origin.getY() + dy, this.origin.getZ() + dz);
-					if (pos.getY() < this.level.getMinY() || pos.getY() > this.level.getMaxY() || !this.level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
-						continue;
-					}
-					BlockState state = this.level.getBlockState(pos);
-					if (state.isAir() || state.getDestroySpeed(this.level, pos) < 0.0F) {
-						continue;
-					}
-					CraterLog.set(this.level, pos, Blocks.AIR.defaultBlockState(), QUIET);
+		for (int dz = -o; dz <= o; dz++) {
+			double h2 = dx * dx + dz * dz;
+			if (h2 > outer * outer) {
+				continue;
+			}
+			int x = this.origin.getX() + dx;
+			int z = this.origin.getZ() + dz;
+			if (!this.level.hasChunk(x >> 4, z >> 4)) {
+				continue;
+			}
+			// the stretch of this column inside the shell: above and below the inner sphere
+			int top = Mth.floor(Math.sqrt(outer * outer - h2));
+			int gap = inner * inner > h2 ? Mth.ceil(Math.sqrt(inner * inner - h2)) : 0;
+			for (int dy = -top; dy <= top; dy++) {
+				if (gap > 0 && dy > -gap && dy < gap) {
+					dy = gap - 1;
+					continue;
+				}
+				int y = this.origin.getY() + dy;
+				if (y < this.level.getMinY() || y > this.level.getMaxY()) {
+					continue;
+				}
+				double d = Math.sqrt(h2 + dy * dy);
+				if (d <= inner || d > outer) {
+					continue;
+				}
+				looked++;
+				pos.set(x, y, z);
+				BlockState state = this.level.getBlockState(pos);
+				if (state.isAir() || state.getDestroySpeed(this.level, pos) < 0.0F) {
+					continue;
+				}
+				BlockState now = rule == null ? Blocks.AIR.defaultBlockState() : rule.apply(pos, d);
+				if (now != null && now != state) {
+					CraterLog.set(this.level, pos, now, QUIET);
 				}
 			}
 		}
-		this.carved = to;
+		return looked;
 	}
 
 	/** Inside it nothing lives; round it everything burns, the closer the worse. */
@@ -180,51 +218,35 @@ public final class SunDetonation {
 
 	/** The rock round it melts: glowing melt against it, glass behind; water round it boils away. */
 	private void melt() {
-		int reach = Mth.ceil(SunTimeline.RADIUS + 8.0F);
+		float r = SunTimeline.RADIUS;
+		double outer = r + 10.0;
+		int reach = Mth.ceil(outer);
 		if (this.meltSlice == Integer.MIN_VALUE) {
 			this.meltSlice = -reach;
 		}
-		if (this.meltSlice > reach) {
-			return;
-		}
 		RandomSource random = this.level.getRandom();
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-		float r = SunTimeline.RADIUS;
-		for (int n = 0; n < 4 && this.meltSlice <= reach; n++, this.meltSlice++) {
-			int dx = this.meltSlice;
-			for (int dy = -reach; dy <= reach; dy++) {
-				for (int dz = -reach; dz <= reach; dz++) {
-					double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-					if (dist <= r - 0.5 || dist > r + 8.0) {
-						continue;
-					}
-					pos.set(this.origin.getX() + dx, this.origin.getY() + dy, this.origin.getZ() + dz);
-					if (pos.getY() < this.level.getMinY() || pos.getY() > this.level.getMaxY() || !this.level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
-						continue;
-					}
-					BlockState state = this.level.getBlockState(pos);
-					if (state.isAir() || state.getDestroySpeed(this.level, pos) < 0.0F) {
-						continue;
-					}
-					if (!state.getFluidState().isEmpty()) {
-						CraterLog.set(this.level, pos, Blocks.AIR.defaultBlockState(), QUIET); // boiled off
-						continue;
-					}
-					if (state.hasBlockEntity()) {
-						continue;
-					}
-					// a ragged edge: the melt reaches further in some places than in others
-					double edge = r + 1.6 + random.nextDouble() * 1.2;
-					double glass = r + 3.2 + random.nextDouble() * 1.8;
-					if (dist < edge) {
-						CraterLog.set(this.level, pos, ModRegistry.MOLTEN_ROCK.defaultBlockState(), QUIET);
-					} else if (dist < glass) {
-						CraterLog.set(this.level, pos, ModRegistry.CRATER_GLASS.defaultBlockState(), QUIET);
-					} else if (this.level.getBlockState(pos.above()).isAir() && random.nextFloat() < 0.8F) {
-						CraterLog.set(this.level, pos, (random.nextBoolean() ? ModRegistry.SMOLDERING_EARTH : ModRegistry.SCORCHED_EARTH).defaultBlockState(), QUIET);
-					}
-				}
+		java.util.function.BiFunction<BlockPos, Double, BlockState> rule = (pos, dist) -> {
+			BlockState state = this.level.getBlockState(pos);
+			if (!state.getFluidState().isEmpty()) {
+				return Blocks.AIR.defaultBlockState(); // boiled off
 			}
+			if (state.hasBlockEntity()) {
+				return null;
+			}
+			// a ragged edge: the melt reaches further in some places than in others
+			if (dist < r + 2.5 + random.nextDouble() * 2.0) {
+				return ModRegistry.MOLTEN_ROCK.defaultBlockState();
+			}
+			if (dist < r + 5.0 + random.nextDouble() * 2.5) {
+				return ModRegistry.CRATER_GLASS.defaultBlockState();
+			}
+			if (this.level.getBlockState(pos.above()).isAir() && random.nextFloat() < 0.8F) {
+				return (random.nextBoolean() ? ModRegistry.SMOLDERING_EARTH : ModRegistry.SCORCHED_EARTH).defaultBlockState();
+			}
+			return null;
+		};
+		for (int n = 0; n < 6 && this.meltSlice <= reach; n++, this.meltSlice++) {
+			this.shellSlice(this.meltSlice, r - 0.5, outer, rule);
 		}
 	}
 
@@ -235,7 +257,7 @@ public final class SunDetonation {
 			this.scorchSlice = -reach;
 		}
 		RandomSource random = this.level.getRandom();
-		for (int n = 0; n < 6 && this.scorchSlice <= reach; n++, this.scorchSlice++) {
+		for (int n = 0; n < 8 && this.scorchSlice <= reach; n++, this.scorchSlice++) {
 			int dx = this.scorchSlice;
 			for (int dz = -reach; dz <= reach; dz++) {
 				double dist = Math.sqrt(dx * dx + dz * dz);
@@ -260,7 +282,7 @@ public final class SunDetonation {
 
 	private void nova() {
 		if (this.griefing) {
-			FlyingDebris.launch(this.level, this.centre.subtract(0.0, SunTimeline.RADIUS * 0.2, 0.0), SunTimeline.RADIUS * 1.6, 260, 2.6);
+			FlyingDebris.launch(this.level, this.centre.subtract(0.0, SunTimeline.RADIUS * 0.2, 0.0), SunTimeline.RADIUS * 1.4, 700, 3.6);
 			BlastPhysics.shatter(this.level, this.centre, SunTimeline.RADIUS, SunTimeline.NOVA_REACH * 1.6, 1400, 1.0F);
 			this.ejecta();
 		}
@@ -269,7 +291,7 @@ public final class SunDetonation {
 	/** Melt flung out of the crater's rim, coming down glowing all round it. */
 	private void ejecta() {
 		RandomSource random = this.level.getRandom();
-		for (int i = 0; i < 70; i++) {
+		for (int i = 0; i < 220; i++) {
 			double a = random.nextDouble() * Mth.TWO_PI;
 			Vec3 at = this.centre.add(Math.cos(a) * SunTimeline.RADIUS * 0.9, -SunTimeline.RADIUS * 0.3, Math.sin(a) * SunTimeline.RADIUS * 0.9);
 			BlockPos p = BlockPos.containing(at);
@@ -277,8 +299,8 @@ public final class SunDetonation {
 				continue;
 			}
 			FallingBlockEntity melt = FallingBlockEntity.fall(this.level, p, (random.nextInt(3) == 0 ? ModRegistry.CRATER_GLASS : ModRegistry.MOLTEN_ROCK).defaultBlockState());
-			double s = 1.4 + random.nextDouble() * 2.2;
-			melt.setDeltaMovement(Math.cos(a) * s, 1.2 + random.nextDouble() * 1.6, Math.sin(a) * s);
+			double s = 2.0 + random.nextDouble() * 3.5;
+			melt.setDeltaMovement(Math.cos(a) * s, 1.6 + random.nextDouble() * 2.4, Math.sin(a) * s);
 			melt.dropItem = false;
 			melt.hurtMarked = true;
 		}
@@ -302,7 +324,7 @@ public final class SunDetonation {
 			Vec3 out = e.position().subtract(this.centre);
 			out = new Vec3(out.x, 0.0, out.z);
 			out = out.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : out.normalize();
-			double push = 0.6 + 4.2 * f * f;
+			double push = 0.8 + 6.0 * f * f;
 			e.setDeltaMovement(e.getDeltaMovement().add(out.x * push, 0.35 + 1.4 * f, out.z * push));
 			e.hurtMarked = true;
 			if (e instanceof LivingEntity living) {

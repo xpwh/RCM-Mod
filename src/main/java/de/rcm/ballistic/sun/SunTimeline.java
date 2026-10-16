@@ -33,20 +33,20 @@ public final class SunTimeline {
 
 	// ---- the strike, after impact
 	/** Light bends and everything is drawn in: the core is collapsing into a star. */
-	public static final int IMPLODE = 40;
+	public static final int IMPLODE = 50;
 	/** The star grows to full size. */
-	public static final int GROWN = 120;
+	public static final int GROWN = 230;
 	/** It burns. */
-	public static final int BURN_END = 460;
+	public static final int BURN_END = 620;
 	/** It collapses... */
-	public static final int COLLAPSED = 500;
+	public static final int COLLAPSED = 670;
 	/** ...and goes nova: the shock races out; the glow and the smoke linger. */
-	public static final int NOVA = 500;
-	public static final int AFTER_END = 980;
+	public static final int NOVA = 670;
+	public static final int AFTER_END = 1500;
 	/** Full radius of the sun. */
-	public static final float RADIUS = 34.0F;
+	public static final float RADIUS = 80.0F;
 	/** How far the nova's shock and heat reach. */
-	public static final float NOVA_REACH = 260.0F;
+	public static final float NOVA_REACH = 650.0F;
 
 	private SunTimeline() {
 	}
@@ -118,7 +118,7 @@ public final class SunTimeline {
 		if (d < NOVA) {
 			return 0.0F;
 		}
-		float x = Mth.clamp((d - NOVA) / 90.0F, 0.0F, 1.0F);
+		float x = Mth.clamp((d - NOVA) / 140.0F, 0.0F, 1.0F);
 		return NOVA_REACH * (1.0F - (1.0F - x) * (1.0F - x));
 	}
 
@@ -135,14 +135,14 @@ public final class SunTimeline {
 	}
 
 	public static int cutsceneTo(int flight) {
-		return FIRE + flight + NOVA + 170;
+		return FIRE + flight + NOVA + 220;
 	}
 
 	/** Where the target shot's camera stands, for the server to load the land round it: between it and the target. */
 	public static Vec3 wideShotAnchor(BlockPos launcher, Vec3 target) {
 		Vec3 away = new Vec3(launcher.getX() - target.x, 0.0, launcher.getZ() - target.z);
 		away = away.lengthSqr() < 1.0 ? new Vec3(1, 0, 0) : away.normalize();
-		return target.add(away.scale(100.0));
+		return target.add(away.scale(RADIUS * 2.6));
 	}
 
 	/** Where the camera is and where it looks, {@code t} ticks after the order: {x, y, z, yaw, pitch}. */
@@ -177,10 +177,10 @@ public final class SunTimeline {
 			// the target, from afar: the round comes down, the sun is born, burns, and goes nova
 			Vec3 away = new Vec3(launcher.getX() - target.x, 0.0, launcher.getZ() - target.z);
 			away = away.lengthSqr() < 1.0 ? new Vec3(1, 0, 0) : away.normalize();
-			float push = Mth.clamp((t - (impact - 70)) / 600.0F, 0.0F, 1.0F);
-			double dist = 230.0 - 60.0 * push;
+			float push = Mth.clamp((t - (impact - 70)) / 800.0F, 0.0F, 1.0F);
+			double dist = RADIUS * 3.4 - RADIUS * 0.8 * push;
 			Vec3 side = new Vec3(-away.z, 0, away.x);
-			eye = target.add(away.scale(dist)).add(side.scale(40.0)).add(0.0, 70.0 - 20.0 * push, 0.0);
+			eye = target.add(away.scale(dist)).add(side.scale(RADIUS * 0.8)).add(0.0, RADIUS * 1.3 - RADIUS * 0.3 * push, 0.0);
 			look = sunCentre(target).add(0.0, t < impact ? 30.0 : 0.0, 0.0);
 		}
 		Vec3 d = look.subtract(eye);

@@ -33,8 +33,8 @@ import org.jspecify.annotations.Nullable;
  */
 public class SunForgeBlockEntity extends BlockEntity implements de.rcm.ballistic.launch.Ownership.Owned {
 	/** Closest and furthest it fires: the nova must not reach back to the complex. */
-	public static final int MIN_RANGE = 340;
-	public static final int MAX_RANGE = 6000;
+	public static final int MIN_RANGE = 800;
+	public static final int MAX_RANGE = 8000;
 	/** After the shot the doors close again and the complex is ready for the next round. */
 	public static final int RESET = SunTimeline.FIRE + 240;
 

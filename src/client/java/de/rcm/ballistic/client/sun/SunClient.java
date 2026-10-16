@@ -272,50 +272,50 @@ public final class SunClient {
 		Vec3 c = s.centre;
 		double dist = distance(mc, c);
 		if (d == 0) {
-			far(mc, c, ModRegistry.SUN_IMPLODE, 1.0F, 1.0F, 2400.0);
+			far(mc, c, ModRegistry.SUN_IMPLODE, 1.0F, 1.0F, 4000.0);
 			if (fresh) {
 				DynamicLights.flash(s.target.add(0, 2, 0), 0xC8E0FF, 1.0F, 50.0F, 300.0F);
 			}
 		}
 		if (d == SunTimeline.IMPLODE) {
-			far(mc, c, ModRegistry.SUN_IGNITE, 1.0F, 1.0F, 3200.0);
+			far(mc, c, ModRegistry.SUN_IGNITE, 1.0F, 1.0F, 6000.0);
 			if (fresh) {
-				BlastShader.blast(BlastShader.Kind.NUCLEAR, c, 3.0, 0xFFC878);
-				BlastShader.flash((float) Mth.clamp(1.1 - dist / 1500.0, 0.15, 1.0));
+				BlastShader.blast(BlastShader.Kind.NUCLEAR, c, 6.0, 0xFFC878);
+				BlastShader.flash((float) Mth.clamp(1.2 - dist / 3000.0, 0.2, 1.0));
 				ClientEffects.setFlash((float) Mth.clamp(0.8 - dist / 2000.0, 0.1, 0.8), 0xFFE8C0);
 				later(mc, dist / SOUND, () -> {
-					float near = (float) Mth.clamp(1.0 - dist / 900.0, 0.0, 1.0);
-					ClientEffects.addShake(5.0F * near);
+					float near = (float) Mth.clamp(1.0 - dist / 2000.0, 0.0, 1.0);
+					ClientEffects.addShake(7.0F * near);
 					BlastShader.quake(0.6F * near);
 				});
 				// the ground thrown up where the core ignites: a ring of dirt and fire
-				ClientEffects.fireball(s.target.add(0, 4, 0), SunTimeline.RADIUS * 0.6, 120, 14.0F, 1.6, 50);
-				ClientEffects.embers(s.target, 260, 3.0);
-				for (int i = 0; i < 90; i++) {
+				ClientEffects.fireball(s.target.add(0, 6, 0), SunTimeline.RADIUS * 0.6, 260, 26.0F, 2.6, 70);
+				ClientEffects.embers(s.target, 600, 5.0);
+				for (int i = 0; i < 220; i++) {
 					double a = RANDOM.nextDouble() * Mth.TWO_PI;
 					double r = SunTimeline.RADIUS * (0.9 + RANDOM.nextDouble() * 0.4);
 					double gy = ClientEffects.groundY(mc, c.x + Math.cos(a) * r, s.target.y, c.z + Math.sin(a) * r);
-					SmokeField.puff(c.x + Math.cos(a) * r, gy + 1.0, c.z + Math.sin(a) * r, Math.cos(a) * 0.9, 0.25, Math.sin(a) * 0.9,
-						900 + RANDOM.nextInt(400), 4.0F, 18.0F, 0x5A4E44, 0.85F, 0.6F, 0.0008F);
+					SmokeField.puff(c.x + Math.cos(a) * r, gy + 1.0, c.z + Math.sin(a) * r, Math.cos(a) * 1.6, 0.35, Math.sin(a) * 1.6,
+						1100 + RANDOM.nextInt(500), 8.0F, 32.0F, 0x5A4E44, 0.85F, 0.6F, 0.0008F);
 				}
 			}
 		}
 		if (d == SunTimeline.BURN_END) {
-			far(mc, c, ModRegistry.SUN_COLLAPSE, 1.0F, 1.0F, 2600.0);
+			far(mc, c, ModRegistry.SUN_COLLAPSE, 1.0F, 1.0F, 5000.0);
 		}
 		if (d == SunTimeline.NOVA) {
-			far(mc, c, dist < 700.0 ? ModRegistry.SUN_NOVA : ModRegistry.SUN_NOVA_FAR, 1.0F, 1.0F, 5000.0);
-			if (dist < 700.0) {
-				far(mc, c, ModRegistry.SUN_NOVA_FAR, 0.8F, 0.8F, 5000.0);
+			far(mc, c, dist < 1400.0 ? ModRegistry.SUN_NOVA : ModRegistry.SUN_NOVA_FAR, 1.0F, 1.0F, 9000.0);
+			if (dist < 1400.0) {
+				far(mc, c, ModRegistry.SUN_NOVA_FAR, 0.9F, 0.75F, 9000.0);
 			}
 			if (fresh) {
-				BlastShader.blast(BlastShader.Kind.NUCLEAR, c, 6.0, 0xFFF0D8);
-				BlastShader.flash((float) Mth.clamp(1.3 - dist / 2500.0, 0.2, 1.0));
-				ClientEffects.setFlash((float) Mth.clamp(1.0 - dist / 3000.0, 0.2, 1.0), 0xFFFFFF);
-				DynamicLights.explosion(c, 5.0, 0xFFE0B0);
-				ClientEffects.fireball(c, SunTimeline.RADIUS * 0.8, 220, 22.0F, 2.6, 80);
-				ClientEffects.embers(c, 500, 4.5);
-				ClientEffects.shockSphere(c, SunTimeline.NOVA_REACH * 0.6, 200);
+				BlastShader.blast(BlastShader.Kind.NUCLEAR, c, 12.0, 0xFFF0D8);
+				BlastShader.flash((float) Mth.clamp(1.4 - dist / 5000.0, 0.3, 1.0));
+				ClientEffects.setFlash((float) Mth.clamp(1.0 - dist / 6000.0, 0.3, 1.0), 0xFFFFFF);
+				DynamicLights.explosion(c, 6.0, 0xFFE0B0);
+				ClientEffects.fireball(c, SunTimeline.RADIUS * 0.8, 400, 40.0F, 4.0, 100);
+				ClientEffects.embers(c, 900, 7.0);
+				ClientEffects.shockSphere(c, SunTimeline.NOVA_REACH * 0.6, 400);
 			}
 		}
 	}
@@ -374,35 +374,35 @@ public final class SunClient {
 		Vec3 c = s.centre;
 		float radius = SunTimeline.sunRadius(d);
 		if (d < SunTimeline.IMPLODE) {
-			BlastShader.lens(c, 3.0F + 16.0F * d / SunTimeline.IMPLODE, 0.0F);
+			BlastShader.lens(c, 6.0F + SunTimeline.RADIUS * 0.5F * d / SunTimeline.IMPLODE, 0.0F);
 			// dust and loose things streaming in towards the core
 			for (int i = 0; i < 6; i++) {
 				double a = RANDOM.nextDouble() * Mth.TWO_PI;
-				double r = 30.0 + RANDOM.nextDouble() * 40.0;
+				double r = SunTimeline.RADIUS * (0.8 + RANDOM.nextDouble() * 1.2);
 				double gy = ClientEffects.groundY(mc, c.x + Math.cos(a) * r, s.target.y, c.z + Math.sin(a) * r);
-				SmokeField.puff(c.x + Math.cos(a) * r, gy + 1.0, c.z + Math.sin(a) * r, -Math.cos(a) * 1.2, 0.25, -Math.sin(a) * 1.2,
-					40 + RANDOM.nextInt(20), 1.5F, 3.0F, 0x8A7C6C, 0.6F, 0.0F, 0.0F);
+				SmokeField.puff(c.x + Math.cos(a) * r, gy + 1.0, c.z + Math.sin(a) * r, -Math.cos(a) * 2.4, 0.35, -Math.sin(a) * 2.4,
+					40 + RANDOM.nextInt(20), 3.0F, 6.0F, 0x8A7C6C, 0.6F, 0.0F, 0.0F);
 			}
 		} else if (d < SunTimeline.COLLAPSED) {
-			BlastShader.lens(c, d > SunTimeline.BURN_END ? 6.0F * (d - SunTimeline.BURN_END) / (SunTimeline.COLLAPSED - SunTimeline.BURN_END) : 0.0F, 0.75F);
-			DynamicLights.lamp(s.id * 7919L + 3L, c.add(0, radius * 0.6, 0), 0xFFB858, 1.0F, Math.min(160.0F, radius * 4.5F + 20.0F));
+			BlastShader.lens(c, d > SunTimeline.BURN_END ? SunTimeline.RADIUS * 0.2F * (d - SunTimeline.BURN_END) / (SunTimeline.COLLAPSED - SunTimeline.BURN_END) : 0.0F, 0.85F);
+			DynamicLights.lamp(s.id * 7919L + 3L, c.add(0, radius * 0.6, 0), 0xFFB858, 1.0F, Math.min(320.0F, radius * 3.5F + 20.0F));
 			if (s.burn == null) {
-				s.burn = new LoopSound(ModRegistry.SUN_BURN, c, 1400.0);
+				s.burn = new LoopSound(ModRegistry.SUN_BURN, c, 3000.0);
 				mc.getSoundManager().play(s.burn);
 			}
 			if (ModConfig.smokeAmount > 0) {
 				// the ground round its foot on fire, black smoke boiling up the star's sides into a towering plume
-				for (int i = 0; i < 5; i++) {
+				for (int i = 0; i < 12; i++) {
 					double a = RANDOM.nextDouble() * Mth.TWO_PI;
 					double r = radius * (1.02 + RANDOM.nextDouble() * 0.25);
 					double gy = ClientEffects.groundY(mc, c.x + Math.cos(a) * r, s.target.y, c.z + Math.sin(a) * r);
 					SmokeField.puff(c.x + Math.cos(a) * r, gy + 1.5, c.z + Math.sin(a) * r, Math.cos(a) * 0.08, 0.28 + RANDOM.nextDouble() * 0.2,
-						Math.sin(a) * 0.08, 900 + RANDOM.nextInt(500), 3.0F, 15.0F, 0x2C2724, 0.75F, 0.55F, 0.0018F);
+						Math.sin(a) * 0.08, 1200 + RANDOM.nextInt(600), 6.0F, 28.0F, 0x2C2724, 0.75F, 0.55F, 0.0018F);
 				}
 				if (RANDOM.nextFloat() < 0.6F) {
 					double a = RANDOM.nextDouble() * Mth.TWO_PI;
 					SmokeField.puff(c.x + Math.cos(a) * radius * 0.5, c.y + radius * 0.95, c.z + Math.sin(a) * radius * 0.5, ClientEffects.gauss() * 0.05,
-						0.55 + RANDOM.nextDouble() * 0.2, ClientEffects.gauss() * 0.05, 1600 + RANDOM.nextInt(600), 8.0F, 32.0F, 0x3A3430, 0.7F, 0.7F, 0.002F);
+						0.55 + RANDOM.nextDouble() * 0.2, ClientEffects.gauss() * 0.05, 2000 + RANDOM.nextInt(800), 16.0F, 60.0F, 0x3A3430, 0.7F, 0.7F, 0.002F);
 				}
 				if (RANDOM.nextFloat() < 0.3F) {
 					ClientEffects.embers(c.add(0, -radius * 0.2, 0), 6, 1.4);
@@ -415,28 +415,28 @@ public final class SunClient {
 			}
 			int n = d - SunTimeline.NOVA;
 			// the glowing crater cooling for a long while
-			float glow = Mth.clamp(1.0F - n / 480.0F, 0.0F, 1.0F);
+			float glow = Mth.clamp(1.0F - n / 700.0F, 0.0F, 1.0F);
 			if (glow > 0.0F) {
-				DynamicLights.lamp(s.id * 7919L + 3L, s.target.add(0, 3, 0), 0xFF7A30, glow, 30.0F + 60.0F * glow);
+				DynamicLights.lamp(s.id * 7919L + 3L, s.target.add(0, 3, 0), 0xFF7A30, glow, 60.0F + 140.0F * glow);
 			}
 			// the shock front rolling over the land: a wall of dust along the ground
 			float front = SunTimeline.shockRadius(d);
-			if (n < 90 && ModConfig.smokeAmount > 0) {
-				int k = 26;
+			if (n < 140 && ModConfig.smokeAmount > 0) {
+				int k = 70;
 				for (int i = 0; i < k; i++) {
 					double a = RANDOM.nextDouble() * Mth.TWO_PI;
 					double x = c.x + Math.cos(a) * front;
 					double z = c.z + Math.sin(a) * front;
 					double gy = ClientEffects.groundY(mc, x, s.target.y, z);
-					SmokeField.puff(x, gy + 1.5, z, Math.cos(a) * 0.5, 0.12, Math.sin(a) * 0.5, 500 + RANDOM.nextInt(300), 4.0F, 14.0F,
+					SmokeField.puff(x, gy + 2.0, z, Math.cos(a) * 0.8, 0.18, Math.sin(a) * 0.8, 700 + RANDOM.nextInt(400), 8.0F, 26.0F,
 						RANDOM.nextBoolean() ? 0x8A7A66 : 0x6E6255, 0.65F, 0.0F, 0.0004F);
 				}
 			}
 			// the column of smoke and dust standing over the crater
-			if (n < 260 && ModConfig.smokeAmount > 0 && RANDOM.nextFloat() < 0.8F) {
-				double h = Math.min(220.0, n * 1.4);
-				SmokeField.puff(c.x + ClientEffects.gauss() * 8.0, s.target.y + RANDOM.nextDouble() * h, c.z + ClientEffects.gauss() * 8.0,
-					ClientEffects.gauss() * 0.05, 0.4, ClientEffects.gauss() * 0.05, 1800 + RANDOM.nextInt(800), 10.0F, 34.0F,
+			for (int k = 0; k < 3 && n < 360 && ModConfig.smokeAmount > 0; k++) {
+				double h = Math.min(520.0, n * 2.2);
+				SmokeField.puff(c.x + ClientEffects.gauss() * 20.0, s.target.y + RANDOM.nextDouble() * h, c.z + ClientEffects.gauss() * 20.0,
+					ClientEffects.gauss() * 0.08, 0.6, ClientEffects.gauss() * 0.08, 2400 + RANDOM.nextInt(1000), 20.0F, 70.0F,
 					RANDOM.nextBoolean() ? 0x4A423C : 0x5C524A, 0.75F, Math.max(0.0F, 0.6F - n / 200.0F), 0.0015F);
 			}
 			// the shock reaching you
@@ -444,7 +444,7 @@ public final class SunClient {
 			if (!s.shockArrived && front >= dist) {
 				s.shockArrived = true;
 				float near = (float) Mth.clamp(1.0 - dist / SunTimeline.NOVA_REACH, 0.0, 1.0);
-				ClientEffects.addShake(3.0F + 6.0F * near);
+				ClientEffects.addShake(4.0F + 8.0F * near);
 				BlastShader.kick(0.5F + 0.5F * near);
 				BlastShader.quake(0.5F * near + 0.2F);
 				if (near > 0.2F) {
@@ -473,14 +473,14 @@ public final class SunClient {
 				stars.add(new SunStar.Star(round.subtract(dir.scale(2.4)), 0.0F, 1.6F, 0.0F, 0.95F, 0.0F, 0.9F, 0.3F));
 			}
 			float d = t - s.impact();
-			if (d < 0.0F || d > SunTimeline.NOVA + 120) {
+			if (d < 0.0F || d > SunTimeline.NOVA + 180) {
 				continue;
 			}
 			float seed = (s.id * 0.137F) % 1.0F;
 			if (d < SunTimeline.IMPLODE) {
 				float x = d / SunTimeline.IMPLODE;
 				// the core: a black speck growing, light falling in towards it
-				stars.add(new SunStar.Star(s.centre, SunTimeline.sunRadius(d), 0.0F, 80.0F * (1.0F - x) + 1.0F, 0.9F, 1.0F, 1.0F, seed));
+				stars.add(new SunStar.Star(s.centre, SunTimeline.sunRadius(d), 0.0F, SunTimeline.RADIUS * 2.4F * (1.0F - x) + 1.0F, 0.9F, 1.0F, 1.0F, seed));
 			} else if (d < SunTimeline.COLLAPSED) {
 				float r = SunTimeline.sunRadius(d);
 				float age = d - SunTimeline.IMPLODE;
@@ -496,8 +496,8 @@ public final class SunClient {
 				stars.add(new SunStar.Star(s.centre, r, r, 0.0F, temp, dark * 0.97F, 1.0F, seed));
 			} else {
 				float n = d - SunTimeline.NOVA;
-				float flash = (float) Math.exp(-n / 16.0);
-				float shock = n < 110.0F ? SunTimeline.shockRadius(d) : 0.0F;
+				float flash = (float) Math.exp(-n / 22.0);
+				float shock = n < 170.0F ? SunTimeline.shockRadius(d) : 0.0F;
 				stars.add(new SunStar.Star(s.centre, 0.0F, SunTimeline.RADIUS * 1.8F * flash, shock, Mth.lerp(Math.min(1.0F, n / 40.0F), 1.0F, 0.3F), 0.0F,
 					1.0F, seed));
 			}

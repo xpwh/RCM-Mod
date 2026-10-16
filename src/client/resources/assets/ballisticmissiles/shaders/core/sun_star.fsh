@@ -135,7 +135,7 @@ void main() {
             col = vec3(1.0, 0.82, 0.6) * rim * 1.4 * (0.7 + 0.3 * vnoise(nw * 9.0 + seconds * 3.0));
         } else {
             float flow = seconds * 0.35;
-            vec3 q = nw * 6.5 + vec3(seed);
+            vec3 q = nw * 6.5 * sqrt(max(radius, 1.0) / 34.0) + vec3(seed); // more, not bigger, cells on a bigger star
             vec3 warp = vec3(fbm(q * 0.45 + flow * 0.3), fbm(q * 0.45 + 7.3 - flow * 0.2), fbm(q * 0.45 + 13.1 + flow * 0.25));
             vec2 cl = cells(q * 1.7 + warp * 2.2 + vec3(0.0, flow, 0.0));
             float gran = smoothstep(0.0, 0.7, cl.y - cl.x);           // bright granules, dark lanes between them
@@ -182,8 +182,8 @@ void main() {
     // the light the air between the eye and what the ray meets scatters towards the eye: R^2 / d^2 along the ray
     if (radius > 0.05) {
         float scatter = radius * radius / b * (atan((tEnd - tc) / b) - atan(-tc / b));
-        float far = exp(-max(tc, 0.0) / 1800.0);
-        col += sunCol * scatter * 0.0065 * bright * far;
+        float far = exp(-max(tc, 0.0) / 3500.0);
+        col += sunCol * scatter * (0.22 / max(radius, 1.0)) * bright * far; // the same glow at the limb whatever its size
         // a tighter, brighter halo hugging it
         float above = (b - radius) / radius;
         if (above > 0.0 && tc > 0.0 && tc < tScene + radius) {
@@ -205,7 +205,7 @@ void main() {
 
     // the shock front: a shell of glowing air racing outwards (before ignition: light falling inwards)
     if (shock > 0.5) {
-        float w = 3.0 + shock * 0.07;
+        float w = 4.0 + shock * 0.06;
         float len = inside(tc, cc, shock, tEnd) - inside(tc, cc, max(shock - w, 0.0), tEnd);
         if (len > 0.0) {
             // where on the shell the ray passes, for the front's ragged, turbulent face
@@ -219,7 +219,7 @@ void main() {
                 hot = vec3(0.65, 0.8, 1.0);
                 k = 0.7 * dark;
             } else {
-                float age = clamp(shock / 260.0, 0.0, 1.0);
+                float age = clamp(shock / 650.0, 0.0, 1.0);
                 hot = mix(vec3(1.0, 0.95, 0.85), vec3(1.0, 0.45, 0.15), smoothstep(0.0, 0.6, age));
                 k = 1.6 * pow(1.0 - age, 1.4);
             }

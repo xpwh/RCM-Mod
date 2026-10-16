@@ -154,7 +154,7 @@ public final class SunStrikes {
 					level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, new ChunkPos(s.launcher), 3);
 				}
 				if (t > impact - 200) {
-					int r = Mth.ceil(SunTimeline.RADIUS * 3.0 / 16.0) + 1;
+					int r = Mth.ceil(SunTimeline.RADIUS * 2.7 / 16.0) + 1;
 					level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, new ChunkPos(BlockPos.containing(s.target)), r);
 				}
 			}
