@@ -78,6 +78,11 @@ public final class GoreWarningScreen extends Screen {
 	private int tones;
 	private List<FormattedCharSequence> body = List.of();
 	private List<FormattedCharSequence> alpha = List.of();
+	private static final List<Gui3D.Part> SIGN = Gui3D.warningSign();
+	private static final List<Gui3D.Part> COIN = Gui3D.coin();
+	/** Blood running off the bottom edge of the big sign: where along it (model x) and when each drop formed. */
+	private final List<float[]> drips = new java.util.ArrayList<>();
+	private float nextDrip = 1.4F;
 
 	private GoreWarningScreen(Screen next) {
 		super(Component.translatable("gore_warning.ballisticmissiles.title"));
@@ -336,6 +341,7 @@ public final class GoreWarningScreen extends Screen {
 		if (a <= 0.005F) {
 			return;
 		}
+		this.hero(g, t, 1.0F - leave, throb);
 		int lift = Math.round((1.0F - enter) * 16.0F + leave * 10.0F);
 		int x0 = this.cardX();
 		int y0 = this.cardY() + lift;
@@ -359,15 +365,10 @@ public final class GoreWarningScreen extends Screen {
 			float grow = easeOutExpo(pulse) * 10.0F;
 			UiKit.triangle(g, bx - grow, by - 2 - grow, 38 + 2 * grow, 36 + 2 * grow, argb(0.35F * (1.0F - pulse) * a * s0, RED));
 		}
+		// the sign itself, in 3D, rocking gently
 		float pop = easeOutBack(Mth.clamp((t - 0.1F) / 0.4F, 0.0F, 1.0F));
-		float ts = 38.0F * pop;
-		UiKit.triangle(g, bx + (38 - ts) / 2.0F, by - 2 + (36 - ts * 36.0F / 38.0F) / 2.0F, ts, ts * 36.0F / 38.0F, argb(a * s0, lerpColor(RED, 0xFF6A6E, throb * 0.4F)));
-		if (pop > 0.6F) {
-			float k = Mth.clamp((pop - 0.6F) / 0.4F, 0.0F, 1.0F);
-			int ink = argb(a * s0 * k, 0x1A0607);
-			g.fill(bx + 18, by + 10, bx + 21, by + 23, ink); // the exclamation mark
-			g.fill(bx + 18, by + 25, bx + 21, by + 28, ink);
-		}
+		Gui3D.draw(g, SIGN, new Gui3D.View(bx + 19, by + 18, 15.5F * pop, Mth.sin(t * 1.3F) * 0.45F + (1.0F - pop) * 2.0F, Mth.sin(t * 0.9F) * 0.12F, 0.0F),
+			a * s0, RED, 0.6F + 0.4F * throb);
 		Component title = this.title.copy().withStyle(ChatFormatting.BOLD);
 		int tx = bx + 50;
 		int titleColor = lerpColor(0xFFFFFF, lerpColor(RED, 0xFF7A7E, throb * 0.5F), Mth.clamp((t - 0.2F) / 0.5F, 0.0F, 1.0F));
@@ -470,6 +471,76 @@ public final class GoreWarningScreen extends Screen {
 		float s7 = stagger(t, 7);
 		Component hint = Component.translatable("gore_warning.ballisticmissiles.hint");
 		g.drawString(this.font, hint, (this.width - this.font.width(hint)) / 2, Math.min(this.height - 11, y0 + ch + 8), argb(a * s7 * 0.9F, FAINT), false);
+	}
+
+	/**
+	 * Either side of the card, when the screen is wide enough: a big 3D warning sign that spins in and then hangs
+	 * rocking, blood forming on its lower edge and dripping off, and a thick red 18+ coin turning slowly.
+	 */
+	private void hero(GuiGraphics g, float t, float alpha, float throb) {
+		int side = this.cardX();
+		if (side < 120) {
+			return;
+		}
+		float size = Math.min(side * 0.3F, Math.min(64.0F, this.height * 0.16F));
+		float cy = this.height * 0.46F;
+		// the sign: in from far off, spinning down to rest, then rocking on its own
+		float e = easeOutBack(Mth.clamp((t - 0.35F) / 1.1F, 0.0F, 1.0F));
+		float spin = 1.0F - easeOutExpo(Mth.clamp((t - 0.35F) / 1.4F, 0.0F, 1.0F));
+		float lx = side * 0.5F;
+		float ly = cy + Mth.sin(t * 1.1F) * 4.0F;
+		Gui3D.View sign = new Gui3D.View(lx, ly, size * e, -spin * 9.4F + Mth.sin(t * 0.7F) * 0.5F, Mth.sin(t * 0.5F) * 0.14F - spin * 0.5F,
+			Mth.sin(t * 0.8F) * 0.05F);
+		UiKit.orb(g, lx - size * 1.1F, ly + size * 1.05F, size * 2.2F, size * 0.5F, 0x000000, 0.55F * alpha * e);
+		Gui3D.draw(g, SIGN, sign, alpha * Mth.clamp(e * 1.5F, 0.0F, 1.0F), RED, 0.5F + 0.5F * throb);
+		this.drips(g, t, sign, size, alpha * Mth.clamp(e, 0.0F, 1.0F));
+
+		// the coin: tossed in, then turning over and over
+		float c = easeOutBack(Mth.clamp((t - 0.55F) / 1.0F, 0.0F, 1.0F));
+		float rx = this.width - side * 0.5F;
+		float ry = cy + Mth.sin(t * 1.1F + 1.7F) * 4.0F;
+		Gui3D.View coin = new Gui3D.View(rx, ry, size * 0.85F * c, t * 1.25F + (1.0F - c) * 6.0F, 0.18F + Mth.sin(t * 0.6F) * 0.1F, -0.12F);
+		UiKit.orb(g, rx - size, ry + size * 0.95F, size * 2.0F, size * 0.45F, 0x000000, 0.5F * alpha * c);
+		float ca = alpha * Mth.clamp(c * 1.5F, 0.0F, 1.0F);
+		Gui3D.draw(g, COIN, coin, ca, RED, 0.5F + 0.5F * throb);
+		Component age = Component.literal("18+").withStyle(ChatFormatting.BOLD);
+		int ink = argb(ca, 0xFFFFFF);
+		Gui3D.faceText(g, this.font, age, coin, 0.0F, 0.0F, 0.171F, 0.62F, ink);
+		Gui3D.faceText(g, this.font, age, coin, 0.0F, 0.0F, -0.171F, 0.62F, ink);
+	}
+
+	/** Drops of blood gathering on the sign's lower edge, swelling, then letting go and falling away. */
+	private void drips(GuiGraphics g, float t, Gui3D.View sign, float size, float alpha) {
+		if (t > this.nextDrip) {
+			this.nextDrip = t + 0.6F + (float) Math.random() * 1.1F;
+			this.drips.add(new float[] {(float) (Math.random() * 1.5 - 0.75), t});
+		}
+		this.drips.removeIf(d -> t - d[1] > 3.0F);
+		for (float[] d : this.drips) {
+			float age = t - d[1];
+			float[] at = Gui3D.screen(new org.joml.Vector3f(d[0], -0.86F, 0.05F), sign);
+			float r = Math.max(1.0F, size * 0.045F);
+			float hang = 0.9F;
+			int col = 0x8A0B10;
+			if (age < hang) {
+				// a bead swelling on the edge, sagging as it grows
+				float k = age / hang;
+				float rr = r * (0.4F + 0.8F * k);
+				UiKit.disc(g, at[0], at[1] + rr * 0.6F * k, rr, argb(alpha, col));
+				continue;
+			}
+			float f = age - hang;
+			float fall = 0.5F * 520.0F * f * f;
+			float y = at[1] + r + fall;
+			float fade = 1.0F - Mth.clamp(fall / (this.height * 0.4F), 0.0F, 1.0F);
+			if (fade <= 0.0F) {
+				continue;
+			}
+			// falling it draws out into a tear: a round head below, a thin tail above
+			float stretch = Math.min(r * 3.0F, 520.0F * f * 0.012F);
+			g.fill(Math.round(at[0] - r * 0.35F), Math.round(y - stretch - r), Math.round(at[0] + r * 0.35F), Math.round(y), argb(alpha * fade * 0.8F, col));
+			UiKit.disc(g, at[0], y, r, argb(alpha * fade, col));
+		}
 	}
 
 	/** Diagonal red and black hazard stripes in a band, sliding along with {@code t}. */
