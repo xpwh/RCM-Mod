@@ -64,6 +64,8 @@ public final class SmokeField {
 	private static final byte[] SHELTER = new byte[CAP];
 	/** How much of each puff shows through the cloud layer between it and the eye (1 all, 0 hidden). */
 	private static final float[] VEIL = new float[CAP];
+	/** This frame: how much of each puff is drawn as a sprite (the rest is in the volume, between the two near its edge). */
+	private static final float[] SPRITE = new float[CAP];
 	/** Scratch: the dynamic light on the puff being drawn. */
 	private static final float[] LIT = new float[3];
 	private static int veilFrame;
@@ -199,9 +201,9 @@ public final class SmokeField {
 		TRAILS.remove(key);
 	}
 
-	/** 0-1: how thick the smoke is where the camera is. */
+	/** 0-1: how thick the smoke is where the camera is (with volumetric smoke the volume itself shows most of it). */
 	public static float fog() {
-		return fog;
+		return SmokeVolume.enabled() ? fog * 0.45F : fog;
 	}
 
 	public static int fogColor() {
@@ -489,18 +491,79 @@ public final class SmokeField {
 		}
 		Arrays.sort(order, 0, n);
 		final int total = n;
+		// near the camera the smoke is raymarched as one volume (nearest first, as many as the quality allows);
+		// what is left is drawn as sprites
+		boolean volume = SmokeVolume.enabled();
+		int volumetric = 0;
+		if (volume) {
+			SmokeVolume.begin();
+			for (int k = 0; k < total; k++) {
+				SPRITE[(int) order[k]] = 1.0F;
+			}
+			for (int k = 0; k < total && !SmokeVolume.full(); k++) {
+				int i = (int) order[k];
+				if (gatherVolume(i, cam, partial)) {
+					order[k] |= VOLUME_BIT;
+					volumetric++;
+				}
+			}
+		}
 		// drawn at the end of the main pass, after the volumetric clouds: smoke writes no depth, so drawn with the
 		// entities the clouds were painted over it wherever a trail crossed in front of one (smoke beyond the
 		// cloud layer is dimmed by VEIL above instead)
 		PoseStack.Pose pose = context.matrices().last();
 		VertexConsumer consumer = context.consumers().getBuffer(TYPE);
 		for (int k = total - 1; k >= 0; k--) {
+			if ((order[k] & VOLUME_BIT) != 0) {
+				continue;
+			}
 			int i = (int) order[k];
 			emit(pose, consumer, i, cam, right, up, theta, day, partial);
 		}
 		if (context.consumers() instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers) {
 			buffers.endBatch(TYPE);
 		}
+		if (volumetric > 0) {
+			Vector3f dir = lightDir(mc);
+			boolean moon = Math.sin((mc.level.getDayTime() % 24000L) / 24000.0 * Math.PI * 2.0) < -0.05;
+			float rain = mc.level.getRainLevel(partial);
+			float strength = (moon ? 0.12F : Mth.clamp(day * 1.1F - 0.1F, 0.0F, 1.0F)) * (1.0F - 0.7F * rain) * (1.0F - NewMoonClient.amount());
+			float[] sky = {0.08F + 0.47F * day, 0.09F + 0.54F * day, 0.12F + 0.62F * day};
+			SmokeVolume.draw(context, dir, strength, sky);
+		}
+	}
+
+	/** Marks a puff in the sort order as raymarched (the order holds the index in its low bits). */
+	private static final long VOLUME_BIT = 1L << 31;
+
+	/** Hands puff {@code i} to the volumetric pass if it is near enough; false: it stays a sprite. */
+	private static boolean gatherVolume(int i, Vec3 cam, float partial) {
+		float age = clock - BORN[i] + partial;
+		float t = Math.min(1.0F, age / LIFE[i]);
+		float rad = radius(i, t);
+		double dx = X[i] - cam.x;
+		double dy = Y[i] - cam.y;
+		double dz = Z[i] - cam.z;
+		double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+		if (dist - rad > SmokeVolume.NEAR || dist + rad > 126.0 || rad > 60.0F) {
+			return false;
+		}
+		// towards the edge of the volume's reach the puff fades over into a sprite, so nothing pops
+		float edge = Mth.clamp((float) (dist - rad - (SmokeVolume.NEAR - 25.0)) / 25.0F, 0.0F, 1.0F);
+		SPRITE[i] = edge;
+		float a = opacity(i, t, age) * VEIL[i] * (1.0F - edge);
+		if (a < 0.01F) {
+			return edge <= 0.0F; // nothing for the volume; a sprite only for its share at the edge
+		}
+		LIT[0] = 0.0F;
+		LIT[1] = 0.0F;
+		LIT[2] = 0.0F;
+		DynamicLights.lightAt(X[i], Y[i], Z[i], LIT);
+		int emit = (int) (Mth.clamp(LIT[0], 0.0F, 1.0F) * 255.0F) << 16 | (int) (Mth.clamp(LIT[1], 0.0F, 1.0F) * 255.0F) << 8
+			| (int) (Mth.clamp(LIT[2], 0.0F, 1.0F) * 255.0F);
+		float hot = GLOW[i] * Mth.clamp(1.0F - age / 6.0F, 0.0F, 1.0F);
+		SmokeVolume.add((float) dx, (float) dy, (float) dz, rad, Mth.clamp(a, 0.0F, 1.0F), COLOR[i], emit, hot, (SEED[i] % 97.0F) / 97.0F, t);
+		return edge <= 0.0F; // fading over: drawn as a sprite too, for its share
 	}
 
 	private static void emit(PoseStack.Pose pose, VertexConsumer consumer, int i, Vec3 cam, Vector3f right, Vector3f up, float theta, float day,
@@ -508,7 +571,7 @@ public final class SmokeField {
 		float age = clock - BORN[i] + partial;
 		float t = Math.min(1.0F, age / LIFE[i]);
 		float rad = radius(i, t);
-		float a = opacity(i, t, age) * VEIL[i];
+		float a = opacity(i, t, age) * VEIL[i] * (SmokeVolume.enabled() ? SPRITE[i] : 1.0F);
 		double dx = X[i] - cam.x;
 		double dy = Y[i] - cam.y;
 		double dz = Z[i] - cam.z;

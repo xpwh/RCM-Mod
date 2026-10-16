@@ -253,6 +253,10 @@ public class SettingsScreen extends Screen {
 				Component.translatable("options.ballisticmissiles.smoke_fade.long"), ModConfig.fastSmoke)
 			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.smoke_fade.tooltip")))
 			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.smoke_fade"), (b, v) -> ModConfig.fastSmoke = v));
+		this.list.row(CycleButton.booleanBuilder(Component.translatable("options.ballisticmissiles.smoke_render.volume").withStyle(ChatFormatting.AQUA),
+				Component.translatable("options.ballisticmissiles.smoke_render.sprites"), ModConfig.volumetricSmoke)
+			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.smoke_render.tooltip")))
+			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.smoke_render"), (b, v) -> ModConfig.volumetricSmoke = v));
 	}
 
 	private void gore() {

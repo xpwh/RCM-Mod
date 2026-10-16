@@ -82,6 +82,8 @@ public final class ModConfig {
 	 * time, like real smoke in moving air; false: the long-hanging smoke as before.
 	 */
 	public static boolean fastSmoke = false;
+	/** Smoke near the camera raymarched as a volume instead of sprites. */
+	public static boolean volumetricSmoke = true;
 	/** Loudness of explosions and other big bangs, percent. */
 	public static int explosionVolume = 100;
 	public static boolean bulletHoles = true;
@@ -126,6 +128,7 @@ public final class ModConfig {
 			cumulusClouds = "cumulus".equals(p.getProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer"));
 			lightShafts = bool(p, "lightShafts", lightShafts);
 			realSky = bool(p, "realSky", realSky);
+			volumetricSmoke = bool(p, "volumetricSmoke", volumetricSmoke);
 			nightSky = bool(p, "nightSky", nightSky);
 			eyeAdaptation = bool(p, "eyeAdaptation", eyeAdaptation);
 			realWater = bool(p, "realWater", realWater);
@@ -164,6 +167,7 @@ public final class ModConfig {
 			p.setProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer");
 			p.setProperty("lightShafts", Boolean.toString(lightShafts));
 			p.setProperty("realSky", Boolean.toString(realSky));
+			p.setProperty("volumetricSmoke", Boolean.toString(volumetricSmoke));
 			p.setProperty("nightSky", Boolean.toString(nightSky));
 			p.setProperty("eyeAdaptation", Boolean.toString(eyeAdaptation));
 			p.setProperty("realWater", Boolean.toString(realWater));
