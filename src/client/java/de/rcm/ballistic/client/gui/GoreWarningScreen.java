@@ -1,27 +1,80 @@
 package de.rcm.ballistic.client.gui;
 
+import static de.rcm.ballistic.client.gui.UiKit.approach;
+import static de.rcm.ballistic.client.gui.UiKit.argb;
+import static de.rcm.ballistic.client.gui.UiKit.ease;
+import static de.rcm.ballistic.client.gui.UiKit.easeOutBack;
+import static de.rcm.ballistic.client.gui.UiKit.easeOutExpo;
+import static de.rcm.ballistic.client.gui.UiKit.lerpColor;
+
 import de.rcm.ballistic.client.ModConfig;
+import java.util.List;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Checkbox;
-import net.minecraft.client.gui.components.MultiLineLabel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Mth;
+import net.minecraft.util.Util;
 
 /**
- * Shown at the start, before the title screen, and meant seriously: this mod shows extreme, realistic
- * violence and is for adults only. It cannot be passed before it has been up long enough to be read, and
- * only by someone who confirms they are at least 18; anyone else turns the gore off. Ticked, it is not
- * shown again (both can be changed later in the settings).
+ * Shown at the start, before the title screen, and meant seriously: this mod shows extreme, realistic violence and
+ * is for adults only. A quiet dark card - a red 18+ badge, the warning, the note that the mod is an early alpha, two
+ * check boxes and two buttons - eases in piece by piece. It cannot be passed before it has been up long enough to
+ * be read (the button fills as the time runs) and read to the end (it scrolls when the screen is small), and only
+ * by someone who confirms they are at least 18; pressing on too early shakes the button and points at what is
+ * missing. Anyone else turns the gore off. Ticked, it is not shown again (both can be changed in the settings).
  */
 public final class GoreWarningScreen extends Screen {
+	/** How long it must stay up before it can be passed: long enough to actually be read. */
+	private static final long READ_MS = 8000L;
+	private static final long OUT_MS = 520L;
+	private static final int PAD = 22;
+	private static final int LINE = 11;
+	private static final int ROW_H = 20;
+	private static final int BUTTON_H = 26;
+	// the palette of the mod's other cards: near-black greys, off-white for what matters, colour only to say something
+	private static final int BACKDROP = 0x0B0B0D;
+	private static final int CARD = 0x161618;
+	private static final int TEXT = 0xEDEDEF;
+	private static final int BODY = 0xB4B4BB;
+	private static final int MUTED = 0x8E8E95;
+	private static final int FAINT = 0x5E5E66;
+	private static final int HAIRLINE = 0x26262A;
+	private static final int BUTTON = 0xE8E8EA;
+	private static final int BUTTON_INK = 0x111113;
+	private static final int DISABLED = 0x232326;
+	private static final int RED = 0xE5484D;
+	private static final int AMBER = 0xF5A524;
+
 	private static boolean shown;
 	private final Screen next;
-	private Checkbox dontShow;
-	private MultiLineLabel text = MultiLineLabel.EMPTY;
+	private long opened = -1L;
+	private long lastFrame;
+	private boolean adult;
+	private boolean dontShow;
+	private long adultAt = -100_000L;
+	private long dontShowAt = -100_000L;
+	/** Pressed on before it may be: when, for the shake and the hint. */
+	private long refusedAt = -100_000L;
+	private long closingAt = -1L;
+	private float scroll;
+	private float scrollTarget;
+	private boolean readToEnd;
+	private float hoverGo;
+	private float hoverOff;
+	private float hoverAdult;
+	private float hoverDont;
+	private float ready;
+	private List<FormattedCharSequence> body = List.of();
+	private List<FormattedCharSequence> alpha = List.of();
 
 	private GoreWarningScreen(Screen next) {
 		super(Component.translatable("gore_warning.ballisticmissiles.title"));
@@ -40,67 +93,175 @@ public final class GoreWarningScreen extends Screen {
 		});
 	}
 
-	/** Ticks the warning must stay up before it can be passed: long enough to actually be read. */
-	private static final int READ_TICKS = 160;
-	/** The note that the mod is an early alpha, still very much being worked on. */
-	private MultiLineLabel alpha = MultiLineLabel.EMPTY;
-	private Checkbox adult;
-	private Button go;
-	private int shownFor;
-
 	@Override
 	protected void init() {
-		int w = Math.min(this.width - 40, 420);
-		this.text = MultiLineLabel.create(this.font, Component.translatable("gore_warning.ballisticmissiles.text"), w);
-		this.alpha = MultiLineLabel.create(this.font, Component.translatable("gore_warning.ballisticmissiles.alpha").withColor(0xFFD040), w);
-		int textTop = Math.max(70, this.height / 2 - 120);
-		int y = Math.min(this.height - 86, this.alphaTop(textTop) + this.alpha.getLineCount() * (this.font.lineHeight + 2) + 10);
-		this.adult = this.addRenderableWidget(Checkbox.builder(Component.translatable("gore_warning.ballisticmissiles.adult"), this.font)
-			.pos(this.width / 2 - 150, y).selected(false).build());
-		y += 22;
-		this.dontShow = this.addRenderableWidget(Checkbox.builder(Component.translatable("gore_warning.ballisticmissiles.dont_show"), this.font)
-			.pos(this.width / 2 - 150, y).selected(false).build());
-		y += 26;
-		this.go = this.addRenderableWidget(Button.builder(Component.translatable("gore_warning.ballisticmissiles.continue"), b -> this.close(true))
-			.bounds(this.width / 2 - 154, y, 150, 20).build());
-		this.addRenderableWidget(Button.builder(Component.translatable("gore_warning.ballisticmissiles.disable"), b -> this.close(false))
-			.bounds(this.width / 2 + 4, y, 150, 20).build());
-		this.updateGo();
+		UiKit.init();
+		int textW = this.cardW() - 2 * PAD;
+		this.body = this.font.split(Component.translatable("gore_warning.ballisticmissiles.text"), textW);
+		this.alpha = this.font.split(Component.translatable("gore_warning.ballisticmissiles.alpha"), textW - 24);
+		if (this.opened < 0L) {
+			this.opened = Util.getMillis();
+			this.lastFrame = this.opened;
+		}
 	}
 
-	/** Where the alpha note starts: just under the warning text. */
-	private int alphaTop(int textTop) {
-		return textTop + this.text.getLineCount() * (this.font.lineHeight + 2) + 8;
+	// ------------------------------------------------------------------ layout
+
+	private int cardW() {
+		return Math.min(440, this.width - 32);
+	}
+
+	/** Height of what scrolls: the warning, a gap, the alpha note in its box. */
+	private int contentH() {
+		return this.body.size() * LINE + 14 + this.alphaBoxH();
+	}
+
+	private int alphaBoxH() {
+		return 26 + this.alpha.size() * LINE + 10;
+	}
+
+	/** The fixed parts round the scrolling text: header, the gap under it, the check boxes and the buttons. */
+	private static final int CHROME = PAD + 58 + 12 + 2 * ROW_H + 4 + 14 + BUTTON_H + PAD;
+
+	private int cardH() {
+		return Math.min(this.height - 24, CHROME + this.contentH());
+	}
+
+	private int viewH() {
+		return Math.max(20, this.cardH() - CHROME);
+	}
+
+	private int maxScroll() {
+		return Math.max(0, this.contentH() - this.viewH());
+	}
+
+	private int cardX() {
+		return (this.width - this.cardW()) / 2;
+	}
+
+	private int cardY() {
+		return (this.height - this.cardH()) / 2;
+	}
+
+	private int viewTop() {
+		return this.cardY() + PAD + 58;
+	}
+
+	private int rowsTop() {
+		return this.viewTop() + this.viewH() + 12;
+	}
+
+	private int buttonsTop() {
+		return this.rowsTop() + 2 * ROW_H + 4 + 14;
+	}
+
+	private int offW() {
+		return Math.round((this.cardW() - 2 * PAD) * 0.4F);
+	}
+
+	private boolean over(double mx, double my, int x, int y, int w, int h) {
+		return mx >= x && mx < x + w && my >= y && my < y + h;
+	}
+
+	private boolean overAdult(double mx, double my) {
+		return this.over(mx, my, this.cardX() + PAD - 4, this.rowsTop(), this.cardW() - 2 * PAD + 8, ROW_H);
+	}
+
+	private boolean overDontShow(double mx, double my) {
+		return this.over(mx, my, this.cardX() + PAD - 4, this.rowsTop() + ROW_H + 4, this.cardW() - 2 * PAD + 8, ROW_H);
+	}
+
+	private boolean overOff(double mx, double my) {
+		return this.over(mx, my, this.cardX() + PAD, this.buttonsTop(), this.offW(), BUTTON_H);
+	}
+
+	private boolean overGo(double mx, double my) {
+		int x = this.cardX() + PAD + this.offW() + 8;
+		return this.over(mx, my, x, this.buttonsTop(), this.cardW() - 2 * PAD - this.offW() - 8, BUTTON_H);
+	}
+
+	// ------------------------------------------------------------------ state
+
+	private float readProgress(long now) {
+		return Mth.clamp((now - this.opened) / (float) READ_MS, 0.0F, 1.0F);
+	}
+
+	private boolean mayGo(long now) {
+		return this.readProgress(now) >= 1.0F && this.readToEnd && this.adult;
 	}
 
 	@Override
-	public void tick() {
-		super.tick();
-		this.shownFor++;
-		this.updateGo();
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (event.button() != 0 || this.closingAt >= 0L) {
+			return true;
+		}
+		double mx = event.x();
+		double my = event.y();
+		long now = Util.getMillis();
+		if (this.overAdult(mx, my)) {
+			this.adult = !this.adult;
+			this.adultAt = now;
+			click(this.adult ? 1.6F : 1.3F);
+		} else if (this.overDontShow(mx, my)) {
+			this.dontShow = !this.dontShow;
+			this.dontShowAt = now;
+			click(this.dontShow ? 1.6F : 1.3F);
+		} else if (this.overOff(mx, my)) {
+			this.close(false);
+		} else if (this.overGo(mx, my)) {
+			this.tryGo(now);
+		}
+		return true;
 	}
 
-	/** Only once it has been read, and only for someone who says they are an adult. */
-	private void updateGo() {
-		if (this.go == null) {
-			return;
+	@Override
+	public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
+		this.scrollTarget = Mth.clamp(this.scrollTarget - (float) scrollY * LINE * 3, 0.0F, this.maxScroll());
+		return true;
+	}
+
+	@Override
+	public boolean keyPressed(KeyEvent event) {
+		if (this.closingAt < 0L && event.isConfirmation()) {
+			this.tryGo(Util.getMillis());
+			return true;
 		}
-		int left = (READ_TICKS - this.shownFor + 19) / 20;
-		this.go.active = left <= 0 && this.adult != null && this.adult.selected();
-		this.go.setMessage(left > 0 ? Component.translatable("gore_warning.ballisticmissiles.continue_wait", left)
-			: Component.translatable("gore_warning.ballisticmissiles.continue"));
+		return super.keyPressed(event);
+	}
+
+	private void tryGo(long now) {
+		if (this.mayGo(now)) {
+			this.close(true);
+		} else {
+			this.refusedAt = now;
+			Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BASS.value(), 0.8F, 0.3F));
+		}
+	}
+
+	private static void click(float pitch) {
+		Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), pitch, 0.25F));
 	}
 
 	private void close(boolean gore) {
+		this.closingAt = Util.getMillis();
 		ModConfig.gore = gore;
 		if (!gore) {
 			ModConfig.blood = false;
 		}
-		if (this.dontShow != null && this.dontShow.selected()) {
+		if (this.dontShow) {
 			ModConfig.goreWarning = false;
 		}
 		ModConfig.save();
-		Minecraft.getInstance().setScreen(this.next);
+		if (gore) {
+			Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_CHIME, 1.2F, 0.7F));
+		}
+	}
+
+	@Override
+	public void tick() {
+		if (this.closingAt >= 0L && Util.getMillis() - this.closingAt > OUT_MS) {
+			Minecraft.getInstance().setScreen(this.next);
+		}
 	}
 
 	@Override
@@ -109,43 +270,222 @@ public final class GoreWarningScreen extends Screen {
 	}
 
 	@Override
-	public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-		g.fill(0, 0, this.width, this.height, 0xFF070303);
-		// a dark red glow in from the edges, slowly pulsing
-		float pulse = 0.6F + 0.4F * net.minecraft.util.Mth.sin((this.shownFor + partialTick) * 0.12F);
-		int a = (int) (0x60 * pulse);
-		g.fillGradient(0, 0, this.width, this.height / 4, a << 24 | 0x900000, 0x00900000);
-		g.fillGradient(0, this.height * 3 / 4, this.width, this.height, 0x00900000, a << 24 | 0x900000);
-		int border = 0xFF000000 | ((int) (0x70 + 0x60 * pulse) << 16);
-		g.fill(0, 0, this.width, 3, border);
-		g.fill(0, this.height - 3, this.width, this.height, border);
-		g.fill(0, 0, 3, this.height, border);
-		g.fill(this.width - 3, 0, this.width, this.height, border);
-		int cx = this.width / 2;
-		int top = Math.max(70, this.height / 2 - 120);
-		// the sign: a red triangle with the age mark
-		int y = top - 64;
-		for (int i = 0; i < 26; i++) {
-			g.fill(cx - i, y + i, cx + i + 1, y + i + 1, 0xFFC01414);
-		}
-		g.drawCenteredString(this.font, "18+", cx, y + 14, 0xFFFFFFFF);
-		g.pose().pushMatrix();
-		g.pose().translate(cx, top - 30);
-		g.pose().scale(1.8F, 1.8F);
-		g.drawCenteredString(this.font, this.title, 0, 0, 0xFFFF3A2A);
-		g.pose().popMatrix();
-		g.drawCenteredString(this.font, Component.translatable("gore_warning.ballisticmissiles.subtitle"), cx, top - 12, 0xFFE0B0B0);
-		this.text.visitLines(net.minecraft.client.gui.TextAlignment.CENTER, cx, top, this.font.lineHeight + 2, g.textRenderer());
-		// the mod is an early alpha: said plainly, in its own colour, so it is not missed
-		int alphaTop = this.alphaTop(top);
-		int alphaLines = this.alpha.getLineCount();
-		g.fill(cx - 214, alphaTop - 4, cx + 214, alphaTop + alphaLines * (this.font.lineHeight + 2) + 2, 0x40FFC020);
-		this.alpha.visitLines(net.minecraft.client.gui.TextAlignment.CENTER, cx, alphaTop, this.font.lineHeight + 2, g.textRenderer());
-		super.render(g, mouseX, mouseY, partialTick);
+	public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+		// drawn in render()
+	}
+
+	// ------------------------------------------------------------------ drawing
+
+	/** Each part eases in a little after the one above it. */
+	private static float stagger(float t, int index) {
+		return easeOutExpo(Mth.clamp((t - 0.15F - index * 0.07F) / 0.55F, 0.0F, 1.0F));
 	}
 
 	@Override
-	public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-		// drawn in render()
+	public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+		long now = Util.getMillis();
+		float dt = Math.min(0.1F, (now - this.lastFrame) / 1000.0F);
+		this.lastFrame = now;
+		float t = (now - this.opened) / 1000.0F;
+		float out = this.closingAt < 0L ? 0.0F : Mth.clamp((now - this.closingAt) / (float) OUT_MS, 0.0F, 1.0F);
+		boolean live = out <= 0.0F;
+
+		this.scroll = approach(this.scroll, this.scrollTarget, dt * 14.0F);
+		if (this.maxScroll() <= 0 || this.scrollTarget >= this.maxScroll() - 2) {
+			this.readToEnd = true;
+		}
+		boolean may = this.mayGo(now);
+		this.ready = approach(this.ready, may ? 1.0F : 0.0F, dt * 8.0F);
+		this.hoverGo = approach(this.hoverGo, live && this.overGo(mouseX, mouseY) ? 1.0F : 0.0F, dt * 12.0F);
+		this.hoverOff = approach(this.hoverOff, live && this.overOff(mouseX, mouseY) ? 1.0F : 0.0F, dt * 12.0F);
+		this.hoverAdult = approach(this.hoverAdult, live && this.overAdult(mouseX, mouseY) ? 1.0F : 0.0F, dt * 12.0F);
+		this.hoverDont = approach(this.hoverDont, live && this.overDontShow(mouseX, mouseY) ? 1.0F : 0.0F, dt * 12.0F);
+
+		// ---- the backdrop: black over the menu, the card's own soft shadow under it
+		float bg = ease(Mth.clamp(t / 0.4F, 0.0F, 1.0F)) * (1.0F - ease(Mth.clamp((out - 0.35F) / 0.65F, 0.0F, 1.0F)));
+		g.fill(0, 0, this.width, this.height, argb(bg, BACKDROP));
+
+		float enter = easeOutExpo(Mth.clamp(t / 0.7F, 0.0F, 1.0F));
+		float leave = ease(Mth.clamp(out / 0.8F, 0.0F, 1.0F));
+		float a = enter * (1.0F - leave);
+		if (a <= 0.005F) {
+			return;
+		}
+		int lift = Math.round((1.0F - enter) * 16.0F + leave * 10.0F);
+		int x0 = this.cardX();
+		int y0 = this.cardY() + lift;
+		int cw = this.cardW();
+		int ch = this.cardH();
+		int textW = cw - 2 * PAD;
+		UiKit.orb(g, x0 - 30, y0 - 10, cw + 60, ch + 56, 0x000000, 0.65F * a);
+		UiKit.round(g, UiKit.FILL, x0, y0, cw, ch, 12, argb(a, CARD));
+		UiKit.round(g, UiKit.EDGE, x0, y0, cw, ch, 12, argb(0.07F * a, 0xFFFFFF));
+
+		// ---- header: the red 18+ badge (a ring breathing out of it now and then), title and line under it
+		float s0 = stagger(t, 0);
+		int bx = x0 + PAD;
+		int by = y0 + PAD + Math.round((1.0F - s0) * 6.0F);
+		float pulse = (t % 2.8F) / 2.8F;
+		if (t > 0.8F && pulse < 0.7F) {
+			float p = pulse / 0.7F;
+			int grow = Math.round(easeOutExpo(p) * 7.0F);
+			UiKit.round(g, UiKit.EDGE, bx - grow, by - grow, 34 + 2 * grow, 34 + 2 * grow, 10 + grow, argb(0.45F * (1.0F - p) * a * s0, RED));
+		}
+		float pop = easeOutBack(Mth.clamp((t - 0.15F) / 0.45F, 0.0F, 1.0F));
+		int bs = Math.max(1, Math.round(34 * pop));
+		UiKit.round(g, UiKit.FILL, bx + (34 - bs) / 2, by + (34 - bs) / 2, bs, bs, 10, argb(a * s0, RED));
+		if (pop > 0.6F) {
+			Component age = Component.literal("18+").withStyle(ChatFormatting.BOLD);
+			g.drawString(this.font, age, bx + 17 - this.font.width(age) / 2, by + 13, argb(a * s0 * Mth.clamp((pop - 0.6F) / 0.4F, 0.0F, 1.0F), 0xFFFFFF), false);
+		}
+		Component title = this.title.copy().withStyle(ChatFormatting.BOLD);
+		g.drawString(this.font, title, bx + 46, by + 7, argb(a * s0, TEXT), false);
+		g.drawString(this.font, Component.translatable("gore_warning.ballisticmissiles.subtitle"), bx + 46, by + 20, argb(a * stagger(t, 1), MUTED), false);
+		float line = easeOutExpo(Mth.clamp((t - 0.35F) / 0.8F, 0.0F, 1.0F));
+		g.fill(x0 + PAD, y0 + PAD + 46, x0 + PAD + Math.round(textW * line), y0 + PAD + 47, argb(a, HAIRLINE));
+
+		// ---- the warning and the alpha note, scrolling if the screen is too small for them
+		int vt = this.viewTop() + lift;
+		int vh = this.viewH();
+		g.enableScissor(x0 + 1, vt, x0 + cw - 1, vt + vh);
+		float s2 = stagger(t, 2);
+		int y = vt - Math.round(this.scroll) + Math.round((1.0F - s2) * 6.0F);
+		for (FormattedCharSequence l : this.body) {
+			if (y > vt - LINE && y < vt + vh) {
+				g.drawString(this.font, l, x0 + PAD, y, argb(a * s2, BODY), false);
+			}
+			y += LINE;
+		}
+		y += 14;
+		float s3 = stagger(t, 3);
+		y += Math.round((1.0F - s3) * 6.0F);
+		int boxH = this.alphaBoxH();
+		UiKit.round(g, UiKit.FILL, x0 + PAD, y, textW, boxH, 8, argb(0.07F * a * s3, AMBER));
+		UiKit.round(g, UiKit.FILL, x0 + PAD, y, 3, boxH, 2, argb(0.9F * a * s3, AMBER));
+		Component label = Component.translatable("gore_warning.ballisticmissiles.alpha_label").withStyle(ChatFormatting.BOLD);
+		int lw = this.font.width(label) + 12;
+		UiKit.round(g, UiKit.FILL, x0 + PAD + 14, y + 9, lw, 13, 6, argb(0.16F * a * s3, AMBER));
+		g.drawString(this.font, label, x0 + PAD + 20, y + 12, argb(a * s3, AMBER), false);
+		int ay = y + 28;
+		for (FormattedCharSequence l : this.alpha) {
+			g.drawString(this.font, l, x0 + PAD + 14, ay, argb(a * s3, 0xD9D4C7), false);
+			ay += LINE;
+		}
+		g.disableScissor();
+		// more below: a soft fade into the card and a thin scroll bar
+		int max = this.maxScroll();
+		if (max > 0) {
+			float more = Mth.clamp((max - this.scroll) / 20.0F, 0.0F, 1.0F);
+			if (more > 0.0F) {
+				g.fillGradient(x0 + 1, vt + vh - 18, x0 + cw - 1, vt + vh, argb(0.0F, CARD), argb(a * more, CARD));
+			}
+			int barH = Math.max(14, Math.round(vh * vh / (float) this.contentH()));
+			int barY = vt + Math.round((vh - barH) * this.scroll / max);
+			UiKit.round(g, UiKit.FILL, x0 + cw - 8, barY, 3, barH, 1, argb(0.35F * a, 0xFFFFFF));
+		}
+
+		// ---- the check boxes
+		float refused = (now - this.refusedAt) / 1000.0F;
+		float point = refused < 1.4F ? (1.0F - refused / 1.4F) : 0.0F;
+		int ry = this.rowsTop() + lift;
+		this.checkRow(g, x0, ry, a * stagger(t, 4), "gore_warning.ballisticmissiles.adult", this.adult, now - this.adultAt, this.hoverAdult,
+			!this.adult ? point : 0.0F, true);
+		this.checkRow(g, x0, ry + ROW_H + 4, a * stagger(t, 5), "gore_warning.ballisticmissiles.dont_show", this.dontShow, now - this.dontShowAt,
+			this.hoverDont, 0.0F, false);
+
+		// ---- the buttons: turn gore off (quiet), and go on (fills while it may not yet be passed)
+		float s6 = stagger(t, 6);
+		int bty = this.buttonsTop() + lift + Math.round((1.0F - s6) * 5.0F);
+		int offW = this.offW();
+		UiKit.round(g, UiKit.FILL, x0 + PAD, bty, offW, BUTTON_H, 8, argb(a * s6 * (0.04F + 0.05F * this.hoverOff), 0xFFFFFF));
+		UiKit.round(g, UiKit.EDGE, x0 + PAD, bty, offW, BUTTON_H, 8, argb(a * s6 * (0.12F + 0.1F * this.hoverOff), 0xFFFFFF));
+		Component off = Component.translatable("gore_warning.ballisticmissiles.disable");
+		g.drawString(this.font, off, x0 + PAD + (offW - this.font.width(off)) / 2, bty + 9, argb(a * s6, lerpColor(MUTED, TEXT, this.hoverOff)), false);
+
+		int shake = refused < 0.6F ? Math.round((float) (Math.exp(-refused * 7.0) * Math.sin(refused * 48.0) * 6.0)) : 0;
+		int gx = x0 + PAD + offW + 8 + shake;
+		int gw = textW - offW - 8;
+		float read = this.readProgress(now);
+		int fill = lerpColor(DISABLED, lerpColor(BUTTON, 0xFFFFFF, this.hoverGo), this.ready);
+		UiKit.round(g, UiKit.FILL, gx, bty, gw, BUTTON_H, 8, argb(a * s6, fill));
+		if (read < 1.0F) {
+			// the time to read it, filling the button
+			int pw = Math.round(gw * read);
+			if (pw > 2) {
+				UiKit.round(g, UiKit.FILL, gx, bty, pw, BUTTON_H, Math.min(8, pw / 2), argb(a * s6 * 0.07F, 0xFFFFFF));
+			}
+		}
+		Component go;
+		if (read < 1.0F) {
+			go = Component.translatable("gore_warning.ballisticmissiles.continue_wait", (int) Math.ceil((1.0F - read) * READ_MS / 1000.0F));
+		} else if (!this.readToEnd) {
+			go = Component.translatable("gore_warning.ballisticmissiles.scroll");
+		} else {
+			go = Component.translatable("gore_warning.ballisticmissiles.continue");
+		}
+		int ink = lerpColor(FAINT, BUTTON_INK, this.ready);
+		if (!may && point > 0.0F && read >= 1.0F) {
+			ink = lerpColor(ink, RED, point);
+		}
+		g.drawString(this.font, go, gx + (gw - this.font.width(go)) / 2, bty + 9, argb(a * s6, ink), false);
+		// how to go on, very quietly under the card
+		float s7 = stagger(t, 7);
+		Component hint = Component.translatable("gore_warning.ballisticmissiles.hint");
+		g.drawString(this.font, hint, (this.width - this.font.width(hint)) / 2, Math.min(this.height - 11, y0 + ch + 8), argb(a * s7 * 0.9F, FAINT), false);
+	}
+
+	/** A check box with its label: the box fills with a little spring and the tick draws itself. */
+	private void checkRow(GuiGraphics g, int x0, int y, float alpha, String key, boolean on, long since, float hover, float point, boolean primary) {
+		if (alpha <= 0.005F) {
+			return;
+		}
+		int x = x0 + PAD;
+		int w = this.cardW() - 2 * PAD;
+		if (hover > 0.01F || point > 0.0F) {
+			UiKit.round(g, UiKit.FILL, x - 4, y, w + 8, ROW_H, 6, argb(alpha * 0.04F * hover, 0xFFFFFF));
+		}
+		if (point > 0.0F) {
+			UiKit.round(g, UiKit.EDGE, x - 4, y, w + 8, ROW_H, 6, argb(alpha * 0.8F * point, RED));
+		}
+		int bx = x + 1;
+		int by = y + 3;
+		float p = Mth.clamp(since / 260.0F, 0.0F, 1.0F);
+		float k = on ? easeOutBack(p) : 1.0F - ease(p);
+		UiKit.round(g, UiKit.EDGE, bx, by, 14, 14, 4, argb(alpha * (0.25F + 0.2F * hover), 0xFFFFFF));
+		int s = Math.round(14 * Mth.clamp(k, 0.0F, 1.2F));
+		if (s > 1) {
+			UiKit.round(g, UiKit.FILL, bx + (14 - s) / 2, by + (14 - s) / 2, s, s, 4, argb(alpha * Mth.clamp(k, 0.0F, 1.0F), BUTTON));
+		}
+		if (on) {
+			float d = Mth.clamp((since - 90) / 220.0F, 0.0F, 1.0F);
+			this.tick(g, bx + 7, by + 7, d, argb(alpha, BUTTON_INK));
+		}
+		Component label = Component.translatable(key);
+		int color = primary ? lerpColor(BODY, TEXT, on ? 1.0F : hover) : lerpColor(MUTED, BODY, on ? 1.0F : hover);
+		g.drawString(this.font, label, x + 24, y + 6, argb(alpha, color), false);
+	}
+
+	/** A tick drawing itself, short stroke first. */
+	private void tick(GuiGraphics g, int x, int y, float p, int color) {
+		float first = Mth.clamp(p / 0.4F, 0.0F, 1.0F);
+		float second = Mth.clamp((p - 0.4F) / 0.6F, 0.0F, 1.0F);
+		stroke(g, x - 4, y, x - 1, y + 3, first, color);
+		if (second > 0.0F) {
+			stroke(g, x - 1, y + 3, x + 4, y - 3, second, color);
+		}
+	}
+
+	private static void stroke(GuiGraphics g, float ax, float ay, float bx, float by, float p, int color) {
+		float dx = (bx - ax) * p;
+		float dy = (by - ay) * p;
+		float len = Mth.sqrt(dx * dx + dy * dy);
+		if (len < 0.1F) {
+			return;
+		}
+		g.pose().pushMatrix();
+		g.pose().translate(ax, ay);
+		g.pose().rotate((float) Math.atan2(dy, dx));
+		g.fill(0, -1, Math.max(1, Math.round(len)), 1, color);
+		g.pose().popMatrix();
 	}
 }
