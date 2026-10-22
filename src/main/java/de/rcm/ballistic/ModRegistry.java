@@ -878,6 +878,12 @@ public final class ModRegistry {
 	public static final SoundEvent SUN_COLLAPSE = sound("sun.collapse");
 	public static final SoundEvent SUN_NOVA = sound("sun.nova");
 	public static final SoundEvent SUN_NOVA_FAR = sound("sun.nova_far");
+	public static final SoundEvent SUN_SIREN = sound("sun.siren");
+	public static final SoundEvent SUN_BEEP = sound("sun.beep");
+	/** A deep cinematic hit under the cutscene's title cards and cuts. */
+	public static final SoundEvent SUN_HIT = sound("sun.hit");
+	/** The nova's shock front tearing past: its crack and the wind behind it. */
+	public static final SoundEvent SUN_SHOCK = sound("sun.shock");
 	public static final SoundEvent SUPPLY_LAUNCH = sound("supply.launch");
 	public static final SoundEvent AK_SHOT = sound("ak.shot");
 	public static final SoundEvent AK_SHOT_MID = sound("ak.shot_mid");

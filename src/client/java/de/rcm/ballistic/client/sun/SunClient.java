@@ -238,6 +238,13 @@ public final class SunClient {
 			if (t == SunTimeline.CHARGE_FROM) {
 				local(mc, base.add(0, 26, 0), ModRegistry.SUN_CHARGE, 10.0F, 1.0F);
 			}
+			if (t == 20) {
+				// the siren winds up over the whole complex
+				local(mc, base.add(0, 30, 0), ModRegistry.SUN_SIREN, 14.0F, 1.0F);
+			}
+			if (t == SunTimeline.FIRE - 60 || t == SunTimeline.FIRE - 40 || t == SunTimeline.FIRE - 20) {
+				local(mc, base.add(0, 4, 0), ModRegistry.SUN_BEEP, 4.0F, t == SunTimeline.FIRE - 20 ? 1.25F : 1.0F);
+			}
 		}
 		// ---- the shot
 		if (t == SunTimeline.FIRE) {
@@ -316,6 +323,15 @@ public final class SunClient {
 				ClientEffects.fireball(c, SunTimeline.RADIUS * 0.8, 400, 40.0F, 4.0, 100);
 				ClientEffects.embers(c, 900, 7.0);
 				ClientEffects.shockSphere(c, SunTimeline.NOVA_REACH * 0.6, 400);
+				ClientEffects.shockSphere(c, SunTimeline.NOVA_REACH * 0.35, 260);
+				// the condensation ring: the air's moisture flashing to cloud behind the shock, racing out over the land
+				for (int i = 0; i < 220; i++) {
+					double a = i * Mth.TWO_PI / 220.0 + RANDOM.nextDouble() * 0.02;
+					double r = SunTimeline.RADIUS * (0.7 + RANDOM.nextDouble() * 0.2);
+					double v = 2.6 + RANDOM.nextDouble() * 0.6;
+					SmokeField.puff(c.x + Math.cos(a) * r, c.y - SunTimeline.RADIUS * 0.2 + ClientEffects.gauss() * 4.0, c.z + Math.sin(a) * r,
+						Math.cos(a) * v, 0.04, Math.sin(a) * v, 260 + RANDOM.nextInt(120), 10.0F, 34.0F, 0xF6F7F8, 0.7F, 0.15F, 0.0F);
+				}
 			}
 		}
 	}
@@ -444,6 +460,8 @@ public final class SunClient {
 			if (!s.shockArrived && front >= dist) {
 				s.shockArrived = true;
 				float near = (float) Mth.clamp(1.0 - dist / SunTimeline.NOVA_REACH, 0.0, 1.0);
+				// the front tearing past: its crack and the wind behind it
+				ClientEffects.playDistant(mc, ModRegistry.SUN_SHOCK, mc.gameRenderer.getMainCamera().position(), 0.5F + 0.5F * near, 1.0F);
 				ClientEffects.addShake(4.0F + 8.0F * near);
 				BlastShader.kick(0.5F + 0.5F * near);
 				BlastShader.quake(0.5F * near + 0.2F);
@@ -463,6 +481,7 @@ public final class SunClient {
 		}
 		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		List<SunStar.Star> stars = new ArrayList<>();
+		List<SunStar.Nova> novas = new ArrayList<>();
 		for (Strike s : STRIKES) {
 			float t = s.time(partial);
 			Vec3 round = s.round(t);
@@ -473,7 +492,7 @@ public final class SunClient {
 				stars.add(new SunStar.Star(round.subtract(dir.scale(2.4)), 0.0F, 1.6F, 0.0F, 0.95F, 0.0F, 0.9F, 0.3F));
 			}
 			float d = t - s.impact();
-			if (d < 0.0F || d > SunTimeline.NOVA + 180) {
+			if (d < 0.0F || d > SunTimeline.NOVA + NOVA_LIFE) {
 				continue;
 			}
 			float seed = (s.id * 0.137F) % 1.0F;
@@ -496,13 +515,33 @@ public final class SunClient {
 				stars.add(new SunStar.Star(s.centre, r, r, 0.0F, temp, dark * 0.97F, 1.0F, seed));
 			} else {
 				float n = d - SunTimeline.NOVA;
+				novas.add(nova(s.centre, n, seed));
+				if (n > 180.0F) {
+					continue;
+				}
 				float flash = (float) Math.exp(-n / 22.0);
 				float shock = n < 170.0F ? SunTimeline.shockRadius(d) : 0.0F;
 				stars.add(new SunStar.Star(s.centre, 0.0F, SunTimeline.RADIUS * 1.8F * flash, shock, Mth.lerp(Math.min(1.0F, n / 40.0F), 1.0F, 0.3F), 0.0F,
 					1.0F, seed));
 			}
 		}
-		SunStar.draw(context, stars);
+		SunStar.draw(context, stars, novas);
+	}
+
+	/** How long the nova's fireball burns and rolls up into smoke, ticks. */
+	static final int NOVA_LIFE = 440;
+
+	/**
+	 * The nova {@code n} ticks in: the fireball bursting out to half again the star's size in a couple of seconds and
+	 * swelling on slowly as it rises and cools; the ring of plasma racing out past the horizon.
+	 */
+	private static SunStar.Nova nova(Vec3 centre, float n, float seed) {
+		float r = SunTimeline.RADIUS * (0.3F + 1.55F * (1.0F - (float) Math.exp(-n / 28.0))) + n * 0.05F;
+		float ring = SunTimeline.NOVA_REACH * 1.15F * (1.0F - (float) Math.exp(-n / 60.0)) + 4.0F;
+		float age = Mth.clamp(n / NOVA_LIFE, 0.0F, 1.0F);
+		// a white flash for the first instants, then the fireball's own light
+		float bright = 1.0F + 1.0F * (float) Math.exp(-n / 10.0);
+		return new SunStar.Nova(centre.add(0.0, -SunTimeline.RADIUS * 0.25, 0.0), r, ring, age, Math.min(1.99F, bright), seed);
 	}
 
 	// ------------------------------------------------------------------ sounds

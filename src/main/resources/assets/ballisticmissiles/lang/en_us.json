@@ -1121,5 +1121,15 @@
 	"options.ballisticmissiles.smooth_look": "Smooth mouse look",
 	"options.ballisticmissiles.smooth_look.tooltip": "The camera follows the mouse through a very short filter: even, stutter-free turns without feeling sluggish.",
 	"options.ballisticmissiles.smooth_move": "Smooth camera when moving",
-	"options.ballisticmissiles.smooth_move.tooltip": "Stepping up blocks and stairs the camera glides up instead of snapping, and landing it sinks a little and springs back."
+	"options.ballisticmissiles.smooth_move.tooltip": "Stepping up blocks and stairs the camera glides up instead of snapping, and landing it sinks a little and springs back.",
+	"subtitles.ballisticmissiles.sun_siren": "Siren wails over the launch complex",
+	"subtitles.ballisticmissiles.sun_beep": "Countdown beeps",
+	"subtitles.ballisticmissiles.sun_hit": "Deep impact",
+	"subtitles.ballisticmissiles.sun_shock": "Shock wave tears past",
+	"cutscene.ballisticmissiles.sun.ch1": "HELIOS LAUNCH COMPLEX",
+	"cutscene.ballisticmissiles.sun.ch2": "COUNTDOWN",
+	"cutscene.ballisticmissiles.sun.ch3": "FLIGHT",
+	"cutscene.ballisticmissiles.sun.ch4": "TERMINAL APPROACH",
+	"cutscene.ballisticmissiles.sun.ch5": "STELLAR IGNITION",
+	"cutscene.ballisticmissiles.sun.ch6": "NOVA"
 }

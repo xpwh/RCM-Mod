@@ -24,6 +24,7 @@ public final class SunCutscene {
 	private static SunClient.Strike strike;
 	private static boolean skipped;
 	private static int age;
+	private static int lastBeat = Integer.MIN_VALUE;
 
 	private SunCutscene() {
 	}
@@ -46,6 +47,7 @@ public final class SunCutscene {
 		strike = s;
 		skipped = false;
 		age = 0;
+		lastBeat = Integer.MIN_VALUE;
 	}
 
 	static void aborted(int id) {
@@ -77,12 +79,28 @@ public final class SunCutscene {
 			return null;
 		}
 		float t = time(partialTick);
-		double[] view = SunTimeline.camera(strike.launcher, strike.target, strike.flight, t);
-		// a camera operator's hands: a slow drift, and a shudder when something big goes off
+		SunDirector.Shot shot = SunDirector.shot(strike, t);
+		Vec3 dir = shot.look().subtract(shot.eye());
+		double yaw = Math.toDegrees(Math.atan2(-dir.x, dir.z));
+		double pitch = Math.toDegrees(-Math.atan2(dir.y, Math.hypot(dir.x, dir.z)));
+		// a camera operator's hands: a slow drift
 		float drift = t * 0.05F;
-		view[3] += Mth.sin(drift * 1.3F) * 0.6F + Mth.sin(drift * 2.9F) * 0.25F;
-		view[4] += Mth.sin(drift * 1.7F + 1.0F) * 0.4F;
-		return view;
+		yaw += Mth.sin(drift * 1.3F) * 0.6F + Mth.sin(drift * 2.9F) * 0.25F;
+		pitch += Mth.sin(drift * 1.7F + 1.0F) * 0.4F;
+		return new double[] {shot.eye().x, shot.eye().y, shot.eye().z, yaw, pitch};
+	}
+
+	/** How far the cutscene's camera rolls (degrees), 0 when none plays. */
+	public static float roll(float partialTick) {
+		return playing() ? SunDirector.shot(strike, time(partialTick)).roll() : 0.0F;
+	}
+
+	/** The cutscene camera's field of view against the player's own (1 when none plays). */
+	public static float fovScale(float partialTick, float fov) {
+		if (!playing() || fov <= 1.0F) {
+			return 1.0F;
+		}
+		return SunDirector.shot(strike, time(partialTick)).fov() / fov;
 	}
 
 	private static void tick(Minecraft mc) {
@@ -99,12 +117,48 @@ public final class SunCutscene {
 			return;
 		}
 		if (playing()) {
+			beats(mc, (int) t);
 			age++;
 			if (mc.options.keyJump.consumeClick() && age > 20) {
 				skipped = true;
 				ClientPlayNetworking.send(new SunNetwork.SkipPayload(strike.id));
 			}
 		}
+	}
+
+	/** The score: deep hits under the title cards and the cuts, the countdown's beeps. */
+	private static void beats(Minecraft mc, int t) {
+		int from = lastBeat == Integer.MIN_VALUE ? t : lastBeat + 1;
+		lastBeat = t;
+		int fire = SunTimeline.FIRE;
+		int impact = fire + strike.flight;
+		for (int k = Math.max(from, t - 10); k <= t; k++) {
+			if (k == SunTimeline.cutsceneFrom() + 12 || k == fire || k == impact + SunTimeline.IMPLODE + 20 || k == impact + SunTimeline.NOVA) {
+				ui(mc, de.rcm.ballistic.ModRegistry.SUN_HIT, 1.0F, k == fire ? 0.9F : 0.75F);
+			}
+			if (k == fire - 60 || k == fire - 40 || k == fire - 20) {
+				ui(mc, de.rcm.ballistic.ModRegistry.SUN_BEEP, k == fire - 20 ? 1.25F : 1.0F, 0.8F);
+			}
+		}
+	}
+
+	private static void ui(Minecraft mc, net.minecraft.sounds.SoundEvent sound, float pitch, float volume) {
+		mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(sound, pitch, volume));
+	}
+
+	/** Which chapter the film is in (1-6) and how long it has been in it, ticks. */
+	private static float[] chapter(float t) {
+		float fire = SunTimeline.FIRE;
+		float impact = fire + strike.flight;
+		float[] starts = {SunTimeline.cutsceneFrom(), fire - 60.0F, fire + 32.0F, impact - 110.0F, impact + SunTimeline.IMPLODE,
+			impact + SunTimeline.NOVA};
+		int n = 0;
+		for (int i = 0; i < starts.length; i++) {
+			if (t >= starts[i]) {
+				n = i;
+			}
+		}
+		return new float[] {n + 1, t - starts[n]};
 	}
 
 	private static float ease(float t, float a, float b) {
@@ -180,6 +234,19 @@ public final class SunCutscene {
 		if (d >= SunTimeline.NOVA && d < SunTimeline.NOVA + 12) {
 			float a = 1.0F - (d - SunTimeline.NOVA) / 12.0F;
 			g.fill(0, 0, w, h, Math.round(a * a * 255.0F) << 24 | 0xFFFFFF);
+		}
+		// the chapter, lower left: a number, a name, a line drawing itself
+		float[] ch = chapter(t);
+		float ca = ease(ch[1], 4.0F, 18.0F) * (1.0F - ease(ch[1], 70.0F, 90.0F));
+		if (ca > 0.01F) {
+			int n = (int) ch[0];
+			int x = 16;
+			int y = h - bar - 34;
+			int col = Math.round(ca * 230.0F) << 24;
+			g.drawString(mc.font, String.format("%02d", n), x, y, col | 0xFFC060, false);
+			g.drawString(mc.font, Component.translatable("cutscene.ballisticmissiles.sun.ch" + n), x + 18, y, col | 0xE8EAEE, false);
+			int line = Math.round(120.0F * ease(ch[1], 6.0F, 30.0F));
+			g.fill(x, y + 12, x + line, y + 13, Math.round(ca * 160.0F) << 24 | 0xFFC060);
 		}
 		// how to skip it
 		float hint = ease(t, from + 20.0F, from + 40.0F) * (1.0F - ease(t, to - 30.0F, to - 10.0F));

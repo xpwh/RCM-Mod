@@ -1881,7 +1881,11 @@
 		"subtitle": "subtitles.ballisticmissiles.sun_arc",
 		"sounds": [
 			{
-				"name": "ballisticmissiles:sun/arc",
+				"name": "ballisticmissiles:sun/arc1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "ballisticmissiles:sun/arc2",
 				"attenuation_distance": 48
 			}
 		]
@@ -2332,6 +2336,43 @@
 			{
 				"name": "ballisticmissiles:knife/hit",
 				"attenuation_distance": 12
+			}
+		]
+	},
+	"sun.siren": {
+		"subtitle": "subtitles.ballisticmissiles.sun_siren",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:sun/siren",
+				"attenuation_distance": 160,
+				"stream": true
+			}
+		]
+	},
+	"sun.beep": {
+		"subtitle": "subtitles.ballisticmissiles.sun_beep",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:sun/beep",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"sun.hit": {
+		"subtitle": "subtitles.ballisticmissiles.sun_hit",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:sun/hit",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"sun.shock": {
+		"subtitle": "subtitles.ballisticmissiles.sun_shock",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:sun/shock",
+				"attenuation_distance": 16
 			}
 		]
 	}

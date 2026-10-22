@@ -26,7 +26,8 @@ import net.minecraft.world.phys.Vec3;
  * Draws the Sun Destroyer's star ({@code shaders/core/sun_star}): first its surface, raytraced against a sphere and
  * writing its true depth, so the world stands in front of and behind it as it should; then, over the whole
  * screen, its light scattered by the air up to whatever each view ray meets, its corona and prominences, and the
- * shock front of the nova. Called from the late pass before the smoke and clouds, which then lie over it.
+ * shock front of the nova; and the nova itself, a raymarched fireball and ring of plasma blended over the scene.
+ * Called from the late pass before the smoke and clouds, which then lie over it.
  */
 public final class SunStar {
 	private static final Identifier DEPTH_ID = BallisticMissiles.id("textures/environment/sun_depth");
@@ -53,12 +54,31 @@ public final class SunStar {
 		.withVertexFormat(DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS)
 		.build();
 
+	/** The nova's fireball and ring, blended over the scene so its smoke can darken what is behind it. */
+	private static final RenderPipeline VOLUME = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
+		.withLocation(BallisticMissiles.id("pipeline/sun_nova"))
+		.withVertexShader(BallisticMissiles.id("core/sun_star"))
+		.withFragmentShader(BallisticMissiles.id("core/sun_star"))
+		.withSampler("Sampler0")
+		.withBlend(new BlendFunction(SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_ALPHA))
+		.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+		.withCull(false)
+		.withDepthWrite(false)
+		.withColorWrite(true, false)
+		.withVertexFormat(DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS)
+		.build();
+
 	private static ScreenCopy depth;
+	private static RenderType volumeType;
 	private static RenderType surfaceType;
 	private static RenderType glowType;
 
 	/** One star to draw this frame. */
 	public record Star(Vec3 centre, float radius, float glowRadius, float shock, float temperature, float dark, float brightness, float seed) {
+	}
+
+	/** A nova: the fireball's radius and the ring's, its age (0-1), about where the star was. */
+	public record Nova(Vec3 centre, float radius, float ring, float age, float brightness, float seed) {
 	}
 
 	private SunStar() {
@@ -67,6 +87,7 @@ public final class SunStar {
 	public static void init() {
 		RenderPipelines.register(SURFACE);
 		RenderPipelines.register(GLOW);
+		RenderPipelines.register(VOLUME);
 	}
 
 	private static void ensure(Minecraft mc) {
@@ -81,11 +102,14 @@ public final class SunStar {
 			glowType = RenderType.create("ballisticmissiles_sun_glow", RenderSetup.builder(GLOW)
 				.withTexture("Sampler0", DEPTH_ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
 				.createRenderSetup());
+			volumeType = RenderType.create("ballisticmissiles_sun_nova", RenderSetup.builder(VOLUME)
+				.withTexture("Sampler0", DEPTH_ID, () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+				.createRenderSetup());
 		}
 	}
 
-	public static void draw(WorldRenderContext context, java.util.List<Star> stars) {
-		if (stars.isEmpty()) {
+	public static void draw(WorldRenderContext context, java.util.List<Star> stars, java.util.List<Nova> novas) {
+		if (stars.isEmpty() && novas.isEmpty()) {
 			return;
 		}
 		Minecraft mc = Minecraft.getInstance();
@@ -116,6 +140,14 @@ public final class SunStar {
 			quad(buffers.getBuffer(glowType), pose, s, cam, 0.0F, seconds, s.radius > 0.05F ? 1 : 2, s.glowRadius);
 		}
 		buffers.endBatch(glowType);
+		// the novas, over all of it
+		for (Nova n : novas) {
+			Star s = new Star(n.centre, 0.0F, 0.0F, n.ring, n.age, 0.0F, n.brightness, n.seed);
+			quad(buffers.getBuffer(volumeType), pose, s, cam, 0.0F, seconds, 3, n.radius);
+		}
+		if (!novas.isEmpty()) {
+			buffers.endBatch(volumeType);
+		}
 	}
 
 	private static void quad(VertexConsumer consumer, PoseStack.Pose pose, Star s, Vec3 cam, float reach, float seconds, int mode, float radius) {

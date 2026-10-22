@@ -135,7 +135,7 @@ public final class SunTimeline {
 	}
 
 	public static int cutsceneTo(int flight) {
-		return FIRE + flight + NOVA + 220;
+		return FIRE + flight + NOVA + 330; // long enough to watch the nova's fireball rise into its mushroom
 	}
 
 	/** Where the target shot's camera stands, for the server to load the land round it: between it and the target. */
@@ -143,49 +143,5 @@ public final class SunTimeline {
 		Vec3 away = new Vec3(launcher.getX() - target.x, 0.0, launcher.getZ() - target.z);
 		away = away.lengthSqr() < 1.0 ? new Vec3(1, 0, 0) : away.normalize();
 		return target.add(away.scale(RADIUS * 2.6));
-	}
-
-	/** Where the camera is and where it looks, {@code t} ticks after the order: {x, y, z, yaw, pitch}. */
-	public static double[] camera(BlockPos launcher, Vec3 target, int flight, float t) {
-		Vec3 base = new Vec3(launcher.getX() + 0.5, launcher.getY(), launcher.getZ() + 0.5);
-		Vec3 eye;
-		Vec3 look;
-		float fire = FIRE;
-		float impact = FIRE + flight;
-		if (t < fire + 8) {
-			// a slow orbit round the tower, low, the camera climbing as the coils charge
-			float a = (t - cutsceneFrom()) * 0.012F + 0.6F;
-			float r = 46.0F - (t - cutsceneFrom()) * 0.06F;
-			eye = base.add(Mth.cos(a) * r, 10.0 + (t - cutsceneFrom()) * 0.09, Mth.sin(a) * r);
-			look = base.add(0.0, 26.0 + Math.max(0.0F, t - fire + 8) * 3.0, 0.0);
-		} else if (t < fire + 40) {
-			// the shot: from close under the tower, the view torn upwards after the round
-			float a = (fire - cutsceneFrom()) * 0.012F + 0.6F;
-			eye = base.add(Mth.cos(a) * 34.0, 6.0, Mth.sin(a) * 34.0);
-			double f = Mth.clamp((t - fire) / (double) flight, 0.0, 1.0);
-			look = flight(launcher, target, f);
-		} else if (t < impact - 70) {
-			// chasing it: behind and a little above, the world falling away beneath
-			double f = Mth.clamp((t - fire) / (double) flight, 0.0, 1.0);
-			Vec3 at = flight(launcher, target, f);
-			Vec3 dir = heading(launcher, target, f);
-			Vec3 side = dir.cross(new Vec3(0, 1, 0));
-			side = side.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : side.normalize();
-			eye = at.subtract(dir.scale(26.0)).add(0.0, 7.0, 0.0).add(side.scale(6.0));
-			look = at.add(dir.scale(30.0));
-		} else {
-			// the target, from afar: the round comes down, the sun is born, burns, and goes nova
-			Vec3 away = new Vec3(launcher.getX() - target.x, 0.0, launcher.getZ() - target.z);
-			away = away.lengthSqr() < 1.0 ? new Vec3(1, 0, 0) : away.normalize();
-			float push = Mth.clamp((t - (impact - 70)) / 800.0F, 0.0F, 1.0F);
-			double dist = RADIUS * 3.4 - RADIUS * 0.8 * push;
-			Vec3 side = new Vec3(-away.z, 0, away.x);
-			eye = target.add(away.scale(dist)).add(side.scale(RADIUS * 0.8)).add(0.0, RADIUS * 1.3 - RADIUS * 0.3 * push, 0.0);
-			look = sunCentre(target).add(0.0, t < impact ? 30.0 : 0.0, 0.0);
-		}
-		Vec3 d = look.subtract(eye);
-		double yaw = Math.toDegrees(Math.atan2(-d.x, d.z));
-		double pitch = Math.toDegrees(-Math.atan2(d.y, Math.hypot(d.x, d.z)));
-		return new double[] {eye.x, eye.y, eye.z, yaw, pitch};
 	}
 }

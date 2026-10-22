@@ -100,6 +100,120 @@ float inside(float tc, float cc, float s, float tEnd) {
     return max(min(tc + q, tEnd) - max(tc - q, 0.0), 0.0);
 }
 
+// burning gas by heat 0-1: dull red, orange, yellow, and white only at the very hottest
+vec3 fire(float h) {
+    vec3 c = mix(vec3(0.35, 0.03, 0.0), vec3(1.0, 0.28, 0.03), smoothstep(0.0, 0.4, h));
+    c = mix(c, vec3(1.0, 0.72, 0.25), smoothstep(0.35, 0.75, h));
+    return mix(c, vec3(1.0, 0.96, 0.88), smoothstep(0.75, 1.0, h));
+}
+
+// cheaper noise for the volume: three octaves
+float fbm3(vec3 p) {
+    float s = 0.5 * vnoise(p);
+    s += 0.25 * vnoise(p * 2.03 + vec3(1.7, 9.2, 3.1));
+    s += 0.125 * vnoise(p * 4.1 + vec3(5.3, 2.8, 7.7));
+    return s / 0.875;
+}
+
+// Mode 3, the nova: the star blown apart. A boiling fireball - white-hot at first, cooling through yellow and orange
+// to a dull red glow inside a shell of dark smoke as it rises and swells - raymarched up to whatever stands in front
+// of it; and round its foot the flat ring of plasma the star's equator throws out, racing outwards, torn into
+// streaks. Drawn over the scene with ordinary blending: the smoke darkens what is behind it.
+//   centre: where the star was (the ring's middle); radius: the fireball's; shock: the ring's; temp: age 0-1.
+vec4 nova(vec3 rd, mat3 toWorld, float tScene, float age, float bright, float seed) {
+    vec3 up = normalize(mat3(ModelViewMat) * vec3(0.0, 1.0, 0.0));
+    float rise = 1.7 * age * (0.6 + 0.4 * age);
+    vec3 fc = centre + up * radius * rise; // the fireball rising off the ground, faster as it goes
+    float R = max(radius, 1.0);
+    vec3 col = vec3(0.0);
+    float T = 1.0;
+
+    // ---- the ring, in the horizontal plane through the star's centre
+    float ring = shock;
+    float dn = dot(rd, up);
+    if (ring > 1.0 && abs(dn) > 1.0e-4) {
+        float tp = dot(centre, up) / dn;
+        if (tp > 0.0 && tp < tScene) {
+            vec3 q = rd * tp - centre;
+            float rr = length(q);
+            float w = 5.0 + ring * 0.06;
+            float band = exp(-pow((rr - ring) / w, 2.0));
+            float inner = exp(-pow((rr - ring * 0.93) / (w * 1.6), 2.0)) * 0.25 * step(rr, ring);
+            if (band + inner > 0.002) {
+                vec3 qw = toWorld * (q / max(rr, 1.0e-3));
+                float ang = atan(qw.z, qw.x);
+                // streaks combed outwards, flickering along the front
+                float streak = fbm3(vec3(ang * 9.0, rr / ring * 3.0 - seconds * 0.6, seed));
+                float rag = 0.35 + 1.3 * streak * streak;
+                float fade = pow(1.0 - age, 1.6);
+                vec3 hot = mix(vec3(0.75, 0.88, 1.0), vec3(1.0, 0.55, 0.22), smoothstep(0.0, 0.7, age));
+                // seen edge on, a thin plate looks brighter: more of it along the ray
+                float edgeOn = 1.0 / max(abs(dn), 0.12);
+                vec3 e = hot * (band * rag + inner * streak) * fade * 1.4 * min(edgeOn, 4.0) * bright;
+                col += e;
+            }
+        }
+    }
+
+    // ---- the fireball
+    // bounds: the head and the stem of smoke it draws up under it
+    vec3 bc = centre + up * radius * rise * 0.5;
+    float tc = dot(bc, rd);
+    float cc = dot(bc, bc);
+    float B = R * (1.35 + rise * 0.5);
+    float h = tc * tc - (cc - B * B);
+    if (h > 0.0) {
+        float q = sqrt(h);
+        float t0 = max(tc - q, 0.0);
+        float t1 = min(tc + q, tScene);
+        if (t1 > t0) {
+            const int STEPS = 30;
+            float dt = (t1 - t0) / float(STEPS);
+            float t = t0 + dt * hash13(vec3(gl_FragCoord.xy, seconds)); // dithered start: no banding
+            // it thins out and is gone at the end of its life
+            float density = (0.9 + 2.6 * age) * (1.0 - smoothstep(0.75, 1.0, age)) / R;
+            for (int i = 0; i < STEPS; i++) {
+                vec3 p = rd * t - fc;
+                vec3 pw = toWorld * p / R;
+                // billows rolling up and out of it
+                vec3 flow = vec3(0.0, -seconds * 0.22, 0.0) + pw * (0.15 * age);
+                float n = fbm3(pw * 2.4 + flow + vec3(seed));
+                float n2 = fbm3(pw * 6.0 - flow * 1.7 + vec3(seed * 1.7));
+                float r = length(pw);
+                float shape = r + (n - 0.5) * 0.7 + (n2 - 0.5) * 0.22;
+                float d = smoothstep(1.0, 0.72, shape);
+                // the stem: a column of dust and smoke from the ground up into the head
+                if (pw.y < 0.0 && pw.y > -rise - 0.4) {
+                    float rh = length(pw.xz) / (0.28 + 0.12 * (1.0 - pw.y / (rise + 0.4)));
+                    float stem = smoothstep(1.0, 0.6, rh + (n - 0.5) * 0.8) * smoothstep(0.0, 0.25, age);
+                    if (stem > d) {
+                        d = stem;
+                        shape = 1.0; // no fire in it: smoke
+                    }
+                }
+                if (d > 0.002) {
+                    // heat: the middle hottest, the whole thing cooling with age; the billows' tops cooler
+                    float heat = clamp(((1.1 - shape) * 1.5 + (n2 - 0.5) * 0.35) * pow(max(1.0 - age, 0.0), 1.3), 0.0, 1.0);
+                    // deep red at the edges through orange and yellow; white only in the first instants' core
+                    vec3 glow = fire(clamp(heat * (0.8 + (bright - 1.0) * 0.4), 0.0, 1.0)) * (heat * 1.5 + heat * heat * 1.2) * bright;
+                    float a = 1.0 - exp(-d * density * dt * 4.0);
+                    // what is not glowing is smoke: grey-brown, lit from inside by what glows
+                    vec3 smoke = vec3(0.16, 0.13, 0.11) * (0.5 + 0.5 * n) + glow * 0.3;
+                    vec3 c = mix(smoke, glow, smoothstep(0.02, 0.3, heat));
+                    col += T * a * c;
+                    T *= 1.0 - a;
+                    if (T < 0.02) {
+                        break;
+                    }
+                }
+                t += dt;
+            }
+        }
+    }
+    col = 1.0 - exp(-col * 1.2);
+    return vec4(col, 1.0 - T);
+}
+
 void main() {
     vec2 size = vec2(textureSize(Sampler0, 0));
     vec2 ndc = gl_FragCoord.xy / size * 2.0 - 1.0;
@@ -168,6 +282,10 @@ void main() {
     if (depth < 1.0) {
         vec4 sv = invProj * vec4(ndc, depth * 2.0 - 1.0, 1.0);
         tScene = length(sv.xyz / sv.w);
+    }
+    if (mode == 3) {
+        fragColor = nova(rd, toWorld, tScene, temp, bright, seed);
+        return;
     }
     if (mode != 2 && radius > 0.05 && cc < radius * radius) {
         // inside it: nothing but light
