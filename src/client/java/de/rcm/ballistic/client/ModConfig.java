@@ -76,6 +76,13 @@ public final class ModConfig {
 	public static boolean goreWarning = true;
 	/** The note after it that updates come now and then, when the developer wants. */
 	public static boolean updateNotice = true;
+	/** The hotbar slides away when it has not been used for a while. */
+	public static boolean hotbarAutoHide = true;
+	public static int hotbarHideSeconds = 5;
+	/** The mouse turns the view through a very short smoothing filter. */
+	public static boolean smoothLook = true;
+	/** Steps up are eased and landings sink and spring back. */
+	public static boolean smoothMove = true;
 	// ---- effects
 	/** The screen effects of blasts (flash, haze, god rays, shell shock...), percent. */
 	public static int screenEffects = 100;
@@ -149,6 +156,10 @@ public final class ModConfig {
 			gore = bool(p, "gore", gore);
 			goreWarning = bool(p, "goreWarning", goreWarning);
 			updateNotice = bool(p, "updateNotice", updateNotice);
+			hotbarAutoHide = bool(p, "hotbarAutoHide", hotbarAutoHide);
+			hotbarHideSeconds = net.minecraft.util.Mth.clamp(percent(p, "hotbarHideSeconds", hotbarHideSeconds), 1, 60);
+			smoothLook = bool(p, "smoothLook", smoothLook);
+			smoothMove = bool(p, "smoothMove", smoothMove);
 			screenEffects = percent(p, "screenEffects", screenEffects);
 			smokeAmount = percent(p, "smokeAmount", smokeAmount);
 			fastSmoke = "fast".equals(p.getProperty("smokeFade", fastSmoke ? "fast" : "long"));
@@ -191,6 +202,10 @@ public final class ModConfig {
 			p.setProperty("gore", Boolean.toString(gore));
 			p.setProperty("goreWarning", Boolean.toString(goreWarning));
 			p.setProperty("updateNotice", Boolean.toString(updateNotice));
+			p.setProperty("hotbarAutoHide", Boolean.toString(hotbarAutoHide));
+			p.setProperty("hotbarHideSeconds", Integer.toString(hotbarHideSeconds));
+			p.setProperty("smoothLook", Boolean.toString(smoothLook));
+			p.setProperty("smoothMove", Boolean.toString(smoothMove));
 			p.setProperty("screenEffects", Integer.toString(screenEffects));
 			p.setProperty("smokeAmount", Integer.toString(smokeAmount));
 			p.setProperty("smokeFade", fastSmoke ? "fast" : "long");

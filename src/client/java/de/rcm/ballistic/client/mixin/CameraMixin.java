@@ -52,6 +52,18 @@ public abstract class CameraMixin {
 	@Shadow
 	protected abstract void setRotation(float yaw, float pitch);
 
+	/** Steps and landings eased (see SmoothCamera); the cutscenes and the cockpit below set the camera themselves. */
+	@Inject(method = "setup", at = @At("TAIL"))
+	private void ballisticmissiles$smoothMove(Level level, Entity entity, boolean detached, boolean mirrored, float partialTick, CallbackInfo ci) {
+		if (detached) {
+			return;
+		}
+		double dy = de.rcm.ballistic.client.effect.SmoothCamera.offset(entity, partialTick);
+		if (dy != 0.0) {
+			this.setPosition(((net.minecraft.client.Camera) (Object) this).position().add(0.0, dy, 0.0));
+		}
+	}
+
 	/** The new-moon cutscene: the eyes go up to the sky and come back. */
 	@Inject(method = "setup", at = @At("TAIL"))
 	private void ballisticmissiles$cutsceneView(Level level, Entity entity, boolean detached, boolean mirrored, float partialTick, CallbackInfo ci) {

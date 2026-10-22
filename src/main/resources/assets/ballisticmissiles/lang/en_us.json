@@ -1113,5 +1113,13 @@
 	"update_notice.ballisticmissiles.dont_show": "Don't show this note again",
 	"update_notice.ballisticmissiles.continue": "Got it",
 	"update_notice.ballisticmissiles.continue_wait": "Please read … %s s",
-	"update_notice.ballisticmissiles.hint": "Enter to continue · can be changed later in the settings"
+	"update_notice.ballisticmissiles.hint": "Enter to continue · can be changed later in the settings",
+	"options.ballisticmissiles.section.hud_camera": "HUD & camera",
+	"options.ballisticmissiles.hotbar_autohide": "Hide hotbar",
+	"options.ballisticmissiles.hotbar_autohide.tooltip": "The hotbar glides away when it has not been used for a while; hearts, food and armour stay. Switching slots, scrolling or picking something up brings it back.",
+	"options.ballisticmissiles.hotbar_hide_seconds": "Hide after: %s s",
+	"options.ballisticmissiles.smooth_look": "Smooth mouse look",
+	"options.ballisticmissiles.smooth_look.tooltip": "The camera follows the mouse through a very short filter: even, stutter-free turns without feeling sluggish.",
+	"options.ballisticmissiles.smooth_move": "Smooth camera when moving",
+	"options.ballisticmissiles.smooth_move.tooltip": "Stepping up blocks and stairs the camera glides up instead of snapping, and landing it sinks a little and springs back."
 }

@@ -1113,5 +1113,13 @@
 	"update_notice.ballisticmissiles.dont_show": "Diesen Hinweis nicht mehr anzeigen",
 	"update_notice.ballisticmissiles.continue": "Verstanden",
 	"update_notice.ballisticmissiles.continue_wait": "Bitte lesen … %s s",
-	"update_notice.ballisticmissiles.hint": "Enter zum Fortfahren · später in den Einstellungen änderbar"
+	"update_notice.ballisticmissiles.hint": "Enter zum Fortfahren · später in den Einstellungen änderbar",
+	"options.ballisticmissiles.section.hud_camera": "HUD & Kamera",
+	"options.ballisticmissiles.hotbar_autohide": "Hotbar ausblenden",
+	"options.ballisticmissiles.hotbar_autohide.tooltip": "Die Hotbar gleitet nach unten weg, wenn sie eine Weile nicht benutzt wurde; Herzen, Hunger und Rüstung bleiben. Slot wechseln, scrollen oder etwas aufheben holt sie zurück.",
+	"options.ballisticmissiles.hotbar_hide_seconds": "Ausblenden nach: %s s",
+	"options.ballisticmissiles.smooth_look": "Weiche Mausbewegung",
+	"options.ballisticmissiles.smooth_look.tooltip": "Die Kamera folgt der Maus über einen ganz kurzen Filter: gleichmäßige, ruckelfreie Drehungen, ohne träge zu wirken.",
+	"options.ballisticmissiles.smooth_move": "Weiche Kamera beim Laufen",
+	"options.ballisticmissiles.smooth_move.tooltip": "Beim Hochsteigen von Stufen und Blöcken gleitet die Kamera hoch statt zu springen, beim Landen federt sie kurz ein."
 }

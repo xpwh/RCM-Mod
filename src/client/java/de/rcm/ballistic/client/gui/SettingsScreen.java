@@ -246,6 +246,11 @@ public class SettingsScreen extends Screen {
 			new IntSlider(0, 100, "options.ballisticmissiles.explosion_volume", ModConfig.explosionVolume, v -> ModConfig.explosionVolume = v));
 		this.list.row(toggle("lens_flare", ModConfig.lensFlare, "lens_flare", v -> ModConfig.lensFlare = v),
 			new IntSlider(0, 100, "options.ballisticmissiles.bloom", ModConfig.bloom, v -> ModConfig.bloom = v));
+		this.list.header("options.ballisticmissiles.section.hud_camera", 0xFF90D0FF);
+		this.list.row(toggle("hotbar_autohide", ModConfig.hotbarAutoHide, "hotbar_autohide", v -> ModConfig.hotbarAutoHide = v),
+			new IntSlider(2, 20, "options.ballisticmissiles.hotbar_hide_seconds", ModConfig.hotbarHideSeconds, v -> ModConfig.hotbarHideSeconds = v));
+		this.list.row(toggle("smooth_look", ModConfig.smoothLook, "smooth_look", v -> ModConfig.smoothLook = v),
+			toggle("smooth_move", ModConfig.smoothMove, "smooth_move", v -> ModConfig.smoothMove = v));
 		this.list.header("options.ballisticmissiles.section.world", 0xFFC0C0C0);
 		this.list.row(new IntSlider(0, 100, "options.ballisticmissiles.smoke_amount", ModConfig.smokeAmount, v -> ModConfig.smokeAmount = v),
 			toggle("bullet_holes", ModConfig.bulletHoles, null, v -> ModConfig.bulletHoles = v));

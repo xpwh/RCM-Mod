@@ -111,6 +111,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.render.SmokeDebug.init();
 		de.rcm.ballistic.client.render.BulletHoles.init();
 		de.rcm.ballistic.client.effect.TsunamiWaves.init();
+		de.rcm.ballistic.client.gui.HotbarFade.init();
+		de.rcm.ballistic.client.effect.SmoothCamera.init();
 		de.rcm.ballistic.client.render.Tracks.init();
 		ModConfig.load();
 		de.rcm.ballistic.client.render.ExhaustPlume.init();
