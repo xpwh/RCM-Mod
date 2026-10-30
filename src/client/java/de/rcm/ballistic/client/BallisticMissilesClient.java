@@ -129,6 +129,10 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.AshStorm.init();
 		de.rcm.ballistic.client.effect.EndSky.init();
 		de.rcm.ballistic.client.effect.EndFx.init();
+		de.rcm.ballistic.client.effect.BodyHeatClient.init();
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.BodyHeatPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.BodyHeatClient.receive(payload.body(), payload.air()));
+		HudElementRegistry.addLast(BallisticMissiles.id("body_heat"), (graphics, tickCounter) -> de.rcm.ballistic.client.effect.BodyHeatClient.hud(graphics));
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.AshStormPayload.TYPE,
 			(payload, context) -> de.rcm.ballistic.client.effect.AshStorm.receive(payload.ticks()));
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.StormForecastPayload.TYPE,
@@ -277,6 +281,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		};
 		ClientHooks.openTargetScreen = hand -> Minecraft.getInstance().setScreen(new TargetScreen(hand));
 		ClientHooks.openBunkerMenu = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.gui.BunkerScreen(pos));
+		ClientHooks.openWeatherMap = () -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.gui.WeatherMapScreen());
 		ClientHooks.openWorkbench = pos -> Minecraft.getInstance().setScreen(new de.rcm.ballistic.client.gui.WorkbenchScreen(pos));
 		ClientHooks.designateLookedAtBlock = BallisticMissilesClient::designate;
 	}

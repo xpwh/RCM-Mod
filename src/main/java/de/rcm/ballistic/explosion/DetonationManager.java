@@ -149,18 +149,24 @@ public final class DetonationManager {
 	/** Marks the ground the blast lays waste, for nature to take back over the following days (see Regrowth). */
 	private static void regrowth(ServerLevel level, Vec3 pos, Warhead warhead) {
 		switch (warhead) {
-			case TSAR -> Regrowth.mark(level, pos, 400.0, true);
-			case HYDROGEN -> Regrowth.mark(level, pos, 300.0, true);
-			case NUCLEAR, MIRV -> Regrowth.mark(level, pos, 200.0, true);
-			case MIRV_WARHEAD, TACTICAL_NUKE, ANTIMATTER -> Regrowth.mark(level, pos, 120.0, true);
-			case THERMOBARIC, MOAB -> Regrowth.mark(level, pos, 60.0, false);
-			case INCENDIARY -> Regrowth.mark(level, pos, 40.0, false);
-			case HYPERSONIC, BUNKER_BUSTER -> Regrowth.mark(level, pos, 40.0, false);
-			case DRONE, BOMBLET -> Regrowth.mark(level, pos, 15.0, false);
+			case TSAR -> laidWaste(level, pos, 400.0, true);
+			case HYDROGEN -> laidWaste(level, pos, 300.0, true);
+			case NUCLEAR, MIRV -> laidWaste(level, pos, 200.0, true);
+			case MIRV_WARHEAD, TACTICAL_NUKE, ANTIMATTER -> laidWaste(level, pos, 120.0, true);
+			case THERMOBARIC, MOAB -> laidWaste(level, pos, 60.0, false);
+			case INCENDIARY -> laidWaste(level, pos, 40.0, false);
+			case HYPERSONIC, BUNKER_BUSTER -> laidWaste(level, pos, 40.0, false);
+			case DRONE, BOMBLET -> laidWaste(level, pos, 15.0, false);
 			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, INTERCEPT, EMP -> {
 			}
-			default -> Regrowth.mark(level, pos, 30.0, false);
+			default -> laidWaste(level, pos, 30.0, false);
 		}
+	}
+
+	/** The ground laid waste round a blast: nature takes it back later (Regrowth); the snow melts, slopes may let go (Snow). */
+	private static void laidWaste(ServerLevel level, Vec3 pos, double radius, boolean nuclear) {
+		Regrowth.mark(level, pos, radius, nuclear);
+		Snow.blast(level, pos, Math.min(radius, 120.0));
 	}
 
 	/** Nuclear, thermonuclear and antimatter warheads (what {@code /bmserver nukes verbieten} forbids). */
@@ -376,7 +382,7 @@ public final class DetonationManager {
 		Killcam.trigger(level, surface, 70.0F);
 		broadcast(level, surface, Warhead.EARTH_PENETRATOR);
 		de.rcm.ballistic.base.CityPower.strike(level, surface, 420.0, 20 * 60 * 15);
-		Regrowth.mark(level, surface, 220.0, true);
+		laidWaste(level, surface, 220.0, true);
 		FlyingDebris.launch(level, surface, 24.0, 300, 3.2);
 		NUKES.add(new NukeDetonation(level, surface, source, NukeDetonation.Yield.FISSION, NukeDetonation.Mode.UNDERGROUND));
 	}
@@ -394,7 +400,7 @@ public final class DetonationManager {
 		Killcam.trigger(level, pos, 110.0F);
 		broadcast(level, pos, Warhead.POSEIDON);
 		de.rcm.ballistic.base.CityPower.strike(level, pos, 900.0, 20 * 60 * 25);
-		Regrowth.mark(level, pos, 160.0, true);
+		laidWaste(level, pos, 160.0, true);
 		BlockPos.MutableBlockPos m = BlockPos.containing(pos).mutable();
 		for (int i = 0; i < 64 && !level.getFluidState(m).isEmpty(); i++) {
 			m.move(0, 1, 0);
@@ -422,7 +428,7 @@ public final class DetonationManager {
 		Killcam.trigger(level, pos, 45.0F);
 		broadcast(level, pos, Warhead.KINETIC_ROD);
 		de.rcm.ballistic.base.CityPower.strike(level, pos, 260.0, 20 * 60 * 8);
-		Regrowth.mark(level, pos, 70.0, false);
+		laidWaste(level, pos, 70.0, false);
 		FlyingDebris.launch(level, pos, 16.0, 260, 3.4);
 		Vec3 d = dir.lengthSqr() < 1.0E-6 ? new Vec3(0, -1, 0) : dir.normalize();
 		Vec3 deep = pos.add(d.scale(5.0));
@@ -655,7 +661,7 @@ public final class DetonationManager {
 		Killcam.trigger(level, pos, 55.0F);
 		broadcast(level, pos, Warhead.MOAB);
 		de.rcm.ballistic.base.CityPower.strike(level, pos, 240.0, 20 * 60 * 7);
-		Regrowth.mark(level, pos, 80.0, false);
+		laidWaste(level, pos, 80.0, false);
 		FlyingDebris.launch(level, pos, 14.0, 220, 2.8);
 		highExplosive(level, pos.add(0, 2.0, 0), source, 15.0F, 8, 42, 0.18); // air burst: wide but shallow
 		double radius = 80.0;

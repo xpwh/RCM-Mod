@@ -1067,5 +1067,14 @@
 	"subtitles.ballisticmissiles.owl": "Eule ruft",
 	"commands.ballisticmissiles.world.storm": "In %s Minuten bricht ein Gewitter los - schau gegen den Wind zum Horizont",
 	"commands.ballisticmissiles.world.ash_storm_on": "Ein Aschesturm fegt durch den Nether",
-	"commands.ballisticmissiles.world.ash_storm_off": "Der Aschesturm legt sich"
+	"commands.ballisticmissiles.world.ash_storm_off": "Der Aschesturm legt sich",
+	"item.ballisticmissiles.weather_map": "Wettersatelliten-Empfänger",
+	"gui.ballisticmissiles.weather_map.title": "Wettersatellit",
+	"gui.ballisticmissiles.weather_map.no_signal": "Kein Satellitenempfang hier",
+	"gui.ballisticmissiles.weather_map.storm_in": "Gewitter erreicht dich in %s min",
+	"gui.ballisticmissiles.weather_map.storm_here": "Gewitter über dir",
+	"gui.ballisticmissiles.weather_map.wind": "Wind %s",
+	"gui.ballisticmissiles.weather_map.ash": "Aschesturm tobt",
+	"gui.ballisticmissiles.weather_map.fallout": "Fallout",
+	"gui.ballisticmissiles.weather_map.scale": "%s Blöcke breit - Mausrad zum Zoomen"
 }

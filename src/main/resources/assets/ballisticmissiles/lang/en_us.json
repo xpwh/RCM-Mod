@@ -1067,5 +1067,14 @@
 	"subtitles.ballisticmissiles.owl": "Owl hoots",
 	"commands.ballisticmissiles.world.storm": "A thunderstorm breaks in %s minutes - watch the horizon upwind",
 	"commands.ballisticmissiles.world.ash_storm_on": "An ash storm sweeps through the Nether",
-	"commands.ballisticmissiles.world.ash_storm_off": "The ash storm dies down"
+	"commands.ballisticmissiles.world.ash_storm_off": "The ash storm dies down",
+	"item.ballisticmissiles.weather_map": "Weather Satellite Receiver",
+	"gui.ballisticmissiles.weather_map.title": "Weather Satellite",
+	"gui.ballisticmissiles.weather_map.no_signal": "No satellite signal here",
+	"gui.ballisticmissiles.weather_map.storm_in": "Thunderstorm arrives in %s min",
+	"gui.ballisticmissiles.weather_map.storm_here": "Thunderstorm overhead",
+	"gui.ballisticmissiles.weather_map.wind": "Wind %s",
+	"gui.ballisticmissiles.weather_map.ash": "Ash storm raging",
+	"gui.ballisticmissiles.weather_map.fallout": "Fallout",
+	"gui.ballisticmissiles.weather_map.scale": "%s blocks across - scroll to zoom"
 }

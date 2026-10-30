@@ -72,9 +72,11 @@ public class BallisticMissiles implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.Regrowth::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.Regrowth::save);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.Regrowth::tick);
+		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.Snow::tick);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.StormForecast::tick);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.AshStorms::tick);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.base.ShulkerGuards::tick);
+		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.injury.BodyHeat::tick);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NewMoon::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.Aurora::load);
@@ -108,6 +110,8 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.explosion.Regrowth.clear();
 			de.rcm.ballistic.explosion.AshStorms.clear();
 			de.rcm.ballistic.base.ShulkerGuards.clear();
+			de.rcm.ballistic.explosion.Snow.clear();
+			de.rcm.ballistic.injury.BodyHeat.clear();
 			de.rcm.ballistic.bunker.BunkerManager.clear();
 			de.rcm.ballistic.explosion.NuclearWinter.clear();
 			RemoteLaunch.clear();

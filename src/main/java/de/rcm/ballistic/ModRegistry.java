@@ -670,6 +670,7 @@ public final class ModRegistry {
 		props -> new de.rcm.ballistic.gun.BallisticArmorItem(props, de.rcm.ballistic.gun.BallisticArmor.Tier.JUGGERNAUT),
 		new Item.Properties().humanoidArmor(ARMOR_JUGGERNAUT_MATERIAL, ArmorType.BOOTS).rarity(Rarity.EPIC));
 
+	public static final Item WEATHER_MAP = registerItem("weather_map", de.rcm.ballistic.item.WeatherMapItem::new, new Item.Properties().stacksTo(1));
 	public static final Item GEIGER_COUNTER = registerItem("geiger_counter", GeigerCounterItem::new, new Item.Properties().stacksTo(1));
 	public static final Item MISSILE_SILO_ITEM = registerItem(
 		"missile_silo", props -> new BlockItem(MISSILE_SILO, props), new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
@@ -1041,6 +1042,7 @@ public final class ModRegistry {
 		output.accept(HAZMAT_LEGGINGS);
 		output.accept(HAZMAT_BOOTS);
 		output.accept(GEIGER_COUNTER);
+		output.accept(WEATHER_MAP);
 		output.accept(NIGHT_VISION_GOGGLES);
 		output.accept(ARMOR_LIGHT_VEST);
 		output.accept(ARMOR_STANDARD_HELMET);

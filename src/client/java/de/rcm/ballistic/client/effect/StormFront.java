@@ -99,6 +99,23 @@ public final class StormFront {
 		lastThunder = 0.0F;
 	}
 
+	/** Where the storm cell is now (x, z), or null (for the weather map). */
+	public static double[] where() {
+		Minecraft mc = Minecraft.getInstance();
+		return mc.level == null || !visible() ? null : center(mc.level.getGameTime());
+	}
+
+	/** In how many ticks the storm breaks here (-1: none on its way). */
+	public static long arrivesIn() {
+		Minecraft mc = Minecraft.getInstance();
+		return mc.level == null || arrival < 0L ? -1L : Math.max(0L, arrival - mc.level.getGameTime());
+	}
+
+	/** How bright the lightning in it is now (0-1). */
+	public static float flashNow() {
+		return flash;
+	}
+
 	/** Whether there is a storm cell to draw. */
 	public static boolean visible() {
 		return fade > 0.003F;

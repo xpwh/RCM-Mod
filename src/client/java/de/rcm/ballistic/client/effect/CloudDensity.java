@@ -137,6 +137,25 @@ public final class CloudDensity {
 	}
 
 	/**
+	 * How cloudy the sky is over (x, z), 0-1, as a satellite would see it: the thickest the cloud is at three
+	 * heights through the layer (null layer or noise not loaded: -1).
+	 */
+	public static float cover(double x, double z) {
+		float bottom = VolumetricClouds.base();
+		if (Float.isNaN(bottom) || !load()) {
+			return -1.0F;
+		}
+		float thick = VolumetricClouds.thickness();
+		double wx = x - Math.floorDiv(Mth.floor(x), 4096) * 4096.0;
+		double wz = z - Math.floorDiv(Mth.floor(z), 4096) * 4096.0;
+		float d = 0.0F;
+		for (int i = 1; i <= 3; i++) {
+			d = Math.max(d, density(wx, bottom + thick * (i * 0.22F), wz, bottom, thick));
+		}
+		return d;
+	}
+
+	/**
 	 * How much light gets through the cloud on the straight line from {@code from} to {@code to} (1: no cloud
 	 * in the way, 0: none gets through), in {@code samples} steps over the part of the line inside the layer.
 	 */

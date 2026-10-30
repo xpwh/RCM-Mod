@@ -102,6 +102,17 @@ public final class Tracks {
 			return;
 		}
 		long now = mc.level.getGameTime();
+		// while it snows, the prints in the snow fill in four times as fast
+		if (now % 20 == 0 && mc.level.isRaining() && !PRINTS.isEmpty()) {
+			ArrayDeque<Print> aged = new ArrayDeque<>(PRINTS.size());
+			for (Print p : PRINTS) {
+				boolean snowing = p.ground == Ground.SNOW && mc.level.getBiome(p.block).value().getPrecipitationAt(p.block, mc.level.getSeaLevel())
+					== net.minecraft.world.level.biome.Biome.Precipitation.SNOW && mc.level.canSeeSky(p.block.above());
+				aged.add(snowing ? new Print(p.x, p.y, p.z, p.yaw, p.w, p.l, p.shape, p.mirror, p.ground, p.block, p.born - 60L) : p);
+			}
+			PRINTS.clear();
+			PRINTS.addAll(aged);
+		}
 		// gone with time, or with the ground (dug up, snow melted)
 		Iterator<Print> it = PRINTS.iterator();
 		while (it.hasNext()) {

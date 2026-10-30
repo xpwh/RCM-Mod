@@ -451,6 +451,20 @@ public final class ModNetworking {
 		}
 	}
 
+	/** Server -> client: your body's heat (-1 freezing .. 1 heat stroke) and the air's temperature (deg C). */
+	public record BodyHeatPayload(float body, float air) implements CustomPacketPayload {
+		public static final Type<BodyHeatPayload> TYPE = new Type<>(BallisticMissiles.id("body_heat"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BodyHeatPayload> CODEC = StreamCodec.of((buf, p) -> {
+			buf.writeFloat(p.body);
+			buf.writeFloat(p.air);
+		}, buf -> new BodyHeatPayload(buf.readFloat(), buf.readFloat()));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: an ash storm is raging in the Nether for this many more ticks (0: none). */
 	public record AshStormPayload(int ticks) implements CustomPacketPayload {
 		public static final Type<AshStormPayload> TYPE = new Type<>(BallisticMissiles.id("ash_storm"));
@@ -926,6 +940,7 @@ public final class ModNetworking {
 		PayloadTypeRegistry.playS2C().register(WinterPayload.TYPE, WinterPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(StormForecastPayload.TYPE, StormForecastPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(AshStormPayload.TYPE, AshStormPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(BodyHeatPayload.TYPE, BodyHeatPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(NewMoonPayload.TYPE, NewMoonPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(AuroraPayload.TYPE, AuroraPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(FlashbangPayload.TYPE, FlashbangPayload.CODEC);

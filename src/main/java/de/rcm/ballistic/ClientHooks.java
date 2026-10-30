@@ -15,6 +15,7 @@ public final class ClientHooks {
 	public static Consumer<InteractionHand> designateLookedAtBlock = hand -> {};
 	/** Asks the player which bunker the kit at this position should build. */
 	public static Consumer<net.minecraft.core.BlockPos> openBunkerMenu = pos -> {};
+	public static Runnable openWeatherMap = () -> {};
 	/** Opens the weapons workbench's menu. */
 	public static Consumer<net.minecraft.core.BlockPos> openWorkbench = pos -> {};
 	public static Consumer<MissileEntity> missileClientTick = missile -> {};
