@@ -84,7 +84,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunAttachmentM
 	}
 
 	/** The exported parts: a count, then per part its name and its vertex data (x y z u v nx ny nz, four to a face). */
-	private static java.util.Map<String, BoxMesh> load(String path) {
+	static java.util.Map<String, BoxMesh> load(String path) {
 		java.util.Map<String, BoxMesh> out = new java.util.HashMap<>();
 		try (java.io.InputStream raw = AkItemRenderer.class.getResourceAsStream(path)) {
 			if (raw == null) {

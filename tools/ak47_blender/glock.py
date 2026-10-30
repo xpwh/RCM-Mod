@@ -26,9 +26,10 @@ S_REAR = min(p[0] for p in P["slide"])
 S_FRONT = max(p[0] for p in P["slide"])
 SW = 0.01275  # half the slide's width (25.5 mm)
 FW = 0.0150   # half the grip's width
-GRIP_ANGLE = math.radians(22.0)
+GRIP_ANGLE = math.radians(20.0)  # the magazine well's rake (the back strap leans further)
 DOWN = Vector((0.0, -math.sin(GRIP_ANGLE), -math.cos(GRIP_ANGLE)))  # down the grip (and the magazine)
-MAG_SEAT = Vector((0.0, 0.034 * math.tan(GRIP_ANGLE), 0.034))
+# the well runs down the middle of the grip: through the grip's centre 2 cm below the origin
+MAG_SEAT = Vector((0.0, 0.0045 + math.tan(GRIP_ANGLE) * 0.054, 0.034))
 
 
 # ------------------------------------------------------------------ materials
@@ -57,8 +58,8 @@ def polymer(name, base=(0.022, 0.022, 0.024), rough=0.6, stipple=0.0):
         nt.links.new(tc.outputs["Object"], vor.inputs["Vector"])
         sep = nt.nodes.new("ShaderNodeSeparateXYZ")
         nt.links.new(tc.outputs["Object"], sep.inputs[0])
-        below = _math(nt, "LESS_THAN", sep.outputs["Z"], 0.028)
-        behind = _math(nt, "LESS_THAN", _math(nt, "SUBTRACT", sep.outputs["Y"], _math(nt, "MULTIPLY", sep.outputs["Z"], 0.4)), 0.02)
+        below = _math(nt, "LESS_THAN", sep.outputs["Z"], 0.02)  # the smooth band under the slide for the thumb
+        behind = _math(nt, "LESS_THAN", sep.outputs["Y"], 0.047)  # the grip all round, front strap too, not the guard
         mask = _math(nt, "MULTIPLY", below, behind)
         h = _math(nt, "ADD", h, _math(nt, "MULTIPLY", _math(nt, "MULTIPLY", vor.outputs["Distance"], 6.0 * stipple), mask))
     bump = _n(nt, "ShaderNodeBump", Strength=0.35, Distance=0.0002)
@@ -199,10 +200,45 @@ cut(frame, boxes("cut_guardloop", [(0.0045, 0.036, -0.03, 0.03, gy_front, 0.0305
 r0, rz0, r1, rz1 = mark("rail_slot")
 cut(frame, boxes("cut_rail", [(-0.02, r0 + 0.004, rz0 - 0.004, 0.02, r0 + 0.0085, rz0 + 0.0015), (-0.02, r1 - 0.012, rz0 - 0.004, 0.02, r1 - 0.0075, rz0 + 0.0015)]))
 # the magazine well's mouth, opened up under the grip
-cut(frame, boxes("cut_well", [(-0.0115, -0.03, -0.07, 0.0115, 0.02, -0.044)]))
+# the grip: rounded all round, not a slab - a loft of cross-sections following the photograph's outline,
+# the back strap and front strap well rounded, the sides a touch fuller in the middle, flared at the well
+cut(frame, prism("cut_grip", [(-0.08, -0.08), (0.045, -0.08), (0.045, 0.024), (0.0365, 0.024), (0.0365, S_BOT + 0.01), (-0.08, S_BOT + 0.01)],
+                  -0.03, 0.03, M_VOID, part="cutters"))
+
+
+def crossings(poly, z):
+    out = []
+    for i in range(len(poly)):
+        (y0, z0), (y1, z1) = poly[i], poly[(i + 1) % len(poly)]
+        if (z0 - z) * (z1 - z) < 0:
+            out.append(y0 + (z - z0) / (z1 - z0) * (y1 - y0))
+    return sorted(out)
+
+
+g_rings = []
+z_low = min(p[1] for p in P["frame"]) + 0.0004
+z_top = S_BOT - 0.0008
+# up under the slide (the beavertail, narrowing to the slide's width), then down to the magazine well
+zs = [z_top, 0.044, 0.04, 0.036, 0.032, 0.028] + [0.024 - i * 0.004 for i in range(int((0.024 - z_low) / 0.004) + 1)] + [z_low]
+for z in zs:
+    fr = crossings(P["frame"], z)
+    gd = crossings(P["guard"], z)
+    back = fr[0]
+    front = min(gd[0] if gd else fr[1], 0.0368 if z > 0.0275 else 1.0)
+    f = max(0.0, (0.024 - z) / (0.024 - z_low))
+    up = min(1.0, max(0.0, (z - 0.022) / (z_top - 0.022)))
+    up = up * up * (3 - 2 * up)
+    hw = FW - 0.0006 + 0.0008 * math.sin(f * math.pi) + 0.0009 * max(0.0, (f - 0.85) / 0.15)  # palm swell, flared well
+    hw = hw + (SW - 0.0003 - hw) * up
+    g_rings.append(ring(Vector((0, (front + back) / 2, z)), X, Vector((0, 1, 0)), hw, (front - back) / 2 - 0.0002, 2.5, 48))
+grip = loft("grip", g_rings, M_FRAME, part="frame", bevel=0.0018, seg=3)
+# the magazine well's mouth, opened up under the grip round the magazine
+wc = MAG_SEAT + DOWN * ((MAG_SEAT.z - z_low) / math.cos(GRIP_ANGLE))
+cut(grip, loft("cut_well", [ring(wc + DOWN * k, X, Vector((0, math.cos(GRIP_ANGLE), -math.sin(GRIP_ANGLE))), 0.0118, 0.0172 + 0.004 * (k > 0), 4.0, 32)
+                            for k in (-0.006, 0.02)], M_VOID, part="cutters"))
 # controls: the slide stop (left), the magazine release (left, behind the guard), the takedown lever (both sides), pins
 sy0, sz0, sy1, sz1 = mark("slide_stop")
-prism("slide_stop", [(sy0, sz0 + 0.002), (sy1, sz0 + 0.003), (sy1, sz1 - 0.001), (sy0 + 0.002, sz1)], -FW - 0.0012, -FW + 0.002, M_STEEL, part="frame",
+prism("slide_stop", [(sy0, sz0 + 0.002), (sy1, sz0 + 0.003), (sy1, sz1 - 0.001), (sy0 + 0.002, sz1)], -SW - 0.0011, -SW + 0.002, M_STEEL, part="frame",
       bevel=0.0005)
 my0, mz0, my1, mz1 = mark("mag_release")
 yloft_pts = []
@@ -238,8 +274,8 @@ def magazine(name, length, part):
         rings.append(ring(c, X, fwd, 0.0108, 0.0158, 4.0, 32))
     loft(name + "_body", rings, M_MAGP, part=part, bevel=0.0004)
     # the floor plate: wider, overhanging front and back, with the finger lip at the front
-    fp = bot + DOWN * 0.0025
-    loft(name + "_plate", [ring(fp - DOWN * 0.003 + fwd * 0.001, X, fwd, 0.0122, 0.0172, 5.0, 32), ring(fp + DOWN * 0.003 + fwd * 0.002, X, fwd, 0.0122, 0.0176, 5.0, 32)],
+    fp = bot + DOWN * 0.0025 + fwd * 0.009
+    loft(name + "_plate", [ring(fp - DOWN * 0.003 + fwd * 0.001, X, fwd, 0.0128, 0.0186, 5.0, 32), ring(fp + DOWN * 0.003 + fwd * 0.002, X, fwd, 0.0128, 0.019, 5.0, 32)],
          M_MAGP, part=part, bevel=0.0008)
     # feed lips, the follower showing orange between them, a round on top
     loft(name + "_follower", [ring(top - DOWN * 0.0005, X, fwd, 0.006, 0.012, 3.0, 20), ring(top + DOWN * 0.002, X, fwd, 0.006, 0.012, 3.0, 20)], M_ORANGE,
@@ -252,8 +288,8 @@ def magazine(name, length, part):
           k=16)
 
 
-magazine("mag", 0.0965, "mag")
-magazine("mag_ext", 0.205, "mag_ext")
+magazine("mag", 0.087, "mag")
+magazine("mag_ext", 0.196, "mag_ext")
 
 # a cartridge (for the chamber) and a spent case, along -item Z (= +Y here) from their base
 lathe("round_case", (0, 0, 0), (0, 1, 0), [(0, 0.0048), (0.0012, 0.0048), (0.0015, 0.0041), (0.0019, 0.0049), (0.0158, 0.0049), (0.0164, 0.0047)], M_BRASS,
@@ -277,8 +313,18 @@ if __name__ == "__main__":
         def nrm_item(n):
             return Vector((n.x, n.z, -n.y)).normalized()
 
-        PIVOTS = {}
-        SPT_BAND = None
+        BAKE_APART = {"mag": 0.3, "mag_ext": 0.6, "round": 0.9, "case": 1.2}
+        # the magazines in a frame of their own: the top at the origin, running down -Y (GlockItemRenderer turns
+        # them back by the grip's angle and puts them at the seat)
+        MAG_FRAME = Matrix.Rotation(GRIP_ANGLE, 3, "X")
+
+        def mag_item(v):
+            return MAG_FRAME @ (to_item(v) - to_item(MAG_SEAT))
+
+        def mag_nrm(n):
+            return (MAG_FRAME @ nrm_item(n)).normalized()
+
+        PART_ITEM = {"mag": (mag_item, mag_nrm), "mag_ext": (mag_item, mag_nrm)}
         exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "export.py")).read())
         sys.exit(0)
     setup_render()
@@ -305,6 +351,12 @@ if __name__ == "__main__":
         shoot("left", (-0.5, -0.12, 0.12), (0, 0.06, 0.01), lens=50)
     if "detail" in want:
         shoot("detail", (0.16, 0.16, 0.1), (0.0, 0.02, 0.05), lens=55, dof=4.0)
+    if "grip_back" in want:
+        shoot("grip_back", (0.05, -0.32, 0.06), (0, -0.01, 0.0), lens=60)
+    if "grip_low" in want:
+        shoot("grip_low", (0.2, 0.14, -0.2), (0, 0.0, -0.02), lens=60)
+    if "grip_q" in want:
+        shoot("grip_q", (-0.22, -0.18, 0.08), (0, 0.0, -0.01), lens=60)
     if "compare" in want:
         cam = camera("compare", (-1.0, 0.0, 0.0), (0.0, 0.0, 0.0))
         cam.data.type = "ORTHO"

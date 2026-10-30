@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import de.rcm.ballistic.client.render.GlockItemRenderer;
 import de.rcm.ballistic.gun.GlockItem;
-import de.rcm.ballistic.gun.GlockMagazineItem;
 import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -19,13 +18,13 @@ import org.joml.Vector3f;
  * Held in two hands, arms out: at the "ready" low in the middle of the view, at the sights the rear notch
  * close under the eye with the front dot sitting in it. A shot snaps the muzzle up and the slide back and
  * forward in a blink, the case spinning out to the right; the gun comes straight back down onto the target.
- * The reload is a speed reload: the gun canted and drawn in, the thumb drops the old magazine out of the grip
- * while the support hand is already on its way to the belt for the new one, brings it up, indexes it into the
- * magwell and slaps it home; from slide lock the support hand then comes over the top and racks the slide.
+ * The reload, the inspect with its press check, the dry click, the draw and the idle look are keyframed in
+ * Blender ({@link GlockClips}): the pistol's pose, both magazines, both hands and the slide come from the clip;
+ * the springs, the aim, the step, the sprint and the landing stay worked out here, on top of it.
  */
 public final class GlockMotion {
 	/** Rear notch (middle of the U) and the front dot: what the eye lines up. */
-	static final Vector3f NOTCH = new Vector3f(0.0F, GlockItemRenderer.NOTCH_Y + 0.0014F, GlockItemRenderer.REAR_SIGHT_Z + 0.0075F);
+	static final Vector3f NOTCH = new Vector3f(0.0F, GlockItemRenderer.NOTCH_Y + 0.0014F, GlockItemRenderer.NOTCH_Z);
 	static final Vector3f DOT = new Vector3f(0.0F, GlockItemRenderer.DOT_Y, GlockItemRenderer.FRONT_SIGHT_Z);
 	static final Vector3f SIGHT_LINE = new Vector3f(DOT).sub(NOTCH).normalize();
 	/** The eye on the sight line, this far behind the notch: the arms out, the gun a forearm's length off. */
@@ -41,16 +40,15 @@ public final class GlockMotion {
 	public static final Vector3f SUPPORT = new Vector3f(-0.022F, -0.016F, -0.006F);
 	/** The magazine pouch on the left of the belt, as it lies from the gun drawn in for the reload. */
 	static final Vector3f POUCH = new Vector3f(-0.12F, -0.32F, -0.14F);
-	/** Over the top of the slide, fingers on the rear serrations (overhand rack). */
-	static final Vector3f OVERHAND = new Vector3f(-0.04F, GlockItemRenderer.SLIDE_TOP - 0.006F, GlockItemRenderer.SLIDE_REAR - 0.006F);
-	/** Fingers on the front serrations, the slide eased back a little to see the brass (press check). */
-	static final Vector3f PRESS = new Vector3f(-0.012F, GlockItemRenderer.SLIDE_TOP - 0.004F, -0.072F);
-	/** The inspect: how long it takes and the press check in the middle of it. */
+	/** The inspect: how long it takes and the press check in the middle of it (the clip's timing, for the sounds). */
 	public static final int INSPECT = 62;
 	static final float PRESS_BACK = 26.0F;
 	static final float PRESS_HOME = 32.0F;
-	/** How far the slide comes back for a press check. */
-	static final float PRESS_TRAVEL = 0.38F;
+	/** The idle look: this long after anything happened, for this long. */
+	static final float IDLE_AFTER = 260.0F;
+	static final int IDLE = 50;
+	static final int DRAW = 11;
+	static final int DRY = 22;
 
 	/**
 	 * Everything the pose depends on. Times are in ticks since the event (negative or large: not happening).
@@ -161,132 +159,90 @@ public final class GlockMotion {
 
 	// ------------------------------------------------------------------ the moving parts
 
+	/** The clip playing now and how far into it (null: none), first come first served. */
+	private static AkClips.Clip clip(Frame f) {
+		if (f.reload() >= 0.0F) {
+			return GlockClips.reload(f.empty(), f.newKind());
+		}
+		if (f.inspect() >= 0.0F && f.inspect() < INSPECT) {
+			return GlockClips.get("inspect");
+		}
+		if (f.dry() >= 0.0F && f.dry() < DRY) {
+			return GlockClips.get("dry");
+		}
+		if (f.drawn() >= 0.0F && f.drawn() < DRAW) {
+			return GlockClips.get("draw");
+		}
+		float idle = f.idle() - IDLE_AFTER;
+		if (idle >= 0.0F && idle < IDLE && f.aim() < 0.05F) {
+			return GlockClips.get("idle");
+		}
+		return null;
+	}
+
+	private static float clipTime(Frame f) {
+		if (f.reload() >= 0.0F) {
+			return f.reload();
+		}
+		if (f.inspect() >= 0.0F && f.inspect() < INSPECT) {
+			return f.inspect();
+		}
+		if (f.dry() >= 0.0F && f.dry() < DRY) {
+			return f.dry();
+		}
+		if (f.drawn() >= 0.0F && f.drawn() < DRAW) {
+			return f.drawn();
+		}
+		return f.idle() - IDLE_AFTER;
+	}
+
+	/** The clip's sample for this frame (null: no clip playing). */
+	static float[] sample(Frame f) {
+		AkClips.Clip c = clip(f);
+		return c == null ? null : c.at(clipTime(f), new float[AkClips.STRIDE]);
+	}
+
 	/** How far back the slide is (0..1, a little past 1 when the hand pulls it against the stop). */
 	public static float slide(Frame f) {
-		float r = f.reload();
-		if (r >= 0.0F && f.empty()) {
-			// locked back until the overhand rack: pulled a touch further, let go - it slams home
-			if (r < GlockItem.T_RACK_BACK - 2.0F) {
-				return 1.0F;
-			}
-			if (r < GlockItem.T_RACK_BACK) {
-				return 1.0F + 0.12F * ramp(r, GlockItem.T_RACK_BACK - 2.0F, GlockItem.T_RACK_BACK);
-			}
-			if (r < GlockItem.T_RACK_FORWARD - 0.6F) {
-				return 1.12F;
-			}
-			return 1.12F * (1.0F - ramp(r, GlockItem.T_RACK_FORWARD - 0.6F, GlockItem.T_RACK_FORWARD));
+		float[] s = f.reload() >= 0.0F || f.inspect() >= 0.0F ? sample(f) : null;
+		if (s != null) {
+			return s[36];
 		}
 		if (f.locked()) {
 			// the last shot: back it goes, and it stays
 			return f.shot() < 0.45F ? smooth(f.shot() / 0.45F) : 1.0F;
 		}
-		float i = f.inspect();
-		if (i >= 0.0F) {
-			return PRESS_TRAVEL * ramp(i, PRESS_BACK - 1.5F, PRESS_BACK + 1.0F) * (1.0F - ramp(i, PRESS_HOME - 1.0F, PRESS_HOME));
-		}
 		// a shot: the slide snaps back on the recoil and the spring drives it home again - a tenth of a second
-		float s = f.shot();
-		if (s >= 0.0F && s < 1.3F) {
-			return s < 0.4F ? smooth(s / 0.4F) : 1.0F - smooth((s - 0.4F) / 0.9F);
+		float s0 = f.shot();
+		if (s0 >= 0.0F && s0 < 1.3F) {
+			return s0 < 0.4F ? smooth(s0 / 0.4F) : 1.0F - smooth((s0 - 0.4F) / 0.9F);
 		}
 		return 0.0F;
 	}
 
-	/** The old magazine leaving the grip: its transform from the seat (null: none to show). */
+	/** The old magazine during a reload: seated until the thumb drops it, then falling away - its transform from the seat (null: none to show). */
 	public static Matrix4f oldMag(Frame f) {
-		float t = f.reload() - GlockItem.T_RELEASE;
-		if (f.reload() < 0.0F || !f.hadMag() || t < 0.0F || t > 11.0F) {
+		if (f.reload() < 0.0F || !f.hadMag()) {
 			return null;
 		}
-		// it slides out down the grip under its own weight, then tumbles away below
-		float d = 0.006F * t + 0.5F * 0.0245F * t * t;
-		Matrix4f m = new Matrix4f().translate(new Vector3f(GlockItemRenderer.MAG_DOWN).mul(Math.min(d, 0.12F)));
-		if (d > 0.12F) {
-			float fall = d - 0.12F;
-			m.translate(0.01F * fall / 0.1F, -fall, 0.02F * fall / 0.1F);
-			m.rotate(Axis.XP.rotationDegrees(-80.0F * fall / 0.3F));
-			m.rotate(Axis.ZP.rotationDegrees(40.0F * fall / 0.3F));
-		}
-		return m;
+		float[] s = sample(f);
+		return s[37] > 0.5F ? AkClips.matrix(s, 6, new Matrix4f()) : null;
 	}
 
-	/** The new magazine on its way in, in the support hand: its transform from the seat (null: seated, or not yet out). */
+	/** The new magazine during a reload, from the pouch to home: its transform from the seat (null: not out yet). */
 	public static Matrix4f newMag(Frame f) {
-		float r = f.reload();
-		if (r < 7.0F || r >= GlockItem.T_IN) {
+		if (f.reload() < 0.0F) {
 			return null;
 		}
-		float length = f.newKind() == GlockMagazineItem.EXTENDED ? 0.2F : 0.115F;
-		// held by its base in the support hand, then indexed into the well and pushed home
-		Vector3f hand = supportHand(f);
-		Vector3f seat = GlockItemRenderer.MAG_SEAT;
-		Vector3f held = new Vector3f(hand).sub(new Vector3f(GlockItemRenderer.MAG_DOWN).mul(length - 0.02F)).sub(seat);
-		// fresh out of the pouch it is tipped over; lined up with the well as it comes up
-		float tip = 1.0F - ramp(r, 9.0F, 14.5F);
-		Matrix4f m = new Matrix4f().translate(held);
-		Vector3f base = new Vector3f(GlockItemRenderer.MAG_DOWN).mul(length - 0.02F);
-		m.translate(base).rotate(Axis.XP.rotationDegrees(-55.0F * tip)).rotate(Axis.ZP.rotationDegrees(-25.0F * tip)).translate(new Vector3f(base).negate());
-		return m;
+		float[] s = sample(f);
+		return s[38] > 0.5F ? AkClips.matrix(s, 18, new Matrix4f()) : null;
 	}
 
 	/** Where the support (left) hand is, item space. */
 	static Vector3f supportHand(Frame f) {
-		float r = f.reload();
-		if (r >= 0.0F) {
-			float length = f.newKind() == GlockMagazineItem.EXTENDED ? 0.2F : 0.115F;
-			Vector3f seat = GlockItemRenderer.MAG_SEAT;
-			// the hand under the well, the magazine's base in the palm: the top 4 cm short of home, and home
-			Vector3f below = new Vector3f(seat).add(new Vector3f(GlockItemRenderer.MAG_DOWN).mul(length - 0.02F + 0.045F));
-			Vector3f home = new Vector3f(seat).add(new Vector3f(GlockItemRenderer.MAG_DOWN).mul(length - 0.02F));
-			Vector3f slap = new Vector3f(home).add(new Vector3f(GlockItemRenderer.MAG_DOWN).mul(-0.006F));
-			if (r < 7.0F) {
-				return swing(SUPPORT, POUCH, ramp(r, 1.0F, 7.0F));
-			}
-			if (r < 9.0F) {
-				return new Vector3f(POUCH).add(0.0F, 0.015F * Mth.sin((r - 7.0F) / 2.0F * Mth.PI), 0.0F); // the pouch flap, the magazine out
-			}
-			if (r < 15.0F) {
-				return swing(POUCH, below, ramp(r, 9.0F, 15.0F));
-			}
-			if (r < GlockItem.T_IN) {
-				return lerp(below, slap, ramp(r, 15.0F, GlockItem.T_IN));
-			}
-			if (!f.empty()) {
-				return lerp(slap, SUPPORT, ramp(r, GlockItem.T_IN + 1.0F, GlockItem.RELOAD_TACTICAL - 1.0F));
-			}
-			// from slide lock: over the top of the slide, rack it, let it fly, back onto the grip
-			Vector3f racked = new Vector3f(OVERHAND).add(-0.01F, 0.0F, 0.04F);
-			if (r < GlockItem.T_RACK_BACK - 2.0F) {
-				return swing(slap, OVERHAND, ramp(r, GlockItem.T_IN + 1.0F, GlockItem.T_RACK_BACK - 2.0F));
-			}
-			if (r < GlockItem.T_RACK_BACK) {
-				return lerp(OVERHAND, racked, ramp(r, GlockItem.T_RACK_BACK - 2.0F, GlockItem.T_RACK_BACK));
-			}
-			if (r < GlockItem.T_RACK_FORWARD + 1.0F) {
-				// let go: the hand flies on back and out to the left
-				return lerp(racked, new Vector3f(racked).add(-0.05F, 0.02F, 0.05F), ramp(r, GlockItem.T_RACK_BACK, GlockItem.T_RACK_FORWARD + 1.0F));
-			}
-			return swing(new Vector3f(racked).add(-0.05F, 0.02F, 0.05F), SUPPORT, ramp(r, GlockItem.T_RACK_FORWARD + 1.0F, GlockItem.RELOAD_EMPTY - 1.0F));
-		}
-		float i = f.inspect();
-		if (i >= 0.0F) {
-			// off the grip as the gun turns, onto the front serrations for the press check, and back
-			float off = ramp(i, 2.0F, 9.0F) * (1.0F - ramp(i, 50.0F, 58.0F));
-			Vector3f away = new Vector3f(SUPPORT).add(-0.05F, -0.05F, 0.03F);
-			Vector3f hand = lerp(SUPPORT, away, off);
-			if (i > 18.0F && i < 40.0F) {
-				float on = ramp(i, 19.0F, 24.0F) * (1.0F - ramp(i, 33.0F, 39.0F));
-				Vector3f pull = new Vector3f(PRESS).add(0.0F, 0.0F, PRESS_TRAVEL * GlockItemRenderer.SLIDE_TRAVEL
-					* ramp(i, PRESS_BACK - 1.5F, PRESS_BACK + 1.0F) * (1.0F - ramp(i, PRESS_HOME - 1.0F, PRESS_HOME)));
-				hand = new Vector3f(hand).lerp(pull, on);
-			}
-			return hand;
-		}
-		// drawn: the support hand comes in from the side to meet the gun
-		float d = ramp(f.drawn(), 5.0F, 11.0F);
-		if (d < 1.0F) {
-			return lerp(new Vector3f(SUPPORT).add(-0.12F, -0.16F, 0.1F), SUPPORT, d);
+		float[] s = sample(f);
+		if (s != null) {
+			return AkClips.vec(s, 30, new Vector3f());
 		}
 		// sprinting: one hand on the gun, the other off it, pumping
 		if (f.run() > 0.01F) {
@@ -355,67 +311,13 @@ public final class GlockMotion {
 		poseStack.translate(0.0F, 0.006F * this.settle.x, 0.0F);
 		poseStack.mulPose(Axis.XP.rotationDegrees(1.2F * this.settle.x));
 
-		// the reload: canted over to the left and drawn in close, the magwell turned towards the support hand;
-		// the thumb's stab at the release, the slap of the new magazine, and from slide lock the overhand rack
-		float r = f.reload();
-		if (r >= 0.0F) {
-			float end = f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL;
-			float in = ramp(r, 0.0F, 4.0F) * (1.0F - ramp(r, end - 6.0F, end));
-			float release = jolt(r - GlockItem.T_RELEASE + 0.5F, 4.0F);
-			float slap = jolt(r - GlockItem.T_IN + 0.3F, 5.0F);
-			float rack = f.empty() ? ramp(r, GlockItem.T_IN + 1.0F, GlockItem.T_RACK_BACK - 1.0F) * (1.0F - ramp(r, GlockItem.T_RACK_FORWARD, end - 3.0F)) : 0.0F;
-			float yank = f.empty() ? jolt(r - GlockItem.T_RACK_BACK + 1.5F, 4.0F) : 0.0F;
-			float home = f.empty() ? jolt(r - GlockItem.T_RACK_FORWARD + 0.4F, 5.0F) : 0.0F;
-			poseStack.translate(-0.06F * in + 0.02F * rack, 0.14F * in + 0.012F * slap - 0.06F * rack, 0.03F * in - 0.16F * rack - 0.012F * yank);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-40.0F * in + 6.0F * release + 20.0F * rack - 4.0F * home));
-			poseStack.mulPose(Axis.XP.rotationDegrees(12.0F * in + 4.0F * release - 3.0F * slap + 6.0F * rack + 3.0F * home));
-			poseStack.mulPose(Axis.YP.rotationDegrees(12.0F * in - 4.0F * yank));
-		}
-
-		// looking it over: turned to show the right side and the port, the press check (brass in the chamber),
-		// turned over to the left side, and back on line
-		float i = f.inspect();
-		if (i >= 0.0F && i < INSPECT) {
-			float up = ramp(i, 0.0F, 9.0F) * (1.0F - ramp(i, INSPECT - 10.0F, INSPECT));
-			float right = ramp(i, 2.0F, 12.0F) * (1.0F - ramp(i, 36.0F, 44.0F));
-			float left = ramp(i, 38.0F, 46.0F) * (1.0F - ramp(i, INSPECT - 12.0F, INSPECT - 2.0F));
-			float check = ramp(i, 20.0F, 25.0F) * (1.0F - ramp(i, 33.0F, 38.0F));
-			float tug = jolt(i - PRESS_BACK + 1.0F, 4.0F);
-			poseStack.translate(-0.06F * up, 0.06F * up, 0.08F * up);
-			poseStack.mulPose(Axis.YP.rotationDegrees(48.0F * right - 32.0F * left - 10.0F * check));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-18.0F * right - 25.0F * left + 8.0F * check));
-			poseStack.mulPose(Axis.XP.rotationDegrees(10.0F * up + 6.0F * left - 2.0F * tug));
-		}
-
-		// a click instead of a bang: the jerk, then a cant to look at the slide
-		float dry = f.dry();
-		if (dry >= 0.0F && dry < 22.0F) {
-			float twitch = jolt(dry, 3.0F);
-			float look = dry < 3.0F ? 0.0F : smooth((dry - 3.0F) / 5.0F) * (1.0F - smooth((dry - 14.0F) / 8.0F));
-			poseStack.translate(0.0F, 0.03F * look - 0.004F * twitch, 0.02F * look);
-			poseStack.mulPose(Axis.XP.rotationDegrees(-1.5F * twitch + 6.0F * look));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(35.0F * look));
-		}
-
-		// a long while doing nothing: a turn of the wrist to look at it, then back
-		float idle = f.idle() - 260.0F;
-		if (idle >= 0.0F && idle < 50.0F && a < 0.05F) {
-			float look = smooth(idle / 10.0F) * (1.0F - smooth((idle - 32.0F) / 16.0F));
-			poseStack.translate(0.0F, 0.03F * look, 0.03F * look);
-			poseStack.mulPose(Axis.YP.rotationDegrees(30.0F * look));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-25.0F * look));
-		}
-
-		// drawn: out of the holster at the right hip - up, muzzle swinging from the ground onto the line,
-		// punched out to the ready with a little overshoot
-		float drawT = f.drawn() / 11.0F;
-		float draw = 1.0F - smooth(drawT);
-		if (draw > 0.0F) {
-			float over = drawT > 0.55F && drawT < 1.0F ? Mth.sin((drawT - 0.55F) / 0.45F * Mth.PI) * 0.4F : 0.0F;
-			float clear = Mth.sin(Mth.clamp(drawT * 1.3F, 0.0F, 1.0F) * Mth.PI);
-			poseStack.translate(0.12F * draw, -0.36F * draw + 0.04F * clear, 0.14F * draw - 0.02F * over);
-			poseStack.mulPose(Axis.XP.rotationDegrees(-75.0F * draw + 3.0F * over));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-20.0F * draw));
+		// the clip playing (reload, inspect, dry click, draw, idle look): the pistol's pose in the hands
+		float[] clip = sample(f);
+		if (clip != null) {
+			poseStack.translate(clip[0], clip[1], clip[2]);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(clip[3]));
+			poseStack.mulPose(Axis.XP.rotationDegrees(clip[4]));
+			poseStack.mulPose(Axis.YP.rotationDegrees(clip[5]));
 		}
 
 		// sprinting: pulled in to the chest, muzzle down and forward, bouncing with the stride
@@ -474,17 +376,12 @@ public final class GlockMotion {
 		float in = r < 0.0F ? 0.0F : ramp(r, 0.0F, 4.0F) * (1.0F - ramp(r, (f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL) - 6.0F,
 			f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL));
 		Vector3f rightPole = new Vector3f(RIGHT_POLE).lerp(new Vector3f(1.0F, 0.1F, 0.5F), in);
-		Vector3f grip = new Vector3f(GRIP).add(0.0F, 0.012F * in, 0.004F * in);
+		float[] clip = sample(f);
+		Vector3f grip = clip != null ? AkClips.vec(clip, 33, new Vector3f()) : new Vector3f(GRIP);
 		return new Hands(grip, supportHand(f), rs, rightPole, ls, new Vector3f(LEFT_POLE));
 	}
 
 	private static Vector3f lerp(Vector3f a, Vector3f b, float t) {
 		return new Vector3f(a).lerp(b, smooth(t));
-	}
-
-	/** An arc from {@code a} to {@code b}, dipping on the way (a hand going down to the belt and back). */
-	private static Vector3f swing(Vector3f a, Vector3f b, float t) {
-		Vector3f p = lerp(a, b, t);
-		return p.add(0.0F, -0.04F * Mth.sin(Mth.clamp(t, 0.0F, 1.0F) * Mth.PI), 0.0F);
 	}
 }

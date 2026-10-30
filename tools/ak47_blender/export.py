@@ -1,8 +1,9 @@
-# Run inside ak47.py (python ak47.py --export=<dir>): bakes the look of the materials into one texture
-# and writes the parts as quad meshes in the mod's item space.
+# Run inside a model script (python ak47.py --export=<dir>, glock.py the same): bakes the look of the
+# materials into one texture and writes the parts as quad meshes in the mod's item space.
 #
-# Item space (as the old hand-built model): x right, y up, z back, origin at the hand on the grip,
-# bore at y = 0.085, muzzle at z = -0.712, the rifle at 1.325 times its real size.
+# The AK's item space (as the old hand-built model): x right, y up, z back, origin at the hand on the grip,
+# bore at y = 0.085, muzzle at z = -0.712, the rifle at 1.325 times its real size. Another model sets
+# EXPORT_NAME, ORDER, to_item and nrm_item before it runs this (and leaves out SELECTOR_PIVOT).
 import gzip
 import struct
 
@@ -14,15 +15,17 @@ MUZZLE_Z = -0.712
 MUZZLE_YB = 0.6305
 
 
-def to_item(v):
-    return Vector((S_ITEM * v.x, BORE_Y + S_ITEM * v.z, MUZZLE_Z + S_ITEM * (MUZZLE_YB - v.y)))
+if "EXPORT_NAME" not in globals():
+    EXPORT_NAME = "ak47"
+    ORDER = ["body", "carrier", "selector", "magazine", "rounds", "tips", "band"]
 
+    def to_item(v):
+        return Vector((S_ITEM * v.x, BORE_Y + S_ITEM * v.z, MUZZLE_Z + S_ITEM * (MUZZLE_YB - v.y)))
 
-def nrm_item(n):
-    return Vector((n.x, n.z, -n.y)).normalized()
-
-
-ORDER = ["body", "carrier", "selector", "magazine", "rounds", "tips", "band"]
+    def nrm_item(n):
+        return Vector((n.x, n.z, -n.y)).normalized()
+# parts moved off to the side (x, metres) while baking: they would shade what they overlap
+BAKE_APART = globals().get("BAKE_APART", {"band": 1.0})
 
 # lighter meshes for the game: no subdivision, at most two bevel segments
 for part in ORDER:
@@ -59,15 +62,14 @@ for pi, part in enumerate(ORDER):
         bm_all.faces.ensure_lookup_table()
         for f in bm_all.faces[n0:]:
             f[part_layer] = pi
-        if part == "band":
-            # off to the side while baking: it would shade the magazine it is wrapped round
+        if part in BAKE_APART:
             for v in {v for f in bm_all.faces[n0:] for v in f.verts}:
-                v.co.x += 1.0
+                v.co.x += BAKE_APART[part]
         bpy.data.meshes.remove(tmp)
         bpy.data.meshes.remove(me)
         ob.hide_render = True
         ob.hide_viewport = True
-me_all = bpy.data.meshes.new("ak47_game")
+me_all = bpy.data.meshes.new(EXPORT_NAME + "_game")
 bm_all.to_mesh(me_all)
 bm_all.free()
 for m in mats:
@@ -75,7 +77,7 @@ for m in mats:
 for p in me_all.polygons:
     p.use_smooth = True
 me_all.set_sharp_from_angle(angle=math.radians(35))
-game = bpy.data.objects.new("ak47_game", me_all)
+game = bpy.data.objects.new(EXPORT_NAME + "_game", me_all)
 scene.collection.objects.link(game)
 print("faces", len(me_all.polygons), "verts", len(me_all.vertices), flush=True)
 
@@ -91,8 +93,8 @@ bpy.ops.uv.pack_islands(margin=0.0015, rotate=True)
 bpy.ops.object.mode_set(mode="OBJECT")
 
 # bake two maps for the game's gun shader (gun.fsh):
-#   ak47.png      base colour (sRGB)
-#   ak47_mat.png  r metallic, g roughness, b ambient occlusion, a clear coat (linear)
+#   <name>.png      base colour (sRGB)
+#   <name>_mat.png  r metallic, g roughness, b ambient occlusion, a clear coat (linear)
 import numpy as np  # noqa: E402
 
 for m in mats:
@@ -188,23 +190,24 @@ full[:, :, 3] = 255
 SWATCH = {"green": (60, 200, 70), "red": (215, 40, 30)}
 for i, c in enumerate(SWATCH.values()):
     full[TEX:, i * 64:(i + 1) * 64, :3] = c
-save_png("ak47.png", full)
+save_png(EXPORT_NAME + ".png", full)
 # the surface map, linear; the swatches as glossy paint
 mat = np.zeros((H, TEX, 4), dtype=np.uint8)
 mat[:TEX, :, :3] = (np.clip(surface, 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
 mat[:TEX, :, 3] = (np.clip(coat, 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
 mat[TEX:] = (0, 140, 255, 80)
-save_png("ak47_mat.png", mat)
+save_png(EXPORT_NAME + "_mat.png", mat)
 
-# the tape back in its place
-band_idx = ORDER.index("band")
+# the parts moved apart back in their place
 pl0 = me_all.attributes["part"].data
-moved = {me_all.loops[li].vertex_index for p in me_all.polygons if pl0[p.index].value == band_idx for li in p.loop_indices}
-for vi in moved:
-    me_all.vertices[vi].co.x -= 1.0
+for part, dx in BAKE_APART.items():
+    idx = ORDER.index(part)
+    moved = {me_all.loops[li].vertex_index for p in me_all.polygons if pl0[p.index].value == idx for li in p.loop_indices}
+    for vi in moved:
+        me_all.vertices[vi].co.x -= dx
 
 # the meshes: quads stay quads, everything else goes as triangles (a quad with its last corner doubled)
-SELECTOR_PIVOT_ITEM = to_item(SELECTOR_PIVOT)
+SELECTOR_PIVOT_ITEM = to_item(SELECTOR_PIVOT) if "selector" in ORDER else Vector()
 uv = me_all.uv_layers.active.data
 cn = me_all.corner_normals
 pl = me_all.attributes["part"].data
@@ -215,12 +218,17 @@ for t in me_all.loop_triangles:
 data = {p: [] for p in ORDER}
 
 
+# a part may have a frame of its own: {part: (position, normal)} from Blender's coordinates
+PART_ITEM = globals().get("PART_ITEM", {})
+
+
 def corner(li, part):
     v = me_all.vertices[me_all.loops[li].vertex_index].co
-    p = to_item(v)
+    to_p, to_n = PART_ITEM.get(part, (to_item, nrm_item))
+    p = to_p(v)
     if part == "selector":
         p = p - SELECTOR_PIVOT_ITEM
-    n = nrm_item(cn[li].vector)
+    n = to_n(cn[li].vector)
     u, w = uv[li].uv
     return (p.x, p.y, p.z, u, (1.0 - w) * TEX / H, n.x, n.y, n.z)
 
@@ -236,7 +244,7 @@ for poly in me_all.polygons:
         for li in q:
             data[part].extend(corner(li, part))
 
-with gzip.open(os.path.join(EXPORT_DIR, "ak47.mesh.gz"), "wb") as f:
+with gzip.open(os.path.join(EXPORT_DIR, EXPORT_NAME + ".mesh.gz"), "wb") as f:
     f.write(struct.pack(">I", len(ORDER)))
     for part in ORDER:
         name = part.encode()

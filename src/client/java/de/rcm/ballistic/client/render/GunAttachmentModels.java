@@ -29,7 +29,7 @@ public final class GunAttachmentModels {
 	}
 
 	public static final Mount AK = new Mount(0.047F, 0.071F, -0.30F, -0.046F, 0.079F, -0.29F, 0.085F, -0.712F, suppressor(0.021F, 0.19F), 0.19F);
-	public static final Mount GLOCK = new Mount(0.004F, 0.006F, -0.075F, -0.0135F, 0.012F, -0.072F, 0.058F, -0.152F, suppressor(0.0165F, 0.15F), 0.15F);
+	public static final Mount GLOCK = new Mount(0.004F, 0.011F, -0.079F, -0.0135F, 0.017F, -0.076F, 0.058F, -0.156F, suppressor(0.0165F, 0.15F), 0.15F);
 	public static final Mount SHOTGUN = new Mount(0.031F, 0.133F, -0.52F, -0.031F, 0.135F, -0.50F, 0.135F, -0.70F, suppressor(0.025F, 0.22F), 0.22F);
 
 	/**

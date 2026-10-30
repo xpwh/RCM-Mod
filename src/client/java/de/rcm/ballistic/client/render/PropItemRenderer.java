@@ -77,8 +77,9 @@ public final class PropItemRenderer implements NoDataSpecialModelRenderer {
 
 		@Override
 		public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
-			// the AK magazines are textured from the rifle's own baked texture
-			return new PropItemRenderer(PropItemRenderer.mesh(this.mesh), this.mesh.startsWith("ak_") ? AkItemRenderer.TYPE : StructureKit.TYPE);
+			// the AK and Glock magazines are textured from their gun's own baked texture
+			return new PropItemRenderer(PropItemRenderer.mesh(this.mesh), this.mesh.startsWith("ak_") ? AkItemRenderer.TYPE
+				: this.mesh.startsWith("glock_") ? GlockItemRenderer.TYPE : StructureKit.TYPE);
 		}
 
 		@Override

@@ -78,7 +78,7 @@ public final class AkClips {
 		return out.set(s[at], s[at + 1], s[at + 2]);
 	}
 
-	private static Map<String, Clip> load(String path) {
+	static Map<String, Clip> load(String path) {
 		Map<String, Clip> out = new HashMap<>();
 		try (InputStream raw = AkClips.class.getResourceAsStream(path)) {
 			if (raw == null) {

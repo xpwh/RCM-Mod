@@ -140,19 +140,13 @@ public final class GlockClient {
 		GlockMotion.Frame f = frame(mc, partial(), stack, local);
 		GunState s = GlockItem.state(stack);
 		float r = f.reload();
-		boolean magIn;
-		int kind;
-		if (r >= 0.0F) {
-			magIn = r < GlockItem.T_RELEASE ? s.hasMag() : r >= GlockItem.T_IN;
-			kind = r < GlockItem.T_RELEASE ? s.ammo() : s.reloadAmmo();
-		} else {
-			magIn = s.hasMag();
-			kind = s.ammo();
-		}
+		// reloading, both magazines go where the clip has them (the old one seated until the thumb drops it)
+		boolean magIn = r < 0.0F && s.hasMag();
+		int kind = r >= 0.0F ? s.reloadAmmo() : s.ammo();
 		float shot = f.shot();
 		float eject = shot - 0.3F;
 		boolean chambered = s.rounds() > 0 && !(r >= 0.0F && f.empty() && r < GlockItem.T_RACK_FORWARD);
-		return new GlockItemRenderer.Pose(GlockMotion.slide(f), magIn, kind, magIn ? null : GlockMotion.newMag(f), f.oldKind(), GlockMotion.oldMag(f),
+		return new GlockItemRenderer.Pose(GlockMotion.slide(f), magIn, kind, GlockMotion.newMag(f), f.oldKind(), GlockMotion.oldMag(f),
 			eject >= 0.0F && eject < 6.0F ? eject : -1.0F, chambered, shot >= 0.0F && shot < 1.2F ? shot : -1.0F,
 			local ? shotSeed : (long) s.lastShot());
 	}
