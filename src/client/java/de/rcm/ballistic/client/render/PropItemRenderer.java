@@ -22,10 +22,12 @@ import org.joml.Vector3fc;
  */
 public final class PropItemRenderer implements NoDataSpecialModelRenderer {
 	private final BoxMesh mesh;
+	private final net.minecraft.client.renderer.rendertype.RenderType type;
 	private final float[] bounds;
 
-	private PropItemRenderer(BoxMesh mesh) {
+	private PropItemRenderer(BoxMesh mesh, net.minecraft.client.renderer.rendertype.RenderType type) {
 		this.mesh = mesh;
+		this.type = type;
 		this.bounds = mesh.bounds();
 	}
 
@@ -55,7 +57,7 @@ public final class PropItemRenderer implements NoDataSpecialModelRenderer {
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.5F, 0.5F); // the middle of the item space...
 		poseStack.translate(-(b[0] + b[3]) * 0.5F, -(b[1] + b[4]) * 0.5F, -(b[2] + b[5]) * 0.5F); // ...on the middle of the mesh
-		collector.submitCustomGeometry(poseStack, StructureKit.TYPE, (pose, consumer) -> this.mesh.emit(pose, consumer, light));
+		collector.submitCustomGeometry(poseStack, this.type, (pose, consumer) -> this.mesh.emit(pose, consumer, light));
 		poseStack.popPose();
 	}
 
@@ -75,7 +77,8 @@ public final class PropItemRenderer implements NoDataSpecialModelRenderer {
 
 		@Override
 		public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context) {
-			return new PropItemRenderer(PropItemRenderer.mesh(this.mesh));
+			// the AK magazines are textured from the rifle's own baked texture
+			return new PropItemRenderer(PropItemRenderer.mesh(this.mesh), this.mesh.startsWith("ak_") ? AkItemRenderer.TYPE : StructureKit.TYPE);
 		}
 
 		@Override

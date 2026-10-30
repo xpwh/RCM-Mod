@@ -31,13 +31,13 @@ import org.joml.Vector3f;
  */
 public final class AkAnim {
 	/** Where the fist sits on the pistol grip. */
-	public static final Vector3f GRIP = new Vector3f(0.0F, -0.04F, 0.088F);
+	public static final Vector3f GRIP = new Vector3f(0.0F, -0.04F, 0.082F);
 	/** Where the support hand cups the lower handguard. */
-	public static final Vector3f HANDGUARD = new Vector3f(-0.004F, 0.012F, -0.37F);
+	public static final Vector3f HANDGUARD = new Vector3f(-0.004F, 0.026F, -0.335F);
 	/** The point of the magazine (in its own space) the hand closes on. */
-	static final Vector3f MAG_HOLD = new Vector3f(-0.006F, -0.105F, -0.098F);
+	static final Vector3f MAG_HOLD = new Vector3f(-0.006F, -0.105F, -0.194F);
 	/** The ball of the charging handle, bolt forward. */
-	static final Vector3f HANDLE = new Vector3f(0.092F, 0.098F, 0.004F);
+	static final Vector3f HANDLE = new Vector3f(0.086F, 0.092F, -0.029F);
 	/** Off-screen spot by the chest rig where magazines come from and go to. */
 	static final Vector3f POUCH = new Vector3f(-0.26F, -0.46F, 0.3F);
 	/** The way to the pouch and back, over {@code away} = 0..1: {away, x, y, z, roll, pitch}. */
@@ -162,9 +162,9 @@ public final class AkAnim {
 		new float[] {19.0F, 0.0F, -0.004F, 0.0F, 0.0F, 0.0F, 1.0F},
 		new float[] {AkItem.T_TAC_IN, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F});
 	/** Where a magazine's top sits (the pivot for tilting one in the hand). */
-	private static final Vector3f MAG_TOP = new Vector3f(0.0F, 0.036F, -0.06F);
+	private static final Vector3f MAG_TOP = new Vector3f(0.0F, 0.029F, -0.115F);
 	/** The middle of a magazine, about which a knocked-out one tumbles. */
-	private static final Vector3f MAG_MIDDLE = new Vector3f(0.0F, -0.1F, -0.11F);
+	private static final Vector3f MAG_MIDDLE = new Vector3f(0.0F, -0.1F, -0.188F);
 
 	/**
 	 * A reload with rounds left, magazine to magazine: the left hand fetches a full one from the pouch,

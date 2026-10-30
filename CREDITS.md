@@ -215,3 +215,9 @@ The heartbeat of the dying player is synthesized by `tools/gen_sounds_v13.py`.
 | Drawn | https://freesound.org/s/387957/ "Metal sound 9 (knife unsheathed)" | giddster | CC0 1.0 |
 | Caught | https://freesound.org/s/455437/ "flip knife.wav" | ExplosiveVFX | CC0 1.0 |
 | Cut | https://freesound.org/s/504610/ "Knife slice" | NeoSpica | CC0 1.0 |
+
+## AK-47 model (`tools/ak47_blender/`)
+
+Modelled in Blender after the photograph "AK-47 type II noBG.png" on Wikimedia Commons
+(https://commons.wikimedia.org/wiki/File:AK-47_type_II_noBG.png), used only as a reference for the
+outlines and proportions; the photograph itself is not shipped.

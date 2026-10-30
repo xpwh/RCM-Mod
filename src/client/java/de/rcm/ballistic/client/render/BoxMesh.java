@@ -55,6 +55,21 @@ public final class BoxMesh {
 		return new BoxMesh(d);
 	}
 
+	/** A mesh from raw vertex data (STRIDE floats each, four to a face), as written by a model exporter. */
+	static BoxMesh of(float[] data) {
+		return new BoxMesh(data);
+	}
+
+	/** A copy with every corner on one texture point: a part painted one plain colour from a swatch. */
+	public BoxMesh withUv(float u, float v) {
+		float[] d = this.data.clone();
+		for (int i = 0; i < d.length; i += STRIDE) {
+			d[i + 3] = u;
+			d[i + 4] = v;
+		}
+		return new BoxMesh(d);
+	}
+
 	/** A copy scaled by {@code k} about the origin. */
 	public BoxMesh scaled(float k) {
 		float[] d = this.data.clone();
