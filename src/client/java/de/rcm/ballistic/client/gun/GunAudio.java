@@ -126,6 +126,7 @@ public final class GunAudio {
 		if (mc.level == null) {
 			return;
 		}
+		de.rcm.ballistic.client.effect.AmbientLife.shot(muzzle, true);
 		Vec3 ear = mc.gameRenderer.getMainCamera().position();
 		double d = own ? 0.0 : ear.distanceTo(muzzle);
 		if (d > 160.0) {
@@ -151,6 +152,7 @@ public final class GunAudio {
 		if (mc.level == null) {
 			return;
 		}
+		de.rcm.ballistic.client.effect.AmbientLife.shot(muzzle, false);
 		Vec3 ear = mc.gameRenderer.getMainCamera().position();
 		double d = own ? 0.0 : ear.distanceTo(muzzle);
 		if (d > 900.0) {

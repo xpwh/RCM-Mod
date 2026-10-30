@@ -54,6 +54,12 @@ public final class ClientEffects {
 	public static void detonation(int warheadId, Vec3 pos) {
 		Warhead[] all = Warhead.values();
 		Warhead warhead = warheadId >= 0 && warheadId < all.length ? all[warheadId] : Warhead.HIGH_EXPLOSIVE;
+		boolean nuke = switch (warhead) {
+			case NUCLEAR, MIRV, HYDROGEN, TSAR, MIRV_WARHEAD, TACTICAL_NUKE, ANTIMATTER, POSEIDON -> true;
+			default -> false;
+		};
+		// every living thing for miles keeps its head down a good while after
+		AmbientLife.disturb(pos, nuke ? 600.0 : 250.0, nuke ? 24000 : 6000);
 		switch (warhead) {
 			case NUCLEAR, MIRV -> BlastShader.blast(BlastShader.Kind.NUCLEAR, pos, 1.0, 0xFFE2B0);
 			case HYDROGEN -> BlastShader.blast(BlastShader.Kind.NUCLEAR, pos, 1.6, 0xFFE2B0);

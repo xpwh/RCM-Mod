@@ -55,6 +55,7 @@ public class BallisticMissiles implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % 6000 == 0) {
 				RadiationManager.save(server);
+				de.rcm.ballistic.explosion.Regrowth.save(server);
 				de.rcm.ballistic.explosion.NuclearWinter.save(server);
 			}
 		});
@@ -68,6 +69,9 @@ public class BallisticMissiles implements ModInitializer {
 		net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) ->
 			de.rcm.ballistic.explosion.WorldCommand.register(dispatcher));
 		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
+		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.Regrowth::load);
+		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.Regrowth::save);
+		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.Regrowth::tick);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NewMoon::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.Aurora::load);
@@ -94,6 +98,7 @@ public class BallisticMissiles implements ModInitializer {
 			DefenseNetwork.clear();
 			EmpManager.clear();
 			RadiationManager.clear();
+			de.rcm.ballistic.explosion.Regrowth.clear();
 			de.rcm.ballistic.bunker.BunkerManager.clear();
 			de.rcm.ballistic.explosion.NuclearWinter.clear();
 			RemoteLaunch.clear();
