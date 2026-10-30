@@ -20,7 +20,13 @@ final class GlockClips {
 		return CLIPS.get(name);
 	}
 
-	static AkClips.Clip reload(boolean empty, int newKind) {
-		return CLIPS.get("reload_" + (empty ? "empty" : "tac") + "_" + (newKind == GlockMagazineItem.EXTENDED ? "ext" : "std"));
+	static AkClips.Clip reload(boolean empty, int newKind, int variant) {
+		String name = "reload_" + (empty ? "empty" : "tac") + "_" + (newKind == GlockMagazineItem.EXTENDED ? "ext" : "std");
+		if (!empty && variant == de.rcm.ballistic.gun.GunState.FUMBLE) {
+			name += "_fumble";
+		} else if (!empty && variant == de.rcm.ballistic.gun.GunState.DROPPED) {
+			name += "_drop";
+		}
+		return CLIPS.get(name);
 	}
 }

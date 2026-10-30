@@ -699,6 +699,7 @@ public final class DetonationManager {
 	}
 
 	private static void broadcast(ServerLevel level, Vec3 pos, Warhead warhead) {
+		de.rcm.ballistic.gun.Nerves.threat(level, pos, 160.0, null);
 		double range = warhead == Warhead.HYDROGEN || warhead == Warhead.POSEIDON ? HYDROGEN_EFFECT_RANGE
 			: warhead == Warhead.TSAR ? HYDROGEN_EFFECT_RANGE * 1.4
 			: warhead == Warhead.BOMBLET ? 600.0

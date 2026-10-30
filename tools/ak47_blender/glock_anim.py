@@ -418,6 +418,112 @@ def reload(kind, empty_gun):
     return end
 
 
+T_FUMBLE_HIT, FUMBLE_DELAY, T_SLIP, DROP_DELAY = 17, 9, 10, 15
+G = 0.0245  # gravity, metres a tick squared
+
+
+def down_at(t):
+    """The world's down in the pistol's frame at tick t."""
+    gm = gun_matrix(t).to_3x3()
+    return gm.inverted() @ (root.matrix_world.to_3x3().inverted() @ Vector((0, 0, -1)))
+
+
+def reload_shaken(kind, variant):
+    """A speed reload with rounds left, gone wrong under fire. "fumble": the fresh magazine comes up crooked, its
+    front edge catches the rim of the well - a clack, a jolt through the gun - it skids off, is pulled down and
+    squared up, and goes home the second time. "drop": it slips from the fingers on its way up and falls - the
+    hand snatches after it, misses - and goes back to the belt for another."""
+    d = FUMBLE_DELAY if variant == "fumble" else DROP_DELAY
+    end = RELOAD_TACTICAL + d
+    keys = {
+        0: (0, 0, 0, 0, 0, 0, "B"),
+        3.4: (-0.04, 0.095, 0.022, -24, 10, 9, "QUADO"),
+        T_RELEASE + 0.6: (-0.045, 0.104, 0.024, -29, 13.5, 10.5, "OUT"),
+        T_DROP + 0.4: (-0.054, 0.122, 0.028, -35, 11, 12, "OUT"),
+        10: (-0.058, 0.13, 0.03, -36, 12, 13, "B"),
+    }
+    if variant == "fumble":
+        keys.update({
+            15: (-0.06, 0.134, 0.031, -37, 12.5, 13, "IN"),
+            T_FUMBLE_HIT + 0.15: (-0.062, 0.127, 0.034, -39, 10, 14.5, "OUT"),   # the clack jolts it
+            19.5: (-0.061, 0.131, 0.032, -37.5, 14, 13.2, "B"),                  # looked at, closer
+            15 + d: (-0.06, 0.134, 0.031, -37, 12.5, 13, "B"),
+        })
+    else:
+        keys.update({
+            T_SLIP + 0.8: (-0.057, 0.124, 0.03, -34, 7, 12.5, "OUT"),            # a start; eyes down after it
+            13.5: (-0.058, 0.127, 0.03, -35, 9, 13, "B"),
+            15 + d: (-0.06, 0.134, 0.031, -37, 12.5, 13, "B"),
+        })
+    keys.update({
+        T_IN + d - 0.7: (-0.06, 0.133, 0.031, -37, 12, 13, "QUADO"),
+        T_IN + d + 0.2: (-0.059, 0.15, 0.028, -34, 7.5, 12.5, "OUT"),
+        T_IN + d + 2: (-0.06, 0.137, 0.03, -36, 11.5, 13, "B"),
+        T_IN + d + 4.5: (-0.03, 0.07, 0.016, -18, 6, 6, "B"),
+        end - 2.6: (0.004, -0.006, 0.003, 1.4, -0.9, -1.2, "B"),
+        end: (0, 0, 0, 0, 0, 0, "B"),
+    })
+    gun_keys(keys)
+    drop_old(T_RELEASE, T_RELEASE + 9)
+    pouch = held(POUCH, -50, 0, -30, kind)
+    up = held(add(POUCH, (0.03, 0.08, 0.01)), -35, 0, -18, kind)
+    below = held(SEAT + MAG_DOWN * (LENGTH[kind] + 0.05) + Vector((-0.004, 0.0, -0.01)), 8, 0, -4, kind)
+    entry = held(SEAT + MAG_DOWN * (LENGTH[kind] + 0.012), 3, 0, 0, kind)
+    new = {6.5: (*pouch, "B"), 9: (*up, "B")}
+    hand = [(0, SUPPORT, "B"), (2.5, (-0.07, -0.08, 0.0), "B"), (6.5, POUCH, "B")]
+    if variant == "fumble":
+        rim = held(SEAT + MAG_DOWN * (LENGTH[kind] + 0.004) + Vector((-0.006, 0.0, -0.007)), 10, 5, -7, kind)
+        skid = held(SEAT + MAG_DOWN * (LENGTH[kind] + 0.034) + Vector((-0.016, 0.0, -0.02)), 16, -6, -11, kind)
+        new.update({
+            13.5: (*held(SEAT + MAG_DOWN * (LENGTH[kind] + 0.05) + Vector((-0.008, 0.0, -0.014)), 11, 4, -7, kind), "B"),
+            15.6: (*held(SEAT + MAG_DOWN * (LENGTH[kind] + 0.02) + Vector((-0.007, 0.0, -0.01)), 9, 5, -6, kind), "IN"),
+            T_FUMBLE_HIT: (*rim, "OUT"),                                     # the front edge on the rim: stopped
+            17.8: (*skid, "B"),                                              # skidded off, turned
+            20.5: (*below, "B"),                                             # pulled down, squared up
+            15.6 + d: (*entry, "IN"),
+            T_IN + d - 0.5: (*MAG_DOWN * 0.002, 0, 0, 0, "QUADO"),
+            T_IN + d: (*SEATED, "C"),
+        })
+        prop_keys("newVis", {0: 0, 6.5: 1})
+        influence_keys(C_L_NEW, {0: (0, "C"), 6.0: (0, "QUAD"), 6.6: (1, "C"), T_IN + d + 0.2: (1, "QUADO"), T_IN + d + 1.2: (0, "C")})
+    else:
+        slip_hand = Vector(POUCH).lerp(SEAT + MAG_DOWN * (LENGTH[kind] + 0.05), 0.35) + Vector((0.01, 0.03, 0.0))
+        slip = held(slip_hand, -26, 0, -14, kind)
+        new[T_SLIP] = (*slip, "L")
+        # the point it was held by falls under gravity; the magazine tumbles about it
+        vel = Vector((0.002, 0.008, 0.0))
+        for i in range(1, 15):
+            dt = i * 0.5
+            h = slip_hand + vel * dt + down_at(T_SLIP + dt) * (0.5 * G * dt * dt)
+            new[T_SLIP + dt] = (*held(h, -26 - 40 * dt, 14 * dt, -14 + 25 * dt, kind), "L")
+        last = new[T_SLIP + 7.0]
+        new[T_SLIP + 7.0] = (*last[:6], "C")                                 # out of sight: it waits there
+        new.update({
+            6.5 + d: (*pouch, "B"),                                          # the second one off the belt
+            9 + d: (*up, "B"),
+            13.5 + d: (*below, "B"),
+            15.6 + d: (*entry, "IN"),
+            T_IN + d - 0.5: (*MAG_DOWN * 0.002, 0, 0, 0, "QUADO"),
+            T_IN + d: (*SEATED, "C"),
+        })
+        prop_keys("newVis", {0: 0, 6.5: 1, T_SLIP + 7.0: 0, 6.5 + d: 1})
+        influence_keys(C_L_NEW, {0: (0, "C"), 6.0: (0, "QUAD"), 6.6: (1, "C"), T_SLIP: (1, "QUAD"), T_SLIP + 0.3: (0, "C"),
+                                 6.0 + d: (0, "QUAD"), 6.6 + d: (1, "C"), T_IN + d + 0.2: (1, "QUADO"), T_IN + d + 1.2: (0, "C")})
+        hand += [(T_SLIP, tuple(slip_hand), "OUT"),
+                 (T_SLIP + 1.0, tuple(slip_hand + Vector((0.006, -0.05, 0.015))), "B"),   # the snatch after it
+                 (T_SLIP + 2.6, tuple(slip_hand + Vector((0.0, -0.09, 0.02))), "B"),
+                 (6.5 + d, POUCH, "B")]
+    mag_keys(NEW, new)
+    prop_keys("oldVis", {0: 1, T_RELEASE + 9: 0})
+    prop_keys("newIn", {0: 0, T_IN + d: 1})
+    hand += [(T_IN + d + 0.4, tuple(SEAT + MAG_DOWN * (LENGTH[kind] - 0.004) + Vector((-0.012, 0, 0))), "B"),
+             (T_IN + d + 3.5, (-0.05, -0.08, 0.02), "B"), (end - 3, SUPPORT, "B")]
+    free_keys("L", {t: (p, m) for t, p, m in hand})
+    free_keys("R", {0: (GRIP, "C")})
+    slide_keys({0: (0.0, "C")})
+    return end
+
+
 def clip_inspect():
     """Looking it over: brought up and rolled to show the right side and the port; the support hand pinches the
     front serrations and eases the slide back - brass in the chamber - and lets it snap home; rolled over to look
@@ -513,6 +619,10 @@ CLIPS = {
     "reload_tac_ext": lambda: reload("ext", False),
     "reload_empty_std": lambda: reload("std", True),
     "reload_empty_ext": lambda: reload("ext", True),
+    "reload_tac_std_fumble": lambda: reload_shaken("std", "fumble"),
+    "reload_tac_ext_fumble": lambda: reload_shaken("ext", "fumble"),
+    "reload_tac_std_drop": lambda: reload_shaken("std", "drop"),
+    "reload_tac_ext_drop": lambda: reload_shaken("ext", "drop"),
     "inspect": clip_inspect,
     "dry": clip_dry,
     "draw": clip_draw,
@@ -646,7 +756,7 @@ if __name__ == "__main__":
     for name, build in CLIPS.items():
         if ONLY and name not in ONLY:
             continue
-        clear("ext" if name.endswith("_ext") else "std")
+        clear("ext" if "_ext" in name else "std")
         length = build()
         n = length * SPT + 1
         samples = []

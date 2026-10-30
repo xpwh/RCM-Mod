@@ -36,6 +36,11 @@ public final class BodyHeatClient {
 		WorldRenderEvents.START_MAIN.register(context -> shiver(Minecraft.getInstance()));
 	}
 
+	/** How stiff with cold the body is, 0-1 (the hands shake with it). */
+	public static float cold() {
+		return Mth.clamp((-shownBody - 0.3F) / 0.5F, 0.0F, 1.0F);
+	}
+
 	public static void receive(float b, float a) {
 		body = b;
 		air = a;

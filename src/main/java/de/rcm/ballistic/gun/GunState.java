@@ -42,6 +42,12 @@ public record GunState(int rounds, int ammo, boolean hasMag, int mode, long last
 	public static final int TACTICAL = 1;
 	public static final int EMPTY = 2;
 
+	/** How a (tactical) reload goes: cleanly, a fumble (the magazine catches the well's lip and has to be put in again), or the
+	 * fresh magazine slipping out of the fingers - kept in the bits of {@code reloadAmmo} above the ammunition type. */
+	public static final int CLEAN = 0;
+	public static final int FUMBLE = 1;
+	public static final int DROPPED = 2;
+
 	public static final GunState DEFAULT = new GunState(0, BALL, false, AUTO, -100L, -1L, 0, BALL);
 
 	public static final Codec<GunState> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -52,7 +58,7 @@ public record GunState(int rounds, int ammo, boolean hasMag, int mode, long last
 		Codec.LONG.optionalFieldOf("last_shot", -100L).forGetter(GunState::lastShot),
 		Codec.LONG.optionalFieldOf("reload_start", -1L).forGetter(GunState::reloadStart),
 		Codec.INT.optionalFieldOf("reload_kind", 0).forGetter(GunState::reloadKind),
-		Codec.INT.optionalFieldOf("reload_ammo", 0).forGetter(GunState::reloadAmmo)
+		Codec.INT.optionalFieldOf("reload_ammo", 0).forGetter(GunState::rawReloadAmmo)
 	).apply(i, GunState::new));
 
 	public static final StreamCodec<ByteBuf, GunState> STREAM_CODEC = StreamCodec.composite(
@@ -63,9 +69,25 @@ public record GunState(int rounds, int ammo, boolean hasMag, int mode, long last
 		ByteBufCodecs.VAR_LONG, GunState::lastShot,
 		ByteBufCodecs.VAR_LONG, GunState::reloadStart,
 		ByteBufCodecs.VAR_INT, GunState::reloadKind,
-		ByteBufCodecs.VAR_INT, GunState::reloadAmmo,
+		ByteBufCodecs.VAR_INT, GunState::rawReloadAmmo,
 		GunState::new
 	);
+
+	/** The kind of magazine going in (the low bits; above them how the reload goes, see {@link #reloadVariant()}). */
+	@Override
+	public int reloadAmmo() {
+		return this.reloadAmmo & 0xFF;
+	}
+
+	/** {@link #CLEAN}, {@link #FUMBLE} or {@link #DROPPED}. */
+	public int reloadVariant() {
+		return this.reloadAmmo >> 8 & 0xFF;
+	}
+
+	/** Both, as stored: to carry over into a state built while the reload goes on. */
+	public int rawReloadAmmo() {
+		return this.reloadAmmo;
+	}
 
 	public boolean reloading() {
 		return this.reloadStart >= 0;
@@ -84,7 +106,11 @@ public record GunState(int rounds, int ammo, boolean hasMag, int mode, long last
 	}
 
 	public GunState startReload(long time, int kind, int ammo) {
-		return new GunState(this.rounds, this.ammo, this.hasMag, this.mode, this.lastShot, time, kind, ammo);
+		return this.startReload(time, kind, ammo, CLEAN);
+	}
+
+	public GunState startReload(long time, int kind, int ammo, int variant) {
+		return new GunState(this.rounds, this.ammo, this.hasMag, this.mode, this.lastShot, time, kind, ammo & 0xFF | variant << 8);
 	}
 
 	public GunState loaded(int rounds, int ammo) {

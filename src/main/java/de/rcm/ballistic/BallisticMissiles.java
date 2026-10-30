@@ -77,6 +77,11 @@ public class BallisticMissiles implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.AshStorms::tick);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.base.ShulkerGuards::tick);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.injury.BodyHeat::tick);
+		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, base, taken, blocked) -> {
+			if (entity instanceof net.minecraft.server.level.ServerPlayer p && taken > 0.0F) {
+				de.rcm.ballistic.gun.Nerves.hurt(p);
+			}
+		});
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
 			if (entity instanceof net.minecraft.world.entity.LightningBolt bolt && entity.tickCount == 0) {
 				de.rcm.ballistic.explosion.LightningStrikes.struck(world, bolt);
@@ -117,6 +122,7 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.base.ShulkerGuards.clear();
 			de.rcm.ballistic.explosion.Snow.clear();
 			de.rcm.ballistic.injury.BodyHeat.clear();
+			de.rcm.ballistic.gun.Nerves.clear();
 			de.rcm.ballistic.bunker.BunkerManager.clear();
 			de.rcm.ballistic.explosion.NuclearWinter.clear();
 			RemoteLaunch.clear();

@@ -183,6 +183,12 @@ public final class BodyHeat {
 		return air < 18.0F ? warm : (air > 26.0F ? heavy + warm * 0.25F : 0.0F);
 	}
 
+	/** The body's state for the player, -1 freezing .. 1 heat stroke. */
+	public static float body(ServerPlayer p) {
+		float[] s = STATE.get(p.getUUID());
+		return s == null ? 0.0F : s[0];
+	}
+
 	public static void forget(ServerPlayer p) {
 		STATE.remove(p.getUUID());
 	}

@@ -133,6 +133,7 @@ public class ShotgunItem extends Item {
 			Vec3 dir = look.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
 			BulletEntity.firePellet(level, player, eye, dir.scale(MUZZLE_VELOCITY * (0.95 + random.nextDouble() * 0.1)), PELLET_DAMAGE);
 		}
+		Nerves.threat(level, muzzle, 32.0, player instanceof ServerPlayer sp ? sp : null);
 		// the blast: each client works out how it sounds where they are (close, far, echoes, rooms)
 		var shot = new de.rcm.ballistic.network.ModNetworking.GunshotPayload(player.getId(), muzzle.x, muzzle.y, muzzle.z, (float) look.x, (float) look.y,
 			(float) look.z, de.rcm.ballistic.network.ModNetworking.GunshotPayload.SHOTGUN

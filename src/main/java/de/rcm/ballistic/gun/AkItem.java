@@ -53,6 +53,21 @@ public class AkItem extends Item {
 	 */
 	public static final int T_TAC_OUT = 14;
 	public static final int T_TAC_IN = 21;
+	/**
+	 * Under pressure a reload with rounds left can go wrong (see {@link Nerves}). A fumble: the fresh magazine's nose
+	 * catches the lip of the well at {@code T_FUMBLE_HIT}, it is pulled back, lined up, and goes in ten ticks late.
+	 * Dropped: it slips out of the fingers on the way up at {@code T_SLIP}, falls, and the hand goes back to the
+	 * pouch for another - everything after sixteen ticks late.
+	 */
+	public static final int T_FUMBLE_HIT = 17;
+	public static final int FUMBLE_DELAY = 10;
+	public static final int T_SLIP = 9;
+	public static final int DROP_DELAY = 16;
+
+	/** How much later than a clean reload the rest of this one comes. */
+	public static int delay(int variant) {
+		return variant == GunState.FUMBLE ? FUMBLE_DELAY : variant == GunState.DROPPED ? DROP_DELAY : 0;
+	}
 	/** Muzzle velocity, blocks per tick (715 m/s). */
 	public static final double MUZZLE_VELOCITY = 35.75;
 
@@ -228,6 +243,7 @@ public class AkItem extends Item {
 	public static void shoot(ServerLevel level, net.minecraft.world.entity.LivingEntity shooter, Vec3 origin, Vec3 muzzle, Vec3 dir, boolean tracer,
 		boolean red, boolean last) {
 		BulletEntity.fire(level, shooter, origin, dir.scale(MUZZLE_VELOCITY), tracer, red);
+		Nerves.threat(level, muzzle, 32.0, shooter instanceof ServerPlayer sp ? sp : null);
 		// everybody near hears it; the shooter gets it too, for the tracer on the bullet's true line
 		GunshotPayload shot = new GunshotPayload(shooter.getId(), muzzle.x, muzzle.y, muzzle.z, (float) dir.x, (float) dir.y, (float) dir.z,
 			(last ? GunshotPayload.LAST : 0) | (tracer ? GunshotPayload.TRACER : 0) | (tracer && red ? GunshotPayload.RED : 0)
@@ -282,7 +298,8 @@ public class AkItem extends Item {
 		}
 		player.stopUsingItem();
 		int kind = state.rounds() > 0 ? GunState.TACTICAL : GunState.EMPTY;
-		setState(stack, state.startReload(player.level().getGameTime(), kind, want));
+		int variant = kind == GunState.TACTICAL ? Nerves.reloadVariant(player) : GunState.CLEAN;
+		setState(stack, state.startReload(player.level().getGameTime(), kind, want, variant));
 	}
 
 	/** V pressed: safe -> auto -> single -> safe. */
@@ -334,22 +351,36 @@ public class AkItem extends Item {
 			return;
 		}
 		long t = level.getGameTime() - state.reloadStart();
-		int duration = state.reloadKind() == GunState.EMPTY ? RELOAD_EMPTY : RELOAD_TACTICAL;
 		boolean tactical = state.reloadKind() == GunState.TACTICAL;
-		if (t == (tactical ? T_TAC_OUT : T_MAG_OUT) && state.hasMag()) {
+		int variant = tactical ? state.reloadVariant() : GunState.CLEAN;
+		// a dropped magazine holds everything up from the strike on; a fumble only the seating
+		int tacOut = T_TAC_OUT + (variant == GunState.DROPPED ? DROP_DELAY : 0);
+		int tacIn = T_TAC_IN + delay(variant);
+		int duration = state.reloadKind() == GunState.EMPTY ? RELOAD_EMPTY : RELOAD_TACTICAL + delay(variant);
+		if (variant == GunState.DROPPED && t == T_SLIP) {
+			// the fresh magazine slips out of the fingers and falls - another one from the pouch, if there is one
+			if (!this.slip(level, player, state.reloadAmmo())) {
+				setState(stack, state.cancelReload());
+				return;
+			}
+		} else if (variant == GunState.FUMBLE && t == T_FUMBLE_HIT) {
+			// the nose catches the lip of the well: a hard clack
+			level.playSound(null, player.getX(), player.getEyeY(), player.getZ(), ModRegistry.AK_MAG_OUT, SoundSource.PLAYERS, 0.8F, 0.75F);
+		}
+		if (t == (tactical ? tacOut : T_MAG_OUT) && state.hasMag()) {
 			this.sound(level, player, ModRegistry.AK_MAG_OUT, 1.0F);
 		} else if (t == T_MAG_DROP && state.hasMag() && state.reloadKind() == GunState.EMPTY) {
 			// a speed reload: the empty magazine is let go and falls where you stand - pick it up again later
 			this.dropMagazine(level, player, state, 0, false);
-			setState(stack, new GunState(0, state.ammo(), false, state.mode(), state.lastShot(), state.reloadStart(), state.reloadKind(), state.reloadAmmo()));
+			setState(stack, new GunState(0, state.ammo(), false, state.mode(), state.lastShot(), state.reloadStart(), state.reloadKind(), state.rawReloadAmmo()));
 			state = state(stack);
-		} else if (t == T_TAC_OUT + 1 && state.hasMag() && tactical) {
+		} else if (t == tacOut + 1 && state.hasMag() && tactical) {
 			// knocked out by the fresh one: away forward with what is left in it; the round in the chamber stays
 			this.dropMagazine(level, player, state, Math.max(0, state.rounds() - 1), true);
 			setState(stack, new GunState(Math.min(1, state.rounds()), state.ammo(), false, state.mode(), state.lastShot(), state.reloadStart(),
-				state.reloadKind(), state.reloadAmmo()));
+				state.reloadKind(), state.rawReloadAmmo()));
 			state = state(stack);
-		} else if (t == (tactical ? T_TAC_IN : T_MAG_IN)) {
+		} else if (t == (tactical ? tacIn : T_MAG_IN)) {
 			this.sound(level, player, ModRegistry.AK_MAG_IN, 1.0F);
 		} else if (t == T_CHARGE && state.reloadKind() == GunState.EMPTY) {
 			this.sound(level, player, ModRegistry.AK_CHARGE, 1.0F);
@@ -380,6 +411,29 @@ public class AkItem extends Item {
 		}
 		int chambered = state.reloadKind() == GunState.TACTICAL ? 1 : 0;
 		setState(stack, state.loaded(newRounds + chambered, state.reloadAmmo()));
+	}
+
+	/**
+	 * The fresh magazine slipping from the hand: the fullest one of that kind leaves the inventory and falls at your feet,
+	 * rounds and all. False if there is no other one to reach for after it.
+	 */
+	private boolean slip(ServerLevel level, Player player, int type) {
+		if (player.getAbilities().instabuild) {
+			return true;
+		}
+		ItemStack mag = findMagazine(player, type);
+		if (mag.isEmpty()) {
+			return false;
+		}
+		ItemStack fallen = mag.split(1);
+		Vec3 look = Vec3.directionFromRotation(0.0F, player.getYRot());
+		Vec3 at = player.position().add(0.0, player.getBbHeight() * 0.5, 0.0).add(look.scale(0.25));
+		ItemEntity item = new ItemEntity(level, at.x, at.y, at.z, fallen);
+		item.setDeltaMovement(level.getRandom().triangle(0.0, 0.03), -0.05, level.getRandom().triangle(0.0, 0.03));
+		item.setPickUpDelay(40);
+		level.addFreshEntity(item);
+		MagazineLanding.watch(item);
+		return !findMagazine(player, type).isEmpty();
 	}
 
 	/**

@@ -78,7 +78,7 @@ public final class GlockMotion {
 	 */
 	public record Frame(float now, float aim, float shot, boolean locked, float reload, boolean empty, boolean hadMag, int oldKind, int newKind, float dry,
 		float inspect, float idle, float drawn, float run, float stride, float walk, float lean, float landed, float landHard, float tired, float breath,
-		int arm) {
+		int arm, int variant) {
 	}
 
 	private static final class Spring {
@@ -162,7 +162,7 @@ public final class GlockMotion {
 	/** The clip playing now and how far into it (null: none), first come first served. */
 	private static AkClips.Clip clip(Frame f) {
 		if (f.reload() >= 0.0F) {
-			return GlockClips.reload(f.empty(), f.newKind());
+			return GlockClips.reload(f.empty(), f.newKind(), f.variant());
 		}
 		if (f.inspect() >= 0.0F && f.inspect() < INSPECT) {
 			return GlockClips.get("inspect");
@@ -296,6 +296,9 @@ public final class GlockMotion {
 		}
 		poseStack.mulPose(Axis.XP.rotationDegrees((Mth.sin(now * 0.05F) * 0.45F + Mth.sin(f.breath()) * 2.0F * f.tired()) * steady));
 		poseStack.mulPose(Axis.YP.rotationDegrees((Mth.cos(now * 0.034F) * 0.4F + Mth.cos(f.breath() * 0.5F) * 1.2F * f.tired()) * steady));
+		if (f.drawn() != 100.0F) {
+			Tremor.apply(poseStack, now, f.aim()); // your own hands only (another player's frame has no draw time)
+		}
 
 		// the step: a bob and a sway, the arms soaking up most of it on the sights
 		float hold = 1.0F - 0.75F * a;
@@ -373,8 +376,8 @@ public final class GlockMotion {
 		Vector3f ls = new Vector3f(LEFT_SHOULDER).lerp(AIM_LEFT_SHOULDER, a);
 		// reloading, the shooting elbow comes up and out so the forearm runs off to the side, clear of the magwell
 		float r = f.reload();
-		float in = r < 0.0F ? 0.0F : ramp(r, 0.0F, 4.0F) * (1.0F - ramp(r, (f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL) - 6.0F,
-			f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL));
+		int length = f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL + GlockItem.delay(f.variant());
+		float in = r < 0.0F ? 0.0F : ramp(r, 0.0F, 4.0F) * (1.0F - ramp(r, length - 6.0F, length));
 		Vector3f rightPole = new Vector3f(RIGHT_POLE).lerp(new Vector3f(1.0F, 0.1F, 0.5F), in);
 		float[] clip = sample(f);
 		Vector3f grip = clip != null ? AkClips.vec(clip, 33, new Vector3f()) : new Vector3f(GRIP);

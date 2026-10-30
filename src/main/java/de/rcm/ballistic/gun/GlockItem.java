@@ -55,6 +55,20 @@ public class GlockItem extends Item {
 	public static final int T_RACK_BACK = 25;
 	public static final int T_RACK_FORWARD = 28;
 	public static final int RELOAD_EMPTY = 35;
+	/**
+	 * A speed reload with rounds left gone wrong under pressure (see {@link Nerves}): fumbled - the magazine's nose
+	 * catches the edge of the well at {@code T_FUMBLE_HIT} and goes in at the second go, nine ticks late - or dropped,
+	 * slipping out of the fingers at {@code T_SLIP}, the hand going back to the belt for another: fifteen ticks late.
+	 */
+	public static final int T_FUMBLE_HIT = 17;
+	public static final int FUMBLE_DELAY = 9;
+	public static final int T_SLIP = 10;
+	public static final int DROP_DELAY = 15;
+
+	/** How much later than a clean reload the new magazine goes in (and the reload ends). */
+	public static int delay(int variant) {
+		return variant == GunState.FUMBLE ? FUMBLE_DELAY : variant == GunState.DROPPED ? DROP_DELAY : 0;
+	}
 	/** Muzzle velocity, blocks per tick (375 m/s). */
 	public static final double MUZZLE_VELOCITY = 18.75;
 
@@ -158,6 +172,7 @@ public class GlockItem extends Item {
 		var random = level.getRandom();
 		Vec3 dir = aim.add(random.nextGaussian() * spread, random.nextGaussian() * spread, random.nextGaussian() * spread).normalize();
 		BulletEntity.firePistol(level, player, eye, dir.scale(MUZZLE_VELOCITY));
+		Nerves.threat(level, muzzle, 28.0, player instanceof ServerPlayer sp ? sp : null);
 		GunshotPayload shot = new GunshotPayload(player.getId(), muzzle.x, muzzle.y, muzzle.z, (float) dir.x, (float) dir.y, (float) dir.z,
 			GunshotPayload.PISTOL | (left == 0 ? GunshotPayload.LAST : 0) | (GunAttachments.suppressed(player) ? GunshotPayload.SUPPRESSED : 0));
 		for (ServerPlayer p : level.players()) {
@@ -200,7 +215,8 @@ public class GlockItem extends Item {
 		}
 		player.stopUsingItem();
 		int kind = state.rounds() > 0 ? GunState.TACTICAL : GunState.EMPTY;
-		setState(stack, state.startReload(player.level().getGameTime(), kind, want));
+		int variant = kind == GunState.TACTICAL ? Nerves.reloadVariant(player) : GunState.CLEAN;
+		setState(stack, state.startReload(player.level().getGameTime(), kind, want, variant));
 	}
 
 	/** The fullest magazine of {@code kind} in the inventory (not counting empties). */
@@ -233,22 +249,33 @@ public class GlockItem extends Item {
 		}
 		long t = level.getGameTime() - state.reloadStart();
 		boolean empty = state.reloadKind() == GunState.EMPTY;
+		int variant = empty ? GunState.CLEAN : state.reloadVariant();
+		int in = T_IN + delay(variant);
+		if (variant == GunState.DROPPED && t == T_SLIP) {
+			// the fresh magazine slips out of the fingers and falls - another one off the belt, if there is one
+			if (!this.slip(level, player, state.reloadAmmo())) {
+				setState(stack, state.cancelReload());
+				return;
+			}
+		} else if (variant == GunState.FUMBLE && t == T_FUMBLE_HIT) {
+			level.playSound(null, player.getX(), player.getEyeY(), player.getZ(), ModRegistry.GLOCK_MAG_OUT, SoundSource.PLAYERS, 0.7F, 0.7F);
+		}
 		if (t == T_RELEASE && state.hasMag()) {
 			sound(level, player, ModRegistry.GLOCK_MAG_OUT, 1.0F);
 		} else if (t == T_DROP && state.hasMag()) {
 			// let go: it drops out of the grip and falls where you stand, with what was left in it
 			this.dropMagazine(level, player, state.ammo(), Math.max(0, state.rounds() - (empty ? 0 : 1)));
 			setState(stack, new GunState(empty ? 0 : 1, state.ammo(), false, state.mode(), state.lastShot(), state.reloadStart(), state.reloadKind(),
-				state.reloadAmmo()));
+				state.rawReloadAmmo()));
 			state = state(stack);
-		} else if (t == T_IN) {
+		} else if (t == in) {
 			sound(level, player, ModRegistry.GLOCK_MAG_IN, 1.0F);
 		} else if (empty && t == T_RACK_BACK) {
 			sound(level, player, ModRegistry.GLOCK_SLIDE_BACK, 0.9F);
 		} else if (empty && t == T_RACK_FORWARD) {
 			sound(level, player, ModRegistry.GLOCK_SLIDE_FORWARD, 1.0F);
 		}
-		if (t == T_IN) {
+		if (t == in) {
 			// the new magazine is in: take it out of the inventory now
 			int rounds;
 			if (player.getAbilities().instabuild) {
@@ -265,14 +292,34 @@ public class GlockItem extends Item {
 			// the round in the chamber stays; from empty it is only chambered by the rack (the slide's still back)
 			int chambered = empty ? 0 : Math.min(1, state.rounds());
 			setState(stack, new GunState(rounds + chambered, state.reloadAmmo(), true, state.mode(), state.lastShot(), state.reloadStart(),
-				state.reloadKind(), state.reloadAmmo()));
+				state.reloadKind(), state.rawReloadAmmo()));
 			state = state(stack);
 		}
-		if (t >= (empty ? RELOAD_EMPTY : RELOAD_TACTICAL)) {
+		if (t >= (empty ? RELOAD_EMPTY : RELOAD_TACTICAL + delay(variant))) {
 			// racked: the slide comes off its stop and the shooting can begin again
 			setState(stack, new GunState(state.rounds(), state.ammo(), state.hasMag(), state.mode(), empty ? -100L : state.lastShot(), -1L, 0,
 				state.reloadAmmo()));
 		}
+	}
+
+	/** The fresh magazine slipping from the hand: it leaves the inventory and falls at your feet. False if none is left. */
+	private boolean slip(ServerLevel level, Player player, int kind) {
+		if (player.getAbilities().instabuild) {
+			return true;
+		}
+		ItemStack mag = findMagazine(player, kind);
+		if (mag.isEmpty()) {
+			return false;
+		}
+		ItemStack fallen = mag.split(1);
+		Vec3 look = Vec3.directionFromRotation(0.0F, player.getYRot());
+		Vec3 at = player.position().add(0.0, player.getBbHeight() * 0.5, 0.0).add(look.scale(0.25));
+		ItemEntity item = new ItemEntity(level, at.x, at.y, at.z, fallen);
+		item.setDeltaMovement(level.getRandom().triangle(0.0, 0.02), -0.05, level.getRandom().triangle(0.0, 0.02));
+		item.setPickUpDelay(40);
+		level.addFreshEntity(item);
+		MagazineLanding.watch(item);
+		return !findMagazine(player, kind).isEmpty();
 	}
 
 	private void dropMagazine(ServerLevel level, Player player, int kind, int rounds) {

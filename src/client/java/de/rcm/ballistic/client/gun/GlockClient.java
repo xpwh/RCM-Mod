@@ -111,7 +111,7 @@ public final class GlockClient {
 		if (s.reloading()) {
 			Boolean seen = HAD_MAG.get(s.reloadStart());
 			if (seen == null) {
-				seen = s.hasMag() || reload >= GlockItem.T_IN;
+				seen = s.hasMag() || reload >= GlockItem.T_IN + GlockItem.delay(s.reloadVariant());
 				if (reload < GlockItem.T_DROP) {
 					HAD_MAG.put(s.reloadStart(), seen);
 				}
@@ -127,7 +127,7 @@ public final class GlockClient {
 			me ? now - busyTick : 0.0F, me ? now - equipTick : 100.0F, me ? GlockMotion.smooth(Mth.lerp(partialTick, prevSprint, sprint)) : 0.0F,
 			me ? player.walkAnimation.position(partialTick) : 0.0F, me ? Mth.lerp(partialTick, prevWalk, walk) : 0.0F,
 			me ? Mth.lerp(partialTick, prevStrafe, strafe) : 0.0F, me ? now - landTick : 100.0F, landHard, me ? Fatigue.level() : 0.0F,
-			me ? Fatigue.breathPhase(partialTick) : 0.0F, me ? Injuries.get(player).arm() : 0);
+			me ? Fatigue.breathPhase(partialTick) : 0.0F, me ? Injuries.get(player).arm() : 0, s.reloadKind() == GunState.EMPTY ? 0 : s.reloadVariant());
 	}
 
 	/** Everything that moves on this gun right now, for its model. */

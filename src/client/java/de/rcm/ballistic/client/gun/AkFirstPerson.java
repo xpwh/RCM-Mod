@@ -243,6 +243,8 @@ public final class AkFirstPerson {
 		poseStack.mulPose(Axis.XP.rotationDegrees((Mth.sin(now * 0.045F) * 0.35F + Mth.sin(breath) * 1.6F * tired) * steady));
 		poseStack.mulPose(Axis.YP.rotationDegrees((Mth.cos(now * 0.031F) * 0.3F + Mth.cos(breath * 0.5F) * 0.9F * tired) * steady));
 		poseStack.translate(0.0F, Mth.sin(breath) * 0.012F * tired * steady, 0.0F);
+		// shaking hands: stress, cold
+		Tremor.apply(poseStack, now, aim);
 
 		// checking the magazine: canted and brought in so you can look at it
 		float checkT = AkClient.checkTime(now);

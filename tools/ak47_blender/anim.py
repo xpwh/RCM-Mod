@@ -286,7 +286,7 @@ def clip_reload_tactical():
     })
     # the old magazine: knocked out at T_TAC_OUT, flying away forward and down, tumbling
     old = {0: (*SEATED, "C"), 13.6: (*SEATED, "QUAD"), 14.6: (0, -0.01, -0.004, 24, 3, 0, "L")}
-    for i in range(1, 8):
+    for i in range(1, 7):
         f = i * 1.0
         old[14.6 + f] = (-0.006 * f, -0.01 + 0.012 * f - 0.0163 * f * f, -0.004 - 0.05 * f, 24 + 21 * f, 3 + 5 * f, 2 * f, "L")
     mag_keys(mag, old)
@@ -304,7 +304,8 @@ def clip_reload_tactical():
         T_TAC_IN: (*SEATED, "C"),
     })
     mag_keys(mag, {T_TAC_IN: (*SEATED, "QUADO"), T_TAC_IN + 1.5: (0, -0.006, 0, 0, 0, 0, "B"), T_TAC_IN + 3: (*SEATED, "C")})
-    prop_keys("magVis", {0: 1, 21.5: 0, T_TAC_IN: 1})
+    # the old one is gone (hidden) just before the fresh one, seated, takes its place
+    prop_keys("magVis", {0: 1, T_TAC_IN - 0.2: 0, T_TAC_IN: 1})
     prop_keys("mag2Vis", {0: 0, 5.5: 1, T_TAC_IN: 0})
     prop_keys("magFresh", {0: 0, T_TAC_IN: 1})
     # the support hand: off the handguard down to the pouch, with the fresh magazine until it is seated, back
@@ -321,6 +322,179 @@ def clip_reload_tactical():
     free_keys("R", {0: (GRIP, "C")})
     bolt_keys({0: (0, "C")})
     return 38
+
+
+T_FUMBLE_HIT, FUMBLE_DELAY, T_SLIP, DROP_DELAY = 17, 10, 9, 16
+G = 0.0245  # gravity, metres a tick squared
+
+
+def gun_down(t):
+    """The world's down, seen in the rifle's frame at tick t (the rifle is canted and turned while reloading)."""
+    scene.frame_set(int(t * FPT), subframe=(t * FPT) % 1.0)
+    return gun.matrix_local.to_3x3().inverted() @ Vector((0, -1, 0))
+
+
+def grip_at(ob, t):
+    """Where a grip point is at tick t, in the rifle's frame."""
+    scene.frame_set(int(t * FPT), subframe=(t * FPT) % 1.0)
+    return (gun.matrix_world.inverted() @ ob.matrix_world).translation.copy()
+
+
+def old_flight():
+    """The old magazine knocked out by the strike at T_TAC_OUT: away forward and down, tumbling."""
+    old = {0: (*SEATED, "C"), 13.6: (*SEATED, "QUAD"), 14.6: (0, -0.01, -0.004, 24, 3, 0, "L")}
+    for i in range(1, 7):
+        f = i * 1.0
+        old[14.6 + f] = (-0.006 * f, -0.01 + 0.012 * f - 0.0163 * f * f, -0.004 - 0.05 * f, 24 + 21 * f, 3 + 5 * f, 2 * f, "L")
+    return old
+
+
+def clip_reload_tactical_fumble():
+    """Under fire, hands shaking: the fresh magazine knocks the old one out as always, but its nose comes in a
+    little crooked and catches the front lip of the well - a hard clack, the rifle jolted - it bounces back off;
+    the shooter's eyes drop to the well, the magazine is drawn back and straightened, lined up again and goes in
+    the second time, ten ticks late."""
+    d = FUMBLE_DELAY
+    gun_keys({
+        0: (0, 0, 0, 0, 0, 0, "B"),
+        5: (-0.05, 0.085, -0.05, -16, 5, 17, "B"),
+        10: (-0.08, 0.145, -0.085, -24, 7, 28, "B"),
+        13.4: (-0.081, 0.15, -0.083, -24.5, 7.5, 29, "IN"),
+        14.3: (-0.084, 0.134, -0.094, -28, 3.5, 31, "OUT"),
+        16.8: (-0.085, 0.16, -0.095, -25, 8, 31, "IN"),
+        T_FUMBLE_HIT + 0.2: (-0.087, 0.152, -0.099, -27, 5.5, 32.5, "OUT"),   # the clack jolts the rifle
+        19.5: (-0.086, 0.152, -0.097, -26, 10, 32, "B"),                     # eyes down at the well
+        24: (-0.085, 0.158, -0.095, -25, 9, 31, "B"),
+        20.6 + d: (-0.085, 0.162, -0.095, -24, 8, 31, "QUADO"),
+        21.4 + d: (-0.085, 0.178, -0.093, -23, 11.5, 31, "OUT"),
+        23 + d: (-0.084, 0.166, -0.094, -24, 8.5, 31, "B"),
+        27 + d: (-0.06, 0.12, -0.07, -17, 5.5, 22, "B"),
+        33 + d: (0.006, -0.008, 0.004, 1.8, -1.2, -1.8, "B"),
+        38 + d: (0, 0, 0, 0, 0, 0, "B"),
+    })
+    mag_keys(mag, old_flight())
+    pouch = add(POUCH, (0.0, 0.05, 0.06))
+    mag_keys(mag2, {
+        5: (*pouch, 30, -35, 0, "B"),
+        8: (-0.12, -0.26, 0.13, 22, -22, 0, "B"),
+        11: (-0.006, -0.055, 0.075, 4, -5, 0, "B"),
+        12.8: (-0.006, -0.062, 0.092, 6, -5, 0, "IN"),
+        T_TAC_OUT: (-0.003, -0.032, 0.04, 10, -2, 0, "OUT"),
+        15.6: (-0.009, -0.044, 0.026, 28, -7, 8, "IN"),                       # crooked, nose a touch forward
+        T_FUMBLE_HIT: (-0.006, -0.029, 0.006, 32, -6, 9, "OUT"),             # on the lip: stopped dead
+        17.7: (-0.018, -0.08, 0.05, 40, -12, 14, "B"),                        # bounced back off it, twisting
+        20: (-0.011, -0.1, 0.075, 13, -3, 2, "B"),                            # drawn back, straightened
+        22.5: (-0.005, -0.066, 0.046, 8, -1, 0, "B"),                         # lined up
+        15.6 + d: (-0.002, -0.034, 0.012, 20, 0, 0, "B"),                     # and in, nose first
+        17.6 + d: (0.0, -0.012, 0.0, 17, 0, 0, "B"),
+        19.6 + d: (0.0, -0.002, 0.0, 6, 0, 0, "QUAD"),
+        T_TAC_IN + d: (*SEATED, "C"),
+    })
+    mag_keys(mag, {T_TAC_IN + d: (*SEATED, "QUADO"), T_TAC_IN + d + 1.5: (0, -0.006, 0, 0, 0, 0, "B"), T_TAC_IN + d + 3: (*SEATED, "C")})
+    prop_keys("magVis", {0: 1, 20.8: 0, T_TAC_IN + d: 1})
+    prop_keys("mag2Vis", {0: 0, 5.5: 1, T_TAC_IN + d: 0})
+    prop_keys("magFresh", {0: 0, T_TAC_IN + d: 1})
+    free_keys("L", {
+        0: (HANDGUARD, "B"),
+        2.5: ((-0.06, -0.06, -0.24), "B"),
+        5: ((-0.21, -0.48, 0.15), "B"),
+        T_TAC_IN + d + 3: ((-0.03, -0.09, -0.21), "B"),
+        28 + d: ((-0.05, -0.02, -0.3), "B"),
+        32 + d: (HANDGUARD, "B"),
+    })
+    influence_keys(C_L_MAG2, {0: (0, "C"), 4.6: (0, "QUAD"), 5.6: (1, "C"), T_TAC_IN + d: (0, "C")})
+    influence_keys(C_L_MAG, {0: (0, "C"), T_TAC_IN + d: (1, "C"), T_TAC_IN + d + 3: (1, "SINE"), 29 + d: (0, "C")})
+    free_keys("R", {0: (GRIP, "C")})
+    bolt_keys({0: (0, "C")})
+    return 38 + d
+
+
+def clip_reload_tactical_drop():
+    """Under fire, hands shaking: the fresh magazine, coming up from the pouch, slips out of the fingers - the hand
+    snatches after it and misses, it falls tumbling out of sight - the eyes follow it down; back to the pouch for
+    another, and the reload carries on from there, sixteen ticks late."""
+    d = DROP_DELAY
+    gun_keys({
+        0: (0, 0, 0, 0, 0, 0, "B"),
+        5: (-0.05, 0.085, -0.05, -16, 5, 17, "B"),
+        8.6: (-0.066, 0.118, -0.07, -20, 6, 23, "B"),
+        T_SLIP + 1.4: (-0.07, 0.11, -0.075, -22, 1.5, 25, "OUT"),             # a start: the eyes go down after it
+        13: (-0.075, 0.125, -0.08, -23, 2, 26, "B"),
+        18: (-0.078, 0.138, -0.083, -23, 5.5, 27, "B"),
+        10 + d: (-0.08, 0.145, -0.085, -24, 7, 28, "B"),
+        13.4 + d: (-0.081, 0.15, -0.083, -24.5, 7.5, 29, "IN"),
+        14.3 + d: (-0.084, 0.134, -0.094, -28, 3.5, 31, "OUT"),
+        17 + d: (-0.085, 0.16, -0.095, -25, 8, 31, "B"),
+        20.6 + d: (-0.085, 0.162, -0.095, -24, 8, 31, "QUADO"),
+        21.4 + d: (-0.085, 0.178, -0.093, -23, 11.5, 31, "OUT"),
+        23 + d: (-0.084, 0.166, -0.094, -24, 8.5, 31, "B"),
+        27 + d: (-0.06, 0.12, -0.07, -17, 5.5, 22, "B"),
+        33 + d: (0.006, -0.008, 0.004, 1.8, -1.2, -1.8, "B"),
+        38 + d: (0, 0, 0, 0, 0, 0, "B"),
+    })
+    # the old one: knocked out by the second fresh magazine, sixteen ticks late
+    mag_keys(mag, {t + (d if t > 0 else 0): v for t, v in old_flight().items()})
+    # the fresh one: up from the pouch, slipping at T_SLIP and falling under gravity, tumbling
+    pouch = add(POUCH, (0.0, 0.05, 0.06))
+    slip = Vector((-0.1, -0.215, 0.12))
+    keys = {
+        5: (*pouch, 30, -35, 0, "B"),
+        8: (-0.12, -0.26, 0.13, 22, -22, 0, "B"),
+        T_SLIP: (*slip, 19, -19, 0, "L"),
+    }
+    # it falls about its middle (where the hand had it), not about the lug: the lug's path follows from the turn
+    from mathutils import Euler
+
+    def rot(rock, roll, yaw):
+        return Euler((math.radians(rock), math.radians(yaw), math.radians(roll)), "XYZ").to_matrix()
+
+    arm = MAG_HOLD - LUG
+    centre = LUG + slip + rot(19, -19, 0) @ arm
+    vel = Vector((0.004, 0.012, -0.004))  # it was still moving up a little as it went
+    for i in range(1, 17):
+        dt = i * 0.5
+        c = centre + vel * dt + gun_down(T_SLIP + dt) * (0.5 * G * dt * dt)
+        rk, rl, yw = 19 - 34 * dt, -19 + 21 * dt, 9 * dt
+        off = c - LUG - rot(rk, rl, yw) @ arm
+        keys[T_SLIP + dt] = (*off, rk, rl, yw, "L")
+    last = keys[T_SLIP + 8.0]
+    keys[T_SLIP + 8.0] = (*last[:6], "C")                                    # gone: it waits out of sight
+    keys.update({
+        5 + d: (*pouch, 30, -35, 0, "B"),                                     # the second one, from the pouch
+        8 + d: (-0.12, -0.26, 0.13, 22, -22, 0, "B"),
+        11 + d: (-0.006, -0.055, 0.075, 4, -5, 0, "B"),
+        12.8 + d: (-0.006, -0.062, 0.092, 6, -5, 0, "IN"),
+        T_TAC_OUT + d: (-0.003, -0.032, 0.04, 10, -2, 0, "OUT"),
+        15.6 + d: (-0.002, -0.034, 0.012, 20, 0, 0, "B"),
+        17.6 + d: (0.0, -0.012, 0.0, 17, 0, 0, "B"),
+        19.6 + d: (0.0, -0.002, 0.0, 6, 0, 0, "QUAD"),
+        T_TAC_IN + d: (*SEATED, "C"),
+    })
+    mag_keys(mag2, keys)
+    mag_keys(mag, {T_TAC_IN + d: (*SEATED, "QUADO"), T_TAC_IN + d + 1.5: (0, -0.006, 0, 0, 0, 0, "B"), T_TAC_IN + d + 3: (*SEATED, "C")})
+    prop_keys("magVis", {0: 1, T_TAC_IN + d - 0.2: 0, T_TAC_IN + d: 1})
+    prop_keys("mag2Vis", {0: 0, 5.5: 1, T_SLIP + 8.0: 0, 5 + d + 0.4: 1, T_TAC_IN + d: 0})
+    prop_keys("magFresh", {0: 0, T_TAC_IN + d: 1})
+    # the hand: with it to the slip, then a snatch after it that misses, back down to the pouch for another
+    influence_keys(C_L_MAG2, {0: (0, "C"), 4.6: (0, "QUAD"), 5.6: (1, "C"), T_SLIP: (1, "QUAD"), T_SLIP + 0.4: (0, "C"),
+                              4.6 + d: (0, "QUAD"), 5.6 + d: (1, "C"), T_TAC_IN + d: (0, "C")})
+    at_slip = grip_at(mag2_grip, T_SLIP)
+    free_keys("L", {
+        0: (HANDGUARD, "B"),
+        2.5: ((-0.06, -0.06, -0.24), "B"),
+        5: ((-0.21, -0.48, 0.15), "B"),
+        T_SLIP: (tuple(at_slip), "OUT"),
+        T_SLIP + 1.2: (tuple(at_slip + Vector((0.01, -0.07, 0.02))), "B"),    # the snatch after it
+        T_SLIP + 3: (tuple(at_slip + Vector((0.0, -0.13, 0.03))), "B"),
+        5 + d: ((-0.21, -0.48, 0.15), "B"),
+        T_TAC_IN + d + 3: ((-0.03, -0.09, -0.21), "B"),
+        28 + d: ((-0.05, -0.02, -0.3), "B"),
+        32 + d: (HANDGUARD, "B"),
+    })
+    influence_keys(C_L_MAG, {0: (0, "C"), T_TAC_IN + d: (1, "C"), T_TAC_IN + d + 3: (1, "SINE"), 29 + d: (0, "C")})
+    free_keys("R", {0: (GRIP, "C")})
+    bolt_keys({0: (0, "C")})
+    return 38 + d
 
 
 def reload_empty(with_mag):
@@ -520,6 +694,8 @@ def clip_draw():
 
 CLIPS = {
     "reload_tactical": clip_reload_tactical,
+    "reload_tactical_fumble": clip_reload_tactical_fumble,
+    "reload_tactical_drop": clip_reload_tactical_drop,
     "reload_empty": lambda: reload_empty(True),
     "reload_nomag": lambda: reload_empty(False),
     "check": clip_check,

@@ -57,7 +57,12 @@ public final class AkClips {
 	 */
 	static Clip reload(GunState state, float r) {
 		if (state.reloadKind() != GunState.EMPTY) {
-			return CLIPS.get("reload_tactical");
+			// under pressure it can go wrong: fumbled at the well, or the fresh magazine dropped
+			return CLIPS.get(switch (state.reloadVariant()) {
+				case GunState.FUMBLE -> "reload_tactical_fumble";
+				case GunState.DROPPED -> "reload_tactical_drop";
+				default -> "reload_tactical";
+			});
 		}
 		if (r < AkItem.T_MAG_DROP && state.hasMag()) {
 			hadMag = state.reloadStart();
