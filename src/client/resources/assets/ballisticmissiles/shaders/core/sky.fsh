@@ -59,62 +59,121 @@ float wallFbm(vec2 p) {
     return wallNoise(p) * 0.5 + wallNoise(p * 2.03 + 3.1) * 0.27 + wallNoise(p * 4.1 + 7.7) * 0.15 + wallNoise(p * 8.3 + 1.3) * 0.08;
 }
 
-vec4 stormWall(vec3 rd, float lum, float dayLight, vec3 sunDir) {
+vec4 stormWall(vec3 rd, vec3 skyCol, float lum, float dayLight, vec3 sunDir) {
     if (StormCell.w <= 0.0) return vec4(0.0);
     vec2 rel = StormCell.xy;
     float dist = max(length(rel), 1.0);
     vec2 toward = rel / dist;
+    vec2 across = vec2(-toward.y, toward.x);     // the +x side of the tower
     float h = max(length(rd.xz), 1e-3);
     vec2 v = rd.xz / h;
-    // the angle off the storm's direction (signed), and the elevation (tan)
     float az = atan(toward.x * v.y - toward.y * v.x, dot(toward, v));
     float elev = rd.y / h;
     float baseE = StormInfo.w / dist;
     float topE = (StormInfo.w + 820.0) / dist;
     float halfW = atan(StormCell.z / dist);
-    // in units of the tower: x across (-1..1 is its width), y up from the base (0) to the top (1)
+    // in units of the tower: x across (-1..1 its width), y up from the base (0) to the top of the dome (1)
     float x = az / halfW;
     float y = (elev - baseE) / max(topE - baseE, 1e-4);
-    // billows: lumpy turrets up the flanks, a rounded dome on top pushing up through the anvil
-    float n = wallFbm(vec2(x * 2.2, y * 2.6) + 11.0);
-    float n2 = wallFbm(vec2(x * 5.0, y * 6.0) + 37.0);
-    float lumps = wallFbm(vec2(sign(x) * 4.0, y * 3.4) + 23.0);
-    float width = 0.6 - 0.12 * y + 0.3 * (lumps - 0.5) + 0.06 * (n2 - 0.5);
+
+    // ---- the shape. Turrets: cauliflower lumps on lumps, the outline warped by the noise itself
+    vec2 q = vec2(x * 2.2, y * 2.6);
+    vec2 warp = vec2(wallFbm(q + 11.0), wallFbm(q + 47.0)) - 0.5;
+    float n = wallFbm(q + warp * 1.4 + 11.0);
+    float n2 = wallFbm(vec2(x * 6.0, y * 7.0) + warp * 2.0 + 37.0);
+    float lumps = wallFbm(vec2(sign(x) * 4.0, y * 3.4) + warp.y + 23.0);
+    // bubbles bulging out of the flanks, big and small
+    float bub = 1.0 - abs(2.0 * wallNoise(vec2(sign(x) * 5.0, y * 9.0) + warp * 2.0) - 1.0);
+    float bub2 = 1.0 - abs(2.0 * wallNoise(vec2(sign(x) * 9.0, y * 19.0) + warp * 3.0) - 1.0);
+    float width = 0.52 + 0.06 * sin(y * 2.4) + 0.24 * (lumps - 0.5) + 0.1 * bub + 0.05 * bub2 + 0.05 * (n2 - 0.5);
     float xw = x / max(width, 0.05);
-    float dome = 0.8 + 0.18 * (1.0 - xw * xw) + 0.05 * (n2 - 0.5);
-    float tower = (1.0 - smoothstep(width - 0.08, width + 0.05, abs(x))) * (1.0 - smoothstep(dome - 0.06, dome + 0.02, y))
-        * smoothstep(-0.02, 0.03, y + 0.02 * (n2 - 0.5));
-    // the anvil: a wedge spread flat at the top, thick over the tower, thinning to its ragged edges
-    float spread = 2.0 + 0.45 * (n - 0.5);
+    // the overshooting top: the strongest updraft punching through the anvil
+    float dome = 0.8 + 0.19 * (1.0 - xw * xw) + 0.06 * (n2 - 0.5);
+    float tower = (1.0 - smoothstep(width - 0.07, width + 0.04, abs(x))) * (1.0 - smoothstep(dome - 0.05, dome + 0.015, y))
+        * smoothstep(-0.02, 0.025, y + 0.025 * (n2 - 0.5));
+    // the anvil: a wedge spread flat under the tropopause, sheared out further downwind (towards us, so it reaches
+    // higher up the sky the closer the storm comes), its underside hanging in mammatus pouches
+    float spread = 2.1 + 0.5 * (n - 0.5);
     float edge = clamp(abs(x) / spread, 0.0, 1.0);
-    float anvilTop = 0.87 - 0.03 * edge + 0.02 * (n2 - 0.5);
-    float anvilBottom = anvilTop - (0.04 + 0.19 * (1.0 - edge)) + 0.04 * (n - 0.5);
-    float anvil = (1.0 - smoothstep(0.8, 1.0, edge)) * smoothstep(anvilBottom - 0.03, anvilBottom + 0.02, y)
-        * (1.0 - smoothstep(anvilTop - 0.02, anvilTop + 0.01, y)) * (0.7 + 0.3 * n2);
-    float cloud = clamp(max(tower, anvil), 0.0, 1.0);
-    // the rain curtain under the base: grey, in soft streaks, thinning to the sides and fading to the ground
-    float streak = 0.6 + 0.4 * wallFbm(vec2(x * 9.0 + y * 1.5, y * 0.6) + 5.0);
-    float curtain = (1.0 - smoothstep(0.35, 0.75, abs(x) + 0.15 * (n - 0.5))) * (1.0 - smoothstep(-0.02, 0.02, y)) * streak * 0.7
-        * smoothstep(-baseE - 0.02, 0.0, elev);
-    // light: a dark base, the upper tower catching the sun (white-grey, warm low sun) - at night all dark
-    vec3 base = vec3(lum * 0.32) * vec3(0.84, 0.88, 0.98);
-    vec3 top = mix(vec3(lum * 0.85), vec3(lum * 0.95, lum * 0.85, lum * 0.75), clamp(1.0 - sunDir.y * 3.0, 0.0, 1.0));
-    vec3 lit = mix(base, top, smoothstep(0.15, 0.95, y) * (0.6 + 0.4 * n2));
+    float anvilTop = 0.87 - 0.02 * edge + 0.015 * (n2 - 0.5);
+    float pu = x * 7.0 + warp.x * 1.5;
+    float lobe = sqrt(max(sin(3.14159 * fract(pu)), 0.0)) * (0.4 + 0.6 * wallHash(vec2(floor(pu), 3.0)));
+    float pouches = lobe * smoothstep(0.22, 0.45, edge) * (1.0 - smoothstep(0.7, 0.92, edge));
+    float anvilBottom = anvilTop - (0.045 + 0.2 * (1.0 - edge)) + 0.03 * (n - 0.5) - 0.05 * pouches;
+    float anvil = (1.0 - smoothstep(0.78, 1.0, edge + 0.08 * (n2 - 0.5))) * smoothstep(anvilBottom - 0.025, anvilBottom + 0.015, y)
+        * (1.0 - smoothstep(anvilTop - 0.015, anvilTop + 0.01, y)) * (0.72 + 0.28 * n2);
+    // the shelf cloud: a low, dark, lumpy roll along the gust front ahead of the storm, once it is near
+    float near = 1.0 - smoothstep(1200.0, 2800.0, dist);
+    float roll = wallFbm(vec2(x * 3.0, y * 1.5) + 61.0);
+    float rollTop = 0.035 + 0.05 * roll * (1.0 - smoothstep(0.6, 1.3, abs(x)));
+    float shelf = near * (1.0 - smoothstep(1.0, 1.35 + 0.2 * roll, abs(x))) * smoothstep(-0.055, -0.03, y + 0.02 * (roll - 0.5))
+        * (1.0 - smoothstep(rollTop - 0.02, rollTop, y));
+    float cloud = clamp(max(max(tower, anvil), shelf), 0.0, 1.0);
+
+    // rain shafts under the base: blown slanting forward, in uneven columns, thinning to the sides and down
+    float below = clamp(-y / max(baseE / max(topE - baseE, 1e-4), 1e-3), 0.0, 1.0);     // 0 at the base, 1 at the ground
+    float xs = x - 0.22 * below;
+    float shafts = smoothstep(0.3, 0.7, wallFbm(vec2(xs * 3.2, 0.7) + 4.0)) * 0.7 + 0.3;
+    float streak = 0.75 + 0.25 * wallNoise(vec2(xs * 40.0, below * 2.0));
+    float curtain = (1.0 - smoothstep(0.3, 0.7, abs(xs) + 0.15 * (n - 0.5))) * (1.0 - smoothstep(-0.015, 0.015, y)) * shafts * streak
+        * (0.9 - 0.4 * below) * smoothstep(-0.005, 0.0, elev);
+
+    // ---- the light. A rough normal: the tower a lumpy column, its top and the anvil facing up
+    float nx = clamp(xw, -1.0, 1.0) * 0.9 + (n2 - 0.5) * 0.5;
+    vec3 side = vec3(-toward.x, 0.0, -toward.y) * sqrt(max(1.0 - nx * nx, 0.0)) + vec3(across.x, 0.0, across.y) * nx;
+    float topness = max(smoothstep(dome - 0.3, dome, y) * tower, anvil * 0.8 * (1.0 - tower));
+    vec3 normal = normalize(mix(side, vec3(0.0, 1.0, 0.0), topness * 0.7) + vec3(0.0, (n - 0.5) * 0.6, 0.0));
+    // sunlight, its colour from the atmosphere (golden low down, orange-pink at sunset)
+    vec3 sunLight = atSunlight(sunDir, 1.0);
+    vec3 tint = sunLight / max(max(sunLight.r, max(sunLight.g, sunLight.b)), 1e-4);
+    float sunUp = smoothstep(-0.03, 0.05, sunDir.y);
+    float diffuse = clamp(dot(normal, sunDir) * 0.8 + 0.2, 0.0, 1.0) * sunUp;
+    // deep inside the cloud little gets through: the lower tower and the base in their own shadow
+    float depth = mix(0.35, 1.0, smoothstep(0.05, 0.75, y)) * (0.75 + 0.25 * n2);
+    vec3 ambient = vec3(lum * 0.36) * vec3(0.82, 0.87, 1.0) * (0.55 + 0.45 * smoothstep(0.0, 0.6, y));
+    vec3 lit = ambient + tint * diffuse * depth * (0.55 + 0.75 * lum);
+    // with the sun behind it: the body dark, the edges glowing silver
+    vec2 sunH = normalize(sunDir.xz + vec2(1e-4));
+    float behind = max(dot(sunH, toward), 0.0) * sunUp * (1.0 - smoothstep(0.35, 0.8, sunDir.y));
+    float rim = cloud * (1.0 - cloud) * 4.0 + (1.0 - smoothstep(0.0, 0.08, abs(abs(x) - width))) * tower * 0.5;
+    lit += tint * rim * behind * 0.9;
+    // the base, the shelf and the underside of the anvil: slate dark
+    float under = max(1.0 - smoothstep(0.0, 0.18, y), shelf);
+    under = max(under, anvil * (1.0 - tower) * (1.0 - smoothstep(anvilBottom, anvilBottom + 0.05, y)) * 0.7);
+    lit *= 1.0 - 0.6 * under;
     vec3 col = mix(vec3(0.010, 0.012, 0.018), lit, dayLight);
-    vec3 rainCol = mix(vec3(0.016, 0.018, 0.024), vec3(lum * 0.5) * vec3(0.88, 0.92, 1.0), dayLight);
+    // the rain shafts: grey, lighter where the sun shines through them from behind
+    vec3 rainCol = mix(vec3(0.016, 0.018, 0.024), vec3(lum * 0.5) * vec3(0.86, 0.9, 1.0) + tint * behind * 0.12, dayLight);
     col = mix(rainCol, col, cloud);
-    float a = max(cloud * (0.82 + 0.18 * n), curtain);
-    // sheet lightning: a glow inside the tower round where it flashed, a faint halo round it on the sky
-    float fx = (toward.x * StormInfo.z - toward.y * StormInfo.y) / dist / halfW;
-    float fy = 0.25 + 0.35 * wallHash(StormInfo.yz);
-    float glow = exp(-pow((x - fx) / 0.45, 2.0) - pow((y - fy) / 0.4, 2.0));
+    float a = max(cloud * (0.86 + 0.14 * n), curtain);
+
+    // ---- lightning: a glow inside the tower round where it flashed, a halo on the sky round it
+    float fx = dot(StormInfo.yz, across) / dist / halfW;
+    float fy = 0.2 + 0.4 * wallHash(StormInfo.yz);
     vec3 flashCol = vec3(0.8, 0.85, 1.0) * StormInfo.x;
-    col += flashCol * glow * (0.4 + 0.6 * n2) * 1.3 * max(cloud, curtain);
-    float halo = StormInfo.x * exp(-pow((x - fx) / 1.4, 2.0) - pow((y - fy) / 1.1, 2.0)) * 0.22 * (1.0 - cloud);
+    float glow = exp(-pow((x - fx) / 0.45, 2.0) - pow((y - fy) / 0.4, 2.0));
+    col += flashCol * glow * (0.35 + 0.65 * n2) * 1.4 * max(cloud, curtain);
+    float halo = StormInfo.x * exp(-pow((x - fx) / 1.4, 2.0) - pow((y - fy) / 1.1, 2.0)) * 0.2 * (1.0 - cloud);
+    // and now and then a bolt to the ground: a thin, jagged channel from the base down through the rain
+    if (StormBolt.x > 0.0 && y < 0.05) {
+        float seed = StormBolt.y;
+        float bx = StormBolt.z / dist / halfW;
+        float path = bx + 0.09 * (wallNoise(vec2(y * 9.0, seed)) - 0.5) + 0.035 * (wallNoise(vec2(y * 37.0, seed + 5.0)) - 0.5);
+        float w = 0.0012 / halfW;
+        float d = abs(x - path);
+        float ground = smoothstep(-0.002, 0.0, elev);
+        float bolt = StormBolt.x * ground * (exp(-pow(d / w, 2.0)) + 0.25 * exp(-pow(d / (w * 9.0), 2.0)));
+        col += vec3(0.85, 0.9, 1.0) * bolt * 2.5;
+        a = max(a, clamp(bolt, 0.0, 1.0));
+        halo += StormBolt.x * 0.25 * exp(-pow((x - bx) / 0.8, 2.0) - pow((y + 0.1) / 0.25, 2.0)) * (1.0 - cloud);
+    }
     col += flashCol * halo;
     a = max(a, halo);
-    // far off, the haze takes it
-    a *= StormCell.w * (1.0 - 0.45 * smoothstep(1500.0, 6000.0, dist));
+
+    // far off, the air between takes it: paler, bluer, lower in contrast (by day)
+    float haze = (0.12 + 0.55 * smoothstep(900.0, 6500.0, dist)) * dayLight;
+    col = mix(col, skyCol, haze);
+    a *= StormCell.w * (1.0 - 0.35 * smoothstep(3000.0, 7000.0, dist));
     return vec4(col, clamp(a, 0.0, 1.0));
 }
 
@@ -154,7 +213,7 @@ void main() {
     float below = 1.0 - smoothstep(-0.02, 0.06, rd.y);
     col = mix(col, FogColor.rgb, below);
     float alpha = skyInfo.a;
-    vec4 wall = stormWall(rd, lum, skyInfo.a, sunDir);
+    vec4 wall = stormWall(rd, col, lum, skyInfo.a, sunDir);
     if (wall.a > 0.0) {
         col = mix(col, wall.rgb, clamp(wall.a, 0.0, 1.0));
         // at night the sky is Minecraft's: the storm hides its stars, its flashes light up in it

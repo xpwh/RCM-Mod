@@ -44,6 +44,12 @@ public final class StormFront {
 	private static int flickers;
 	private static float flashX;
 	private static float flashZ;
+	/** A bolt to the ground from the cell: brightness (flickering, the return strokes), its seed, where across. */
+	private static float bolt;
+	private static float prevBolt;
+	private static int strokes;
+	private static float boltSeed;
+	private static float boltAcross;
 
 	private StormFront() {
 	}
@@ -88,6 +94,8 @@ public final class StormFront {
 		leaving = -1L;
 		fade = 0.0F;
 		flash = prevFlash = 0.0F;
+		bolt = prevBolt = 0.0F;
+		strokes = 0;
 		lastThunder = 0.0F;
 	}
 
@@ -168,6 +176,14 @@ public final class StormFront {
 		// sheet lightning in it: more often the closer it comes
 		prevFlash = flash;
 		flash *= 0.5F;
+		prevBolt = bolt;
+		bolt = 0.0F;
+		if (strokes > 0) {
+			// return strokes running up the same channel: on, off, on again
+			strokes--;
+			bolt = R.nextFloat() < 0.7F ? 0.6F + R.nextFloat() * 0.4F : 0.0F;
+			flash = Math.max(flash, bolt * 0.7F);
+		}
 		if (flickers > 0 && R.nextFloat() < 0.5F) {
 			flickers--;
 			flash = Math.max(flash, 0.5F + R.nextFloat() * 0.5F);
@@ -187,6 +203,13 @@ public final class StormFront {
 				float r = RADIUS * 0.6F * Mth.sqrt(R.nextFloat());
 				flashX = Mth.cos(a) * r;
 				flashZ = Mth.sin(a) * r;
+				// one in three comes down to the ground as a bolt you can see, out of the rain under the base
+				if (R.nextFloat() < 0.35F) {
+					bolt = 1.0F;
+					strokes = 2 + R.nextInt(4);
+					boltSeed = R.nextFloat() * 100.0F;
+					boltAcross = (R.nextFloat() - 0.5F) * RADIUS * 0.9F;
+				}
 				float base = Float.isNaN(VolumetricClouds.base()) ? (float) mc.player.getY() + 130.0F : VolumetricClouds.base();
 				// the rumble, long after the flash - from far off nothing at all
 				Storm.distantThunder(new Vec3(c[0] + flashX, base + 120.0, c[1] + flashZ));
@@ -207,6 +230,12 @@ public final class StormFront {
 		// with a storm right here it is all over the sky anyway: the cell gives way to it
 		float strength = fade * (1.0F - 0.85F * mc.level.getThunderLevel(partialTick));
 		return new float[] {(float) (c[0] - cam.x), (float) (c[1] - cam.z), RADIUS, strength};
+	}
+
+	/** The bolt for the uniform block: brightness, seed, where across the cell (blocks). */
+	static float[] bolt(float partialTick) {
+		// no blending between ticks: a stroke is there or it is not
+		return new float[] {partialTick < 0.5F ? prevBolt : bolt, boltSeed, boltAcross};
 	}
 
 	/** The flash for the uniform block: brightness, where in the cell (x, z). */

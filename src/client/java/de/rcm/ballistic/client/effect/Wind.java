@@ -40,7 +40,7 @@ public final class Wind {
 	public static final int LEAVES = 4;
 
 	private static final int BLASTS = 4;
-	private static final int UBO_SIZE = 16 + 16 * BLASTS * 2 + 32;
+	private static final int UBO_SIZE = 16 + 16 * BLASTS * 2 + 48;
 
 	private record Blast(Vec3 at, float start, float speed, float reach, float push) {
 		boolean over(float now) {
@@ -170,12 +170,15 @@ public final class Wind {
 			if (cell == null) {
 				b.putVec4(0.0F, 0.0F, 1.0F, 0.0F);
 				b.putVec4(0.0F, 0.0F, 0.0F, 0.0F);
+				b.putVec4(0.0F, 0.0F, 0.0F, 0.0F);
 			} else {
 				float[] f = StormFront.flash(partial);
 				float base = VolumetricClouds.base();
 				float baseUp = (float) ((Float.isNaN(base) ? 192.0F : base) - cam.y);
 				b.putVec4(cell[0], cell[1], cell[2], cell[3]);
 				b.putVec4(f[0], f[1], f[2], Math.max(baseUp, 20.0F));
+				float[] bolt = StormFront.bolt(partial);
+				b.putVec4(bolt[0], bolt[1], bolt[2], 0.0F);
 			}
 			ByteBuffer data = b.get();
 			RenderSystem.getDevice().createCommandEncoder().writeToBuffer(target.slice(), data);

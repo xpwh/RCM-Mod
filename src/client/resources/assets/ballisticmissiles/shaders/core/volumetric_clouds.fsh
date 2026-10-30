@@ -116,12 +116,14 @@ void main() {
             vec3 ambient = mix(skyBottom, skyTop, clamp(h * 1.2, 0.0, 1.0));
             // inside the storm cell: the base slate-dark, the tower in its own gloom
             float cell = stormCore(p.xz);
-            ambient *= 1.0 - cell * (0.75 - 0.4 * clamp(h / TOWER, 0.0, 1.0));
+            float hc = clamp(h / TOWER, 0.0, 1.0);
+            ambient *= 1.0 - cell * 0.7 * (1.0 - smoothstep(0.0, 0.45, hc));
             // dark edges (the "powder" effect) only show on the side away from the sun
             float away = 0.5 - 0.5 * cosTheta;
             vec3 lit = ambient + sunCol * sunT * mix(1.0, powder, 0.5 * away) * phase * 0.9;
             lit += boltCol * (0.25 + 0.75 * (1.0 - h) * (1.0 - h)) * (0.4 + 0.6 * d);
-            lit *= 1.0 - cell * 0.55;
+            // the base slate-dark in the shadow of the tower above it; up top it shines in the sun
+            lit *= 1.0 - cell * 0.6 * (1.0 - smoothstep(0.05, 0.5, hc));
             // sheet lightning inside the far storm: the whole tower lit up from within, round where it flashed
             if (StormInfo.x > 0.0) {
                 vec2 fp = cellCenter + StormInfo.yz;
