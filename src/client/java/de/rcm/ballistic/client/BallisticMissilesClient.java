@@ -54,6 +54,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 			EntityRendererRegistry.register(ModRegistry.missileEntity(type), MissileRenderer::new);
 		}
 		EntityRendererRegistry.register(ModRegistry.BOMBLET, BombletRenderer::new);
+		EntityRendererRegistry.register(net.minecraft.world.entity.EntityType.LIGHTNING_BOLT, de.rcm.ballistic.client.render.StormLightningRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.REENTRY_VEHICLE, ctx -> new ProjectileRenderer<>(ctx, false));
 		EntityRendererRegistry.register(ModRegistry.SPENT_STAGE, de.rcm.ballistic.client.render.SpentStageRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.INTERCEPTOR, ctx -> new ProjectileRenderer<>(ctx, true));

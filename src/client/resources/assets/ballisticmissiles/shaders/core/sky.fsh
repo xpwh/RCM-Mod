@@ -59,6 +59,12 @@ float wallFbm(vec2 p) {
     return wallNoise(p) * 0.5 + wallNoise(p * 2.03 + 3.1) * 0.27 + wallNoise(p * 4.1 + 7.7) * 0.15 + wallNoise(p * 8.3 + 1.3) * 0.08;
 }
 
+// a jagged line: straight runs between random kinks
+float boltKink(float t, float seed) {
+    float i = floor(t);
+    return mix(wallHash(vec2(i, seed)), wallHash(vec2(i + 1.0, seed)), fract(t));
+}
+
 vec4 stormWall(vec3 rd, vec3 skyCol, float lum, float dayLight, vec3 sunDir) {
     if (StormCell.w <= 0.0) return vec4(0.0);
     vec2 rel = StormCell.xy;
@@ -158,11 +164,30 @@ vec4 stormWall(vec3 rd, vec3 skyCol, float lum, float dayLight, vec3 sunDir) {
     if (StormBolt.x > 0.0 && y < 0.05) {
         float seed = StormBolt.y;
         float bx = StormBolt.z / dist / halfW;
-        float path = bx + 0.09 * (wallNoise(vec2(y * 9.0, seed)) - 0.5) + 0.035 * (wallNoise(vec2(y * 37.0, seed + 5.0)) - 0.5);
-        float w = 0.0012 / halfW;
-        float d = abs(x - path);
+        // how far down from the base (0) to the ground (1)
+        float down = clamp(-y / max(baseE / max(topE - baseE, 1e-4), 1e-3), 0.0, 1.2);
+        float w = 0.0011 / halfW;
         float ground = smoothstep(-0.002, 0.0, elev);
-        float bolt = StormBolt.x * ground * (exp(-pow(d / w, 2.0)) + 0.25 * exp(-pow(d / (w * 9.0), 2.0)));
+        // the channel: sharp kinks at every scale (straight runs between them), not a smooth wave
+        float path = bx + 0.11 * (boltKink(down * 5.0, seed) - 0.5) + 0.05 * (boltKink(down * 13.0, seed + 3.0) - 0.5)
+            + 0.02 * (boltKink(down * 37.0, seed + 7.0) - 0.5);
+        float d = abs(x - path);
+        float bolt = exp(-pow(d / w, 2.0)) + 0.22 * exp(-pow(d / (w * 10.0), 2.0));
+        // branches: forking off the upper part, down and out, fading towards their tips
+        for (int i = 0; i < 4; i++) {
+            float fi = float(i);
+            float from = 0.05 + 0.4 * wallHash(vec2(seed, fi));
+            float len = 0.15 + 0.3 * wallHash(vec2(seed + 1.0, fi));
+            float along = (down - from) / len;
+            if (along < 0.0 || along > 1.0) continue;
+            float slope = (wallHash(vec2(seed + 2.0, fi)) - 0.5) * 0.9;
+            float start = bx + 0.11 * (boltKink(from * 5.0, seed) - 0.5) + 0.05 * (boltKink(from * 13.0, seed + 3.0) - 0.5);
+            float bpath = start + slope * (down - from) * 2.0 + 0.04 * (boltKink(down * 21.0, seed + 11.0 + fi) - 0.5) * along;
+            float bd = abs(x - bpath);
+            float fadeTip = (1.0 - along) * 0.55;
+            bolt += fadeTip * (exp(-pow(bd / (w * 0.7), 2.0)) + 0.2 * exp(-pow(bd / (w * 7.0), 2.0)));
+        }
+        bolt *= StormBolt.x * ground * step(down, 1.0);
         col += vec3(0.85, 0.9, 1.0) * bolt * 2.5;
         a = max(a, clamp(bolt, 0.0, 1.0));
         halo += StormBolt.x * 0.25 * exp(-pow((x - bx) / 0.8, 2.0) - pow((y + 0.1) / 0.25, 2.0)) * (1.0 - cloud);
