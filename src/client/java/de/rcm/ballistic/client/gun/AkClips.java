@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
@@ -21,8 +22,14 @@ import org.joml.Vector3f;
  * samples blended, so they run smooth at any frame rate.
  */
 public final class AkClips {
-	/** Floats per sample: gun x y z roll pitch yaw | mag 3x4 | mag2 3x4 | left xyz | right xyz | bolt | mag shown | mag2 shown | fresh. */
-	static final int STRIDE = 40;
+	/**
+	 * Floats per sample: gun x y z roll pitch yaw | mag 3x4 | mag2 3x4 | left xyz | right xyz | bolt | mag shown | mag2 shown | fresh |
+	 * left hand turn xyzw | right hand turn xyzw | head pitch yaw roll.
+	 */
+	static final int STRIDE = 51;
+	static final int LEFT_TURN = 40;
+	static final int RIGHT_TURN = 44;
+	static final int HEAD = 48;
 	private static final Map<String, Clip> CLIPS = load("/assets/ballisticmissiles/meshes/ak47.anim.gz");
 	/** The reload (by its start tick) during which the rifle still had a magazine in it. */
 	private static long hadMag = Long.MIN_VALUE;
@@ -41,7 +48,7 @@ public final class AkClips {
 			float f = s - i;
 			for (int k = 0; k < STRIDE; k++) {
 				float a = this.data[i * STRIDE + k];
-				out[k] = k >= 37 ? a : a + (this.data[j * STRIDE + k] - a) * f;
+				out[k] = k >= 37 && k < LEFT_TURN ? a : a + (this.data[j * STRIDE + k] - a) * f;
 			}
 			return out;
 		}
@@ -52,22 +59,40 @@ public final class AkClips {
 	}
 
 	/**
+	 * One of a reload's takes (the clip, "@1", "@2": the same events, the motion a little different), picked by
+	 * {@code seed} - the reload's start, so every player sees the same take.
+	 */
+	static Clip take(Map<String, Clip> clips, String name, long seed) {
+		long h = seed * 0x9E3779B97F4A7C15L;
+		int n = (int) Long.remainderUnsigned(h ^ (h >>> 29), 3L);
+		Clip c = n == 0 ? null : clips.get(name + "@" + n);
+		return c != null ? c : clips.get(name);
+	}
+
+	/** A hand's turn from a sample (at LEFT_TURN or RIGHT_TURN), normalised (the blend between samples is not). */
+	static Quaternionf turn(float[] s, int at, Quaternionf out) {
+		out.set(s[at], s[at + 1], s[at + 2], s[at + 3]);
+		float l = out.lengthSquared();
+		return l < 1.0E-8F ? out.identity() : out.normalize();
+	}
+
+	/**
 	 * The clip for the reload under way: magazine to magazine with rounds left; for an empty rifle, with the
 	 * old magazine to let fall or, when there was none, straight to the pouch.
 	 */
 	static Clip reload(GunState state, float r) {
 		if (state.reloadKind() != GunState.EMPTY) {
 			// under pressure it can go wrong: fumbled at the well, or the fresh magazine dropped
-			return CLIPS.get(switch (state.reloadVariant()) {
+			return take(CLIPS, switch (state.reloadVariant()) {
 				case GunState.FUMBLE -> "reload_tactical_fumble";
 				case GunState.DROPPED -> "reload_tactical_drop";
 				default -> "reload_tactical";
-			});
+			}, state.reloadStart());
 		}
 		if (r < AkItem.T_MAG_DROP && state.hasMag()) {
 			hadMag = state.reloadStart();
 		}
-		return CLIPS.get(state.hasMag() || hadMag == state.reloadStart() ? "reload_empty" : "reload_nomag");
+		return take(CLIPS, state.hasMag() || hadMag == state.reloadStart() ? "reload_empty" : "reload_nomag", state.reloadStart());
 	}
 
 	/** A magazine's matrix from a sample (3x4, row by row, from {@code at}). */

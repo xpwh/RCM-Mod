@@ -20,6 +20,11 @@ public abstract class PlayerModelMixin {
 			this.ballisticmissiles$limp((PlayerModel) (Object) this, gore.ballisticmissiles$seed(), body.ballisticmissiles$flail(), state.ageInTicks);
 		}
 		PlayerModel self = (PlayerModel) (Object) this;
+		// reloading a gun: the support arm to the pouch and the well, the head bowed over the hands
+		if (body.ballisticmissiles$corpseAge() < 0.0F) {
+			de.rcm.ballistic.client.gun.ThirdPersonReload.pose(self, state.id,
+				net.minecraft.client.Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false));
+		}
 		// smoking: the right hand holds the cigarette in front of the chest, and comes up to the face for a drag
 		float smoke = de.rcm.ballistic.client.item.SmokingClient.raise(state.id, net.minecraft.client.Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false));
 		if (smoke >= 0.0F && body.ballisticmissiles$corpseAge() < 0.0F) {

@@ -10,9 +10,12 @@ metre), under a root that turns it to Blender's Z-up:
   hand_L, hand_R  the hands: a free path, blended onto a grip by keyed constraint influences
 
 The clips are sampled four times a tick into glock19.anim.gz, the same layout as the AK's (AkClips):
-  per clip: name, length (ticks), samples; per sample 40 floats:
+  per clip: name, length (ticks), samples; per sample 51 floats:
     gun x y z roll pitch yaw (degrees) | old magazine 3x4 | new magazine 3x4 | left hand xyz | right hand xyz |
-    slide 0..1.12 | old shown | new shown | new seated
+    slide 0..1.12 | old shown | new shown | new seated | left hand turn xyzw | right hand turn xyzw |
+    head pitch yaw roll (degrees)
+A magazine let fall is simulated (Bullet, animkit.rigid_fall); the reloads come in three takes ("name",
+"name@1", "name@2"), the game picks one at random.
   a magazine's matrix moves it from its seat (GlockItemRenderer.submitMagazine's "from").
 
     python glock_anim.py <glock19.mesh.gz> <glock19.png> <out_dir> [--preview] [--clips=a,b]
@@ -25,6 +28,9 @@ import sys
 
 import bpy  # noqa: I001
 from mathutils import Euler, Matrix, Vector
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import animkit  # noqa: E402
 
 MESH, TEX, OUT = sys.argv[1:4]
 PREVIEW = "--preview" in sys.argv
@@ -174,6 +180,11 @@ C_L_RACK = grip_constraint("L", rack_grip)
 FLAGS = ("oldVis", "newVis", "newIn")
 for p in FLAGS:
     gun[p] = 0.0
+# smooth channels: each forearm's twist (degrees), the eyes' extra look down (degrees)
+CURVES = ("twistL", "twistR", "look")
+for p in CURVES:
+    gun[p] = 0.0
+TAKE = animkit.Take(0)
 
 # ---- keying helpers
 INTERP = {"B": ("BEZIER", "AUTO"), "L": ("LINEAR", "AUTO"), "C": ("CONSTANT", "AUTO"), "BACK": ("BACK", "EASE_OUT"),
@@ -209,7 +220,7 @@ def key(ob, path, tick, mode="B"):
 
 def gun_keys(keys):
     """{tick: (x, y, z, roll, pitch, yaw, mode)}"""
-    for t, (x, y, z, roll, pitch, yaw, mode) in sorted(keys.items()):
+    for t, (x, y, z, roll, pitch, yaw, mode) in sorted(TAKE.gun(keys).items()):
         gun.location = (x, y, z)
         gun.rotation_euler = (math.radians(pitch), math.radians(yaw), math.radians(roll))
         key(gun, "location", t, mode)
@@ -225,6 +236,10 @@ def gun_matrix(t):
 def mag_keys(ob, keys):
     """{tick: (dx, dy, dz, pitch, yaw, roll, mode)}: moved from the seat and turned about it."""
     for t, (dx, dy, dz, rx, ry, rz, mode) in sorted(keys.items()):
+        if TAKE.n and mode != "C" and math.sqrt(dx * dx + dy * dy + dz * dz) > 0.12:
+            # on its way from the pouch: another path each take
+            dx, dy, dz = TAKE.point((dx, dy, dz), 0.008)
+            rx, ry, rz = TAKE.angle(rx, 4.0), TAKE.angle(ry, 2.0), TAKE.angle(rz, 4.0)
         ob.location = SEAT + Vector((dx, dy, dz))
         ob.rotation_euler = (math.radians(rx), math.radians(ry), math.radians(rz))
         key(ob, "location", t, mode)
@@ -247,7 +262,10 @@ def hold_local(kind):
 def free_keys(side, keys):
     """{tick: ((x, y, z), mode)}"""
     free = hands[side][1]
+    ticks = sorted(keys)
     for t, (p, mode) in sorted(keys.items()):
+        if t not in (ticks[0], ticks[-1]):
+            p = TAKE.point(p, 0.006)
         free.location = p
         key(free, "location", t, mode)
 
@@ -273,6 +291,13 @@ def prop_keys(name, keys):
                     kp.interpolation = "CONSTANT"
 
 
+def curve_keys(name, keys):
+    """A smooth channel (twistL, twistR, look): {tick: degrees}."""
+    for t, v in sorted(keys.items()):
+        gun[name] = float(v)
+        key(gun, f'["{name}"]', t, "B")
+
+
 def slide_keys(keys):
     for t, (b, mode) in sorted(keys.items()):
         slide.location = (0.0, 0.0, SLIDE_TRAVEL * b)
@@ -294,7 +319,7 @@ def clear(kind="std"):
     new_grip.location = MAG_TILT.to_3x3() @ hold_local(kind)
     hands["L"][1].location = SUPPORT
     hands["R"][1].location = GRIP
-    for p in FLAGS:
+    for p in FLAGS + CURVES:
         gun[p] = 0.0
     for name in ("old", "new"):
         mags[name][0].hide_render = kind == "ext" and name == "new"
@@ -335,7 +360,14 @@ def drop_old(t0, until):
         keys[t0 + t] = (off.x, off.y, off.z, *rot, "L")
         p0 = p
     mag_keys(OLD, keys)
+    # clear of the well (about three ticks out): from there Bullet has it
+    animkit.rigid_fall(scene, OLD, gun, t0 + 3.0, until, FPT)
     return p0
+
+
+def fall_new(kind, release, until):
+    """The fresh magazine slipping from the fingers at `release`: Bullet has it until `until`."""
+    animkit.rigid_fall(scene, NEW, gun, release, until, FPT, mesh=mags["new"][1 if kind == "ext" else 0].data)
 
 
 # ---------------------------------------------------------------- the clips
@@ -409,6 +441,9 @@ def reload(kind, empty_gun):
         influence_keys(C_L_RACK, {0: (0, "C"), 21.6: (0, "QUAD"), 23: (1, "C"), T_RACK_FORWARD - 0.5: (1, "QUADO"), T_RACK_FORWARD + 0.2: (0, "C")})
     free_keys("L", {t: (p, m) for t, p, m in hand})
     free_keys("R", {0: (GRIP, "C")})
+    if empty_gun:
+        # the support hand's forearm rolled over the top for the rack
+        curve_keys("twistL", {0: 0, 21: 0, 23: -70, T_RACK_FORWARD + 1.2: -60, 31.5: 0})
     if empty_gun:
         # locked back until the hand takes it: pulled to the stop, held, let go - it slams home
         slide_keys({0: (1.0, "C"), 23.2: (1.0, "SINE"), T_RACK_BACK: (1.12, "C"), T_RACK_FORWARD - 0.5: (1.12, "QUAD"),
@@ -516,11 +551,17 @@ def reload_shaken(kind, variant):
     mag_keys(NEW, new)
     prop_keys("oldVis", {0: 1, T_RELEASE + 9: 0})
     prop_keys("newIn", {0: 0, T_IN + d: 1})
+    if variant == "fumble":
+        curve_keys("look", {0: 0, T_FUMBLE_HIT: 0, T_FUMBLE_HIT + 1.5: 6, 20.5: 5, 15.6 + d: 1, T_IN + d + 2: 0})
+    else:
+        curve_keys("look", {0: 0, T_SLIP: 0, T_SLIP + 1.5: 9, T_SLIP + 4: 13, T_SLIP + 7: 7, 6.5 + d: 3, 13.5 + d: 0})
     hand += [(T_IN + d + 0.4, tuple(SEAT + MAG_DOWN * (LENGTH[kind] - 0.004) + Vector((-0.012, 0, 0))), "B"),
              (T_IN + d + 3.5, (-0.05, -0.08, 0.02), "B"), (end - 3, SUPPORT, "B")]
     free_keys("L", {t: (p, m) for t, p, m in hand})
     free_keys("R", {0: (GRIP, "C")})
     slide_keys({0: (0.0, "C")})
+    if variant == "drop":
+        fall_new(kind, T_SLIP, T_SLIP + 7.0)
     return end
 
 
@@ -555,6 +596,7 @@ def clip_inspect():
         59: (SUPPORT, "B"),
     })
     influence_keys(C_L_PRESS, {0: (0, "C"), 20.5: (0, "QUAD"), 22.5: (1, "C"), PRESS_HOME - 0.4: (1, "QUADO"), PRESS_HOME + 1.5: (0, "C")})
+    curve_keys("twistL", {0: 0, 18: 0, 22.5: -35, PRESS_HOME + 2: 0})
     free_keys("R", {0: (GRIP, "C")})
     slide_keys({0: (0.0, "C"), PRESS_BACK - 1.6: (0.0, "SINE"), PRESS_BACK + 0.6: (0.38, "B"), PRESS_HOME - 0.3: (0.4, "QUAD"),
                 PRESS_HOME + 0.1: (0.0, "C")})
@@ -645,7 +687,19 @@ def sample():
         out += list((gi @ hands[side][0].matrix_world).translation)
     out.append(slide.location.z / SLIDE_TRAVEL)
     out += [gun["oldVis"], gun["newVis"], gun["newIn"]]
+    out += animkit.hand_quat(hands["L"][0], gi, gun["twistL"])
+    out += animkit.hand_quat(hands["R"][0], gi, gun["twistR"])
+    out.append(gun["look"])  # replaced by the head's pitch, yaw, roll (animkit.camera)
     return out
+
+
+def jobs():
+    """Every clip, and the takes of the reloads: (name, build, take)."""
+    for name, build in CLIPS.items():
+        yield name, build, 0
+        if name.startswith("reload_"):
+            for n in (1, 2):
+                yield f"{name}@{n}", build, n
 
 
 # ---------------------------------------------------------------- preview: arms with IK, a first-person camera
@@ -753,9 +807,10 @@ if __name__ == "__main__":
     if PREVIEW:
         preview_setup()
     blob = []
-    for name, build in CLIPS.items():
+    for name, build, take in jobs():
         if ONLY and name not in ONLY:
             continue
+        TAKE = animkit.Take(take)
         clear("ext" if "_ext" in name else "std")
         length = build()
         n = length * SPT + 1
@@ -763,6 +818,9 @@ if __name__ == "__main__":
         for i in range(n):
             scene.frame_set(int(i * FPT / SPT), subframe=(i * FPT / SPT) % 1.0)
             samples.append(sample())
+        # the eyes on the pistol while it is in close; not for the draw and the dry click (on target)
+        head = animkit.camera(samples, SPT, [s[-1] for s in samples], down=0.0 if name in ("draw", "dry", "idle") else 4.0)
+        samples = [s[:-1] + h for s, h in zip(samples, head)]
         blob.append((name, length, samples))
         print(name, length, "ticks", len(samples), "samples", flush=True)
         if PREVIEW:
@@ -786,4 +844,4 @@ if __name__ == "__main__":
                 f.write(struct.pack(">H", len(nb)) + nb)
                 f.write(struct.pack(">III", length, SPT, len(samples)))
                 for s in samples:
-                    f.write(struct.pack(">40f", *s))
+                    f.write(struct.pack(">51f", *s))

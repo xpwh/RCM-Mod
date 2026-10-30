@@ -75,10 +75,12 @@ public final class GlockMotion {
 	 * @param tired     0..1 out of breath
 	 * @param breath    breathing phase
 	 * @param arm       0..2 a wounded arm's tremor
+	 * @param variant   how the reload goes (GunState.CLEAN, FUMBLE, DROPPED)
+	 * @param start     the tick the reload started (picks its take)
 	 */
 	public record Frame(float now, float aim, float shot, boolean locked, float reload, boolean empty, boolean hadMag, int oldKind, int newKind, float dry,
 		float inspect, float idle, float drawn, float run, float stride, float walk, float lean, float landed, float landHard, float tired, float breath,
-		int arm, int variant) {
+		int arm, int variant, long start) {
 	}
 
 	private static final class Spring {
@@ -112,6 +114,11 @@ public final class GlockMotion {
 	/** Coming up onto the sights: it rises a touch past the line and settles. */
 	private final Spring settle = new Spring(1.2F, 0.45F);
 	private boolean wasAimed;
+	/** The clip's pose carrying on (FollowThrough), and how long the last step was. */
+	private final FollowThrough follow = new FollowThrough();
+	private float lastDt;
+	/** Reloading: the hold is loose, the gun lags far more as you turn. */
+	private boolean loose;
 
 	/** A shot: {@code braced} 1 at the ready, less on the sights; {@code side} -1..1 which way it rolls; {@code r} 0..1 random. */
 	public void kick(float braced, float side, float r) {
@@ -123,7 +130,8 @@ public final class GlockMotion {
 
 	/** {@code dt} ticks on; the view turned by {@code dYaw}, {@code dPitch} degrees meanwhile. */
 	public void step(float dt, float dYaw, float dPitch, float aim) {
-		float hold = 1.0F - 0.8F * aim;
+		this.lastDt = dt;
+		float hold = (1.0F - 0.8F * aim) * (this.loose ? 1.9F : 1.0F);
 		this.lagYaw.v += Mth.clamp(dYaw, -25.0F, 25.0F) * 0.09F * hold;
 		this.lagPitch.v += Mth.clamp(dPitch, -25.0F, 25.0F) * 0.09F * hold;
 		boolean aimed = aim > 0.97F;
@@ -159,10 +167,12 @@ public final class GlockMotion {
 
 	// ------------------------------------------------------------------ the moving parts
 
+	private static final float[] NO_CLIP = new float[6];
+
 	/** The clip playing now and how far into it (null: none), first come first served. */
 	private static AkClips.Clip clip(Frame f) {
 		if (f.reload() >= 0.0F) {
-			return GlockClips.reload(f.empty(), f.newKind(), f.variant());
+			return GlockClips.reload(f.empty(), f.newKind(), f.variant(), f.start());
 		}
 		if (f.inspect() >= 0.0F && f.inspect() < INSPECT) {
 			return GlockClips.get("inspect");
@@ -322,6 +332,17 @@ public final class GlockMotion {
 			poseStack.mulPose(Axis.XP.rotationDegrees(clip[4]));
 			poseStack.mulPose(Axis.YP.rotationDegrees(clip[5]));
 		}
+		// the gun's weight carrying on past where the clip stops it; the head moving with the clip (your own gun only)
+		this.loose = f.reload() >= 0.0F;
+		this.follow.step(clip != null ? clip : NO_CLIP, this.lastDt);
+		this.lastDt = 0.0F;
+		this.follow.apply(poseStack);
+		if (f.drawn() != 100.0F) {
+			HeadMotion.begin();
+			if (clip != null) {
+				HeadMotion.add(clip, 1.0F);
+			}
+		}
 
 		// sprinting: pulled in to the chest, muzzle down and forward, bouncing with the stride
 		float run = f.run();
@@ -354,7 +375,8 @@ public final class GlockMotion {
 	// ------------------------------------------------------------------ the arms
 
 	/** Where the hands are (item space), and the shoulders and the ways the elbows point (first-person base space, as AkArms takes them). */
-	public record Hands(Vector3f right, Vector3f left, Vector3f rightShoulder, Vector3f rightPole, Vector3f leftShoulder, Vector3f leftPole) {
+	public record Hands(Vector3f right, Vector3f left, Vector3f rightShoulder, Vector3f rightPole, Vector3f leftShoulder, Vector3f leftPole,
+		Quaternionf rightTurn, Quaternionf leftTurn) {
 	}
 
 	/** The arms drawn for the pistol: slimmer than the model's, the forearm (and fist) shorter, so the hands sit on a small gun. */
@@ -381,7 +403,9 @@ public final class GlockMotion {
 		Vector3f rightPole = new Vector3f(RIGHT_POLE).lerp(new Vector3f(1.0F, 0.1F, 0.5F), in);
 		float[] clip = sample(f);
 		Vector3f grip = clip != null ? AkClips.vec(clip, 33, new Vector3f()) : new Vector3f(GRIP);
-		return new Hands(grip, supportHand(f), rs, rightPole, ls, new Vector3f(LEFT_POLE));
+		Quaternionf rightTurn = clip != null ? AkClips.turn(clip, AkClips.RIGHT_TURN, new Quaternionf()) : new Quaternionf();
+		Quaternionf leftTurn = clip != null ? AkClips.turn(clip, AkClips.LEFT_TURN, new Quaternionf()) : new Quaternionf();
+		return new Hands(grip, supportHand(f), rs, rightPole, ls, new Vector3f(LEFT_POLE), rightTurn, leftTurn);
 	}
 
 	private static Vector3f lerp(Vector3f a, Vector3f b, float t) {

@@ -85,7 +85,8 @@ public class GlockStudio {
 			if (reload >= (empty ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL)) { reload = -1; locked = false; kind = newKind; }
 			float inspect = t - inspectStart >= 0 && t - inspectStart < GlockMotion.INSPECT ? t - inspectStart : -1;
 			GlockMotion.Frame f = new GlockMotion.Frame(t, aimE, t - lastShot, locked && reload < 0, reload, empty, true, kind, newKind, t - dryTick, inspect,
-				0, t - equipTick, smooth(prevSprint + (sprint - prevSprint) * partial), stride, prevWalk + (walk - prevWalk) * partial, 0, 100, 0.8F, 0, 0, 0);
+				0, t - equipTick, smooth(prevSprint + (sprint - prevSprint) * partial), stride, prevWalk + (walk - prevWalk) * partial, 0, 100, 0.8F, 0, 0, 0, 0,
+				(long) reloadStart);
 			frame(m, f, reload, kind, newKind, rounds > 0);
 		}
 	}

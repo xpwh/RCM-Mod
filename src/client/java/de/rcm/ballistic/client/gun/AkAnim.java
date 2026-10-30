@@ -4,6 +4,7 @@ import de.rcm.ballistic.gun.AkItem;
 import de.rcm.ballistic.gun.GunState;
 import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
@@ -39,6 +40,9 @@ public final class AkAnim {
 	public int mag2Tracer;
 	public final Vector3f leftHand = new Vector3f();
 	public final Vector3f rightHand = new Vector3f();
+	/** Which way the hands are turned (item space): the turn of what they hold, a forearm rolled over. */
+	public final Quaternionf leftTurn = new Quaternionf();
+	public final Quaternionf rightTurn = new Quaternionf();
 	private final float[] sample = new float[AkClips.STRIDE];
 
 	/** Pose the hands, magazines and bolt from a clip at {@code t} ticks; returns the sample. */
@@ -48,6 +52,8 @@ public final class AkAnim {
 		AkClips.matrix(s, 18, this.mag2);
 		AkClips.vec(s, 30, this.leftHand);
 		AkClips.vec(s, 33, this.rightHand);
+		AkClips.turn(s, AkClips.LEFT_TURN, this.leftTurn);
+		AkClips.turn(s, AkClips.RIGHT_TURN, this.rightTurn);
 		this.bolt = Math.max(this.bolt, s[36]);
 		return s;
 	}
@@ -78,6 +84,8 @@ public final class AkAnim {
 		this.magLoaded = state.rounds() > 0;
 		this.leftHand.set(HANDGUARD);
 		this.rightHand.set(GRIP);
+		this.leftTurn.identity();
+		this.rightTurn.identity();
 		this.mag2Visible = false;
 		if (!state.reloading()) {
 			if (check >= 0.0F && state.hasMag()) {

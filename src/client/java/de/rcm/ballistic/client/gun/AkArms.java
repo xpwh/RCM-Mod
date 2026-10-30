@@ -58,7 +58,8 @@ public final class AkArms {
 		poseStack.translate(-3.2F / 16.0F, 2.4F / 16.0F, 0.5F / 16.0F);
 		poseStack.mulPose(Axis.YP.rotationDegrees(3.0F));
 		Vector3f left = AttachAnim.supportHand(partialTick, stack, anim.leftHand);
-		draw(player, base, poseStack, collector, light, anim.rightHand, left, RIGHT_SHOULDER, LEFT_SHOULDER);
+		draw(player, base, poseStack, collector, light, anim.rightHand, left, RIGHT_SHOULDER, LEFT_SHOULDER, RIGHT_POLE, LEFT_POLE, THICK, 1.0F,
+			anim.rightTurn, anim.leftTurn);
 		poseStack.popPose();
 	}
 
@@ -94,6 +95,16 @@ public final class AkArms {
 	 */
 	public static void draw(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, Vector3f rightHand,
 		Vector3f leftHand, Vector3f rightShoulderBase, Vector3f leftShoulderBase, Vector3f rightPole, Vector3f leftPole, float thick, float fore) {
+		draw(player, base, poseStack, collector, light, rightHand, leftHand, rightShoulderBase, leftShoulderBase, rightPole, leftPole, thick, fore, null, null);
+	}
+
+	/**
+	 * The same with the hands turned (item space, null: not): a hand on a magazine turns with it, a forearm rolls
+	 * over to reach across the top - the forearm (with its fist) rolls about its length to match.
+	 */
+	public static void draw(AbstractClientPlayer player, Matrix4f base, PoseStack poseStack, SubmitNodeCollector collector, int light, Vector3f rightHand,
+		Vector3f leftHand, Vector3f rightShoulderBase, Vector3f leftShoulderBase, Vector3f rightPole, Vector3f leftPole, float thick, float fore,
+		Quaternionf rightTurn, Quaternionf leftTurn) {
 		Minecraft mc = Minecraft.getInstance();
 		PlayerModel model = mc.getEntityRenderDispatcher().getPlayerRenderer(player).getModel();
 		Identifier skin = player.getSkin().body().texturePath();
@@ -110,14 +121,14 @@ public final class AkArms {
 		float rightFist = slim ? -0.5F : -1.0F;
 		float leftFist = slim ? 0.5F : 1.0F;
 		// forearms: fist at the hand, running back to the elbow
-		arm(model.rightArm, model.rightSleeve, rightSleeve, rightHand, rightElbow, rightFist, fore, false, poseStack, collector, light, skin, thick);
-		arm(model.leftArm, model.leftSleeve, leftSleeve, leftHand, leftElbow, leftFist, fore, false, poseStack, collector, light, skin, thick);
+		arm(model.rightArm, model.rightSleeve, rightSleeve, rightHand, rightElbow, rightFist, fore, false, poseStack, collector, light, skin, thick, rightTurn);
+		arm(model.leftArm, model.leftSleeve, leftSleeve, leftHand, leftElbow, leftFist, fore, false, poseStack, collector, light, skin, thick, leftTurn);
 		// upper arms: from the elbow on up to the shoulder (mostly out of view), drawn the other way round so
 		// the fist end of the model stays hidden at the shoulder
 		arm(model.rightArm, model.rightSleeve, rightSleeve, rightElbow, rightShoulder, rightFist, rightElbow.distance(rightShoulder) / (12.0F / 16.0F), true,
-			poseStack, collector, light, skin, thick);
+			poseStack, collector, light, skin, thick, null);
 		arm(model.leftArm, model.leftSleeve, leftSleeve, leftElbow, leftShoulder, leftFist, leftElbow.distance(leftShoulder) / (12.0F / 16.0F), true,
-			poseStack, collector, light, skin, thick);
+			poseStack, collector, light, skin, thick, null);
 	}
 
 	/**
@@ -166,10 +177,11 @@ public final class AkArms {
 	 * 8.5 px down. A forearm puts the fist at {@code from} and runs back towards {@code to} (the elbow);
 	 * {@code reversed} (an upper arm) starts the top of the model at {@code from} (the elbow) and runs on to
 	 * {@code to} (the shoulder), {@code length} times as long as the model. The outer face (away from the
-	 * body) is turned outward.
+	 * body) is turned outward - or, given the hand's {@code turn}, rolled about the arm's length as far as the hand is
+	 * turned that way.
 	 */
 	private static void arm(ModelPart arm, ModelPart sleeve, boolean sleeveShown, Vector3f from, Vector3f to, float fistX, float length, boolean reversed,
-		PoseStack poseStack, SubmitNodeCollector collector, int light, Identifier skin, float thick) {
+		PoseStack poseStack, SubmitNodeCollector collector, int light, Identifier skin, float thick, Quaternionf turn) {
 		// +Y of the model: from the shoulder end towards the fist end
 		Vector3f down = reversed ? new Vector3f(to).sub(from) : new Vector3f(from).sub(to);
 		if (down.lengthSquared() < 1.0E-6F) {
@@ -178,6 +190,9 @@ public final class AkArms {
 		down.normalize();
 		// model +X points to the player's left: for both arms that is the gun's -X here
 		Vector3f side = new Vector3f(-1.0F, 0.0F, 0.0F);
+		if (turn != null) {
+			turn.transform(side);
+		}
 		side.sub(new Vector3f(down).mul(side.dot(down)));
 		if (side.lengthSquared() < 1.0E-4F) {
 			side.set(0.0F, 0.0F, 1.0F).sub(new Vector3f(down).mul(down.z));

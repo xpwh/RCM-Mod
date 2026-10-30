@@ -94,6 +94,10 @@ public final class AkFirstPerson {
 
 	/** The rifle's pose in the hand from a Blender clip (scratch sample). */
 	private static final float[] POSE = new float[AkClips.STRIDE];
+	/** The clip poses applied this frame, added up (gun channels), for the follow-through. */
+	private static final float[] CLIP_POSE = new float[6];
+	private static final FollowThrough FOLLOW = new FollowThrough();
+	private static float frameDt;
 
 	/** The last pull of the trigger on an empty gun. */
 	private static long dryTick = -100L;
@@ -151,7 +155,7 @@ public final class AkFirstPerson {
 	}
 
 	/** Steps the springs to this frame and feeds them the shots fired and the turn of the view since the last. */
-	private static void physics(Minecraft mc, float now, float partialTick) {
+	private static void physics(Minecraft mc, float now, float partialTick, boolean loose) {
 		var player = mc.player;
 		float yaw = player.getViewYRot(partialTick);
 		float pitch = player.getViewXRot(partialTick);
@@ -163,6 +167,7 @@ public final class AkFirstPerson {
 			lastPitch = pitch;
 		}
 		lastFrame = now;
+		frameDt = dt;
 		float aiming = AkClient.aimProgress(partialTick);
 		while (pendingKicks > 0) {
 			pendingKicks--;
@@ -178,8 +183,8 @@ public final class AkFirstPerson {
 		float dp = pitch - lastPitch;
 		lastYaw = yaw;
 		lastPitch = pitch;
-		// at the shoulder, the sights held on the point of aim: hardly any lag
-		float hold = 1.0F - 0.85F * aiming;
+		// at the shoulder, the sights held on the point of aim: hardly any lag; reloading, held loosely: a lot
+		float hold = (1.0F - 0.85F * aiming) * (loose ? 1.9F : 1.0F);
 		LAG_YAW.v += Mth.clamp(dy, -25.0F, 25.0F) * 0.09F * hold;
 		LAG_PITCH.v += Mth.clamp(dp, -25.0F, 25.0F) * 0.09F * hold;
 		for (Spring sp : new Spring[] {BACK, PITCH, YAW, ROLL, LAG_YAW, LAG_PITCH}) {
@@ -202,8 +207,10 @@ public final class AkFirstPerson {
 		float now = mc.level.getGameTime() + partialTick;
 		GunState state = AkItem.state(stack);
 		if (mc.player != null) {
-			physics(mc, now, partialTick);
+			physics(mc, now, partialTick, state.reloading());
 		}
+		HeadMotion.begin();
+		java.util.Arrays.fill(CLIP_POSE, 0.0F);
 
 		// up to the eye: rear notch and front post lined up on the middle of the view
 		float aim = AkClient.aimProgress(partialTick);
@@ -303,6 +310,10 @@ public final class AkFirstPerson {
 			pose(poseStack, AkClips.reload(state, r), r);
 		}
 
+		// the rifle's weight carrying on past where the clip stops it, and lagging as it starts
+		FOLLOW.step(CLIP_POSE, frameDt);
+		FOLLOW.apply(poseStack);
+
 		// recoil: the springs, kicked by every shot
 		poseStack.translate(0.0F, 0.12F * Math.max(0.0F, PITCH.x) * 0.02F, Math.max(-0.02F, BACK.x));
 		poseStack.mulPose(Axis.XP.rotationDegrees(PITCH.x));
@@ -313,6 +324,10 @@ public final class AkFirstPerson {
 	/** The rifle's pose in the hand from a clip: moved, then rolled, pitched and turned. */
 	private static void pose(PoseStack poseStack, AkClips.Clip clip, float t) {
 		float[] p = clip.at(t, POSE);
+		for (int i = 0; i < 6; i++) {
+			CLIP_POSE[i] += p[i];
+		}
+		HeadMotion.add(p, 1.0F);
 		poseStack.translate(p[0], p[1], p[2]);
 		poseStack.mulPose(Axis.ZP.rotationDegrees(p[3]));
 		poseStack.mulPose(Axis.XP.rotationDegrees(p[4]));

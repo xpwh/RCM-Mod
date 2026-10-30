@@ -127,7 +127,7 @@ public final class GlockClient {
 			me ? now - busyTick : 0.0F, me ? now - equipTick : 100.0F, me ? GlockMotion.smooth(Mth.lerp(partialTick, prevSprint, sprint)) : 0.0F,
 			me ? player.walkAnimation.position(partialTick) : 0.0F, me ? Mth.lerp(partialTick, prevWalk, walk) : 0.0F,
 			me ? Mth.lerp(partialTick, prevStrafe, strafe) : 0.0F, me ? now - landTick : 100.0F, landHard, me ? Fatigue.level() : 0.0F,
-			me ? Fatigue.breathPhase(partialTick) : 0.0F, me ? Injuries.get(player).arm() : 0, s.reloadKind() == GunState.EMPTY ? 0 : s.reloadVariant());
+			me ? Fatigue.breathPhase(partialTick) : 0.0F, me ? Injuries.get(player).arm() : 0, s.reloadKind() == GunState.EMPTY ? 0 : s.reloadVariant(), s.reloadStart());
 	}
 
 	/** Everything that moves on this gun right now, for its model. */
@@ -371,7 +371,7 @@ public final class GlockClient {
 		poseStack.mulPose(Axis.YP.rotationDegrees(3.0F));
 		AkArms.draw(player, base, poseStack, collector, light, hands.right(), AttachAnim.supportHand(partialTick, stack, hands.left()), hands.rightShoulder(),
 			hands.leftShoulder(), hands.rightPole(),
-			hands.leftPole(), GlockMotion.ARM_THICK, GlockMotion.FOREARM);
+			hands.leftPole(), GlockMotion.ARM_THICK, GlockMotion.FOREARM, hands.rightTurn(), hands.leftTurn());
 		poseStack.popPose();
 	}
 

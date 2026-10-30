@@ -83,6 +83,27 @@ public abstract class CameraMixin {
 		}
 	}
 
+	/** Working a gun in first person: the head's own motion from the clip playing (HeadMotion) - the view only. */
+	@Inject(method = "setup", at = @At("TAIL"))
+	private void ballisticmissiles$headMotion(Level level, Entity entity, boolean detached, boolean mirrored, float partialTick, CallbackInfo ci) {
+		Minecraft mc = Minecraft.getInstance();
+		if (detached || entity != mc.player || entity.getVehicle() != null || de.rcm.ballistic.client.effect.NewMoonCutscene.playing()
+			|| de.rcm.ballistic.client.effect.KillcamClient.camera(partialTick) != null) {
+			return;
+		}
+		float[] head = de.rcm.ballistic.client.gun.HeadMotion.current();
+		if (head == null) {
+			return;
+		}
+		this.setRotation(this.yRot + head[1], net.minecraft.util.Mth.clamp(this.xRot + head[0], -90.0F, 90.0F));
+		if (head[2] != 0.0F) {
+			this.rotation.rotateZ(head[2] * net.minecraft.util.Mth.DEG_TO_RAD);
+			this.rotation.transform(new Vector3f(0.0F, 0.0F, -1.0F), this.forwards);
+			this.rotation.transform(new Vector3f(0.0F, 1.0F, 0.0F), this.up);
+			this.rotation.transform(new Vector3f(-1.0F, 0.0F, 0.0F), this.left);
+		}
+	}
+
 	@Inject(method = "setup", at = @At("TAIL"))
 	private void ballisticmissiles$cockpitView(Level level, Entity entity, boolean detached, boolean mirrored, float partialTick, CallbackInfo ci) {
 		Quaternionf q = this.ballisticmissiles$cockpit;
