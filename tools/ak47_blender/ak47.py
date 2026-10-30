@@ -1,16 +1,10 @@
-"""AK-47 built in Blender from script, at real size in metres, after a side photograph of a Type II rifle.
+"""AK-47 (Type 3, milled receiver) built in Blender from script, real size in metres.
 
 Axes: X right, Y forward (towards the muzzle), Z up. Origin: rear of the receiver on the bore axis.
 Separate objects for the parts that move in game: body, carrier (bolt carrier + charging handle),
-selector, magazine (with rounds, tracer tips and tape as their own parts).
+selector, magazine.
 
-Needs Blender's Python module (pip install bpy, Python 3.13).
-
-    python ak47.py <out_dir> [--blend] [--shot=side,three_quarter,left,detail,compare]   preview renders
-    python ak47.py --export=<dir>     bake the texture and write the game meshes (export.py):
-                                      copy ak47.png to textures/entity/, ak47.mesh.gz to meshes/
-    python3 trace.py <photo.png> profile.json     outlines traced from the reference photo
-    python3 check_game.py <mesh.gz> <png> <out.png>   draw the exported mesh as the mod reads it
+    python ak47.py [out_dir] [--blend]
 """
 import math
 import sys
@@ -30,6 +24,8 @@ HDRI = bpy.utils.resource_path("LOCAL") + "/datafiles/studiolights/world/interio
 
 
 DISPLAY = {}
+# per material for the game shader: (metallic, roughness socket or value, clear coat)
+SURFACE = {}
 
 
 def node_mat(name):
@@ -134,7 +130,7 @@ def blued(name="blued", base=(0.03, 0.033, 0.037), rough=0.36, wear=0.95):
     col = _mix_rgb(nt, pm.outputs[0], base, (0.075, 0.08, 0.085))
     col = _mix_rgb(nt, worn, col, (0.36, 0.36, 0.35))
     nt.links.new(col, bsdf.inputs["Base Color"])
-    DISPLAY[m.name] = (col, 2.6)
+    DISPLAY[m.name] = (col, 2.0)
     # scratches: noise stretched along the rifle
     mp = _n(nt, "ShaderNodeMapping", Scale=(1.0, 0.04, 1.0))
     nt.links.new(tc.outputs["Object"], mp.inputs[0])
@@ -147,6 +143,7 @@ def blued(name="blued", base=(0.03, 0.033, 0.037), rough=0.36, wear=0.95):
     rough_out = _mix_f(nt, worn, rr.outputs[0], 0.2)
     rough_out = _mix_f(nt, pm.outputs[0], rough_out, rough + 0.12)
     nt.links.new(rough_out, bsdf.inputs["Roughness"])
+    SURFACE[m.name] = (1.0, rough_out, 0.0)  # (the game adds a little roughness to metals)
     bump = _n(nt, "ShaderNodeBump", Strength=0.05, Distance=0.0002)
     h = _math(nt, "ADD", scr.outputs["Fac"], _math(nt, "MULTIPLY", fine.outputs["Fac"], 0.4))
     nt.links.new(h, bump.inputs["Height"])
@@ -155,7 +152,7 @@ def blued(name="blued", base=(0.03, 0.033, 0.037), rough=0.36, wear=0.95):
     return m
 
 
-def wood(name, dark=(0.028, 0.0065, 0.003), light=(0.105, 0.024, 0.0095), scale=(1.0, 0.035, 1.0), grain="Y", tilt=0.0):
+def wood(name, dark=(0.03, 0.0085, 0.0038), light=(0.11, 0.034, 0.0135), scale=(1.0, 0.035, 1.0), grain="Y", tilt=0.0):
     """Old shellacked birch: fine straight grain along the part, figure and darker streaks, worn and
     handled, the finish semi-matte with grime in the corners and dents all over."""
     m, nt, bsdf = node_mat(name)
@@ -203,11 +200,12 @@ def wood(name, dark=(0.028, 0.0065, 0.003), light=(0.105, 0.024, 0.0095), scale=
     edge, bev_n = _edge_mask(nt, 0.002, 0.02, 0.12)
     col = _mix_rgb(nt, _math(nt, "MULTIPLY", edge, 0.5), col, (light[0] * 1.35, light[1] * 1.4, light[2] * 1.4))
     nt.links.new(col, bsdf.inputs["Base Color"])
-    DISPLAY[m.name] = (col, 1.35)
+    DISPLAY[m.name] = (col, 1.45)
     # semi-matte old finish, patchy where worn
     rr = _n(nt, "ShaderNodeMapRange", **{"To Min": 0.32, "To Max": 0.6})
     nt.links.new(big.outputs["Fac"], rr.inputs[0])
     nt.links.new(rr.outputs[0], bsdf.inputs["Roughness"])
+    SURFACE[m.name] = (0.0, rr.outputs[0], 0.3)
     bsdf.inputs["Coat Weight"].default_value = 0.18
     bsdf.inputs["Coat Roughness"].default_value = 0.25
     # dents, dings and the grain in relief
@@ -228,6 +226,7 @@ def flat(name, color, rough=0.5, metal=0.0):
     m, nt, bsdf = node_mat(name)
     bsdf.inputs["Base Color"].default_value = (*color, 1)
     DISPLAY[m.name] = (tuple(color), 1.6 if metal else 1.0)
+    SURFACE[m.name] = (metal, rough, 0.0)
     bsdf.inputs["Roughness"].default_value = rough
     bsdf.inputs["Metallic"].default_value = metal
     return m

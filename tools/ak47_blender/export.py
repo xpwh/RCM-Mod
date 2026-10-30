@@ -90,57 +90,111 @@ bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.0015, are
 bpy.ops.uv.pack_islands(margin=0.0015, rotate=True)
 bpy.ops.object.mode_set(mode="OBJECT")
 
-# bake: what each material looks like under plain light, darkened in the hollows
-img = bpy.data.images.new("ak47_bake", TEX, TEX, alpha=False, float_buffer=True)
+# bake two maps for the game's gun shader (gun.fsh):
+#   ak47.png      base colour (sRGB)
+#   ak47_mat.png  r metallic, g roughness, b ambient occlusion, a clear coat (linear)
+import numpy as np  # noqa: E402
+
 for m in mats:
     nt = m.node_tree
-    out = [n for n in nt.nodes if n.type == "OUTPUT_MATERIAL"][0]
+    tn = nt.nodes.new("ShaderNodeTexImage")
+    tn.name = "bake_target"
+    nt.nodes.active = tn
+scene.render.engine = "CYCLES"
+scene.render.bake.margin = 8
+
+
+def emit_bake(name, feed, samples):
+    """Bake what feed(material, node_tree) returns (a colour socket) through an emission shader."""
+    im = bpy.data.images.new(name, TEX, TEX, alpha=False, float_buffer=True)
+    for m in mats:
+        nt = m.node_tree
+        out = [n for n in nt.nodes if n.type == "OUTPUT_MATERIAL"][0]
+        em = nt.nodes.new("ShaderNodeEmission")
+        nt.links.new(feed(m, nt), em.inputs["Color"])
+        nt.links.new(em.outputs[0], out.inputs["Surface"])
+        nt.nodes["bake_target"].image = im
+    scene.cycles.samples = samples
+    bpy.ops.object.bake(type="EMIT", use_clear=True)
+    return np.array(im.pixels[:], dtype=np.float32).reshape(TEX, TEX, 4)[::-1, :, :3]
+
+
+def socket_or_value(nt, v):
+    if isinstance(v, (int, float)):
+        n = nt.nodes.new("ShaderNodeValue")
+        n.outputs[0].default_value = v
+        return n.outputs[0]
+    return v
+
+
+def feed_albedo(m, nt):
     src, gain = DISPLAY[m.name]
-    em = nt.nodes.new("ShaderNodeEmission")
-    ao = nt.nodes.new("ShaderNodeAmbientOcclusion")
-    ao.inputs["Distance"].default_value = 0.02
-    ao.only_local = True
-    if isinstance(src, tuple):
-        ao.inputs["Color"].default_value = (*src, 1)
-    else:
-        nt.links.new(src, ao.inputs["Color"])
-    # AO only part way: the game shades by itself too
+    rgb = nt.nodes.new("ShaderNodeRGB")
     mix = nt.nodes.new("ShaderNodeMix")
     mix.data_type = "RGBA"
     mix.blend_type = "MULTIPLY"
-    mix.inputs["Factor"].default_value = 0.75
-    nt.links.new(ao.outputs["Color"], mix.inputs["A"])
-    nt.links.new(ao.outputs["AO"], mix.inputs["B"])
-    nt.links.new(mix.outputs["Result"], em.inputs["Color"])
-    em.inputs["Strength"].default_value = gain
-    nt.links.new(em.outputs[0], out.inputs["Surface"])
-    tn = nt.nodes.new("ShaderNodeTexImage")
-    tn.image = img
-    nt.nodes.active = tn
-scene.render.engine = "CYCLES"
-scene.cycles.samples = 32
-scene.render.bake.margin = 6
-bpy.ops.object.bake(type="EMIT", use_clear=True)
+    mix.inputs["Factor"].default_value = 1.0
+    if isinstance(src, tuple):
+        mix.inputs["A"].default_value = (*src, 1)
+    else:
+        nt.links.new(src, mix.inputs["A"])
+    rgb.outputs[0].default_value = (gain, gain, gain, 1)
+    nt.links.new(rgb.outputs[0], mix.inputs["B"])
+    return mix.outputs["Result"]
 
-# to sRGB 8 bit, with a strip of plain swatches below for the tracer paint: green, red
-import numpy as np  # noqa: E402
 
-px = np.array(img.pixels[:], dtype=np.float32).reshape(TEX, TEX, 4)[::-1, :, :3]
-px = np.clip(px, 0.0, 1.0)
-srgb = np.where(px <= 0.0031308, px * 12.92, 1.055 * np.power(px, 1 / 2.4) - 0.055)
+def feed_surface(m, nt):
+    metal, rough, coat = SURFACE[m.name]
+    ao = nt.nodes.new("ShaderNodeAmbientOcclusion")
+    ao.inputs["Distance"].default_value = 0.02
+    ao.only_local = True
+    comb = nt.nodes.new("ShaderNodeCombineColor")
+    nt.links.new(socket_or_value(nt, metal), comb.inputs[0])
+    nt.links.new(socket_or_value(nt, rough), comb.inputs[1])
+    nt.links.new(ao.outputs["AO"], comb.inputs[2])
+    return comb.outputs[0]
+
+
+def feed_coat(m, nt):
+    comb = nt.nodes.new("ShaderNodeCombineColor")
+    v = socket_or_value(nt, SURFACE[m.name][2])
+    for k in range(3):
+        nt.links.new(v, comb.inputs[k])
+    return comb.outputs[0]
+
+
+albedo = emit_bake("bake_albedo", feed_albedo, 4)
+surface = emit_bake("bake_surface", feed_surface, 32)
+coat = emit_bake("bake_coat", feed_coat, 1)[..., 0]
+
 STRIP = 32
-full = np.zeros((TEX + STRIP, TEX, 4), dtype=np.uint8)
+H = TEX + STRIP
+
+
+def save_png(name, rgba):
+    im = bpy.data.images.new(name, TEX, H, alpha=True)
+    im.pixels[:] = (rgba[::-1].astype(np.float32) / 255.0).ravel()
+    im.filepath_raw = os.path.join(EXPORT_DIR, name)
+    im.file_format = "PNG"
+    im.save()
+
+
+# base colour to sRGB, with a strip of plain swatches below for the tracer paint: green, red
+px = np.clip(albedo, 0.0, 1.0)
+srgb = np.where(px <= 0.0031308, px * 12.92, 1.055 * np.power(px, 1 / 2.4) - 0.055)
+full = np.zeros((H, TEX, 4), dtype=np.uint8)
 full[:TEX, :, :3] = (srgb * 255 + 0.5).astype(np.uint8)
 full[:, :, 3] = 255
 SWATCH = {"green": (60, 200, 70), "red": (215, 40, 30)}
 for i, c in enumerate(SWATCH.values()):
     full[TEX:, i * 64:(i + 1) * 64, :3] = c
-H = TEX + STRIP
-out_img = bpy.data.images.new("ak47_out", TEX, H, alpha=True)
-out_img.pixels[:] = (full[::-1].astype(np.float32) / 255.0).ravel()
-out_img.filepath_raw = os.path.join(EXPORT_DIR, "ak47.png")
-out_img.file_format = "PNG"
-out_img.save()
+save_png("ak47.png", full)
+# the surface map, linear; the swatches as glossy paint
+mat = np.zeros((H, TEX, 4), dtype=np.uint8)
+mat[:TEX, :, :3] = (np.clip(surface, 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
+mat[:TEX, :, 3] = (np.clip(coat, 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
+mat[TEX:] = (0, 140, 255, 80)
+save_png("ak47_mat.png", mat)
 
 # the tape back in its place
 band_idx = ORDER.index("band")

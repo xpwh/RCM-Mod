@@ -36,9 +36,9 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunAttachmentM
 	static final float MUZZLE_Z = -0.712F;
 	/** The selector lever turns about this point (its mesh is drawn relative to it). */
 	static final Vector3f SELECTOR_PIVOT = new Vector3f(0.0225F, 0.0691F, 0.0784F);
-	/** The rifle's own texture, baked from the Blender materials. */
-	public static final net.minecraft.client.renderer.rendertype.RenderType TYPE = net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(
-		BallisticMissiles.id("textures/entity/ak47.png"));
+	/** Shaded physically per pixel (GunShading): the base colour and the surface map baked from the Blender materials. */
+	public static final net.minecraft.client.renderer.rendertype.RenderType TYPE = GunShading.type("ak47",
+		BallisticMissiles.id("textures/entity/ak47.png"), BallisticMissiles.id("textures/entity/ak47_mat.png"));
 	/** Plain paint swatches in the strip under the baked texture: green and red, for tracer tips and tape. */
 	private static final float SWATCH_V = 2064.0F / 2080.0F;
 	private static final float GREEN_U = 32.0F / 2048.0F;
@@ -113,6 +113,7 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunAttachmentM
 	public static final Vector3f VIEW_MUZZLE = new Vector3f(0.36F, -0.3F, -1.4F);
 
 	public static void register() {
+		GunShading.init();
 		SpecialModelRenderers.ID_MAPPER.put(BallisticMissiles.id("ak47"), Unbaked.MAP_CODEC);
 	}
 
