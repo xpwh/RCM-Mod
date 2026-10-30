@@ -51,7 +51,7 @@ public final class KillcamClient {
 
 	private static void start(Killcam.Payload p) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.player == null || de.rcm.ballistic.client.sun.SunCutscene.playing()) {
+		if (mc.player == null) {
 			return;
 		}
 		pos = p.pos();

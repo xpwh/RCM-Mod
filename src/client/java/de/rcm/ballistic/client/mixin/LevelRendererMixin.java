@@ -50,7 +50,7 @@ public abstract class LevelRendererMixin {
 	)
 	private Entity ballisticmissiles$showPilot(Camera camera) {
 		Minecraft mc = Minecraft.getInstance();
-		if ((DroneClient.isFlying() || de.rcm.ballistic.client.sun.SunCutscene.playing()
+		if ((DroneClient.isFlying()
 			|| de.rcm.ballistic.client.effect.KillcamClient.playing()) && mc.player != null) {
 			return mc.player; // "the camera is in you": your body is drawn
 		}

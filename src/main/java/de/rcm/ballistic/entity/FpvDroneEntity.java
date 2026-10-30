@@ -197,19 +197,11 @@ public class FpvDroneEntity extends Entity {
 
 	/** Where the world is seen from for {@code player}: their drone while they fly one, else themselves. */
 	public static ChunkPos viewChunk(ServerPlayer player) {
-		Vec3 cutscene = de.rcm.ballistic.sun.SunStrikes.view(player);
-		if (cutscene != null) {
-			return new ChunkPos(net.minecraft.core.BlockPos.containing(cutscene));
-		}
 		FpvDroneEntity drone = flownBy(player);
 		return drone != null ? drone.chunkPosition() : player.chunkPosition();
 	}
 
 	public static Vec3 viewPosition(ServerPlayer player) {
-		Vec3 cutscene = de.rcm.ballistic.sun.SunStrikes.view(player);
-		if (cutscene != null) {
-			return cutscene;
-		}
 		FpvDroneEntity drone = flownBy(player);
 		return drone != null ? drone.position() : player.position();
 	}

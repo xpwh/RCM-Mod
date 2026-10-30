@@ -309,12 +309,6 @@ public final class ModRegistry {
 		de.rcm.ballistic.block.OrbitalUplinkBlock::new,
 		BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(6.0F, 1200.0F).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
 	);
-	public static final Block SUN_FORGE = registerBlock(
-		"sun_forge",
-		de.rcm.ballistic.sun.SunForgeBlock::new,
-		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(8.0F, 3600.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
-			.lightLevel(state -> 6)
-	);
 	public static final Block WEAPONS_WORKBENCH = registerBlock(
 		"weapons_workbench", de.rcm.ballistic.gun.Workbench.BenchBlock::new,
 		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(4.0F, 12.0F).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
@@ -456,10 +450,6 @@ public final class ModRegistry {
 	public static final BlockEntityType<de.rcm.ballistic.block.OrbitalUplinkBlockEntity> ORBITAL_UPLINK_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("orbital_uplink"),
 		FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.block.OrbitalUplinkBlockEntity::new, ORBITAL_UPLINK).build()
-	);
-	public static final BlockEntityType<de.rcm.ballistic.sun.SunForgeBlockEntity> SUN_FORGE_BE = Registry.register(
-		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("sun_forge"),
-		FabricBlockEntityTypeBuilder.create(de.rcm.ballistic.sun.SunForgeBlockEntity::new, SUN_FORGE).build()
 	);
 	public static final BlockEntityType<JammerBlockEntity> JAMMER_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("jammer"), FabricBlockEntityTypeBuilder.create(JammerBlockEntity::new, JAMMER).build()
@@ -706,14 +696,6 @@ public final class ModRegistry {
 	public static final Item TUNGSTEN_ROD = registerItem(
 		"tungsten_rod", props -> new de.rcm.ballistic.item.InfoItem(props, "tungsten_rod", 2), new Item.Properties().stacksTo(6).rarity(Rarity.RARE)
 	);
-	public static final Item SUN_FORGE_ITEM = registerItem(
-		"sun_forge", props -> new de.rcm.ballistic.item.InfoBlockItem(SUN_FORGE, props, "sun_forge", 4),
-		new Item.Properties().useBlockDescriptionPrefix().rarity(Rarity.EPIC)
-	);
-	public static final Item SUN_DESTROYER = registerItem(
-		"sun_destroyer", props -> new de.rcm.ballistic.item.InfoItem(props, "sun_destroyer", 4), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-			.fireResistant()
-	);
 	public static final Item AK47 = registerItem(
 		"ak47", de.rcm.ballistic.gun.AkItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)
 			.component(net.minecraft.core.component.DataComponents.USE_EFFECTS, new net.minecraft.world.item.component.UseEffects(true, false, 0.85F))
@@ -862,28 +844,6 @@ public final class ModRegistry {
 	public static final SoundEvent ZIP_TIE = sound("soldier.zip_tie");
 	public static final SoundEvent UPLINK_ALARM = sound("uplink.alarm");
 	public static final SoundEvent ROD_REENTRY = sound("rod.reentry");
-	public static final SoundEvent SUN_LOAD = sound("sun.load");
-	public static final SoundEvent SUN_KLAXON = sound("sun.klaxon");
-	public static final SoundEvent SUN_ABORT = sound("sun.abort");
-	public static final SoundEvent SUN_DOORS = sound("sun.doors");
-	public static final SoundEvent SUN_LIFT = sound("sun.lift");
-	public static final SoundEvent SUN_CHARGE = sound("sun.charge");
-	public static final SoundEvent SUN_ARC = sound("sun.arc");
-	public static final SoundEvent SUN_FIRE = sound("sun.fire");
-	public static final SoundEvent SUN_FIRE_FAR = sound("sun.fire_far");
-	public static final SoundEvent SUN_FLIGHT = sound("sun.flight");
-	public static final SoundEvent SUN_IMPLODE = sound("sun.implode");
-	public static final SoundEvent SUN_IGNITE = sound("sun.ignite");
-	public static final SoundEvent SUN_BURN = sound("sun.burn");
-	public static final SoundEvent SUN_COLLAPSE = sound("sun.collapse");
-	public static final SoundEvent SUN_NOVA = sound("sun.nova");
-	public static final SoundEvent SUN_NOVA_FAR = sound("sun.nova_far");
-	public static final SoundEvent SUN_SIREN = sound("sun.siren");
-	public static final SoundEvent SUN_BEEP = sound("sun.beep");
-	/** A deep cinematic hit under the cutscene's title cards and cuts. */
-	public static final SoundEvent SUN_HIT = sound("sun.hit");
-	/** The nova's shock front tearing past: its crack and the wind behind it. */
-	public static final SoundEvent SUN_SHOCK = sound("sun.shock");
 	public static final SoundEvent SUPPLY_LAUNCH = sound("supply.launch");
 	public static final SoundEvent AK_SHOT = sound("ak.shot");
 	public static final SoundEvent AK_SHOT_MID = sound("ak.shot_mid");
@@ -1012,8 +972,6 @@ public final class ModRegistry {
 		output.accept(POSEIDON_ITEM);
 		output.accept(ORBITAL_UPLINK_ITEM);
 		output.accept(TUNGSTEN_ROD);
-		output.accept(SUN_FORGE_ITEM);
-		output.accept(SUN_DESTROYER);
 		output.accept(AK47);
 		ItemStack loadedShotgun = new ItemStack(SHOTGUN);
 		loadedShotgun.set(GUN_STATE, de.rcm.ballistic.gun.GunState.DEFAULT.withRounds(de.rcm.ballistic.gun.ShotgunItem.CAPACITY));

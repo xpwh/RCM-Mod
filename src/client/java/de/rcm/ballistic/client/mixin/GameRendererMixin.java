@@ -51,19 +51,8 @@ public abstract class GameRendererMixin {
 		return bob * (1.0F - 0.88F * aim);
 	}
 
-	/** The Sun Destroyer's cutscene sets its own lens: wide for the blasts, long for the dolly zoom. */
-	@com.llamalad7.mixinextras.injector.ModifyReturnValue(method = "getFov", at = @At("RETURN"))
-	private float ballisticmissiles$cutsceneLens(float fov, @com.llamalad7.mixinextras.sugar.Local(argsOnly = true) float partialTick) {
-		return fov * de.rcm.ballistic.client.sun.SunCutscene.fovScale(partialTick, fov);
-	}
-
 	@Inject(method = "bobHurt", at = @At("HEAD"))
 	private void ballisticmissiles$shake(PoseStack poseStack, float partialTick, CallbackInfo ci) {
-		// the Sun Destroyer's cutscene: the frame tilted
-		float sunRoll = de.rcm.ballistic.client.sun.SunCutscene.roll(partialTick);
-		if (sunRoll != 0.0F) {
-			poseStack.mulPose(Axis.ZP.rotationDegrees(sunRoll));
-		}
 		if (de.rcm.ballistic.client.drone.DroneClient.isFlying()) {
 			// the drone banks into its turns, and the picture with it
 			poseStack.mulPose(Axis.ZP.rotationDegrees(de.rcm.ballistic.client.drone.DroneClient.cameraRoll(partialTick)));
@@ -110,8 +99,7 @@ public abstract class GameRendererMixin {
 	/** The new-moon cutscene: no hands in view while it plays. */
 	@Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
 	private void ballisticmissiles$cutsceneHands(float partialTick, boolean sleeping, org.joml.Matrix4f view, CallbackInfo ci) {
-		if (de.rcm.ballistic.client.effect.NewMoonCutscene.playing() || de.rcm.ballistic.client.sun.SunCutscene.playing()
-			|| de.rcm.ballistic.client.effect.KillcamClient.playing()) {
+		if (de.rcm.ballistic.client.effect.NewMoonCutscene.playing() || de.rcm.ballistic.client.effect.KillcamClient.playing()) {
 			ci.cancel();
 		}
 	}
