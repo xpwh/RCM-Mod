@@ -86,6 +86,13 @@ public final class BaseRegistry {
 		BuiltInRegistries.STRUCTURE_PIECE, BallisticMissiles.id("military_base"), (StructurePieceType.ContextlessType) MilitaryBasePiece::new
 	);
 
+	public static final StructureType<CityStructure> CITY = Registry.register(
+		BuiltInRegistries.STRUCTURE_TYPE, BallisticMissiles.id("city"), () -> CityStructure.CODEC
+	);
+	public static final StructurePieceType CITY_PIECE = Registry.register(
+		BuiltInRegistries.STRUCTURE_PIECE, BallisticMissiles.id("city"), (StructurePieceType.ContextlessType) CityPiece::new
+	);
+
 	public static final CreativeModeTab TAB = Registry.register(
 		BuiltInRegistries.CREATIVE_MODE_TAB,
 		BallisticMissiles.id("base"),

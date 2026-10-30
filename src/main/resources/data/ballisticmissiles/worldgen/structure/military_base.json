@@ -2,7 +2,7 @@
 	"type": "ballisticmissiles:military_base",
 	"site": "base",
 	"biomes": "#ballisticmissiles:has_structure/military_base",
-	"step": "surface_structures",
+	"step": "top_layer_modification",
 	"terrain_adaptation": "beard_thin",
 	"spawn_overrides": {}
 }

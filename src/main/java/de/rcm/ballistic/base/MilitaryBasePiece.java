@@ -418,6 +418,7 @@ public class MilitaryBasePiece extends StructurePiece {
 				case AIRFIELD -> this.airfield();
 				default -> this.deepBunker();
 			}
+			this.details();
 			this.garrison();
 			this.flag();
 		}
@@ -2310,6 +2311,114 @@ public class MilitaryBasePiece extends StructurePiece {
 		}
 
 		/** The guards: in the towers, the gun nests, round the yard and at each site. */
+		/**
+		 * What makes the compound lived in: trucks parked along the main road, a mess and aid tent, a firing range
+		 * behind the command bunker, steel hedgehogs on the approach.
+		 */
+		void details() {
+			this.truck(5, 13, 1);
+			this.truck(5, 21, 2);
+			this.tent(-11, 14, -5, 25);
+			this.range();
+			for (int s = -1; s <= 1; s += 2) {
+				this.hedgehog(s * 10, 42);
+				this.hedgehog(s * 13, 45);
+				this.hedgehog(s * 9, 47);
+				this.hedgehog(s * 15, 40);
+			}
+		}
+
+		/** An army truck, 3 x 7, its cab towards +z: wheels, an olive body, a canvas tilt over the load bed. */
+		void truck(int x0, int z0, int salt) {
+			BlockState body = Blocks.GREEN_TERRACOTTA.defaultBlockState();
+			BlockState canvas = (this.hash(x0, z0, salt) < 0.5F ? Blocks.GREEN_WOOL : Blocks.BROWN_WOOL).defaultBlockState();
+			for (int z : new int[] {z0 + 1, z0 + 4, z0 + 5}) {
+				this.set(x0, 1, z, Blocks.BLACK_CONCRETE);
+				this.set(x0 + 2, 1, z, Blocks.BLACK_CONCRETE);
+			}
+			this.fill(x0 + 1, 1, z0, x0 + 1, 1, z0 + 6, Blocks.GRAY_CONCRETE);
+			this.fill(x0, 2, z0, x0 + 2, 2, z0 + 6, body);
+			// the cab: windscreen in front, side windows, a roof
+			this.fill(x0, 3, z0 + 5, x0 + 2, 3, z0 + 6, body);
+			this.fill(x0, 4, z0 + 6, x0 + 2, 4, z0 + 6, Blocks.GLASS);
+			this.set(x0, 4, z0 + 5, Blocks.GLASS);
+			this.set(x0 + 2, 4, z0 + 5, Blocks.GLASS);
+			this.set(x0 + 1, 4, z0 + 5, body);
+			this.fill(x0, 5, z0 + 5, x0 + 2, 5, z0 + 6, body);
+			// the tilt over the bed, open at the back, a crate inside
+			this.fill(x0, 3, z0, x0, 4, z0 + 3, canvas);
+			this.fill(x0 + 2, 3, z0, x0 + 2, 4, z0 + 3, canvas);
+			this.fill(x0, 5, z0, x0 + 2, 5, z0 + 3, canvas);
+			this.air(x0 + 1, 3, z0, x0 + 1, 4, z0 + 3);
+			this.barrel(x0 + 1, 3, z0 + 2, Direction.UP);
+		}
+
+		/** A long army tent: canvas sides sloping to a ridge, the mess at one end, cots and a red cross at the other. */
+		void tent(int x1, int z1, int x2, int z2) {
+			BlockState canvas = Blocks.GREEN_WOOL.defaultBlockState();
+			int mid = (x1 + x2) / 2;
+			this.fill(x1 + 1, 0, z1, x2 - 1, 0, z2, Blocks.SPRUCE_PLANKS);
+			this.fill(x1, 1, z1, x1, 2, z2, canvas);
+			this.fill(x2, 1, z1, x2, 2, z2, canvas);
+			this.fill(x1 + 1, 3, z1, x1 + 1, 3, z2, canvas);
+			this.fill(x2 - 1, 3, z1, x2 - 1, 3, z2, canvas);
+			this.fill(x1 + 2, 4, z1, x1 + 2, 4, z2, canvas);
+			this.fill(x2 - 2, 4, z1, x2 - 2, 4, z2, canvas);
+			this.fill(mid, 5, z1, mid, 5, z2, canvas);
+			this.air(x1 + 1, 1, z1, x2 - 1, 2, z2);
+			this.air(x1 + 2, 3, z1, x2 - 2, 3, z2);
+			this.air(mid, 4, z1, mid, 4, z2);
+			// guy ropes' pegs
+			for (int z = z1; z <= z2; z += 4) {
+				this.set(x1 - 1, 1, z, Blocks.SPRUCE_FENCE);
+				this.set(x2 + 1, 1, z, Blocks.SPRUCE_FENCE);
+			}
+			// the mess: tables with stools
+			for (int z = z1 + 2; z <= z1 + 5; z += 3) {
+				this.set(mid, 1, z, Blocks.SPRUCE_FENCE);
+				this.set(mid, 2, z, Blocks.SPRUCE_PRESSURE_PLATE);
+				this.set(mid - 1, 1, z, this.facing(Blocks.SPRUCE_STAIRS, Direction.EAST));
+				this.set(mid + 1, 1, z, this.facing(Blocks.SPRUCE_STAIRS, Direction.WEST));
+			}
+			this.set(x2 - 1, 1, z1 + 1, Blocks.SMOKER.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST));
+			this.barrel(x2 - 1, 1, z1 + 2, Direction.WEST);
+			// the aid post: cots, a cabinet, the red cross on the ridge
+			this.bed(x1 + 1, 1, z2 - 1, Direction.SOUTH);
+			this.bed(x1 + 1, 1, z2 - 4, Direction.SOUTH);
+			this.bed(x2 - 1, 1, z2 - 1, Direction.SOUTH);
+			this.set(x2 - 1, 1, z2 - 4, Blocks.BREWING_STAND);
+			this.set(mid, 5, z2 - 3, Blocks.RED_WOOL);
+			this.set(mid, 5, z2 - 2, Blocks.RED_WOOL);
+			this.set(mid, 5, z2 - 4, Blocks.RED_WOOL);
+			for (int z = z1 + 2; z < z2; z += 4) {
+				this.set(mid, 4, z, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
+			}
+		}
+
+		/** The firing range: a sandbag firing line, targets on hay in front of an earth stop butt. */
+		void range() {
+			this.fill(-6, 0, -34, 7, 0, -29, Blocks.GRAVEL);
+			this.fill(-6, 1, -29, 7, 1, -29, BaseRegistry.SANDBAGS);
+			this.fill(-7, 1, -35, 8, 3, -35, Blocks.COARSE_DIRT);
+			this.fill(-7, 3, -35, 8, 3, -35, Blocks.GRASS_BLOCK);
+			for (int x = -4; x <= 6; x += 5) {
+				this.set(x, 1, -33, Blocks.HAY_BLOCK);
+				this.set(x, 2, -33, Blocks.TARGET);
+			}
+			this.set(7, 2, -29, BaseRegistry.MILITARY_CRATE);
+			this.pole(-7, -29, 5, Direction.NORTH);
+		}
+
+		/** A Czech hedgehog: crossed steel beams against vehicles. */
+		void hedgehog(int x, int z) {
+			BlockState cross = Blocks.IRON_BARS.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)
+				.setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true);
+			this.set(x, 1, z, cross);
+			this.set(x, 2, z, Blocks.IRON_BARS);
+			this.set(x + 1, 1, z, Blocks.IRON_BARS.defaultBlockState().setValue(IronBarsBlock.WEST, true));
+			this.set(x - 1, 1, z, Blocks.IRON_BARS.defaultBlockState().setValue(IronBarsBlock.EAST, true));
+		}
+
 		void garrison() {
 			for (int sx = -1; sx <= 1; sx += 2) {
 				for (int sz = -1; sz <= 1; sz += 2) {

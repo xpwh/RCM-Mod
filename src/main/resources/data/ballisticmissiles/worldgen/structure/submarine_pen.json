@@ -2,7 +2,7 @@
 	"type": "ballisticmissiles:military_base",
 	"site": "sub_pen",
 	"biomes": "#ballisticmissiles:has_structure/submarine_pen",
-	"step": "surface_structures",
+	"step": "top_layer_modification",
 	"terrain_adaptation": "none",
 	"spawn_overrides": {}
 }

@@ -14,7 +14,8 @@
 		"ServerExplosionMixin",
 		"CraterLogMixin",
 		"PlayerReachMixin",
-		"VehicleMoveMixin"
+		"VehicleMoveMixin",
+		"StructureTreesMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
