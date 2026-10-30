@@ -344,6 +344,19 @@ public final class Storm {
 				int x = Mth.floor(cam.x + Math.cos(a) * r);
 				int z = Mth.floor(cam.z + Math.sin(a) * r);
 				int y = mc.level.hasChunk(x >> 4, z >> 4) ? mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) : mc.level.getSeaLevel();
+				// it goes for what stands highest round there: a tree, a tower, a peak
+				for (int i = 0; i < 6; i++) {
+					int qx = x + RANDOM.nextInt(41) - 20;
+					int qz = z + RANDOM.nextInt(41) - 20;
+					if (mc.level.hasChunk(qx >> 4, qz >> 4)) {
+						int qy = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, qx, qz);
+						if (qy > y + 2) {
+							x = qx;
+							z = qz;
+							y = qy;
+						}
+					}
+				}
 				strike(new Vec3(x + 0.5, y, z + 0.5), false);
 			}
 			// heavy rain: drops bouncing off the ground all round

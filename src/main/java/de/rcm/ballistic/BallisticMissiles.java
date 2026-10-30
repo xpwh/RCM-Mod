@@ -77,6 +77,11 @@ public class BallisticMissiles implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.AshStorms::tick);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.base.ShulkerGuards::tick);
 		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.injury.BodyHeat::tick);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+			if (entity instanceof net.minecraft.world.entity.LightningBolt bolt && entity.tickCount == 0) {
+				de.rcm.ballistic.explosion.LightningStrikes.struck(world, bolt);
+			}
+		});
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NewMoon::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.Aurora::load);

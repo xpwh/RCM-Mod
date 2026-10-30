@@ -15,7 +15,8 @@
 		"CraterLogMixin",
 		"PlayerReachMixin",
 		"VehicleMoveMixin",
-		"StructureTreesMixin"
+		"StructureTreesMixin",
+		"LightningTargetMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
