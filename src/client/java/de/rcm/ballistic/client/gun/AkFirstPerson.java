@@ -92,52 +92,9 @@ public final class AkFirstPerson {
 	private static float lastYaw;
 	private static float lastPitch;
 
-	/**
-	 * The rifle through a reload with rounds left (magazine to magazine): {tick, x, y, z, roll, pitch, yaw}.
-	 * It stays nearer the target than for an empty gun, canted just enough to see the well.
-	 */
-	private static final Keys RELOAD_TACTICAL = new Keys(
-		new float[] {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F},
-		new float[] {6.0F, -0.05F, 0.09F, -0.055F, -15.0F, 4.0F, 18.0F},
-		new float[] {11.0F, -0.08F, 0.15F, -0.09F, -24.0F, 7.0F, 30.0F},
-		new float[] {AkItem.T_TAC_OUT, -0.085F, 0.16F, -0.095F, -26.0F, 7.0F, 32.0F},
-		new float[] {18.0F, -0.085F, 0.165F, -0.095F, -25.0F, 8.0F, 32.0F},
-		new float[] {AkItem.T_TAC_IN, -0.085F, 0.17F, -0.095F, -24.0F, 9.0F, 31.0F},
-		new float[] {26.0F, -0.065F, 0.13F, -0.075F, -18.0F, 6.0F, 24.0F},
-		new float[] {32.0F, -0.022F, 0.04F, -0.022F, -5.0F, 2.0F, 7.0F},
-		new float[] {AkItem.RELOAD_TACTICAL, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F});
-	/** The same with an empty gun: then rolled over to the right for the charging handle. */
-	private static final Keys RELOAD_EMPTY = new Keys(
-		new float[] {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F},
-		new float[] {7.0F, -0.08F, 0.15F, -0.09F, -24.0F, 7.0F, 30.0F},
-		new float[] {12.0F, -0.095F, 0.185F, -0.11F, -30.0F, 8.0F, 38.0F},
-		new float[] {18.0F, -0.1F, 0.19F, -0.115F, -33.0F, 6.0F, 42.0F},
-		new float[] {25.0F, -0.1F, 0.19F, -0.115F, -31.0F, 7.0F, 40.0F},
-		new float[] {30.0F, -0.1F, 0.2F, -0.115F, -29.0F, 9.0F, 38.0F},
-		new float[] {36.0F, -0.095F, 0.19F, -0.11F, -28.0F, 7.0F, 36.0F},
-		new float[] {42.0F, -0.07F, 0.19F, -0.115F, -6.0F, 6.0F, 42.0F},
-		new float[] {48.0F, -0.04F, 0.2F, -0.12F, 19.0F, 5.0F, 48.0F},
-		new float[] {AkItem.T_CHARGE + 1.0F, -0.04F, 0.2F, -0.12F, 22.0F, 6.0F, 48.0F},
-		new float[] {AkItem.T_CHARGE + 5.0F, -0.045F, 0.19F, -0.115F, 18.0F, 4.0F, 44.0F},
-		new float[] {61.0F, -0.05F, 0.16F, -0.09F, 7.0F, 3.0F, 28.0F},
-		new float[] {66.0F, -0.02F, 0.07F, -0.035F, 2.0F, 1.0F, 10.0F},
-		new float[] {AkItem.RELOAD_EMPTY, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F});
+	/** The rifle's pose in the hand from a Blender clip (scratch sample). */
+	private static final float[] POSE = new float[AkClips.STRIDE];
 
-	/**
-	 * Looking the rifle over (G): {tick, x, y, z, roll, pitch, yaw}. Turned in to show its right side
-	 * (selector, ejection port) for the press check, then rolled over to the left to look at the
-	 * magazine and slap it home, and back on target.
-	 */
-	private static final Keys INSPECT = new Keys(
-		new float[] {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F},
-		new float[] {10.0F, -0.11F, 0.1F, -0.09F, 12.0F, 6.0F, 52.0F},
-		new float[] {20.0F, -0.115F, 0.11F, -0.095F, 16.0F, 9.0F, 56.0F},
-		new float[] {28.0F, -0.11F, 0.115F, -0.1F, 18.0F, 7.0F, 54.0F},
-		new float[] {36.0F, -0.105F, 0.11F, -0.095F, 14.0F, 7.0F, 50.0F},
-		new float[] {45.0F, -0.06F, 0.13F, -0.08F, -48.0F, 10.0F, -18.0F},
-		new float[] {53.0F, -0.055F, 0.13F, -0.08F, -44.0F, 8.0F, -16.0F},
-		new float[] {58.0F, -0.03F, 0.07F, -0.04F, -20.0F, 4.0F, -8.0F},
-		new float[] {AkClient.INSPECT_TICKS, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F});
 	/** The last pull of the trigger on an empty gun. */
 	private static long dryTick = -100L;
 
@@ -287,44 +244,28 @@ public final class AkFirstPerson {
 		poseStack.mulPose(Axis.YP.rotationDegrees((Mth.cos(now * 0.031F) * 0.3F + Mth.cos(breath * 0.5F) * 0.9F * tired) * steady));
 		poseStack.translate(0.0F, Mth.sin(breath) * 0.012F * tired * steady, 0.0F);
 
-		// checking the magazine: canted and brought in a little so you can look at it
+		// checking the magazine: canted and brought in so you can look at it
 		float checkT = AkClient.checkTime(now);
 		if (checkT >= 0.0F) {
-			float c = smooth(checkT / 7.0F) * (1.0F - smooth((checkT - 31.0F) / 8.0F));
-			poseStack.translate(-0.06F * c, 0.13F * c, -0.06F * c);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-24.0F * c));
-			poseStack.mulPose(Axis.XP.rotationDegrees(5.0F * c));
-			poseStack.mulPose(Axis.YP.rotationDegrees(28.0F * c));
+			pose(poseStack, AkClips.get("check"), checkT);
 		}
 
 		// looking it over
 		float insp = AkClient.inspectTime(now);
 		if (insp >= 0.0F) {
-			float slap = insp > 49.0F && insp < 54.0F ? Mth.sin((insp - 49.0F) / 5.0F * Mth.PI) : 0.0F;
-			float snap = insp > 35.0F && insp < 39.0F ? Mth.sin((insp - 35.0F) / 4.0F * Mth.PI) : 0.0F;
-			poseStack.translate(INSPECT.at(insp, 0), INSPECT.at(insp, 1) + 0.01F * slap, INSPECT.at(insp, 2) - 0.006F * snap);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(INSPECT.at(insp, 3)));
-			poseStack.mulPose(Axis.XP.rotationDegrees(INSPECT.at(insp, 4) - 3.0F * slap + 1.5F * snap));
-			poseStack.mulPose(Axis.YP.rotationDegrees(INSPECT.at(insp, 5)));
+			pose(poseStack, AkClips.get("inspect"), insp);
 		}
 
 		// a click instead of a bang: the trigger finger's twitch, then a quick cant to look at the empty rifle
 		float dry = now - dryTick;
 		if (dry >= 0.0F && dry < 22.0F) {
-			float twitch = dry < 4.0F ? Mth.sin(dry / 4.0F * Mth.PI) : 0.0F;
-			float look = dry < 4.0F ? 0.0F : smooth((dry - 4.0F) / 5.0F) * (1.0F - smooth((dry - 13.0F) / 9.0F));
-			poseStack.translate(-0.03F * look, 0.035F * look - 0.004F * twitch, -0.006F * twitch);
-			poseStack.mulPose(Axis.XP.rotationDegrees(-1.2F * twitch + 4.0F * look));
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-16.0F * look));
-			poseStack.mulPose(Axis.YP.rotationDegrees(10.0F * look));
+			pose(poseStack, AkClips.get("dry"), dry);
 		}
 
 		// brought up into the shoulder when drawn: from low and canted to on target
-		float draw = 1.0F - smooth((now - equipTick) / 12.0F);
-		if (draw > 0.0F) {
-			poseStack.translate(0.04F * draw, -0.25F * draw, 0.1F * draw);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(-35.0F * draw));
-			poseStack.mulPose(Axis.XP.rotationDegrees(-30.0F * draw));
+		float drawn = now - equipTick;
+		if (drawn >= 0.0F && drawn < 12.0F) {
+			pose(poseStack, AkClips.get("draw"), drawn);
 		}
 
 		// sprinting: low ready - muzzle down and across the body, bouncing with the stride
@@ -353,26 +294,11 @@ public final class AkFirstPerson {
 			poseStack.translate(0.01F * flick, 0.008F * flick, 0.0F);
 		}
 
-		// reload choreography: the rifle drawn in and canted so the magazine well faces you, held steady
-		// while the magazines change (with a jerk as the old one is wrenched out and a knock as the new one
-		// slaps home), then - for an empty gun - rolled over to the right to bring the charging handle
-		// under your hand, a jolt as the bolt slams home, and back up on target
+		// reloading: the rifle drawn in and canted so the well faces you, jolted as the magazines change and
+		// the bolt slams home, rolled over for the charging handle on an empty gun, back on target
 		if (state.reloading()) {
 			float r = now - state.reloadStart();
-			Keys keys = state.reloadKind() == GunState.EMPTY ? RELOAD_EMPTY : RELOAD_TACTICAL;
-			boolean tactical = state.reloadKind() == GunState.TACTICAL;
-			int magIn = tactical ? AkItem.T_TAC_IN : AkItem.T_MAG_IN;
-			float slap = r > magIn + 2 && r < magIn + 7 ? Mth.sin((r - (magIn + 2)) / 5.0F * Mth.PI) : 0.0F;
-			float tug = jolt(r - (tactical ? AkItem.T_TAC_OUT : AkItem.T_MAG_OUT), 4.0F);
-			float slam = state.reloadKind() == GunState.EMPTY ? jolt(r - (AkItem.T_CHARGE + 3), 5.0F) : 0.0F;
-			float settle = r > magIn + 4 ? jolt(r - (magIn + 4), 6.0F) * -0.4F : 0.0F;
-			// a flick of the rifle to let the empty magazine fall clear
-			float flick = state.reloadKind() == GunState.EMPTY ? jolt(r - AkItem.T_MAG_DROP, 5.0F) : 0.0F;
-			poseStack.translate(keys.at(r, 0), keys.at(r, 1) + 0.012F * (slap + settle) - 0.014F * tug + 0.006F * slam,
-				keys.at(r, 2) - 0.01F * tug - 0.018F * slam);
-			poseStack.mulPose(Axis.ZP.rotationDegrees(keys.at(r, 3) + 4.0F * tug + 6.0F * flick));
-			poseStack.mulPose(Axis.XP.rotationDegrees(keys.at(r, 4) - 3.0F * (slap + settle) - 4.0F * tug + 2.5F * slam));
-			poseStack.mulPose(Axis.YP.rotationDegrees(keys.at(r, 5)));
+			pose(poseStack, AkClips.reload(state, r), r);
 		}
 
 		// recoil: the springs, kicked by every shot
@@ -382,12 +308,12 @@ public final class AkFirstPerson {
 		poseStack.mulPose(Axis.ZP.rotationDegrees(ROLL.x));
 	}
 
-	/** A quick knock that starts at t = 0 and has died away by t = length (0 outside). */
-	private static float jolt(float t, float length) {
-		if (t < 0.0F || t > length) {
-			return 0.0F;
-		}
-		float f = t / length;
-		return Mth.sin(Math.min(1.0F, f * 3.0F) * Mth.PI * 0.5F) * (1.0F - f) * (1.0F - f);
+	/** The rifle's pose in the hand from a clip: moved, then rolled, pitched and turned. */
+	private static void pose(PoseStack poseStack, AkClips.Clip clip, float t) {
+		float[] p = clip.at(t, POSE);
+		poseStack.translate(p[0], p[1], p[2]);
+		poseStack.mulPose(Axis.ZP.rotationDegrees(p[3]));
+		poseStack.mulPose(Axis.XP.rotationDegrees(p[4]));
+		poseStack.mulPose(Axis.YP.rotationDegrees(p[5]));
 	}
 }
