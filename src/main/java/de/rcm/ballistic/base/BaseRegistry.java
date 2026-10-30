@@ -46,6 +46,11 @@ public final class BaseRegistry {
 		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
 	public static final Block ALARM_LIGHT = block("alarm_light", p -> new BaseBlocks.Lamp(p, true, Block.box(4, 0, 4, 12, 9, 12)),
 		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.0F, 4.0F).sound(SoundType.GLASS).noOcclusion());
+	/** The city's ceiling lights (on and off with the rooms' hours) and its neon signs. */
+	public static final Block ROOM_LIGHT = block("room_light", CityLights.RoomLight::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.QUARTZ).strength(0.6F).sound(SoundType.GLASS));
+	public static final Block NEON_SIGN = block("neon_sign", CityLights.Neon::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(0.8F).sound(SoundType.GLASS));
 	public static final Block CORRUGATED_OLIVE = block("corrugated_olive", Block::new,
 		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(3.0F, 8.0F).sound(SoundType.COPPER).requiresCorrectToolForDrops());
 	public static final Block CORRUGATED_GREY = block("corrugated_grey", Block::new,

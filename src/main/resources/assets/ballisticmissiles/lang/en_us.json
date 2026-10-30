@@ -1056,5 +1056,7 @@
 	"options.ballisticmissiles.smooth_look": "Smooth mouse look",
 	"options.ballisticmissiles.smooth_look.tooltip": "The camera follows the mouse through a very short filter: even, stutter-free turns without feeling sluggish.",
 	"options.ballisticmissiles.smooth_move": "Smooth camera when moving",
-	"options.ballisticmissiles.smooth_move.tooltip": "Stepping up blocks and stairs the camera glides up instead of snapping, and landing it sinks a little and springs back."
+	"options.ballisticmissiles.smooth_move.tooltip": "Stepping up blocks and stairs the camera glides up instead of snapping, and landing it sinks a little and springs back.",
+	"block.ballisticmissiles.room_light": "Ceiling Light",
+	"block.ballisticmissiles.neon_sign": "Neon Sign"
 }

@@ -29,7 +29,9 @@
 // the walls the rain is driven against are wet - only where the sky is open over them (the heightmap): darker,
 // a glossy sheen that mirrors the light at a glancing look; on flat ground water stands in puddles, more and
 // larger the longer and harder it rains, mirror-flat but for the rings the drops throw while it still rains.
-// Grass and leaves soak it up: puddles keep to stone, earth, sand, paths and concrete.
+// Grass and leaves soak it up: puddles keep to stone, earth, sand, paths and concrete. Paved ground - asphalt,
+// flagstones, kerbs (dark or grey, without colour) - goes mirror-like: smooth, glossier, more and longer puddles,
+// the lights of the street (lamps, lit windows, neon) drawn out in it as bright, shimmering streaks.
 
 uniform sampler2D Sampler0; // depth of the opaque world (before the translucent terrain)
 #ifdef SHADE
@@ -483,13 +485,16 @@ void main() {
     // wet is darker and a little richer in colour
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
     vec3 soaked = mix(vec3(lum), col, 1.15) * mix(1.0, 0.62, wet * (1.0 - 0.4 * green));
+    // paved: grey without colour, the darker (asphalt) the more so; only flat ground
+    float sat = max(col.r, max(col.g, col.b)) - min(col.r, min(col.g, col.b));
+    float paved = (1.0 - green) * (1.0 - smoothstep(0.06, 0.16, sat)) * (1.0 - smoothstep(0.55, 0.75, lum)) * step(0.9, n.y);
 
     // ---- puddles on flat ground, more and larger the more it has rained
     vec2 world = p.xz + cameraXZ + vec2(float(data.y >> 8 & 15), float(data.y >> 12 & 15)) * 16.0;
     float pool = 0.0;
     if (n.y > 0.9) {
         float nz = wrapNoise(world, 32.0) * 0.6 + wrapNoise(world, 64.0) * 0.28 + wrapNoise(world, 128.0) * 0.12;
-        float level = 1.0 - puddles * 0.55;
+        float level = 1.0 - puddles * 0.55 * (1.0 + 0.7 * paved);
         pool = smoothstep(level, level + 0.06, nz) * (1.0 - green) * exposed * fade;
     }
 
@@ -505,7 +510,7 @@ void main() {
     } else {
         // a wet surface is rough: the reflection is broken up
         vec2 j = vec2(hash(floor(world * 8.0)), hash(floor(world * 8.0) + 7.1)) - 0.5;
-        nw = normalize(n + vec3(j.x, 0.0, j.y) * 0.12);
+        nw = normalize(n + vec3(j.x, 0.0, j.y) * 0.12 * (1.0 - 0.75 * paved));
     }
     vec3 r = reflect(v, nw);
     if (r.y < 0.02 && n.y > 0.7) r.y = 0.02;
@@ -513,9 +518,19 @@ void main() {
     vec3 zenith = vec3(float(data.x & 255), float((data.x >> 8) & 255), float(data.y & 255)) / 255.0;
     vec3 sky = mix(FogColor.rgb, zenith, smoothstep(0.0, 0.6, r.y));
     vec3 reflected = mirror(p + n * 0.05, r, dist, sky);
+    if (paved > 0.05 && dist < 60.0) {
+        // wet asphalt draws a light out into a streak towards you: a second look a little further along the
+        // mirrored ray, the bright parts of it added, shimmering with the rain
+        float shimmer = 0.85 + 0.15 * sin(t * 0.7 + world.x * 3.1 + world.y * 2.3);
+        vec3 r2 = normalize(r + vec3(0.0, 0.06, 0.0));
+        vec3 far = mirror(p + n * 0.05, r2, dist, sky);
+        vec3 glow = max(far - 0.55, 0.0) + max(reflected - 0.55, 0.0);
+        reflected += glow * paved * shimmer * 1.4 * (1.0 - smoothstep(30.0, 60.0, dist));
+    }
     float cosv = clamp(dot(-v, nw), 0.0, 1.0);
     float fresnel = 0.02 + 0.98 * pow(1.0 - cosv, 5.0);
-    float gloss = mix(fresnel * 0.55 * wet * (1.0 - 0.7 * green), 0.08 + 0.92 * fresnel, pool);
+    float sheen = mix(fresnel * 0.55, 0.06 + 0.9 * fresnel, paved * 0.85);
+    float gloss = mix(sheen * wet * (1.0 - 0.7 * green), 0.08 + 0.92 * fresnel, pool);
     // standing water darkens what lies under it a little more, and mirrors it
     vec3 base = mix(soaked, soaked * 0.7, pool);
     vec3 result = mix(base, reflected, clamp(gloss, 0.0, 1.0));

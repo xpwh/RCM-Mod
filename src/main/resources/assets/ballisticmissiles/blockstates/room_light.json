@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"lit=true": {
+			"model": "ballisticmissiles:block/room_light"
+		},
+		"lit=false": {
+			"model": "ballisticmissiles:block/room_light_off"
+		}
+	}
+}

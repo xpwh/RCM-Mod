@@ -102,10 +102,7 @@ public class CityPiece extends StructurePiece {
 		Blocks.WHITE_CARPET.defaultBlockState()};
 	private static final BlockState[] BEDS = {Blocks.WHITE_BED.defaultBlockState(), Blocks.LIGHT_GRAY_BED.defaultBlockState(),
 		Blocks.BLUE_BED.defaultBlockState(), Blocks.RED_BED.defaultBlockState(), Blocks.GRAY_BED.defaultBlockState()};
-	/** The shops' fascia boards and their awnings. */
-	private static final BlockState[] SIGNS = {Blocks.RED_CONCRETE.defaultBlockState(), Blocks.BLUE_CONCRETE.defaultBlockState(),
-		Blocks.GREEN_CONCRETE.defaultBlockState(), Blocks.BLACK_CONCRETE.defaultBlockState(), Blocks.ORANGE_CONCRETE.defaultBlockState(),
-		Blocks.PURPLE_CONCRETE.defaultBlockState()};
+	/** The shops' awnings. */
 	private static final BlockState[] AWNINGS = {Blocks.RED_WOOL.defaultBlockState(), Blocks.GREEN_WOOL.defaultBlockState(),
 		Blocks.BLUE_WOOL.defaultBlockState(), Blocks.YELLOW_WOOL.defaultBlockState(), Blocks.ORANGE_WOOL.defaultBlockState()};
 
@@ -502,7 +499,7 @@ public class CityPiece extends StructurePiece {
 			int pz = z0;
 			this.fill(px, 1, pz, px, 9, pz, Blocks.ANDESITE_WALL.defaultBlockState());
 			this.fill(px, 10, pz, px, 13, pz, brand);
-			this.set(px, 11, pz, Blocks.SEA_LANTERN.defaultBlockState());
+			this.set(px, 11, pz, this.neon((int) (this.hash(k, j, 53) * 6)));
 			this.set(px, 12, pz, Blocks.WHITE_CONCRETE.defaultBlockState());
 		}
 
@@ -686,11 +683,20 @@ public class CityPiece extends StructurePiece {
 			}
 			if (y % 4 == 0) {
 				boolean light = Math.floorMod(x - bx0, 4) == 2 && Math.floorMod(z - bz0, 4) == 2;
-				this.set(x, y, z, light ? Blocks.SEA_LANTERN.defaultBlockState() : slab);
+				this.set(x, y, z, light ? this.roomLight(x, y, z) : slab);
 			} else {
 				BlockState f = Math.abs(x - cx) <= 2 && Math.abs(z - cz) <= 3 ? null : this.furnish(x, y, z, bx0, bz0, bx1, bz1, cx, cz, use);
 				this.set(x, y, z, f != null ? f : Blocks.AIR.defaultBlockState());
 			}
+		}
+
+		/** A room's ceiling light, on or off as the room's hours have it (it sets itself right on its own ticks). */
+		BlockState roomLight(int x, int y, int z) {
+			return BaseRegistry.ROOM_LIGHT.defaultBlockState().setValue(CityLights.RoomLight.LIT, this.hash(x * 31 + y, z, 60) < 0.55F);
+		}
+
+		BlockState neon(int color) {
+			return BaseRegistry.NEON_SIGN.defaultBlockState().setValue(CityLights.Neon.COLOR, color);
 		}
 
 		static final int LOBBY = 0;
@@ -968,7 +974,8 @@ public class CityPiece extends StructurePiece {
 			BlockState trim = this.pick(FRAMES, k, j, 14);
 			this.paveLot(x0, z0, x1, z1, Blocks.SMOOTH_STONE.defaultBlockState());
 			BlockState railing = Blocks.IRON_BARS.defaultBlockState();
-			BlockState sign = this.pick(SIGNS, k, j, 35);
+			int signColor = (int) (this.hash(k, j, 35) * 6);
+			int bladeColor = (int) (this.hash(k, j, 39) * 6);
 			BlockState awning = this.pick(AWNINGS, k, j, 36);
 			for (int x = Math.max(x0, this.cx0); x <= Math.min(x1, this.cx1); x++) {
 				for (int z = Math.max(z0, this.cz0); z <= Math.min(z1, this.cz1); z++) {
@@ -989,6 +996,11 @@ public class CityPiece extends StructurePiece {
 							// striped awnings over the shop windows, flowers under them
 							int along = x == bx0 - 1 || x == bx1 + 1 ? z - bz0 : x - bx0;
 							this.set(x, 4, z, Math.floorMod(along, 2) == 0 ? awning : Blocks.WHITE_WOOL.defaultBlockState());
+							// a tall neon sign standing out from the middle of each face
+							int span = x == bx0 - 1 || x == bx1 + 1 ? bz1 - bz0 : bx1 - bx0;
+							if (along == span / 2 && top > 12) {
+								this.fill(x, 5, z, x, Math.min(top - 1, 11), z, this.neon(bladeColor));
+							}
 							if (Math.floorMod(along, 5) == 2) {
 								this.set(x, 1, z, Blocks.POTTED_RED_TULIP.defaultBlockState());
 							}
@@ -1012,8 +1024,8 @@ public class CityPiece extends StructurePiece {
 							int along = x == bx0 || x == bx1 ? z - bz0 : x - bx0;
 							boolean cornerCol = (x == bx0 || x == bx1) && (z == bz0 || z == bz1);
 							this.set(x, y, z, cornerCol || along % 3 == 0 ? wall : glass);
-						} else if (edge && y == 4) {
-							this.set(x, y, z, sign); // the shops' fascia
+						} else if (edge && y == 5 && top > 8) {
+							this.set(x, y, z, this.neon(signColor)); // the shops' neon fascia, over the awnings
 						} else if (edge && y > 3) {
 							this.set(x, y, z, y % 4 == 0 ? trim : wall);
 						} else {

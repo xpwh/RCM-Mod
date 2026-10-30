@@ -1056,5 +1056,7 @@
 	"options.ballisticmissiles.smooth_look": "Weiche Mausbewegung",
 	"options.ballisticmissiles.smooth_look.tooltip": "Die Kamera folgt der Maus über einen ganz kurzen Filter: gleichmäßige, ruckelfreie Drehungen, ohne träge zu wirken.",
 	"options.ballisticmissiles.smooth_move": "Weiche Kamera beim Laufen",
-	"options.ballisticmissiles.smooth_move.tooltip": "Beim Hochsteigen von Stufen und Blöcken gleitet die Kamera hoch statt zu springen, beim Landen federt sie kurz ein."
+	"options.ballisticmissiles.smooth_move.tooltip": "Beim Hochsteigen von Stufen und Blöcken gleitet die Kamera hoch statt zu springen, beim Landen federt sie kurz ein.",
+	"block.ballisticmissiles.room_light": "Deckenleuchte",
+	"block.ballisticmissiles.neon_sign": "Leuchtreklame"
 }
