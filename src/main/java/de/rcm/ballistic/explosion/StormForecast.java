@@ -50,7 +50,8 @@ public final class StormForecast {
 	static int forecast(MinecraftServer server) {
 		ServerLevel level = server.overworld();
 		ServerLevelData data = server.getWorldData().overworldData();
-		if (!level.dimensionType().hasSkyLight() || !level.getGameRules().get(GameRules.ADVANCE_WEATHER) || data.getClearWeatherTime() > 0) {
+		if (!level.dimensionType().hasSkyLight() || !level.getGameRules().get(GameRules.ADVANCE_WEATHER) || data.getClearWeatherTime() > 0
+			|| !de.rcm.ballistic.config.ServerConfig.nature(de.rcm.ballistic.config.ServerConfig.STORM_FORECAST)) {
 			return -1;
 		}
 		boolean thunder = data.isThundering();

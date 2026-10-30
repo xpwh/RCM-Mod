@@ -97,7 +97,7 @@ public final class Sky {
 
 	/** How strong the rainbow is now, 0-1: there is one, the sun is low enough (under 42 degrees) and up. */
 	private static float rainbow(Minecraft mc, Vector3f sun, float partialTick) {
-		if (bowStart < 0L) {
+		if (bowStart < 0L || !ModConfig.rainbow) {
 			return 0.0F;
 		}
 		float now = mc.level.getGameTime() + partialTick;

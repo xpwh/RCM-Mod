@@ -44,7 +44,7 @@ public final class Snow {
 	public static void tick(ServerLevel level) {
 		long now = level.getGameTime();
 		releases(level, now);
-		if (!level.isRaining() || now % 10L != 3L || !level.dimensionType().hasSkyLight()) {
+		if (!level.isRaining() || now % 10L != 3L || !level.dimensionType().hasSkyLight() || !de.rcm.ballistic.config.ServerConfig.nature(de.rcm.ballistic.config.ServerConfig.SNOW)) {
 			return;
 		}
 		int max = level.isThundering() ? 8 : 5;
@@ -88,7 +88,9 @@ public final class Snow {
 			return;
 		}
 		melt(level, pos, Math.min(radius * 0.8, 80.0));
-		avalanche(level, pos, Mth.clamp(radius * 2.2, 24.0, 140.0));
+		if (de.rcm.ballistic.config.ServerConfig.nature(de.rcm.ballistic.config.ServerConfig.AVALANCHES)) {
+			avalanche(level, pos, Mth.clamp(radius * 2.2, 24.0, 140.0));
+		}
 	}
 
 	/** Melts the snow (and ice) round {@code pos}: a crater in the snow, puddles where the ice was. */

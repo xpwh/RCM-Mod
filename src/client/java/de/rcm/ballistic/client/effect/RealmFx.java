@@ -37,12 +37,15 @@ public final class RealmFx {
 
 	/** How hard the air shimmers (0-1). */
 	public static float heat() {
+		if (!de.rcm.ballistic.client.ModConfig.heatShimmer) {
+			return 0.0F;
+		}
 		return Mth.clamp(heat + nearPortal * 0.5F, 0.0F, 1.0F);
 	}
 
 	/** How strong the portal's passage is on the eyes now (0-1), and in what colour. */
 	public static float portal() {
-		return portal;
+		return de.rcm.ballistic.client.ModConfig.heatShimmer ? portal : 0.0F;
 	}
 
 	public static int portalColor() {
@@ -51,11 +54,11 @@ public final class RealmFx {
 
 	/** The ripple of a portal's passage (0-1). */
 	public static float portalShimmer() {
-		return portalShimmer;
+		return de.rcm.ballistic.client.ModConfig.heatShimmer ? portalShimmer : 0.0F;
 	}
 
 	public static boolean any() {
-		return heat() > 0.01F || portal > 0.01F || portalShimmer > 0.01F;
+		return heat() > 0.01F || portal() > 0.01F || portalShimmer() > 0.01F;
 	}
 
 	private static void tick(Minecraft mc) {

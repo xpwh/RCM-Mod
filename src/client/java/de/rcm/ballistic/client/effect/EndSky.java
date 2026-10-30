@@ -51,7 +51,7 @@ public final class EndSky {
 
 	private static void render(WorldRenderContext context) {
 		Minecraft mc = Minecraft.getInstance();
-		if (!ModConfig.realSky || mc.level == null || mc.level.dimension() != Level.END) {
+		if (!ModConfig.realSky || !ModConfig.endSky || mc.level == null || mc.level.dimension() != Level.END) {
 			return;
 		}
 		Camera camera = mc.gameRenderer.getMainCamera();
@@ -60,13 +60,15 @@ public final class EndSky {
 		org.joml.Vector3fc f = camera.forwardVector();
 		org.joml.Vector3fc u = camera.upVector();
 		org.joml.Vector3fc l = camera.leftVector();
+		// alpha: the nature quality (0 low, 1/3 medium, 2/3 high)
+		int color = Math.min(2, ModConfig.natureQuality.ordinal()) * 85 << 24 | 0xFFFFFF;
 		float w = 6.0F;
 		float[][] corners = {{w, -w}, {-w, -w}, {-w, w}, {w, w}};
 		for (float[] c : corners) {
 			float x = (f.x() + l.x() * c[0] + u.x() * c[1]) * FAR;
 			float y = (f.y() + l.y() * c[0] + u.y() * c[1]) * FAR;
 			float z = (f.z() + l.z() * c[0] + u.z() * c[1]) * FAR;
-			consumer.addVertex(pose, x, y, z).setColor(-1).setUv(0.0F, 0.0F).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0).setNormal(pose, 0.0F, 1.0F, 0.0F);
+			consumer.addVertex(pose, x, y, z).setColor(color).setUv(0.0F, 0.0F).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0).setNormal(pose, 0.0F, 1.0F, 0.0F);
 		}
 	}
 }

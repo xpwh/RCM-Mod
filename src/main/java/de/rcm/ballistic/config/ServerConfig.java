@@ -25,6 +25,25 @@ public final class ServerConfig {
 	/** After big explosions everyone near sees a slow-motion replay from several angles (the whole world slows down for it). */
 	public static boolean killcam = true;
 
+	/** The world's living systems, each switchable (bits below; all on by default). */
+	public static final int SNOW = 1;
+	public static final int AVALANCHES = 2;
+	public static final int ASH_STORMS = 4;
+	public static final int BODY_HEAT = 8;
+	public static final int LIGHTNING = 16;
+	public static final int SHULKER_GUARDS = 32;
+	public static final int REGROWTH = 64;
+	public static final int STORM_FORECAST = 128;
+	/** Their names in /bmserver natur. */
+	public static final String[] NATURE_NAMES = {"schnee", "lawinen", "aschesturm", "temperatur", "blitzschaeden", "shulkerwachen", "nachwachsen",
+		"gewittervorhersage"};
+	public static int nature = 0xFF;
+
+	/** Whether that part of the world is switched on. */
+	public static boolean nature(int bit) {
+		return (nature & bit) != 0;
+	}
+
 	private ServerConfig() {
 	}
 
@@ -40,6 +59,7 @@ public final class ServerConfig {
 				gore = Boolean.parseBoolean(p.getProperty("gore", "true").trim());
 				nukes = Boolean.parseBoolean(p.getProperty("nukes", "true").trim());
 				killcam = Boolean.parseBoolean(p.getProperty("killcam", "true").trim());
+				nature = Integer.parseInt(p.getProperty("nature", "255").trim()) & 0xFF;
 			}
 		} catch (Exception e) {
 			BallisticMissiles.LOGGER.warn("Could not read {}: {}", FILE, e.toString());
@@ -54,6 +74,7 @@ public final class ServerConfig {
 			p.setProperty("gore", Boolean.toString(gore));
 			p.setProperty("nukes", Boolean.toString(nukes));
 			p.setProperty("killcam", Boolean.toString(killcam));
+			p.setProperty("nature", Integer.toString(nature));
 			Files.createDirectories(FILE.getParent());
 			try (var out = Files.newOutputStream(FILE)) {
 				p.store(out, "Ballistic Missiles - world settings (settings screen for operators, /bmserver)");

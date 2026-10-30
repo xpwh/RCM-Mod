@@ -95,6 +95,7 @@ public class SettingsScreen extends Screen {
 	private enum Page {
 		GRAPHICS,
 		EFFECTS,
+		NATURE,
 		GORE,
 		AI,
 		SPAWN,
@@ -193,6 +194,7 @@ public class SettingsScreen extends Screen {
 		switch (this.page) {
 			case GRAPHICS -> this.graphics();
 			case EFFECTS -> this.effects();
+			case NATURE -> this.nature();
 			case GORE -> this.gore();
 			case AI -> this.ai();
 			case SPAWN -> this.spawn();
@@ -238,6 +240,45 @@ public class SettingsScreen extends Screen {
 		IntSlider bloom = new IntSlider(0, 100, "options.ballisticmissiles.bloom", ModConfig.bloom, v -> ModConfig.bloom = v);
 		bloom.setTooltip(Tooltip.create(Component.translatable("options.ballisticmissiles.bloom.tooltip")));
 		this.list.row(bloom, toggle("storms", ModConfig.storms, "storms", v -> ModConfig.storms = v));
+	}
+
+	private void nature() {
+		this.list.header("options.ballisticmissiles.section.nature_look", 0xFF90E090);
+		this.list.row(new IntSlider(0, 200, "options.ballisticmissiles.wind_amount", ModConfig.windAmount, v -> ModConfig.windAmount = v),
+			CycleButton.builder((ModConfig.Quality q) -> Component.translatable("options.ballisticmissiles.quality." + q.name().toLowerCase(Locale.ROOT)),
+					ModConfig.natureQuality)
+				.withValues(ModConfig.Quality.LOW, ModConfig.Quality.MEDIUM, ModConfig.Quality.HIGH)
+				.withTooltip(q -> Tooltip.create(Component.translatable("options.ballisticmissiles.nature_quality.tooltip")))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.nature_quality"), (b, v) -> ModConfig.natureQuality = v));
+		this.list.row(toggle("wildlife", ModConfig.wildlife, "wildlife", v -> ModConfig.wildlife = v),
+			toggle("night_sounds", ModConfig.nightSounds, "night_sounds", v -> ModConfig.nightSounds = v));
+		this.list.row(toggle("storm_front", ModConfig.stormFront, "storm_front", v -> ModConfig.stormFront = v),
+			toggle("rainbow", ModConfig.rainbow, "rainbow", v -> ModConfig.rainbow = v));
+		this.list.row(toggle("heat_shimmer", ModConfig.heatShimmer, "heat_shimmer", v -> ModConfig.heatShimmer = v),
+			toggle("breath", ModConfig.breath, "breath", v -> ModConfig.breath = v));
+		this.list.row(toggle("end_sky", ModConfig.endSky, "end_sky", v -> ModConfig.endSky = v),
+			toggle("end_effects", ModConfig.endEffects, "end_effects", v -> ModConfig.endEffects = v));
+		this.list.row(toggle("temperature_hud", ModConfig.temperatureHud, "temperature_hud", v -> ModConfig.temperatureHud = v));
+
+		this.list.header("options.ballisticmissiles.section.nature_world", 0xFFFFC080);
+		this.list.note("options.ballisticmissiles.nature_world.note");
+		String[] names = de.rcm.ballistic.config.ServerConfig.NATURE_NAMES;
+		List<AbstractWidget> pending = new ArrayList<>();
+		for (int i = 0; i < names.length; i++) {
+			String name = names[i];
+			boolean on = (ModConfig.serverNature & (1 << i)) != 0;
+			pending.add(command(CycleButton.onOffBuilder(on)
+				.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.nature." + name + ".tooltip")))
+				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.nature." + name),
+					(b, v) -> this.run("bmserver natur " + name + " " + (v ? "an" : "aus")))));
+			if (pending.size() == 2) {
+				this.list.row(pending.get(0), pending.get(1));
+				pending.clear();
+			}
+		}
+		if (!pending.isEmpty()) {
+			this.list.row(pending.get(0));
+		}
 	}
 
 	private void effects() {

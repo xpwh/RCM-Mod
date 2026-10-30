@@ -86,7 +86,7 @@ public final class NightSounds {
 			HUSHED.clear();
 			return;
 		}
-		if (mc.isPaused()) {
+		if (mc.isPaused() || !de.rcm.ballistic.client.ModConfig.nightSounds) {
 			return;
 		}
 		tick++;

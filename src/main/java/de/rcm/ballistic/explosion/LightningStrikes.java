@@ -45,7 +45,7 @@ public final class LightningStrikes {
 	 */
 	public static BlockPos target(ServerLevel level, BlockPos around, BlockPos chosen) {
 		BlockPos ground = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, around);
-		if (!chosen.equals(ground)) {
+		if (!chosen.equals(ground) || !de.rcm.ballistic.config.ServerConfig.nature(de.rcm.ballistic.config.ServerConfig.LIGHTNING)) {
 			return null; // a lightning rod or a creature: Minecraft's own reasons
 		}
 		BlockPos best = ground;
@@ -67,6 +67,9 @@ public final class LightningStrikes {
 
 	/** A bolt has struck (a real one, not just its look): what it does where it hits. */
 	public static void struck(ServerLevel level, LightningBolt bolt) {
+		if (!de.rcm.ballistic.config.ServerConfig.nature(de.rcm.ballistic.config.ServerConfig.LIGHTNING)) {
+			return;
+		}
 		BlockPos at = bolt.blockPosition();
 		BlockPos hit = at.below();
 		BlockState s = level.getBlockState(hit);

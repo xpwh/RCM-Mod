@@ -31,6 +31,13 @@ public final class AshStorms {
 			return;
 		}
 		long now = nether.getGameTime();
+		if (!de.rcm.ballistic.config.ServerConfig.nature(de.rcm.ballistic.config.ServerConfig.ASH_STORMS)) {
+			if (until > 0L) {
+				stop(server);
+			}
+			next = now + 1200L;
+			return;
+		}
 		if (next == 0L) {
 			next = now + 18000 + R.nextInt(24000);
 		}

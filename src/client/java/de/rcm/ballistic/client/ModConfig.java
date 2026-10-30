@@ -105,6 +105,23 @@ public final class ModConfig {
 	/** Dynamic light quality: 0 off, 1 low (few lights, hard shadows), 2 high, 3 ultra (many, soft shadows). */
 	public static int lightQuality = 2;
 	/** The connected server's misfire setting, as it last told us (shown in the settings, not saved here). */
+	// ---- world and nature (all on by default)
+	/** How hard the wind blows the grass and how far blast waves press it, percent (0: still). */
+	public static int windAmount = 100;
+	/** How much the living world costs: low, medium, high (how many animals, ash flakes, how fine the End sky). */
+	public static Quality natureQuality = Quality.HIGH;
+	public static boolean wildlife = true;
+	public static boolean nightSounds = true;
+	public static boolean stormFront = true;
+	public static boolean rainbow = true;
+	public static boolean endSky = true;
+	public static boolean endEffects = true;
+	public static boolean heatShimmer = true;
+	public static boolean breath = true;
+	public static boolean temperatureHud = true;
+	/** The server's living systems (ServerConfig.nature), mirrored for the screen. */
+	public static int serverNature = 0xFF;
+
 	public static int serverMisfireChance;
 	/** The connected server's other world settings, as it last told us. */
 	public static int serverGunDamage = 100;
@@ -173,6 +190,20 @@ public final class ModConfig {
 				lightQuality = 2;
 			}
 			dynamicLights = lightQuality > 0;
+			windAmount = Mth.clamp(integer(p, "windAmount", windAmount), 0, 200);
+			natureQuality = Quality.parse(p.getProperty("natureQuality"), natureQuality);
+			if (natureQuality == Quality.ULTRA) {
+				natureQuality = Quality.HIGH;
+			}
+			wildlife = bool(p, "wildlife", wildlife);
+			nightSounds = bool(p, "nightSounds", nightSounds);
+			stormFront = bool(p, "stormFront", stormFront);
+			rainbow = bool(p, "rainbow", rainbow);
+			endSky = bool(p, "endSky", endSky);
+			endEffects = bool(p, "endEffects", endEffects);
+			heatShimmer = bool(p, "heatShimmer", heatShimmer);
+			breath = bool(p, "breath", breath);
+			temperatureHud = bool(p, "temperatureHud", temperatureHud);
 		} catch (Exception e) {
 			BallisticMissiles.LOGGER.warn("Could not read {}: {}", FILE, e.toString());
 		}
@@ -214,6 +245,17 @@ public final class ModConfig {
 			p.setProperty("tracks", Boolean.toString(tracks));
 			p.setProperty("dynamicLights", Boolean.toString(dynamicLights));
 			p.setProperty("lightQuality", Integer.toString(lightQuality));
+			p.setProperty("windAmount", Integer.toString(windAmount));
+			p.setProperty("natureQuality", natureQuality.name().toLowerCase(java.util.Locale.ROOT));
+			p.setProperty("wildlife", Boolean.toString(wildlife));
+			p.setProperty("nightSounds", Boolean.toString(nightSounds));
+			p.setProperty("stormFront", Boolean.toString(stormFront));
+			p.setProperty("rainbow", Boolean.toString(rainbow));
+			p.setProperty("endSky", Boolean.toString(endSky));
+			p.setProperty("endEffects", Boolean.toString(endEffects));
+			p.setProperty("heatShimmer", Boolean.toString(heatShimmer));
+			p.setProperty("breath", Boolean.toString(breath));
+			p.setProperty("temperatureHud", Boolean.toString(temperatureHud));
 			Files.createDirectories(FILE.getParent());
 			try (var out = Files.newOutputStream(FILE)) {
 				p.store(out, "Ballistic Missiles - client settings (settings screen, /bmconfig, /volcloud)");

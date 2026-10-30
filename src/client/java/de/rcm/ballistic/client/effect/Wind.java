@@ -140,7 +140,7 @@ public final class Wind {
 		// an hour of game ticks round and round: the sway's phases jump once an hour, unseen
 		float seconds = mc.level == null ? 0.0F : ((mc.level.getGameTime() % 72000L) + partial) / 20.0F;
 		float dir = direction(seconds);
-		float strength = mc.level == null ? 0.0F : strength(seconds, partial);
+		float strength = mc.level == null ? 0.0F : strength(seconds, partial) * de.rcm.ballistic.client.ModConfig.windAmount / 100.0F;
 		Vec3 cam = mc.gameRenderer.getMainCamera().position();
 		int cx = Mth.floor(cam.x);
 		int cy = Mth.floor(cam.y);
@@ -160,7 +160,7 @@ public final class Wind {
 			for (int i = 0; i < BLASTS; i++) {
 				if (i < WAVES.size()) {
 					Blast w = WAVES.get(i);
-					b.putVec4(w.speed(), w.reach(), w.push(), 0.0F);
+					b.putVec4(w.speed(), w.reach(), w.push() * Math.min(1.0F, de.rcm.ballistic.client.ModConfig.windAmount / 100.0F), 0.0F);
 				} else {
 					b.putVec4(1.0F, 0.0F, 0.0F, 0.0F);
 				}

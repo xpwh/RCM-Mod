@@ -41,8 +41,11 @@ public final class BodyHeat {
 		boolean second = server.getTickCount() % 20 == 0;
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
 			float[] s = STATE.computeIfAbsent(p.getUUID(), k -> new float[2]);
-			if (p.isCreative() || p.isSpectator() || !p.isAlive()) {
+			if (p.isCreative() || p.isSpectator() || !p.isAlive() || !de.rcm.ballistic.config.ServerConfig.nature(de.rcm.ballistic.config.ServerConfig.BODY_HEAT)) {
 				s[0] = 0.0F;
+				if (second) {
+					ServerPlayNetworking.send(p, new BodyHeatPayload(0.0F, 15.0F));
+				}
 				continue;
 			}
 			if (second) {

@@ -26,7 +26,7 @@ public final class ShulkerGuards {
 	}
 
 	public static void tick(MinecraftServer server) {
-		if (server.getTickCount() % 20 != 0) {
+		if (server.getTickCount() % 20 != 0 || !de.rcm.ballistic.config.ServerConfig.nature(de.rcm.ballistic.config.ServerConfig.SHULKER_GUARDS)) {
 			return;
 		}
 		ServerLevel end = server.getLevel(Level.END);

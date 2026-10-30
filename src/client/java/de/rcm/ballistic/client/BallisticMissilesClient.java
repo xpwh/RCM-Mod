@@ -187,6 +187,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 			ModConfig.serverGore = payload.gore();
 			ModConfig.serverNukes = payload.nukes();
 			ModConfig.serverKillcam = payload.killcam();
+			ModConfig.serverNature = payload.nature();
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ModConfig.serverGore = true);
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.JammerPayload.TYPE, (payload, context) ->

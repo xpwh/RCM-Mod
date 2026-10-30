@@ -8,6 +8,10 @@
 // slowly folding and unfolding along the sky, ribbons of violet light like an aurora with nothing to cause it.
 
 in vec3 relPos;
+flat in float quality;
+
+// how many noise octaves (the nature quality setting: 3, 4 or 5)
+int octaves = 5;
 
 out vec4 fragColor;
 
@@ -28,6 +32,7 @@ float esFbm(vec3 p) {
     float v = 0.0;
     float a = 0.5;
     for (int i = 0; i < 5; i++) {
+        if (i >= octaves) break;
         v += a * esNoise(p);
         p = p * 2.03 + vec3(1.7, 9.2, 3.1);
         a *= 0.5;
@@ -79,6 +84,8 @@ vec3 galaxy(vec3 rd, vec3 c, vec3 n, float size, vec3 tint, float seed) {
 
 void main() {
     vec3 rd = normalize(relPos);
+    int level = int(quality * 3.0 + 0.5);
+    octaves = level <= 0 ? 3 : level == 1 ? 4 : 5;
     // GameTime runs 0-1 over 20 minutes; whole cycles only, so nothing jumps when it wraps
     float t = GameTime * 6.28318;
 
@@ -96,7 +103,9 @@ void main() {
 
     // stars: fine and many, a few bright ones; fewer behind the dust
     col += stars(rd, 140.0, t * 40.0) * (1.0 - 0.75 * dust) * 0.55;
-    col += stars(rd, 55.0, t * 40.0) * (1.0 - 0.6 * dust) * 0.7;
+    if (level >= 1) {
+        col += stars(rd, 55.0, t * 40.0) * (1.0 - 0.6 * dust) * 0.7;
+    }
 
     // far galaxies
     col += galaxy(rd, normalize(vec3(0.55, 0.42, -0.72)), normalize(vec3(0.2, 1.0, 0.3)), 0.08, vec3(0.75, 0.7, 1.0), 0.31);

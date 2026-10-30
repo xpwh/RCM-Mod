@@ -512,10 +512,19 @@ public final class AmbientLife {
 
 	// ------------------------------------------------------------------ tick: spawning and moving
 
+	/** How many of a kind at most, by the nature quality setting. */
+	private static int cap(int high) {
+		return switch (de.rcm.ballistic.client.ModConfig.natureQuality) {
+			case LOW -> Math.max(1, high / 3);
+			case MEDIUM -> Math.max(1, high * 2 / 3);
+			default -> high;
+		};
+	}
+
 	private static void tick(Minecraft mc) {
 		ClientLevel level = mc.level;
-		if (level == null || mc.player == null || mc.isPaused()) {
-			if (level == null) {
+		if (level == null || mc.player == null || mc.isPaused() || !de.rcm.ballistic.client.ModConfig.wildlife) {
+			if (level == null || !de.rcm.ballistic.client.ModConfig.wildlife) {
 				BUTTERFLIES.clear();
 				FIREFLIES.clear();
 				FLOCKS.clear();
@@ -578,7 +587,7 @@ public final class AmbientLife {
 		boolean wild = !level.getBiome(at).is(BiomeTags.IS_OCEAN) && warmth > 0.15F && warmth < 1.5F;
 
 		// butterflies: over flowers by day
-		if (day && !rain && wild && BUTTERFLIES.size() < 22 && tick % 3 == 0) {
+		if (day && !rain && wild && BUTTERFLIES.size() < cap(22) && tick % 3 == 0) {
 			int x = Mth.floor(p.x + (R.nextFloat() - 0.5F) * 40.0F);
 			int z = Mth.floor(p.z + (R.nextFloat() - 0.5F) * 40.0F);
 			int h = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
@@ -592,7 +601,7 @@ public final class AmbientLife {
 			}
 		}
 		// fireflies: warm, dry nights, low over grass, plants and water
-		if (night && !rain && warmth >= 0.5F && warmth < 1.5F && FIREFLIES.size() < 60 && tick % 2 == 0) {
+		if (night && !rain && warmth >= 0.5F && warmth < 1.5F && FIREFLIES.size() < cap(60) && tick % 2 == 0) {
 			int x = Mth.floor(p.x + (R.nextFloat() - 0.5F) * 44.0F);
 			int z = Mth.floor(p.z + (R.nextFloat() - 0.5F) * 44.0F);
 			int h = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
@@ -604,7 +613,7 @@ public final class AmbientLife {
 			}
 		}
 		// pollen and seeds on the wind over meadows, warm days
-		if (day && !rain && wild && warmth >= 0.5F && SEEDS.size() < 45 && tick % 2 == 0) {
+		if (day && !rain && wild && warmth >= 0.5F && SEEDS.size() < cap(45) && tick % 2 == 0) {
 			// upwind, so they come drifting past
 			float a = windDir + Mth.PI + (R.nextFloat() - 0.5F) * 2.4F;
 			double d = 4.0 + R.nextFloat() * 18.0;
@@ -647,7 +656,7 @@ public final class AmbientLife {
 		boolean deerTime = t < 13000L || t > 22500L;
 		boolean deerLand = level.getBiome(at).is(BiomeTags.IS_FOREST) || level.getBiome(at).is(BiomeTags.IS_TAIGA)
 			|| warmth >= 0.5F && warmth <= 0.95F;
-		if (deerTime && deerLand && wild && DEER.size() < 6 && tick % 80 == 0 && R.nextFloat() < 0.45F) {
+		if (deerTime && deerLand && wild && DEER.size() < cap(6) && tick % 80 == 0 && R.nextFloat() < 0.45F) {
 			float a = R.nextFloat() * Mth.TWO_PI;
 			double dist = 34.0 + R.nextFloat() * 26.0;
 			int x = Mth.floor(p.x + Mth.cos(a) * dist);

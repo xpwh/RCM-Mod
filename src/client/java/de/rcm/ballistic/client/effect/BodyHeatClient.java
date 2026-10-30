@@ -60,7 +60,7 @@ public final class BodyHeatClient {
 			boolean me = e == mc.player;
 			boolean cold = me ? air < 4.0F : coldAt(mc, e.blockPosition());
 			int period = me && shownBody < -0.4F ? 40 : 60;
-			if (cold && (now + e.getId() * 13L) % period == 0 && !e.isUnderWater()) {
+			if (cold && de.rcm.ballistic.client.ModConfig.breath && (now + e.getId() * 13L) % period == 0 && !e.isUnderWater()) {
 				breathe(e, me && mc.options.getCameraType().isFirstPerson());
 			}
 		}
@@ -120,7 +120,7 @@ public final class BodyHeatClient {
 	/** The thermometer by the hotbar, when the air is hard or the body feels it. */
 	public static void hud(GuiGraphics g) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.player == null || mc.options.hideGui || mc.player.isCreative() || mc.player.isSpectator()) {
+		if (mc.player == null || mc.options.hideGui || mc.player.isCreative() || mc.player.isSpectator() || !de.rcm.ballistic.client.ModConfig.temperatureHud) {
 			return;
 		}
 		if (Math.abs(shownBody) < 0.12F && air > 0.0F && air < 34.0F) {

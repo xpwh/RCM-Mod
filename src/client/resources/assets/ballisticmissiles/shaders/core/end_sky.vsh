@@ -13,9 +13,11 @@ in ivec2 UV2;
 in vec3 Normal;
 
 out vec3 relPos;
+flat out float quality;
 
 void main() {
     vec4 pos = ProjMat * ModelViewMat * vec4(Position, 1.0);
     gl_Position = pos.xyww;
     relPos = Position;
+    quality = Color.a;
 }

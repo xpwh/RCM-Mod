@@ -133,7 +133,13 @@ public final class AshStorm {
 
 	private static void flakes(Minecraft mc) {
 		Vec3 cam = mc.gameRenderer.getMainCamera().position();
-		int want = Math.round(MAX * amount * (0.4F + 0.6F * shelter));
+		float budget = switch (de.rcm.ballistic.client.ModConfig.natureQuality) {
+			case LOW -> 0.35F;
+			case MEDIUM -> 0.65F;
+			default -> 1.0F;
+		};
+		int want = Math.round(MAX * budget * amount * (0.4F + 0.6F * shelter));
+		long tick = mc.level.getGameTime();
 		float gust = 0.75F + 0.35F * Mth.sin(mc.level.getGameTime() * 0.05F) * Mth.sin(mc.level.getGameTime() * 0.013F);
 		float wx = Mth.cos(dir) * 0.85F * gust;
 		float wz = Mth.sin(dir) * 0.85F * gust;
@@ -150,8 +156,9 @@ public final class AshStorm {
 			double dx = X[i] - cam.x;
 			double dz = Z[i] - cam.z;
 			// out of range downwind, or into a wall: back upwind
+			// into a wall: looked at every fourth tick only (a flake moves less than a block in that time)
 			if (dx * dx + dz * dz > 24.0 * 24.0 || Math.abs(Y[i] - cam.y) > 14.0
-				|| mc.level.getBlockState(BlockPos.containing(X[i], Y[i], Z[i])).blocksMotion()) {
+				|| (i + tick) % 4 == 0 && mc.level.getBlockState(BlockPos.containing(X[i], Y[i], Z[i])).blocksMotion()) {
 				spawn(i, cam, true);
 			}
 		}

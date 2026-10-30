@@ -86,7 +86,7 @@ public final class EndFx {
 				mc.getSoundManager().play(echo);
 			}
 		}
-		if (level.dimension() != Level.END) {
+		if (level.dimension() != Level.END || !de.rcm.ballistic.client.ModConfig.endEffects) {
 			RODS.clear();
 			return;
 		}

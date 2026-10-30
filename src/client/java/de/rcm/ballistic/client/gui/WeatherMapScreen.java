@@ -60,7 +60,7 @@ public final class WeatherMapScreen extends Screen {
 
 	@Override
 	public void tick() {
-		if (++this.age % 5 == 0) {
+		if (++this.age % 10 == 0) {
 			this.redraw();
 		}
 	}
@@ -106,6 +106,16 @@ public final class WeatherMapScreen extends Screen {
 				}
 			}
 		}
+		// the clouds: worked out on a grid at half the resolution (the costly part), smoothed between
+		int grid = SIZE / 2 + 1;
+		float[] clouds = new float[grid * grid];
+		if (overworld) {
+			for (int gy = 0; gy < grid; gy++) {
+				for (int gx = 0; gx < grid; gx++) {
+					clouds[gy * grid + gx] = CloudDensity.cover(this.landX + (gx * 2 - SIZE / 2) * step, this.landZ + (gy * 2 - SIZE / 2) * step);
+				}
+			}
+		}
 		float rain = mc.level.getRainLevel(1.0F);
 		float thunder = mc.level.getThunderLevel(1.0F);
 		double[] cell = StormFront.where();
@@ -118,15 +128,20 @@ public final class WeatherMapScreen extends Screen {
 				int c = this.land[py * SIZE + px];
 				if (c == 0) {
 					// not known: a dim grid
-					boolean grid = Math.floorMod(Mth.floor(x), 256) < step || Math.floorMod(Mth.floor(z), 256) < step;
-					c = grid ? 0xFF262A30 : 0xFF181B20;
+					boolean line = Math.floorMod(Mth.floor(x), 256) < step || Math.floorMod(Mth.floor(z), 256) < step;
+					c = line ? 0xFF262A30 : 0xFF181B20;
 				}
 				float r = (c >> 16 & 255) / 255.0F;
 				float g = (c >> 8 & 255) / 255.0F;
 				float b = (c & 255) / 255.0F;
 				if (overworld) {
 					// the clouds from above: white, the thick parts brighter
-					float cloud = CloudDensity.cover(x, z);
+					int gx = px / 2;
+					int gy = py / 2;
+					float fx = (px & 1) * 0.5F;
+					float fy = (py & 1) * 0.5F;
+					float cloud = Mth.lerp(fy, Mth.lerp(fx, clouds[gy * grid + gx], clouds[gy * grid + gx + 1]),
+						Mth.lerp(fx, clouds[(gy + 1) * grid + gx], clouds[(gy + 1) * grid + gx + 1]));
 					float storm = 0.0F;
 					if (cell != null) {
 						double d = Math.hypot(x - cell[0], z - cell[1]) / StormFront.RADIUS;

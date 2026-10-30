@@ -86,7 +86,7 @@ public final class Regrowth {
 
 	public static void tick(ServerLevel level) {
 		long now = level.getGameTime();
-		if (ZONES.isEmpty() || now % 20 != 7) {
+		if (ZONES.isEmpty() || now % 20 != 7 || !de.rcm.ballistic.config.ServerConfig.nature(de.rcm.ballistic.config.ServerConfig.REGROWTH)) {
 			return;
 		}
 		ZONES.removeIf(z -> now - z.start() > z.delay() + KEEP || now < z.start());

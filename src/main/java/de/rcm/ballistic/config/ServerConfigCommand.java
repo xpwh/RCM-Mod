@@ -42,6 +42,15 @@ public final class ServerConfigCommand {
 			.executes(ctx -> report(ctx.getSource()))
 			.then(Commands.literal("erlauben").executes(ctx -> nukes(ctx.getSource(), true)))
 			.then(Commands.literal("verbieten").executes(ctx -> nukes(ctx.getSource(), false))));
+		var natur = Commands.literal("natur");
+		for (int i = 0; i < ServerConfig.NATURE_NAMES.length; i++) {
+			int bit = 1 << i;
+			String name = ServerConfig.NATURE_NAMES[i];
+			natur.then(Commands.literal(name)
+				.then(Commands.literal("an").executes(ctx -> nature(ctx.getSource(), name, bit, true)))
+				.then(Commands.literal("aus").executes(ctx -> nature(ctx.getSource(), name, bit, false))));
+		}
+		root.then(natur);
 		root.then(Commands.literal("killcam")
 			.executes(ctx -> report(ctx.getSource()))
 			.then(Commands.literal("an").executes(ctx -> killcam(ctx.getSource(), true)))
@@ -80,6 +89,14 @@ public final class ServerConfigCommand {
 		if (ServerConfig.killcam != on) {
 			ServerConfig.killcam = on;
 			announce(source, "Killcam", Announcement.state(on, "ON", "OFF"));
+		}
+		return changed(source);
+	}
+
+	private static int nature(CommandSourceStack source, String name, int bit, boolean on) {
+		if (ServerConfig.nature(bit) != on) {
+			ServerConfig.nature = on ? ServerConfig.nature | bit : ServerConfig.nature & ~bit;
+			announce(source, name, Announcement.state(on, "ON", "OFF"));
 		}
 		return changed(source);
 	}

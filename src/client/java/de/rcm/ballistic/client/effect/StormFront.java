@@ -206,7 +206,7 @@ public final class StormFront {
 			flash = Math.max(flash, 0.5F + R.nextFloat() * 0.5F);
 		}
 		double[] c = center(now);
-		if (c != null && visible()) {
+		if (c != null && visible() && de.rcm.ballistic.client.ModConfig.stormFront) {
 			double dx = c[0] - mc.player.getX();
 			double dz = c[1] - mc.player.getZ();
 			double d = Math.hypot(dx, dz);
@@ -237,7 +237,7 @@ public final class StormFront {
 	/** The cell for the uniform block: centre relative to the camera (x, z), radius, strength. */
 	static float[] cell(Vec3 cam, float partialTick) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.level == null || !visible()) {
+		if (mc.level == null || !visible() || !de.rcm.ballistic.client.ModConfig.stormFront) {
 			return null;
 		}
 		double[] c = center(mc.level.getGameTime());
