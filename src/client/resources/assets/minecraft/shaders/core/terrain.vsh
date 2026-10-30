@@ -68,6 +68,27 @@ vec3 sway(vec3 rel, vec3 world, float amp, bool leaf) {
         off.xz += d / dist * push * a;
         off.y -= abs(push) * a * (leaf ? 0.05 : 0.45);
     }
+    // downwash: under a rotor the grass is flattened outwards and thrashes, the leaves shiver
+    for (int i = 0; i < 4; i++) {
+        float k = WashPos[i].w;
+        if (k <= 0.0) {
+            continue;
+        }
+        vec3 d3 = rel - WashPos[i].xyz;
+        vec2 d = d3.xz;
+        float dist = length(d) + 0.001;
+        float r = WashShape[i].x;
+        if (dist > r * 1.6 || abs(d3.y) > r) {
+            continue;
+        }
+        // hardest just out from under the rotor, dying off past its rim
+        float fall = smoothstep(r * 1.6, r * 0.4, dist) * (0.55 + 0.45 * smoothstep(0.0, r * 0.35, dist));
+        float thrash = 0.65 + 0.35 * sin(t * 17.0 - dist * 1.9 + dot(world.xz, vec2(1.3, 0.7))) * sin(t * 11.0 + phase * 3.0);
+        float push = k * fall * thrash;
+        float a = leaf ? 0.25 : amp;
+        off.xz += d / dist * push * 0.55 * a;
+        off.y -= push * a * (leaf ? 0.03 : 0.3);
+    }
     return off;
 }
 

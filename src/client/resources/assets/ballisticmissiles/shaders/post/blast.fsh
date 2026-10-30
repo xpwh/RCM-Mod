@@ -550,7 +550,12 @@ void main() {
             float a = float(i) * 0.785398;
             halo += hot(texture(InSampler, uv + vec2(cos(a) / aspect, sin(a)) * 0.012).rgb, 0.25);
         }
-        lit += luma(halo) / 8.0 * gain * 0.05;
+        // a flash (a muzzle, a blast): everything bright blooms out in big soft halos, the picture whites out for
+        // a blink - then the tube's gain control throttles it down and it comes back up
+        vec4 p14 = param(14);
+        lit += luma(halo) / 8.0 * gain * (0.05 + 0.6 * p14.r);
+        lit = mix(lit, 1.15, p14.r * 0.75);
+        lit *= 1.0 - 0.65 * p14.g;
         float grain = hash(texCoord * OutSize + fract(time * 7.31) * 113.0);
         lit = lit * (0.85 + 0.3 * grain) + (grain - 0.5) * 0.04;
         lit += p8.b * 0.7; // a fresh tube warming up

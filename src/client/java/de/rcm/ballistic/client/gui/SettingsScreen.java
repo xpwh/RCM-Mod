@@ -292,6 +292,7 @@ public class SettingsScreen extends Screen {
 			new IntSlider(2, 20, "options.ballisticmissiles.hotbar_hide_seconds", ModConfig.hotbarHideSeconds, v -> ModConfig.hotbarHideSeconds = v));
 		this.list.row(toggle("smooth_look", ModConfig.smoothLook, "smooth_look", v -> ModConfig.smoothLook = v),
 			toggle("smooth_move", ModConfig.smoothMove, "smooth_move", v -> ModConfig.smoothMove = v));
+		this.list.row(toggle("first_person_body", ModConfig.firstPersonBody, "first_person_body", v -> ModConfig.firstPersonBody = v));
 		this.list.header("options.ballisticmissiles.section.world", 0xFFC0C0C0);
 		this.list.row(new IntSlider(0, 100, "options.ballisticmissiles.smoke_amount", ModConfig.smokeAmount, v -> ModConfig.smokeAmount = v),
 			toggle("bullet_holes", ModConfig.bulletHoles, null, v -> ModConfig.bulletHoles = v));

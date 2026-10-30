@@ -43,6 +43,22 @@ public abstract class LevelRendererMixin {
 		});
 	}
 
+	/** Your own body in first person (FirstPersonBody): the world draws it as if the camera were outside it. */
+	@Redirect(method = "extractVisibleEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;isDetached()Z"), require = 0)
+	private boolean ballisticmissiles$ownBody(Camera camera) {
+		return camera.isDetached() || de.rcm.ballistic.client.render.FirstPersonBody.wanted(camera);
+	}
+
+	/** ... stripped of what would sit in your face (the head, the helmet, the arms and what is in your hands). */
+	@com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation(method = "extractVisibleEntities", at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/client/renderer/LevelRenderer;extractEntity(Lnet/minecraft/world/entity/Entity;F)Lnet/minecraft/client/renderer/entity/state/EntityRenderState;"))
+	private net.minecraft.client.renderer.entity.state.EntityRenderState ballisticmissiles$stripOwnBody(LevelRenderer self, Entity entity, float partial,
+		com.llamalad7.mixinextras.injector.wrapoperation.Operation<net.minecraft.client.renderer.entity.state.EntityRenderState> original) {
+		net.minecraft.client.renderer.entity.state.EntityRenderState state = original.call(self, entity, partial);
+		de.rcm.ballistic.client.render.FirstPersonBody.extracted(entity, state);
+		return state;
+	}
+
 	@Redirect(
 		method = "extractVisibleEntities",
 		at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;entity()Lnet/minecraft/world/entity/Entity;", ordinal = 3),

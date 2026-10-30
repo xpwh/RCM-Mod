@@ -1055,6 +1055,8 @@
 	"options.ballisticmissiles.hotbar_hide_seconds": "Hide after: %s s",
 	"options.ballisticmissiles.smooth_look": "Smooth mouse look",
 	"options.ballisticmissiles.smooth_look.tooltip": "The camera follows the mouse through a very short filter: even, stutter-free turns without feeling sluggish.",
+	"options.ballisticmissiles.first_person_body": "Own body in first person",
+	"options.ballisticmissiles.first_person_body.tooltip": "Look down and you see your legs, chest and boots.",
 	"options.ballisticmissiles.smooth_move": "Smooth camera when moving",
 	"options.ballisticmissiles.smooth_move.tooltip": "Stepping up blocks and stairs the camera glides up instead of snapping, and landing it sinks a little and springs back.",
 	"block.ballisticmissiles.room_light": "Ceiling Light",

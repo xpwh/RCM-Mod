@@ -6,6 +6,7 @@
 		"AbstractClientPlayerMixin",
 		"AtmosphericFogMixin",
 		"AvatarRendererMixin",
+		"HumanoidModelMixin",
 		"AvatarRenderStateMixin",
 		"BufferBuilderMixin",
 		"CameraMixin",

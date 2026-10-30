@@ -145,6 +145,7 @@ public final class DynamicLights {
 
 	/** A flash: full {@code strength} at once, dying away over about {@code decayMs}. */
 	public static void flash(Vec3 at, int rgb, float strength, float radius, float decayMs) {
+		Vision.flashSeen(at, strength, radius);
 		add(at, rgb, strength, radius, decayMs, false);
 	}
 

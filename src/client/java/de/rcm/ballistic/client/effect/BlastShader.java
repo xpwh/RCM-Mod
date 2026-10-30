@@ -215,7 +215,7 @@ public final class BlastShader {
 		}
 		if (params == null) {
 			// registered before the effect first loads, so the post chain picks this texture up
-			params = new DynamicTexture(() -> "Blast shader parameters", 14, 1, false);
+			params = new DynamicTexture(() -> "Blast shader parameters", 15, 1, false);
 			mc.getTextureManager().register(PARAMS, params);
 			WorldFx.ensureTextures(mc);
 		}
@@ -356,6 +356,8 @@ public final class BlastShader {
 		// the other worlds: the Nether's heat shimmer, an ash storm, a portal's passage (and its colour)
 		img.setPixel(12, 0, argb(255, RealmFx.heat() * k, AshStorm.amount(), RealmFx.portalShimmer() * k));
 		img.setPixel(13, 0, byteOf(RealmFx.portal() * k) << 24 | (RealmFx.portalColor() & 0xFFFFFF));
+		// a flash through night vision: the bloom, and the gain throttled down after it
+		img.setPixel(14, 0, argb(255, Vision.flare(), Vision.gainDip(), 0.0F));
 		params.upload();
 	}
 

@@ -127,6 +127,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.StormFront.init();
 		de.rcm.ballistic.client.effect.RealmFx.init();
 		de.rcm.ballistic.client.effect.AshStorm.init();
+		de.rcm.ballistic.client.effect.IrStrobes.init();
 		de.rcm.ballistic.client.effect.EndSky.init();
 		de.rcm.ballistic.client.effect.EndFx.init();
 		de.rcm.ballistic.client.effect.BodyHeatClient.init();

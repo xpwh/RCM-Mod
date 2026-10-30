@@ -116,6 +116,42 @@ public final class Vision {
 		return Math.max(nightVision, thermal);
 	}
 
+	// a flash seen through the tube: the picture blooms out white, then the tube's automatic gain throttles it
+	// down and it comes back over the better part of a second
+	private static float flashAmount;
+	private static long flashAt;
+
+	/** Something flashed (a muzzle, an explosion) at {@code at}, this bright: what it does to the goggles' picture. */
+	public static void flashSeen(net.minecraft.world.phys.Vec3 at, float strength, float radius) {
+		Minecraft mc = Minecraft.getInstance();
+		if (nightVision < 0.05F || mc.player == null) {
+			return;
+		}
+		net.minecraft.client.Camera cam = mc.gameRenderer.getMainCamera();
+		net.minecraft.world.phys.Vec3 d = at.subtract(cam.position());
+		double dist = Math.max(1.0, d.length());
+		// in front: full; beside or behind, only the light thrown about the scene
+		float facing = (float) Mth.clamp(d.normalize().dot(new net.minecraft.world.phys.Vec3(cam.forwardVector())), 0.0, 1.0);
+		float a = Mth.clamp(strength * (float) (radius / (dist * 2.0)), 0.0F, 1.0F) * (0.35F + 0.65F * facing * facing);
+		float now = flare();
+		if (a > now) {
+			flashAmount = Math.min(1.0F, Math.max(a, now + a * 0.4F));
+			flashAt = System.nanoTime();
+		}
+	}
+
+	/** The bloom of the last flash now (0-1): white-out for a blink. */
+	public static float flare() {
+		float t = (System.nanoTime() - flashAt) / 1.0E9F;
+		return flashAmount * (float) Math.exp(-t / 0.09F);
+	}
+
+	/** The gain throttled down after it (0-1): the picture dim, recovering. */
+	public static float gainDip() {
+		float t = (System.nanoTime() - flashAt) / 1.0E9F;
+		return flashAmount * Mth.clamp(t / 0.06F, 0.0F, 1.0F) * (float) Math.exp(-t / 0.7F);
+	}
+
 	/** The warm-up bloom of a freshly switched-on tube (0-1). */
 	public static float warmUp() {
 		return warmUp / 14.0F;

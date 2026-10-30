@@ -9,4 +9,6 @@ layout(std140) uniform BmWind {
     vec4 StormCell;     // xy: centre (x, z) relative to the camera block, z: radius, w: strength (0: none)
     vec4 StormInfo;     // x: sheet lightning in it (0-1), yz: where in it (x, z from the centre), w: the cloud base over the camera
     vec4 StormBolt;     // x: a bolt to the ground (0-1), y: its seed, z: where across the cell (blocks), w: unused
+    vec4 WashPos[4];    // downwash (rotors, exhaust): xyz where it hits the ground, relative to the camera block; w: strength (0: none)
+    vec4 WashShape[4];  // x: radius (blocks)
 };

@@ -83,6 +83,8 @@ public final class ModConfig {
 	public static boolean smoothLook = true;
 	/** Steps up are eased and landings sink and spring back. */
 	public static boolean smoothMove = true;
+	/** Your own body (legs, chest) seen when you look down in first person. */
+	public static boolean firstPersonBody = true;
 	// ---- effects
 	/** The screen effects of blasts (flash, haze, god rays, shell shock...), percent. */
 	public static int screenEffects = 100;
@@ -177,6 +179,7 @@ public final class ModConfig {
 			hotbarHideSeconds = net.minecraft.util.Mth.clamp(percent(p, "hotbarHideSeconds", hotbarHideSeconds), 1, 60);
 			smoothLook = bool(p, "smoothLook", smoothLook);
 			smoothMove = bool(p, "smoothMove", smoothMove);
+			firstPersonBody = bool(p, "firstPersonBody", firstPersonBody);
 			screenEffects = percent(p, "screenEffects", screenEffects);
 			smokeAmount = percent(p, "smokeAmount", smokeAmount);
 			fastSmoke = "fast".equals(p.getProperty("smokeFade", fastSmoke ? "fast" : "long"));
@@ -237,6 +240,7 @@ public final class ModConfig {
 			p.setProperty("hotbarHideSeconds", Integer.toString(hotbarHideSeconds));
 			p.setProperty("smoothLook", Boolean.toString(smoothLook));
 			p.setProperty("smoothMove", Boolean.toString(smoothMove));
+			p.setProperty("firstPersonBody", Boolean.toString(firstPersonBody));
 			p.setProperty("screenEffects", Integer.toString(screenEffects));
 			p.setProperty("smokeAmount", Integer.toString(smokeAmount));
 			p.setProperty("smokeFade", fastSmoke ? "fast" : "long");
