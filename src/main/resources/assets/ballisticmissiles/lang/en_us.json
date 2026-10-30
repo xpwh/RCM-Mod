@@ -1065,5 +1065,7 @@
 	"subtitles.ballisticmissiles.cricket": "Cricket chirps",
 	"subtitles.ballisticmissiles.frog": "Frog croaks",
 	"subtitles.ballisticmissiles.owl": "Owl hoots",
-	"commands.ballisticmissiles.world.storm": "A thunderstorm breaks in %s minutes - watch the horizon upwind"
+	"commands.ballisticmissiles.world.storm": "A thunderstorm breaks in %s minutes - watch the horizon upwind",
+	"commands.ballisticmissiles.world.ash_storm_on": "An ash storm sweeps through the Nether",
+	"commands.ballisticmissiles.world.ash_storm_off": "The ash storm dies down"
 }

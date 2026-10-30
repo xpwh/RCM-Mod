@@ -187,6 +187,20 @@ void main() {
         uv += n * column * 0.006;
     }
 
+    // ---- the hot air of the Nether (and a portal's passage): the far side of a lava lake swims and ripples,
+    // the more air there is between, the more (p12: r heat, g ash storm, b portal; p13: the portal's tint)
+    vec4 p12 = param(12);
+    vec4 p13 = param(13);
+    float sceneDepth = texture(DepthSampler, texCoord).r;
+    float sceneDist = sceneDepth >= 0.99999 ? 400.0 : 0.05 / max(1.0 - sceneDepth, 1.0e-5);
+    float shimmerAmt = p12.r + p12.b * 1.5;
+    if (shimmerAmt > 0.0) {
+        float through = 1.0 - exp(-sceneDist / 22.0);
+        vec2 n = vec2(noise(uv * vec2(16.0, 34.0) + vec2(0.0, -time * 1.9)), noise(uv * vec2(16.0, 34.0) + vec2(3.7, -time * 2.3))) - 0.5;
+        vec2 n2 = vec2(noise(uv * vec2(41.0, 77.0) + vec2(0.0, -time * 3.1)), noise(uv * vec2(41.0, 77.0) + vec2(8.1, -time * 3.4))) - 0.5;
+        uv += (n * 0.0045 + n2 * 0.0018) * shimmerAmt * (0.25 + 0.75 * through);
+    }
+
     // ---- a star's core collapsing: the light bent round it as round a black hole (the picture behind it
     // pulled into a ring at the edge of its reach), and a burning star's hot air boiling round it
     vec4 p11 = param(11);
@@ -317,6 +331,22 @@ void main() {
         col = mix(col, soft, 0.5 * smoke);
         float thick = clamp(smoke * (0.75 + 0.5 * swirl), 0.0, 0.97);
         col = mix(col, smokeCol * (0.8 + 0.4 * swirl), thick);
+    }
+
+    // ---- an ash storm in the Nether: glowing ash driven past, the far side gone in a dark red-brown murk
+    float ashStorm = p12.g;
+    if (ashStorm > 0.0) {
+        float swirl = noise(uv * vec2(3.0, 5.0) + vec2(time * 0.9, time * 0.05)) * 0.6 + noise(uv * vec2(9.0, 7.0) + vec2(time * 1.7, 0.0)) * 0.4;
+        float murk = (1.0 - exp(-sceneDist / mix(60.0, 14.0, ashStorm))) * ashStorm * (0.8 + 0.35 * swirl);
+        vec3 ashCol = vec3(0.24, 0.1, 0.055) * (0.75 + 0.5 * swirl) + vec3(0.22, 0.07, 0.0) * smoothstep(0.6, 1.0, swirl) * ashStorm;
+        col = mix(col, ashCol, clamp(murk, 0.0, 0.94));
+    }
+
+    // ---- through a portal: the heat (or the cold) of the other side hitting the eyes, the picture washed in it
+    if (p13.a > 0.0) {
+        float edge = smoothstep(0.25, 0.85, length((texCoord - 0.5) * vec2(aspect, 1.0)));
+        col = mix(col, p13.rgb * (0.45 + 0.8 * luma(col)), p13.a * (0.35 + 0.45 * edge));
+        col += p13.rgb * p13.a * 0.25 * edge;
     }
 
     // ---- water on the lens: soft focus inside the water, the rims dark, the glints bright

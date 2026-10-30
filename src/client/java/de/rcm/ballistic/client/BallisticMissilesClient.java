@@ -125,6 +125,12 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.NightSounds.init();
 		de.rcm.ballistic.client.effect.Wind.init();
 		de.rcm.ballistic.client.effect.StormFront.init();
+		de.rcm.ballistic.client.effect.RealmFx.init();
+		de.rcm.ballistic.client.effect.AshStorm.init();
+		de.rcm.ballistic.client.effect.EndSky.init();
+		de.rcm.ballistic.client.effect.EndFx.init();
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.AshStormPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.AshStorm.receive(payload.ticks()));
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.StormForecastPayload.TYPE,
 			(payload, context) -> de.rcm.ballistic.client.effect.StormFront.receive(payload.ticks()));
 		de.rcm.ballistic.client.effect.SmokeVolume.init();

@@ -53,6 +53,17 @@ public final class WorldCommand {
 					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.world.storm", m), true);
 					return m;
 				})))
+			.then(Commands.literal("aschesturm")
+				.then(Commands.literal("an").executes(ctx -> {
+					AshStorms.start(ctx.getSource().getServer(), 3600);
+					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.world.ash_storm_on"), true);
+					return 1;
+				}))
+				.then(Commands.literal("aus").executes(ctx -> {
+					AshStorms.stop(ctx.getSource().getServer());
+					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.world.ash_storm_off"), true);
+					return 1;
+				})))
 			.then(Commands.literal("polarlicht")
 				.then(Commands.literal("an").executes(ctx -> aurora(ctx.getSource(), true)))
 				.then(Commands.literal("aus").executes(ctx -> aurora(ctx.getSource(), false)))

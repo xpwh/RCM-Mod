@@ -935,6 +935,7 @@ public final class ModRegistry {
 	public static final SoundEvent THUNDER_FAR = sound("storm.thunder_far");
 	public static final SoundEvent GRENADE_EXPLODE_FAR = sound("grenade.explode_far");
 	public static final SoundEvent NIGHT_CRICKET = sound("night.cricket");
+	public static final SoundEvent ASH_STORM = sound("nether.ash_storm");
 	public static final SoundEvent NIGHT_FROG = sound("night.frog");
 	public static final SoundEvent NIGHT_FROG_CHORUS = sound("night.frog_chorus");
 	public static final SoundEvent NIGHT_OWL = sound("night.owl");

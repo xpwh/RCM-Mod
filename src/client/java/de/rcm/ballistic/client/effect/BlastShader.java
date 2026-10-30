@@ -205,7 +205,7 @@ public final class BlastShader {
 		boolean wanted = mc.level != null && de.rcm.ballistic.client.ModConfig.screenEffects > 0 && (strength > 0.01F || exposure > 0.01F || heat > 0.02F || dust > 0.01F || shellShock() > 0.02F
 			|| WinterClient.amount() > 0.01F || quake > 0.01F || drench > 0.01F || afterimage > 0.01F || SmokeField.fog() > 0.01F || suppression > 0.01F || loss > 0.01F
 			|| Vision.any() > 0.01F || de.rcm.ballistic.client.ModConfig.bloom > 0 || de.rcm.ballistic.client.ModConfig.lensFlare
-			|| EyeAdaptation.overexposure(0.0F) > 0.01F || lensRadius > 0.0F || lensShimmer > 0.0F);
+			|| EyeAdaptation.overexposure(0.0F) > 0.01F || lensRadius > 0.0F || lensShimmer > 0.0F || RealmFx.any() || AshStorm.amount() > 0.01F);
 		if (!wanted) {
 			if (ours) {
 				renderer.clearPostEffect();
@@ -215,7 +215,7 @@ public final class BlastShader {
 		}
 		if (params == null) {
 			// registered before the effect first loads, so the post chain picks this texture up
-			params = new DynamicTexture(() -> "Blast shader parameters", 12, 1, false);
+			params = new DynamicTexture(() -> "Blast shader parameters", 14, 1, false);
 			mc.getTextureManager().register(PARAMS, params);
 			WorldFx.ensureTextures(mc);
 		}
@@ -353,6 +353,9 @@ public final class BlastShader {
 			? argb(255, Mth.clamp(lensScreen[0] * 0.5F + 0.25F, 0.0F, 1.0F), Mth.clamp(lensScreen[1] * 0.5F + 0.25F, 0.0F, 1.0F), Mth.clamp(lensReach * 2.0F, 0.0F, 1.0F))
 			: argb(0, 0.0F, 0.0F, 0.0F));
 		img.setPixel(11, 0, img.getPixel(11, 0) & 0x00FFFFFF | byteOf(lensScreen[3] > 0.0F && lensNear ? lensShimmer * k : 0.0F) << 24);
+		// the other worlds: the Nether's heat shimmer, an ash storm, a portal's passage (and its colour)
+		img.setPixel(12, 0, argb(255, RealmFx.heat() * k, AshStorm.amount(), RealmFx.portalShimmer() * k));
+		img.setPixel(13, 0, byteOf(RealmFx.portal() * k) << 24 | (RealmFx.portalColor() & 0xFFFFFF));
 		params.upload();
 	}
 

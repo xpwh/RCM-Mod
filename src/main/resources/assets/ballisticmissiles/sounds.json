@@ -2270,5 +2270,13 @@
 				"attenuation_distance": 64
 			}
 		]
+	},
+	"nether.ash_storm": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:nether/ash_storm",
+				"stream": true
+			}
+		]
 	}
 }

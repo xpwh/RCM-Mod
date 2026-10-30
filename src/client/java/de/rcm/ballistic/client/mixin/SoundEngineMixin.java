@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import net.minecraft.client.sounds.SoundEngine.PlayResult;
 
 /**
  * Blast deafness: after a close explosion every other sound in the game is muffled while the ears
@@ -16,6 +17,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(SoundEngine.class)
 public abstract class SoundEngineMixin {
+	/** The dragon's roar echoing off the void (EndFx). */
+	@Inject(method = "play(Lnet/minecraft/client/resources/sounds/SoundInstance;)Lnet/minecraft/client/sounds/SoundEngine$PlayResult;", at = @At("HEAD"))
+	private void ballisticmissiles$echo(SoundInstance sound, CallbackInfoReturnable<PlayResult> cir) {
+		de.rcm.ballistic.client.effect.EndFx.played(sound);
+	}
+
 	@Inject(method = "calculateVolume(Lnet/minecraft/client/resources/sounds/SoundInstance;)F", at = @At("RETURN"), cancellable = true)
 	private void ballisticmissiles$deafness(SoundInstance sound, CallbackInfoReturnable<Float> cir) {
 		// Minecraft's own thunder, heard everywhere at once: the storm plays its own, when sound would arrive

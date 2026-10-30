@@ -451,6 +451,18 @@ public final class ModNetworking {
 		}
 	}
 
+	/** Server -> client: an ash storm is raging in the Nether for this many more ticks (0: none). */
+	public record AshStormPayload(int ticks) implements CustomPacketPayload {
+		public static final Type<AshStormPayload> TYPE = new Type<>(BallisticMissiles.id("ash_storm"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, AshStormPayload> CODEC = StreamCodec.of((buf, p) -> buf.writeVarInt(p.ticks),
+			buf -> new AshStormPayload(buf.readVarInt()));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: the next thunderstorm breaks in this many ticks (-1: none in sight). */
 	public record StormForecastPayload(int ticks) implements CustomPacketPayload {
 		public static final Type<StormForecastPayload> TYPE = new Type<>(BallisticMissiles.id("storm_forecast"));
@@ -913,6 +925,7 @@ public final class ModNetworking {
 		});
 		PayloadTypeRegistry.playS2C().register(WinterPayload.TYPE, WinterPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(StormForecastPayload.TYPE, StormForecastPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(AshStormPayload.TYPE, AshStormPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(NewMoonPayload.TYPE, NewMoonPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(AuroraPayload.TYPE, AuroraPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(FlashbangPayload.TYPE, FlashbangPayload.CODEC);
