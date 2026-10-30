@@ -2,10 +2,10 @@
 	"placement": {
 		"type": "minecraft:random_spread",
 		"salt": 1100647,
-		"spacing": 14,
-		"separation": 5,
+		"spacing": 28,
+		"separation": 10,
 		"exclusion_zone": {
-			"chunk_count": 5,
+			"chunk_count": 10,
 			"other_set": "ballisticmissiles:military_bases"
 		}
 	},
