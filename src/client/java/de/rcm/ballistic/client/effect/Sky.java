@@ -53,6 +53,68 @@ public final class Sky {
 		// before the entities: the solid world is drawn (and hides the sky where it stands), particles,
 		// smoke and translucent things still come after
 		WorldRenderEvents.BEFORE_ENTITIES.register(Sky::render);
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(Sky::tickRainbow);
+	}
+
+	// ------------------------------------------------------------------ the rainbow
+
+	/** How long a rainbow stays after the rain (ticks), give or take. */
+	private static final int BOW_LENGTH = 3600;
+	private static boolean wet;
+	private static boolean stormy;
+	private static long bowStart = -1L;
+	private static long bowEnd = -1L;
+	private static final net.minecraft.util.RandomSource BOW_RANDOM = net.minecraft.util.RandomSource.create();
+
+	/**
+	 * Watches the weather: when a shower or a thunderstorm passes over and the rain eases off, there may be a
+	 * rainbow (after a thunderstorm there always is), opposite the sun, for a few minutes.
+	 */
+	private static void tickRainbow(Minecraft mc) {
+		if (mc.level == null) {
+			wet = stormy = false;
+			bowStart = bowEnd = -1L;
+			return;
+		}
+		long now = mc.level.getGameTime();
+		float rain = mc.level.getRainLevel(1.0F);
+		if (rain > 0.6F) {
+			wet = true;
+			stormy |= mc.level.getThunderLevel(1.0F) > 0.3F;
+			if (rain > 0.8F) {
+				bowStart = bowEnd = -1L; // raining hard again: gone
+			}
+		} else if (wet && rain < 0.45F) {
+			wet = false;
+			if (stormy || BOW_RANDOM.nextFloat() < 0.6F) {
+				bowStart = now;
+				bowEnd = now + BOW_LENGTH / 2 + BOW_RANDOM.nextInt(BOW_LENGTH);
+			}
+			stormy = false;
+		}
+	}
+
+	/** How strong the rainbow is now, 0-1: there is one, the sun is low enough (under 42 degrees) and up. */
+	private static float rainbow(Minecraft mc, Vector3f sun, float partialTick) {
+		if (bowStart < 0L) {
+			return 0.0F;
+		}
+		float now = mc.level.getGameTime() + partialTick;
+		float in = smooth((now - bowStart) / 400.0F);
+		float out = smooth((bowEnd - now) / 900.0F);
+		if (out <= 0.0F) {
+			bowStart = bowEnd = -1L;
+			return 0.0F;
+		}
+		// the sun high: the bow's top sinks below the horizon; the sun down: no light for it
+		float low = smooth((0.66F - sun.y) / 0.12F) * smooth(sun.y / 0.05F);
+		// only where it was raining: not over a desert or snow
+		net.minecraft.core.BlockPos at = mc.gameRenderer.getMainCamera().blockPosition();
+		if (mc.level.getBiome(at).value().getPrecipitationAt(at, mc.level.getSeaLevel()) != net.minecraft.world.level.biome.Biome.Precipitation.RAIN) {
+			return 0.0F;
+		}
+		float rain = mc.level.getRainLevel(partialTick);
+		return in * out * low * (1.0F - 0.7F * smooth((rain - 0.35F) / 0.3F));
 	}
 
 	private static RenderType type() {
@@ -98,8 +160,10 @@ public final class Sky {
 		float rain = mc.level.getRainLevel(partialTick);
 		float thunder = mc.level.getThunderLevel(partialTick);
 		ModConfig.Quality quality = ModConfig.cloudQuality;
+		// blue: the quality in the top two bits, the rainbow's strength in the low six
+		int bow = Math.round(rainbow(mc, sun, partialTick) * 63.0F);
 		int color = Math.round(cover * 255.0F) << 24 | Math.round(rain * 255.0F) << 16 | Math.round(thunder * 255.0F) << 8
-			| Math.round(quality.ordinal() * 85.0F);
+			| quality.ordinal() << 6 | bow;
 		Camera camera = mc.gameRenderer.getMainCamera();
 		VertexConsumer consumer = context.consumers().getBuffer(type());
 		PoseStack.Pose pose = context.matrices().last();

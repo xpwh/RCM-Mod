@@ -1061,5 +1061,8 @@
 	"block.ballisticmissiles.neon_sign": "Leuchtreklame",
 	"block.ballisticmissiles.street_lamp": "Straßenlaterne",
 	"block.ballisticmissiles.traffic_light": "Ampel",
-	"block.ballisticmissiles.car_headlight": "Autoscheinwerfer"
+	"block.ballisticmissiles.car_headlight": "Autoscheinwerfer",
+	"subtitles.ballisticmissiles.cricket": "Grille zirpt",
+	"subtitles.ballisticmissiles.frog": "Frosch quakt",
+	"subtitles.ballisticmissiles.owl": "Eule ruft"
 }

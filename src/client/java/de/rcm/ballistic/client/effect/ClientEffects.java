@@ -60,6 +60,22 @@ public final class ClientEffects {
 		};
 		// every living thing for miles keeps its head down a good while after
 		AmbientLife.disturb(pos, nuke ? 600.0 : 250.0, nuke ? 24000 : 6000);
+		// the blast wave sweeping over the grass
+		switch (warhead) {
+			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, INTERCEPT -> {
+			}
+			case TSAR -> Wind.blast(pos, 900.0F, 150.0F, 1.1F);
+			case HYDROGEN -> Wind.blast(pos, 700.0F, 140.0F, 1.1F);
+			case MOAB, THERMOBARIC -> Wind.blast(pos, 180.0F, 90.0F, 0.9F);
+			case BOMBLET, DRONE -> Wind.blast(pos, 35.0F, 50.0F, 0.6F);
+			default -> {
+				if (nuke) {
+					Wind.blast(pos, 500.0F, 120.0F, 1.0F);
+				} else {
+					Wind.blast(pos, 80.0F, 60.0F, 0.8F);
+				}
+			}
+		}
 		switch (warhead) {
 			case NUCLEAR, MIRV -> BlastShader.blast(BlastShader.Kind.NUCLEAR, pos, 1.0, 0xFFE2B0);
 			case HYDROGEN -> BlastShader.blast(BlastShader.Kind.NUCLEAR, pos, 1.6, 0xFFE2B0);

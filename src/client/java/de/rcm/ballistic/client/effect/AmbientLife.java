@@ -55,6 +55,7 @@ public final class AmbientLife {
 	private static final List<Flock> FLOCKS = new ArrayList<>();
 	private static final List<Leap> LEAPS = new ArrayList<>();
 	private static final List<Deer> DEER = new ArrayList<>();
+	private static final List<Seed> SEEDS = new ArrayList<>();
 	private static long tick;
 
 	private AmbientLife() {
@@ -83,6 +84,7 @@ public final class AmbientLife {
 			return;
 		}
 		boolean already = quiet(at);
+		NightSounds.hush(at, radius, quietTicks);
 		QUIET.add(new Quiet(at, radius, level.getGameTime() + quietTicks));
 		double r2 = radius * radius;
 		for (Butterfly b : BUTTERFLIES) {
@@ -152,6 +154,40 @@ public final class AmbientLife {
 
 		double distSqr(Vec3 p) {
 			return (this.x - p.x) * (this.x - p.x) + (this.y - p.y) * (this.y - p.y) + (this.z - p.z) * (this.z - p.z);
+		}
+	}
+
+	/** Pollen, a dandelion seed, a bit of fluff: carried along on the wind, rising and sinking in the gusts. */
+	private static final class Seed extends Creature {
+		final float size;
+		final float phase;
+		final int life;
+
+		Seed(double x, double y, double z) {
+			this.x = this.px = x;
+			this.y = this.py = y;
+			this.z = this.pz = z;
+			this.size = 0.025F + R.nextFloat() * 0.035F;
+			this.phase = R.nextFloat() * 100.0F;
+			this.life = 200 + R.nextInt(260);
+		}
+
+		void tick(ClientLevel level, float seconds, float dir, float strength) {
+			this.last();
+			float drift = 0.02F + 0.07F * strength;
+			float t = this.age + this.phase;
+			this.x += Mth.cos(dir) * drift + Mth.sin(t * 0.13F) * 0.008;
+			this.z += Mth.sin(dir) * drift + Mth.cos(t * 0.11F) * 0.008;
+			this.y += Mth.sin(t * 0.07F) * 0.012 - 0.002;
+			if (!level.getBlockState(BlockPos.containing(this.x, this.y, this.z)).isAir()) {
+				this.y += 0.05; // over the grass, not into it
+			}
+			this.gone = this.age > this.life;
+		}
+
+		float alpha(float partial) {
+			float a = this.age + partial;
+			return Mth.clamp(a / 30.0F, 0.0F, 1.0F) * Mth.clamp((this.life - a) / 30.0F, 0.0F, 1.0F);
 		}
 	}
 
@@ -485,6 +521,7 @@ public final class AmbientLife {
 				FLOCKS.clear();
 				LEAPS.clear();
 				DEER.clear();
+				SEEDS.clear();
 				QUIET.clear();
 			}
 			return;
@@ -525,6 +562,13 @@ public final class AmbientLife {
 		for (Deer d : DEER) {
 			d.tick(level, p);
 		}
+		float seconds = ((now % 72000L)) / 20.0F;
+		float windDir = Wind.direction(seconds);
+		float windStrength = Wind.strength(seconds, 1.0F);
+		SEEDS.removeIf(sd -> sd.gone || sd.distSqr(p) > 36 * 36);
+		for (Seed sd : SEEDS) {
+			sd.tick(level, seconds, windDir, windStrength);
+		}
 		if (!overworld || mc.player.isSpectator()) {
 			return;
 		}
@@ -557,6 +601,22 @@ public final class AmbientLife {
 			if ((ground.is(Blocks.GRASS_BLOCK) || ground.is(Blocks.MOSS_BLOCK) || !ground.getFluidState().isEmpty()) && !quiet(spot)
 				&& level.canSeeSky(BlockPos.containing(spot))) {
 				FIREFLIES.add(new Firefly(spot.x, spot.y, spot.z));
+			}
+		}
+		// pollen and seeds on the wind over meadows, warm days
+		if (day && !rain && wild && warmth >= 0.5F && SEEDS.size() < 45 && tick % 2 == 0) {
+			// upwind, so they come drifting past
+			float a = windDir + Mth.PI + (R.nextFloat() - 0.5F) * 2.4F;
+			double d = 4.0 + R.nextFloat() * 18.0;
+			int x = Mth.floor(p.x + Mth.cos(a) * d);
+			int z = Mth.floor(p.z + Mth.sin(a) * d);
+			int h = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			BlockState ground = level.getBlockState(new BlockPos(x, h - 1, z));
+			BlockState plant = level.getBlockState(new BlockPos(x, h, z));
+			Vec3 spot = new Vec3(x + R.nextFloat(), h + 0.4 + R.nextFloat() * 3.0, z + R.nextFloat());
+			if ((ground.is(Blocks.GRASS_BLOCK) || plant.is(BlockTags.FLOWERS) || plant.is(Blocks.SHORT_GRASS) || plant.is(Blocks.TALL_GRASS))
+				&& !quiet(spot)) {
+				SEEDS.add(new Seed(spot.x, spot.y, spot.z));
 			}
 		}
 		// a flock of birds crossing the sky
@@ -676,7 +736,7 @@ public final class AmbientLife {
 	private static void render(WorldRenderContext context) {
 		Minecraft mc = Minecraft.getInstance();
 		ClientLevel level = mc.level;
-		if (level == null || BUTTERFLIES.isEmpty() && FIREFLIES.isEmpty() && FLOCKS.isEmpty() && LEAPS.isEmpty() && DEER.isEmpty()) {
+		if (level == null || BUTTERFLIES.isEmpty() && FIREFLIES.isEmpty() && FLOCKS.isEmpty() && LEAPS.isEmpty() && DEER.isEmpty() && SEEDS.isEmpty()) {
 			return;
 		}
 		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
@@ -696,11 +756,21 @@ public final class AmbientLife {
 				drawDeer(level, consumer, pose.pose(), d, cam, partial);
 			}
 		});
-		if (!FIREFLIES.isEmpty()) {
+		if (!FIREFLIES.isEmpty() || !SEEDS.isEmpty()) {
 			var camera = mc.gameRenderer.getMainCamera();
 			org.joml.Vector3f up = new org.joml.Vector3f(camera.upVector());
 			org.joml.Vector3f right = new org.joml.Vector3f(camera.leftVector()).negate();
 			context.commandQueue().submitCustomGeometry(poseStack, GLOW, (pose, consumer) -> {
+				for (Seed sd : SEEDS) {
+					float a = sd.alpha(partial) * 0.75F;
+					if (a < 0.02F) {
+						continue;
+					}
+					float x = (float) (Mth.lerp(partial, sd.px, sd.x) - cam.x);
+					float y = (float) (Mth.lerp(partial, sd.py, sd.y) - cam.y);
+					float z = (float) (Mth.lerp(partial, sd.pz, sd.z) - cam.z);
+					billboard(consumer, pose.pose(), x, y, z, right, up, sd.size, (int) (a * 255.0F) << 24 | 0xFFF6DC);
+				}
 				for (Firefly f : FIREFLIES) {
 					float g = f.glow(partial);
 					if (g < 0.02F) {

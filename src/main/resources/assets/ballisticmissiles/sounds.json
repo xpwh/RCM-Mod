@@ -2185,5 +2185,90 @@
 				"attenuation_distance": 12
 			}
 		]
+	},
+	"night.cricket": {
+		"subtitle": "subtitles.ballisticmissiles.cricket",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/cricket1",
+				"attenuation_distance": 14
+			},
+			{
+				"name": "ballisticmissiles:night/cricket2",
+				"attenuation_distance": 14
+			},
+			{
+				"name": "ballisticmissiles:night/cricket3",
+				"attenuation_distance": 14
+			},
+			{
+				"name": "ballisticmissiles:night/cricket4",
+				"attenuation_distance": 14
+			}
+		]
+	},
+	"night.frog": {
+		"subtitle": "subtitles.ballisticmissiles.frog",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/frog1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:night/frog2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:night/frog3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:night/frog4",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"night.frog_chorus": {
+		"subtitle": "subtitles.ballisticmissiles.frog",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/frog_chorus1",
+				"attenuation_distance": 40
+			},
+			{
+				"name": "ballisticmissiles:night/frog_chorus2",
+				"attenuation_distance": 40
+			}
+		]
+	},
+	"night.owl": {
+		"subtitle": "subtitles.ballisticmissiles.owl",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/owl1",
+				"attenuation_distance": 72
+			},
+			{
+				"name": "ballisticmissiles:night/owl2",
+				"attenuation_distance": 72
+			},
+			{
+				"name": "ballisticmissiles:night/owl3",
+				"attenuation_distance": 72
+			}
+		]
+	},
+	"night.owl_female": {
+		"subtitle": "subtitles.ballisticmissiles.owl",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/owl_female1",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "ballisticmissiles:night/owl_female2",
+				"attenuation_distance": 64
+			}
+		]
 	}
 }

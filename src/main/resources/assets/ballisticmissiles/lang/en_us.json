@@ -1061,5 +1061,8 @@
 	"block.ballisticmissiles.neon_sign": "Neon Sign",
 	"block.ballisticmissiles.street_lamp": "Street Lamp",
 	"block.ballisticmissiles.traffic_light": "Traffic Light",
-	"block.ballisticmissiles.car_headlight": "Car Headlights"
+	"block.ballisticmissiles.car_headlight": "Car Headlights",
+	"subtitles.ballisticmissiles.cricket": "Cricket chirps",
+	"subtitles.ballisticmissiles.frog": "Frog croaks",
+	"subtitles.ballisticmissiles.owl": "Owl hoots"
 }
