@@ -128,7 +128,7 @@ def blued(name="blued", base=(0.03, 0.033, 0.037), rough=0.36, wear=0.95):
     pm = _n(nt, "ShaderNodeMapRange", **{"From Min": 0.45, "From Max": 0.75, "To Max": 0.7 * wear})
     nt.links.new(patina.outputs["Fac"], pm.inputs[0])
     col = _mix_rgb(nt, pm.outputs[0], base, (0.075, 0.08, 0.085))
-    col = _mix_rgb(nt, worn, col, (0.36, 0.36, 0.35))
+    col = _mix_rgb(nt, worn, col, (0.27, 0.27, 0.265))
     nt.links.new(col, bsdf.inputs["Base Color"])
     DISPLAY[m.name] = (col, 2.0)
     # scratches: noise stretched along the rifle
@@ -580,14 +580,19 @@ for y, bot in sorted(lb):
 lrings.insert(0, ring(Vector((0, lb[-1][0] - 0.003, (0.0105 + lb[-1][1]) / 2)), X, Z, 0.0215, (0.0105 - lb[-1][1]) / 2 - 0.002, 3.0, 44))
 loft("lower_handguard", lrings, M_WOOD, subsurf=1)
 # the ferrule at its front end
-yloft("ferrule", [(0.418, 0.0115, -0.0215, 0.0205, 3.6), (0.433, 0.0115, -0.0098, 0.0165, 3.2)], M_BLUED, k=44, bevel=0.0005)
+# the ferrule: a thin steel band round the front of the handguard, a flat front plate the barrel goes through
+fb = max(lb)[1]  # bottom of the front end
+yloft("ferrule", [(0.4155, 0.0112, fb - 0.0006, 0.0209, 3.0), (0.4245, 0.0112, fb + 0.0004, 0.0207, 3.0),
+                  (0.4265, 0.0102, fb + 0.0016, 0.0195, 3.0)], M_BLUED, k=44, bevel=0.0004)
 
 # ===== gas tube and the upper handguard over it, vent holes ahead of it
 GT_Z = 0.024
 lathe("gas_tube", (0, 0.305, GT_Z), (0, 1, 0), [(0, 0.0093), (0.183, 0.0093)], M_BLUED, k=40)
 yloft("upper_handguard", [(0.307, 0.0395, 0.0135, 0.0148, 2.2), (0.316, 0.0415, 0.0128, 0.0156, 2.2), (0.405, 0.0395, 0.0128, 0.0156, 2.2),
-                          (0.416, 0.0375, 0.0135, 0.0148, 2.2)], M_WOOD, k=44, subsurf=1)
-yloft("upper_cap", [(0.416, 0.0362, 0.0142, 0.0132, 2.4), (0.421, 0.0352, 0.0145, 0.0122, 2.4)], M_BLUED, k=40)
+                          (0.4145, 0.0378, 0.0134, 0.0148, 2.2)], M_WOOD, k=44, subsurf=1)
+# the thin steel cap closing the front of the upper handguard round the gas tube
+yloft("upper_cap", [(0.4135, 0.0382, 0.0132, 0.0151, 2.2), (0.4175, 0.0378, 0.0134, 0.0149, 2.2), (0.419, 0.0368, 0.0142, 0.0139, 2.2)],
+      M_BLUED, k=44, bevel=0.0003)
 for i, y in enumerate((0.441, 0.452, 0.463)):
     for sx in (-1, 1):
         box(f"vent{i}{sx}", sx * 0.0094 - 0.0012, y, GT_Z + 0.0005, sx * 0.0094 + 0.0012, y + 0.0062, GT_Z + 0.0045, M_BLACK, bevel=0.0003)
@@ -792,5 +797,7 @@ if __name__ == "__main__":
         scene.cycles.samples = 16 if __import__("os").environ.get("QUICK") else 64
         scene.render.filepath = f"{OUT}/compare.png"
         bpy.ops.render.render(write_still=True)
+    if "front" in want:
+        shoot("front", (-0.16, 0.56, 0.06), (0.0, 0.42, 0.0), lens=60)
     if "detail" in want:
         shoot("detail", (0.32, 0.36, 0.06), (0.0, 0.14, -0.02), lens=55, dof=4.0)

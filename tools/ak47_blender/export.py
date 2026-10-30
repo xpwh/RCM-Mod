@@ -146,7 +146,7 @@ def feed_albedo(m, nt):
 def feed_surface(m, nt):
     metal, rough, coat = SURFACE[m.name]
     ao = nt.nodes.new("ShaderNodeAmbientOcclusion")
-    ao.inputs["Distance"].default_value = 0.02
+    ao.inputs["Distance"].default_value = 0.007
     ao.only_local = True
     comb = nt.nodes.new("ShaderNodeCombineColor")
     nt.links.new(socket_or_value(nt, metal), comb.inputs[0])
