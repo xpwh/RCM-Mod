@@ -72,6 +72,7 @@ public class BallisticMissiles implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.Regrowth::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.Regrowth::save);
 		ServerTickEvents.END_WORLD_TICK.register(de.rcm.ballistic.explosion.Regrowth::tick);
+		ServerTickEvents.END_SERVER_TICK.register(de.rcm.ballistic.explosion.StormForecast::tick);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NuclearWinter::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.NewMoon::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.Aurora::load);
@@ -83,11 +84,13 @@ public class BallisticMissiles implements ModInitializer {
 				de.rcm.ballistic.explosion.NuclearWinter.sync(handler.player);
 				de.rcm.ballistic.explosion.NewMoon.sync(handler.player);
 				de.rcm.ballistic.explosion.Aurora.sync(handler.player);
+				de.rcm.ballistic.explosion.StormForecast.sync(handler.player);
 				de.rcm.ballistic.injury.Injuries.rejoin(handler.player);
 			});
 		net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
 			(player, origin, destination) -> {
 				RadiationManager.sync(destination, player);
+				de.rcm.ballistic.explosion.StormForecast.sync(player);
 			});
 		ServerLifecycleEvents.SERVER_STOPPING.register(RadiationManager::save);
 		// each world starts from the saved settings, not from what a server visited before left behind

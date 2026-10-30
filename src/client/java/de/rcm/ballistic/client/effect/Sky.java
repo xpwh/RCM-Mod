@@ -36,6 +36,7 @@ public final class Sky {
 	private static final float FAR = 500.0F;
 	private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
 		.withLocation(BallisticMissiles.id("pipeline/sky"))
+		.withUniform("BmWind", com.mojang.blaze3d.shaders.UniformType.UNIFORM_BUFFER)
 		.withVertexShader(BallisticMissiles.id("core/sky"))
 		.withFragmentShader(BallisticMissiles.id("core/sky"))
 		.withBlend(BlendFunction.TRANSLUCENT)
@@ -154,7 +155,8 @@ public final class Sky {
 		float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		Vector3f sun = sun(mc, partialTick);
 		float cover = cover(sun.y);
-		if (cover <= 0.0F) {
+		// at night only for a storm on the horizon (its flashes and the stars it hides)
+		if (cover <= 0.0F && !StormFront.visible()) {
 			return;
 		}
 		float rain = mc.level.getRainLevel(partialTick);

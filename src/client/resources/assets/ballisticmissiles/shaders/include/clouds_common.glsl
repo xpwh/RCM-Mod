@@ -23,6 +23,26 @@ bool cumulusStyle;
 float coverage;
 float storm;
 vec2 cloudWind;
+// the thunderstorm coming in from the horizon (StormFront; needs bm_wind.glsl imported first): set by stormSetup
+vec2 cellCenter;
+float cellRadius;
+float cellStrength;
+
+void stormSetup(vec3 cam) {
+    cellCenter = cam.xz + StormCell.xy;
+    cellRadius = max(StormCell.z, 1.0);
+    cellStrength = StormCell.w;
+}
+
+// how much of the storm cell's core is over (x, z), 0-1
+float stormCore(vec2 xz) {
+    if (cellStrength <= 0.0) return 0.0;
+    float r = length(xz - cellCenter);
+    return cellStrength * (1.0 - smoothstep(cellRadius * 0.45, cellRadius, r));
+}
+
+// how high the cell towers above the layer's base, as a multiple of the layer's thickness
+const float TOWER = 2.4;
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
@@ -59,10 +79,26 @@ float cumulus(vec3 p, float h, int detail, out float e, out float nr);
 float density(vec3 p, int detail, out float smoke, out float glow) {
     smoke = 0.0;
     glow = 0.0;
-    float h = (p.y - bottom) / thick;
-    if (h <= 0.0 || h >= 1.0) {
-        return 0.0;
+    // the storm cell: a cumulonimbus towering far above the layer, flattening out into an anvil at the top
+    float core = stormCore(p.xz);
+    float anvil = 0.0;
+    float hTower = (p.y - bottom) / (thick * TOWER);
+    if (cellStrength > 0.0 && hTower > 0.6 && hTower < 1.0) {
+        float r = length(p.xz - cellCenter);
+        float band = smoothstep(0.66, 0.8, hTower) * (1.0 - smoothstep(0.9, 1.0, hTower));
+        // ragged at its edge, thinning out downwind
+        float rag = cloudNoise(vec3((p.xz + cloudWind) / 900.0, p.y / 900.0)).r;
+        anvil = cellStrength * band * (1.0 - smoothstep(cellRadius * (1.1 + 0.5 * rag), cellRadius * 2.0, r)) * (0.55 + 0.45 * rag);
     }
+    float layerThick = thick * mix(1.0, TOWER, core);
+    float h = (p.y - bottom) / layerThick;
+    if (h <= 0.0 || h >= 1.0) {
+        return anvil > 0.0 ? clamp(anvil * 1.6 - 0.3, 0.0, 1.0) : 0.0;
+    }
+    float coverage0 = coverage;
+    float storm0 = storm;
+    coverage = mix(coverage, 0.97, core);
+    storm = max(storm, core);
     vec4 dist = texture(Sampler0, p.xz / 1024.0);
     float d;
     float e = 0.5;
@@ -72,6 +108,9 @@ float density(vec3 p, int detail, out float smoke, out float glow) {
     } else {
         d = layered(p, h, detail, dist, e, nr);
     }
+    coverage = coverage0;
+    storm = storm0;
+    d = max(d, clamp(anvil * 1.6 - 0.3, 0.0, 1.0));
     float base = max(d, 0.0);
     d = base * (1.0 - dist.r);
     // a rocket only stirs the cloud that is there: heaped edges and exhaust show within the real cloud

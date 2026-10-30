@@ -46,6 +46,13 @@ public final class WorldCommand {
 						ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.world.new_moon_darkness", v), true);
 						return v;
 					}))))
+			.then(Commands.literal("gewitter")
+				.then(Commands.argument("minuten", IntegerArgumentType.integer(1, 60)).executes(ctx -> {
+					int m = IntegerArgumentType.getInteger(ctx, "minuten");
+					StormForecast.schedule(ctx.getSource().getServer(), m * 1200);
+					ctx.getSource().sendSuccess(() -> Component.translatable("commands.ballisticmissiles.world.storm", m), true);
+					return m;
+				})))
 			.then(Commands.literal("polarlicht")
 				.then(Commands.literal("an").executes(ctx -> aurora(ctx.getSource(), true)))
 				.then(Commands.literal("aus").executes(ctx -> aurora(ctx.getSource(), false)))

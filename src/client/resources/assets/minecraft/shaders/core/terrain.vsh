@@ -4,6 +4,7 @@
 #moj_import <minecraft:globals.glsl>
 #moj_import <minecraft:chunksection.glsl>
 #moj_import <minecraft:projection.glsl>
+#moj_import <ballisticmissiles:bm_wind.glsl>
 
 // Vanilla's terrain shader, with the wind (Ballistic Missiles, see Wind.java): the mesher marks plants and leaves
 // in the vertex alpha - 252 leaves, 210-250 plants (250 at the foot, lower = further up the stalk) - and BmWind
@@ -17,11 +18,6 @@ in vec3 Normal;
 
 uniform sampler2D Sampler2;
 
-layout(std140) uniform BmWind {
-    vec4 WindInfo;      // xy: direction (x, z), z: strength, w: seconds
-    vec4 BlastPos[4];   // xyz: relative to the camera block, w: seconds since it went off (< 0: none)
-    vec4 BlastShape[4]; // x: speed of the front (blocks/s), y: reach, z: how hard it pushes
-};
 
 out float sphericalVertexDistance;
 out float cylindricalVertexDistance;

@@ -13,6 +13,7 @@
 // (they widen, then fill in again), G = exhaust smoke spreading out along the layer, B = cloud pushed
 // aside and piled up round the rims of the holes, A = rocket engines and fireballs lighting the cloud.
 
+#moj_import <ballisticmissiles:bm_wind.glsl>
 #moj_import <ballisticmissiles:clouds_common.glsl>
 #moj_import <ballisticmissiles:atmosphere.glsl>
 
@@ -39,7 +40,9 @@ void main() {
 
     vec3 rd = normalize(relPos);
     vec3 cam = wrappedCamera(CameraBlockPos, CameraOffset);
-    float top = bottom + thick;
+    stormSetup(cam);
+    // a storm cell coming in towers far above the layer
+    float top = bottom + thick * (cellStrength > 0.0 ? TOWER : 1.0);
 
     float t0;
     float t1;
@@ -111,10 +114,21 @@ void main() {
             float powder = 1.0 - exp(-d * 6.0);
             float h = (p.y - bottom) / thick;
             vec3 ambient = mix(skyBottom, skyTop, clamp(h * 1.2, 0.0, 1.0));
+            // inside the storm cell: the base slate-dark, the tower in its own gloom
+            float cell = stormCore(p.xz);
+            ambient *= 1.0 - cell * (0.75 - 0.4 * clamp(h / TOWER, 0.0, 1.0));
             // dark edges (the "powder" effect) only show on the side away from the sun
             float away = 0.5 - 0.5 * cosTheta;
             vec3 lit = ambient + sunCol * sunT * mix(1.0, powder, 0.5 * away) * phase * 0.9;
             lit += boltCol * (0.25 + 0.75 * (1.0 - h) * (1.0 - h)) * (0.4 + 0.6 * d);
+            lit *= 1.0 - cell * 0.55;
+            // sheet lightning inside the far storm: the whole tower lit up from within, round where it flashed
+            if (StormInfo.x > 0.0) {
+                vec2 fp = cellCenter + StormInfo.yz;
+                float fr = cellRadius * 0.55;
+                float near = exp(-dot(p.xz - fp, p.xz - fp) / (fr * fr));
+                lit += vec3(0.85, 0.9, 1.15) * StormInfo.x * near * (0.35 + 0.65 * d) * (0.5 + 0.5 * clamp(1.0 - h / TOWER, 0.0, 1.0)) * 2.2;
+            }
             // a rocket engine (or a fireball) inside or under the cloud: it glows orange round it
             // (a big fireball's light reaches across the cloud base, lighting it from below)
             lit += glowCol * glow * (0.5 + 1.2 * glow) * (0.3 + 0.7 * d) * mix(1.0, 0.4 + 1.2 * (1.0 - h), clamp(lightning * 2.0, 0.0, 1.0));

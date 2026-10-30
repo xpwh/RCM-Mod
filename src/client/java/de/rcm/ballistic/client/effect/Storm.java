@@ -270,6 +270,14 @@ public final class Storm {
 		thunder(mc, ground.add(0.0, 30.0, 0.0));
 	}
 
+	/** Thunder from a storm far off (StormFront): heard when sound would get here, if it carries that far. */
+	public static void distantThunder(Vec3 at) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level != null) {
+			thunder(mc, at);
+		}
+	}
+
 	private static void thunder(Minecraft mc, Vec3 at) {
 		double d = mc.gameRenderer.getMainCamera().position().distanceTo(at);
 		if (d > 3200.0) {

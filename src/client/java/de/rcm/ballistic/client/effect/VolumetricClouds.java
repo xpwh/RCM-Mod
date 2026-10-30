@@ -57,6 +57,7 @@ public final class VolumetricClouds {
 
 	private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
 		.withLocation(BallisticMissiles.id("pipeline/volumetric_clouds"))
+		.withUniform("BmWind", com.mojang.blaze3d.shaders.UniformType.UNIFORM_BUFFER)
 		.withVertexShader(BallisticMissiles.id("core/volumetric_clouds"))
 		.withFragmentShader(BallisticMissiles.id("core/volumetric_clouds"))
 		.withSampler("Sampler0")
@@ -78,6 +79,7 @@ public final class VolumetricClouds {
 	private static RenderPipeline lightPipeline(String location, boolean shafts) {
 		RenderPipeline.Builder b = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
 			.withLocation(BallisticMissiles.id(location))
+			.withUniform("BmWind", com.mojang.blaze3d.shaders.UniformType.UNIFORM_BUFFER)
 			.withVertexShader(BallisticMissiles.id("core/volumetric_light"))
 			.withFragmentShader(BallisticMissiles.id("core/volumetric_light"))
 			.withSampler("Sampler0")

@@ -1064,5 +1064,6 @@
 	"block.ballisticmissiles.car_headlight": "Car Headlights",
 	"subtitles.ballisticmissiles.cricket": "Cricket chirps",
 	"subtitles.ballisticmissiles.frog": "Frog croaks",
-	"subtitles.ballisticmissiles.owl": "Owl hoots"
+	"subtitles.ballisticmissiles.owl": "Owl hoots",
+	"commands.ballisticmissiles.world.storm": "A thunderstorm breaks in %s minutes - watch the horizon upwind"
 }

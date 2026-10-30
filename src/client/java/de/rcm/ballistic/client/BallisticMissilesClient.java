@@ -123,6 +123,9 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.AmbientLife.init();
 		de.rcm.ballistic.client.effect.NightSounds.init();
 		de.rcm.ballistic.client.effect.Wind.init();
+		de.rcm.ballistic.client.effect.StormFront.init();
+		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.StormForecastPayload.TYPE,
+			(payload, context) -> de.rcm.ballistic.client.effect.StormFront.receive(payload.ticks()));
 		de.rcm.ballistic.client.effect.SmokeVolume.init();
 		de.rcm.ballistic.client.render.JetExhaust.init();
 		de.rcm.ballistic.client.effect.Storm.init(); // its bolts draw before the clouds and the smoke, which lie over them

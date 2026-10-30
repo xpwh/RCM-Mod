@@ -3,6 +3,7 @@
 #moj_import <minecraft:fog.glsl>
 #moj_import <minecraft:globals.glsl>
 #moj_import <ballisticmissiles:atmosphere.glsl>
+#moj_import <ballisticmissiles:bm_wind.glsl>
 
 // The physically based sky (see include/atmosphere.glsl), with the sun's disc. Below the horizon it runs
 // into the fog colour, which Sky.java sets to this same sky at the horizon, so the land meets it cleanly.
@@ -40,6 +41,83 @@ vec3 rainbow(vec3 rd, vec3 sunDir, float strength) {
     return col * strength;
 }
 
+// The thunderstorm coming in (StormFront): from far off, beyond where the clouds are drawn, a dark tower on the
+// horizon - billowing up into a dome, the anvil spreading out flat on top, a grey curtain of rain hanging under
+// it - and the sheet lightning flickering inside it. Returns its colour (rgb) and how much of the sky it covers (a).
+float wallHash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float wallNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(wallHash(i), wallHash(i + vec2(1.0, 0.0)), f.x), mix(wallHash(i + vec2(0.0, 1.0)), wallHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+float wallFbm(vec2 p) {
+    return wallNoise(p) * 0.5 + wallNoise(p * 2.03 + 3.1) * 0.27 + wallNoise(p * 4.1 + 7.7) * 0.15 + wallNoise(p * 8.3 + 1.3) * 0.08;
+}
+
+vec4 stormWall(vec3 rd, float lum, float dayLight, vec3 sunDir) {
+    if (StormCell.w <= 0.0) return vec4(0.0);
+    vec2 rel = StormCell.xy;
+    float dist = max(length(rel), 1.0);
+    vec2 toward = rel / dist;
+    float h = max(length(rd.xz), 1e-3);
+    vec2 v = rd.xz / h;
+    // the angle off the storm's direction (signed), and the elevation (tan)
+    float az = atan(toward.x * v.y - toward.y * v.x, dot(toward, v));
+    float elev = rd.y / h;
+    float baseE = StormInfo.w / dist;
+    float topE = (StormInfo.w + 820.0) / dist;
+    float halfW = atan(StormCell.z / dist);
+    // in units of the tower: x across (-1..1 is its width), y up from the base (0) to the top (1)
+    float x = az / halfW;
+    float y = (elev - baseE) / max(topE - baseE, 1e-4);
+    // billows: lumpy turrets up the flanks, a rounded dome on top pushing up through the anvil
+    float n = wallFbm(vec2(x * 2.2, y * 2.6) + 11.0);
+    float n2 = wallFbm(vec2(x * 5.0, y * 6.0) + 37.0);
+    float lumps = wallFbm(vec2(sign(x) * 4.0, y * 3.4) + 23.0);
+    float width = 0.6 - 0.12 * y + 0.3 * (lumps - 0.5) + 0.06 * (n2 - 0.5);
+    float xw = x / max(width, 0.05);
+    float dome = 0.8 + 0.18 * (1.0 - xw * xw) + 0.05 * (n2 - 0.5);
+    float tower = (1.0 - smoothstep(width - 0.08, width + 0.05, abs(x))) * (1.0 - smoothstep(dome - 0.06, dome + 0.02, y))
+        * smoothstep(-0.02, 0.03, y + 0.02 * (n2 - 0.5));
+    // the anvil: a wedge spread flat at the top, thick over the tower, thinning to its ragged edges
+    float spread = 2.0 + 0.45 * (n - 0.5);
+    float edge = clamp(abs(x) / spread, 0.0, 1.0);
+    float anvilTop = 0.87 - 0.03 * edge + 0.02 * (n2 - 0.5);
+    float anvilBottom = anvilTop - (0.04 + 0.19 * (1.0 - edge)) + 0.04 * (n - 0.5);
+    float anvil = (1.0 - smoothstep(0.8, 1.0, edge)) * smoothstep(anvilBottom - 0.03, anvilBottom + 0.02, y)
+        * (1.0 - smoothstep(anvilTop - 0.02, anvilTop + 0.01, y)) * (0.7 + 0.3 * n2);
+    float cloud = clamp(max(tower, anvil), 0.0, 1.0);
+    // the rain curtain under the base: grey, in soft streaks, thinning to the sides and fading to the ground
+    float streak = 0.6 + 0.4 * wallFbm(vec2(x * 9.0 + y * 1.5, y * 0.6) + 5.0);
+    float curtain = (1.0 - smoothstep(0.35, 0.75, abs(x) + 0.15 * (n - 0.5))) * (1.0 - smoothstep(-0.02, 0.02, y)) * streak * 0.7
+        * smoothstep(-baseE - 0.02, 0.0, elev);
+    // light: a dark base, the upper tower catching the sun (white-grey, warm low sun) - at night all dark
+    vec3 base = vec3(lum * 0.32) * vec3(0.84, 0.88, 0.98);
+    vec3 top = mix(vec3(lum * 0.85), vec3(lum * 0.95, lum * 0.85, lum * 0.75), clamp(1.0 - sunDir.y * 3.0, 0.0, 1.0));
+    vec3 lit = mix(base, top, smoothstep(0.15, 0.95, y) * (0.6 + 0.4 * n2));
+    vec3 col = mix(vec3(0.010, 0.012, 0.018), lit, dayLight);
+    vec3 rainCol = mix(vec3(0.016, 0.018, 0.024), vec3(lum * 0.5) * vec3(0.88, 0.92, 1.0), dayLight);
+    col = mix(rainCol, col, cloud);
+    float a = max(cloud * (0.82 + 0.18 * n), curtain);
+    // sheet lightning: a glow inside the tower round where it flashed, a faint halo round it on the sky
+    float fx = (toward.x * StormInfo.z - toward.y * StormInfo.y) / dist / halfW;
+    float fy = 0.25 + 0.35 * wallHash(StormInfo.yz);
+    float glow = exp(-pow((x - fx) / 0.45, 2.0) - pow((y - fy) / 0.4, 2.0));
+    vec3 flashCol = vec3(0.8, 0.85, 1.0) * StormInfo.x;
+    col += flashCol * glow * (0.4 + 0.6 * n2) * 1.3 * max(cloud, curtain);
+    float halo = StormInfo.x * exp(-pow((x - fx) / 1.4, 2.0) - pow((y - fy) / 1.1, 2.0)) * 0.22 * (1.0 - cloud);
+    col += flashCol * halo;
+    a = max(a, halo);
+    // far off, the haze takes it
+    a *= StormCell.w * (1.0 - 0.45 * smoothstep(1500.0, 6000.0, dist));
+    return vec4(col, clamp(a, 0.0, 1.0));
+}
+
 void main() {
     vec3 rd = normalize(relPos);
     float rain = skyInfo.r;
@@ -75,5 +153,12 @@ void main() {
     // into the fog towards and below the horizon
     float below = 1.0 - smoothstep(-0.02, 0.06, rd.y);
     col = mix(col, FogColor.rgb, below);
-    fragColor = vec4(col, skyInfo.a);
+    float alpha = skyInfo.a;
+    vec4 wall = stormWall(rd, lum, skyInfo.a, sunDir);
+    if (wall.a > 0.0) {
+        col = mix(col, wall.rgb, clamp(wall.a, 0.0, 1.0));
+        // at night the sky is Minecraft's: the storm hides its stars, its flashes light up in it
+        alpha = max(alpha, wall.a * 0.92);
+    }
+    fragColor = vec4(col, alpha);
 }

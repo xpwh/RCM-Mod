@@ -451,6 +451,18 @@ public final class ModNetworking {
 		}
 	}
 
+	/** Server -> client: the next thunderstorm breaks in this many ticks (-1: none in sight). */
+	public record StormForecastPayload(int ticks) implements CustomPacketPayload {
+		public static final Type<StormForecastPayload> TYPE = new Type<>(BallisticMissiles.id("storm_forecast"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, StormForecastPayload> CODEC = StreamCodec.of((buf, p) -> buf.writeVarInt(p.ticks + 1),
+			buf -> new StormForecastPayload(buf.readVarInt() - 1));
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: how much soot is in the stratosphere (nuclear winter, 0-1). */
 	public record WinterPayload(float soot) implements CustomPacketPayload {
 		public static final Type<WinterPayload> TYPE = new Type<>(BallisticMissiles.id("winter"));
@@ -900,6 +912,7 @@ public final class ModNetworking {
 			}
 		});
 		PayloadTypeRegistry.playS2C().register(WinterPayload.TYPE, WinterPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(StormForecastPayload.TYPE, StormForecastPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(NewMoonPayload.TYPE, NewMoonPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(AuroraPayload.TYPE, AuroraPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(FlashbangPayload.TYPE, FlashbangPayload.CODEC);

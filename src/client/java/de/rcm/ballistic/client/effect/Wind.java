@@ -40,7 +40,7 @@ public final class Wind {
 	public static final int LEAVES = 4;
 
 	private static final int BLASTS = 4;
-	private static final int UBO_SIZE = 16 + 16 * BLASTS * 2;
+	private static final int UBO_SIZE = 16 + 16 * BLASTS * 2 + 32;
 
 	private record Blast(Vec3 at, float start, float speed, float reach, float push) {
 		boolean over(float now) {
@@ -115,7 +115,9 @@ public final class Wind {
 		float rain = mc.level.getRainLevel(partialTick);
 		float thunder = mc.level.getThunderLevel(partialTick);
 		float calm = 0.75F + 0.25F * Mth.sin(seconds * 0.011F) * Mth.sin(seconds * 0.0037F + 1.0F);
-		return (0.4F + 0.35F * rain + 0.45F * thunder) * calm;
+		// the gust front ahead of a storm coming in
+		float front = StormFront.closeness();
+		return (0.4F + 0.35F * rain + 0.45F * thunder + 0.55F * front * front) * calm;
 	}
 
 	private static GpuBuffer buffer() {
@@ -162,6 +164,18 @@ public final class Wind {
 				} else {
 					b.putVec4(1.0F, 0.0F, 0.0F, 0.0F);
 				}
+			}
+			// the storm on its way (StormFront): its cell, the flash in it, the cloud base over the camera
+			float[] cell = StormFront.cell(cam, partial);
+			if (cell == null) {
+				b.putVec4(0.0F, 0.0F, 1.0F, 0.0F);
+				b.putVec4(0.0F, 0.0F, 0.0F, 0.0F);
+			} else {
+				float[] f = StormFront.flash(partial);
+				float base = VolumetricClouds.base();
+				float baseUp = (float) ((Float.isNaN(base) ? 192.0F : base) - cam.y);
+				b.putVec4(cell[0], cell[1], cell[2], cell[3]);
+				b.putVec4(f[0], f[1], f[2], Math.max(baseUp, 20.0F));
 			}
 			ByteBuffer data = b.get();
 			RenderSystem.getDevice().createCommandEncoder().writeToBuffer(target.slice(), data);

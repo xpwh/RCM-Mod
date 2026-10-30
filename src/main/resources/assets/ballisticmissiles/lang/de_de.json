@@ -1064,5 +1064,6 @@
 	"block.ballisticmissiles.car_headlight": "Autoscheinwerfer",
 	"subtitles.ballisticmissiles.cricket": "Grille zirpt",
 	"subtitles.ballisticmissiles.frog": "Frosch quakt",
-	"subtitles.ballisticmissiles.owl": "Eule ruft"
+	"subtitles.ballisticmissiles.owl": "Eule ruft",
+	"commands.ballisticmissiles.world.storm": "In %s Minuten bricht ein Gewitter los - schau gegen den Wind zum Horizont"
 }

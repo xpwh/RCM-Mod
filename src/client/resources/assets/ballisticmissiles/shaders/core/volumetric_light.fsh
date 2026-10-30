@@ -13,6 +13,7 @@
 //  with RAYS (drawn after the clouds): light shafts - sunlight scattered in the air towards the eye,
 //    except where the clouds overhead cut it off, so beams fan out through the gaps
 
+#moj_import <ballisticmissiles:bm_wind.glsl>
 #moj_import <ballisticmissiles:clouds_common.glsl>
 #moj_import <ballisticmissiles:atmosphere.glsl>
 
@@ -46,6 +47,7 @@ void main() {
 
     vec3 rd = normalize(relPos);
     vec3 cam = wrappedCamera(CameraBlockPos, CameraOffset);
+    stormSetup(cam);
     // distance to the world along this ray, from the depth copy
     float depth = texture(Sampler2, gl_FragCoord.xy / ScreenSize).r;
     float sceneT = 1.0e6;
