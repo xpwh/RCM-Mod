@@ -145,6 +145,9 @@ public class CityPiece extends StructurePiece {
 			int wz = CityPiece.this.oz + z;
 			if (this.clip.isInside(wx, wy, wz)) {
 				this.level.setBlock(this.m.set(wx, wy, wz), s, Block.UPDATE_CLIENTS);
+				if (s.getBlock() instanceof CityLights.TrafficLight) {
+					this.level.scheduleTick(this.m.immutable(), s.getBlock(), 1); // onto the clock
+				}
 			}
 		}
 
@@ -287,7 +290,7 @@ public class CityPiece extends StructurePiece {
 						int m12 = Math.floorMod(along, 12);
 						if (m12 == 6) {
 							this.fill(x, 1, z, x, 4, z, Blocks.ANDESITE_WALL.defaultBlockState());
-							this.set(x, 5, z, Blocks.LANTERN.defaultBlockState());
+							this.set(x, 5, z, this.streetLamp());
 						} else if (m12 == 0) {
 							this.streetTree(x, z);
 						} else if (m12 == 3) {
@@ -332,10 +335,8 @@ public class CityPiece extends StructurePiece {
 				return;
 			}
 			this.fill(x, 1, z, x, 3, z, Blocks.POLISHED_BLACKSTONE_WALL.defaultBlockState());
-			this.set(x, 4, z, Blocks.LIME_CONCRETE.defaultBlockState());
-			this.set(x, 5, z, Blocks.YELLOW_CONCRETE.defaultBlockState());
-			this.set(x, 6, z, Blocks.RED_CONCRETE.defaultBlockState());
-			this.set(x, 7, z, Blocks.POLISHED_BLACKSTONE_SLAB.defaultBlockState());
+			this.set(x, 4, z, BaseRegistry.TRAFFIC_LIGHT.defaultBlockState());
+			this.set(x, 5, z, Blocks.POLISHED_BLACKSTONE_SLAB.defaultBlockState());
 		}
 
 		/** A street tree in its pit: a short trunk, a round crown. */
@@ -372,7 +373,8 @@ public class CityPiece extends StructurePiece {
 				for (int b = 0; b < 9; b++) {
 					int px = alongZ ? x + a : z + b;
 					int pz = alongZ ? z + b : x + a;
-					this.set(px, 1, pz, b == 1 || b == 7 ? Blocks.BLACK_CONCRETE.defaultBlockState() : Blocks.YELLOW_CONCRETE.defaultBlockState());
+					this.set(px, 1, pz, b == 8 ? this.headlight(alongZ ? Direction.SOUTH : Direction.EAST, x, z)
+						: b == 1 || b == 7 ? Blocks.BLACK_CONCRETE.defaultBlockState() : Blocks.YELLOW_CONCRETE.defaultBlockState());
 					this.set(px, 2, pz, b == 0 || b == 8 ? Blocks.YELLOW_CONCRETE.defaultBlockState() : Blocks.BLACK_STAINED_GLASS.defaultBlockState());
 					this.set(px, 3, pz, Blocks.WHITE_CONCRETE.defaultBlockState());
 				}
@@ -419,7 +421,7 @@ public class CityPiece extends StructurePiece {
 					this.fill(mx + s * 4, 1, mz + t * 4, mx + s * 4, 7, mz + t * 4, Blocks.IRON_BARS.defaultBlockState());
 					this.set(mx + s * 4, 8, mz + t * 4, flags[f++ % flags.length].defaultBlockState());
 					this.fill(mx + s * 8, 1, mz + t * 8, mx + s * 8, 3, mz + t * 8, Blocks.ANDESITE_WALL.defaultBlockState());
-					this.set(mx + s * 8, 4, mz + t * 8, Blocks.LANTERN.defaultBlockState());
+					this.set(mx + s * 8, 4, mz + t * 8, this.streetLamp());
 				}
 				this.set(mx + s * 6, 1, mz - 1, this.stairs(Blocks.SPRUCE_STAIRS, s > 0 ? Direction.EAST : Direction.WEST));
 				this.set(mx + s * 6, 1, mz + 1, this.stairs(Blocks.SPRUCE_STAIRS, s > 0 ? Direction.EAST : Direction.WEST));
@@ -602,7 +604,7 @@ public class CityPiece extends StructurePiece {
 				for (int b = 0; b < 4; b++) {
 					int px = alongZ ? x + a : x + b;
 					int pz = alongZ ? z + b : z + a;
-					this.set(px, 1, pz, b == 0 || b == 3 ? Blocks.BLACK_CONCRETE.defaultBlockState() : paint);
+					this.set(px, 1, pz, b == 3 ? this.headlight(alongZ ? Direction.SOUTH : Direction.EAST, x, z) : b == 0 ? Blocks.BLACK_CONCRETE.defaultBlockState() : paint);
 					this.set(px, 2, pz, b == 1 || b == 2 ? Blocks.BLACK_STAINED_GLASS.defaultBlockState() : paint);
 				}
 			}
@@ -693,6 +695,16 @@ public class CityPiece extends StructurePiece {
 		/** A room's ceiling light, on or off as the room's hours have it (it sets itself right on its own ticks). */
 		BlockState roomLight(int x, int y, int z) {
 			return BaseRegistry.ROOM_LIGHT.defaultBlockState().setValue(CityLights.RoomLight.LIT, this.hash(x * 31 + y, z, 60) < 0.55F);
+		}
+
+		BlockState streetLamp() {
+			return BaseRegistry.STREET_LAMP.defaultBlockState();
+		}
+
+		/** A car's front with its headlights; half the cars have their engine running (their lights on at night). */
+		BlockState headlight(Direction facing, int carX, int carZ) {
+			return BaseRegistry.HEADLIGHT.defaultBlockState().setValue(CityLights.Headlight.FACING, facing)
+				.setValue(CityLights.Headlight.RUNNING, this.hash(carX, carZ, 61) < 0.5F);
 		}
 
 		BlockState neon(int color) {
@@ -1213,7 +1225,7 @@ public class CityPiece extends StructurePiece {
 				this.set(mx + s * 9, 1, mz - 4, Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, s > 0 ? Direction.EAST : Direction.WEST));
 				for (int t = -1; t <= 1; t += 2) {
 					this.fill(mx + s * 5, 1, mz + t * 5, mx + s * 5, 3, mz + t * 5, Blocks.ANDESITE_WALL);
-					this.set(mx + s * 5, 4, mz + t * 5, Blocks.LANTERN);
+					this.set(mx + s * 5, 4, mz + t * 5, this.streetLamp());
 				}
 			}
 		}
@@ -1232,7 +1244,7 @@ public class CityPiece extends StructurePiece {
 			}
 			for (int x = x0 + 3; x <= x1 - 3; x += 7) {
 				this.fill(x, 1, (z0 + z1) / 2, x, 4, (z0 + z1) / 2, Blocks.ANDESITE_WALL);
-				this.set(x, 5, (z0 + z1) / 2, Blocks.LANTERN);
+				this.set(x, 5, (z0 + z1) / 2, this.streetLamp());
 			}
 		}
 	}

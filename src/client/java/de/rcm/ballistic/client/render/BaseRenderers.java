@@ -258,4 +258,123 @@ public final class BaseRenderers {
 			return 256;
 		}
 	}
+
+	// ------------------------------------------------------------------ city lights
+
+	/**
+	 * A street lamp at night: the pool of light it throws on the street (the light shader), and the cone of it
+	 * hanging in the air under the lamp - faint in a clear night, thick in rain and haze.
+	 */
+	public static class StreetLampRenderer implements BlockEntityRenderer<de.rcm.ballistic.base.CityLights.Glow, StreetLampRenderer.State> {
+		private static final BoxMesh CONE = cone(0.34F, 2.7F, 4.6F, BEAM_HAZE);
+		private static final BoxMesh CORE = cone(0.3F, 1.25F, 3.6F, BEAM_HAZE);
+
+		public StreetLampRenderer(BlockEntityRendererProvider.Context context) {
+		}
+
+		public static class State extends BlockEntityRenderState {
+			public boolean lit;
+			public float dark;
+			public float haze;
+		}
+
+		@Override
+		public State createRenderState() {
+			return new State();
+		}
+
+		@Override
+		public void extractRenderState(de.rcm.ballistic.base.CityLights.Glow lamp, State state, float partialTick, Vec3 cameraPos,
+			ModelFeatureRenderer.@Nullable CrumblingOverlay overlay) {
+			BlockEntityRenderer.super.extractRenderState(lamp, state, partialTick, cameraPos, overlay);
+			BlockState s = lamp.getBlockState();
+			state.lit = s.hasProperty(de.rcm.ballistic.base.CityLights.StreetLamp.LIT) && s.getValue(de.rcm.ballistic.base.CityLights.StreetLamp.LIT);
+			Level level = lamp.getLevel();
+			state.dark = darkness(level, partialTick);
+			state.haze = level == null ? 0.0F : level.getRainLevel(partialTick);
+		}
+
+		@Override
+		public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+			if (!state.lit) {
+				return;
+			}
+			Vec3 lens = Vec3.atBottomCenterOf(state.blockPos).add(0.0, 0.5, 0.0);
+			DynamicLights.spot(state.blockPos.asLong() * 7L + 3L, lens, new Vec3(0.0, -1.0, 0.0), 58.0F, 0xFFD6A0, 0.85F, 15.0F);
+			if (state.dark < 0.05F) {
+				return;
+			}
+			poseStack.pushPose();
+			poseStack.translate(0.5F, 0.56F, 0.5F);
+			poseStack.mulPose(new Quaternionf().rotationX(Mth.HALF_PI)); // the cone's +z pointing down
+			float thick = state.dark * (1.0F + 1.2F * state.haze);
+			int a = (int) Mth.clamp(thick * 22.0F, 0.0F, 70.0F);
+			int b = (int) Mth.clamp(thick * 40.0F, 0.0F, 110.0F);
+			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE,
+				(pose, consumer) -> CONE.emit(pose, consumer, LightTexture.FULL_BRIGHT, a << 24 | 0xFFD8A8));
+			collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE,
+				(pose, consumer) -> CORE.emit(pose, consumer, LightTexture.FULL_BRIGHT, b << 24 | 0xFFE6C4));
+			poseStack.popPose();
+		}
+	}
+
+	/** A car's headlights at night: two beams down the road, and their cones in the air. */
+	public static class HeadlightRenderer implements BlockEntityRenderer<de.rcm.ballistic.base.CityLights.Glow, HeadlightRenderer.State> {
+		private static final BoxMesh BEAM = cone(0.16F, 1.7F, 8.5F, BEAM_HAZE);
+
+		public HeadlightRenderer(BlockEntityRendererProvider.Context context) {
+		}
+
+		public static class State extends BlockEntityRenderState {
+			public boolean lit;
+			public Direction facing = Direction.NORTH;
+			public float dark;
+			public float haze;
+		}
+
+		@Override
+		public State createRenderState() {
+			return new State();
+		}
+
+		@Override
+		public void extractRenderState(de.rcm.ballistic.base.CityLights.Glow lamp, State state, float partialTick, Vec3 cameraPos,
+			ModelFeatureRenderer.@Nullable CrumblingOverlay overlay) {
+			BlockEntityRenderer.super.extractRenderState(lamp, state, partialTick, cameraPos, overlay);
+			BlockState s = lamp.getBlockState();
+			state.lit = s.hasProperty(de.rcm.ballistic.base.CityLights.Headlight.LIT) && s.getValue(de.rcm.ballistic.base.CityLights.Headlight.LIT);
+			state.facing = s.hasProperty(de.rcm.ballistic.base.CityLights.Headlight.FACING) ? s.getValue(de.rcm.ballistic.base.CityLights.Headlight.FACING)
+				: Direction.NORTH;
+			Level level = lamp.getLevel();
+			state.dark = darkness(level, partialTick);
+			state.haze = level == null ? 0.0F : level.getRainLevel(partialTick);
+		}
+
+		@Override
+		public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+			if (!state.lit) {
+				return;
+			}
+			Direction f = state.facing;
+			float tilt = 5.0F * Mth.DEG_TO_RAD;
+			Vec3 lens = Vec3.atBottomCenterOf(state.blockPos).add(f.getStepX() * 0.55, 0.5, f.getStepZ() * 0.55);
+			Vec3 dir = new Vec3(f.getStepX() * Mth.cos(tilt), -Mth.sin(tilt), f.getStepZ() * Mth.cos(tilt));
+			DynamicLights.spot(state.blockPos.asLong() * 7L + 5L, lens, dir, 26.0F, 0xF2F4FF, 0.9F, 24.0F);
+			if (state.dark < 0.05F) {
+				return;
+			}
+			float thick = state.dark * (1.0F + 1.4F * state.haze);
+			int a = (int) Mth.clamp(thick * 26.0F, 0.0F, 80.0F);
+			for (float side : new float[] {-0.28F, 0.28F}) {
+				poseStack.pushPose();
+				poseStack.translate(0.5F + f.getStepX() * 0.5F, 0.48F, 0.5F + f.getStepZ() * 0.5F);
+				poseStack.mulPose(new Quaternionf().rotationY(-f.toYRot() * Mth.DEG_TO_RAD));
+				poseStack.translate(side, 0.0F, 0.0F);
+				poseStack.mulPose(new Quaternionf().rotationX(tilt));
+				collector.submitCustomGeometry(poseStack, StructureKit.GLOW_TYPE,
+					(pose, consumer) -> BEAM.emit(pose, consumer, LightTexture.FULL_BRIGHT, a << 24 | 0xEEF2FF));
+				poseStack.popPose();
+			}
+		}
+	}
 }

@@ -1058,5 +1058,8 @@
 	"options.ballisticmissiles.smooth_move": "Smooth camera when moving",
 	"options.ballisticmissiles.smooth_move.tooltip": "Stepping up blocks and stairs the camera glides up instead of snapping, and landing it sinks a little and springs back.",
 	"block.ballisticmissiles.room_light": "Ceiling Light",
-	"block.ballisticmissiles.neon_sign": "Neon Sign"
+	"block.ballisticmissiles.neon_sign": "Neon Sign",
+	"block.ballisticmissiles.street_lamp": "Street Lamp",
+	"block.ballisticmissiles.traffic_light": "Traffic Light",
+	"block.ballisticmissiles.car_headlight": "Car Headlights"
 }

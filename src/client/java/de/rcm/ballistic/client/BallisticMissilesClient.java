@@ -132,9 +132,12 @@ public class BallisticMissilesClient implements ClientModInitializer {
 			ctx -> new de.rcm.ballistic.client.render.TitleScene.Renderer(ctx.vertexConsumers()));
 		BlockEntityRenderers.register(de.rcm.ballistic.base.BaseRegistry.LAMP_BE, de.rcm.ballistic.client.render.BaseRenderers.LampRenderer::new);
 		BlockEntityRenderers.register(de.rcm.ballistic.base.BaseRegistry.FLAG_BE, de.rcm.ballistic.client.render.BaseRenderers.FlagRenderer::new);
+		BlockEntityRenderers.register(de.rcm.ballistic.base.BaseRegistry.STREET_LAMP_BE, de.rcm.ballistic.client.render.BaseRenderers.StreetLampRenderer::new);
+		BlockEntityRenderers.register(de.rcm.ballistic.base.BaseRegistry.HEADLIGHT_BE, de.rcm.ballistic.client.render.BaseRenderers.HeadlightRenderer::new);
 		net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap.putBlocks(net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT,
 			de.rcm.ballistic.base.BaseRegistry.CHAINLINK_FENCE, de.rcm.ballistic.base.BaseRegistry.BARBED_WIRE, de.rcm.ballistic.base.BaseRegistry.CAMO_NET,
-			de.rcm.ballistic.base.BaseRegistry.STEEL_GRATE, de.rcm.ballistic.base.BaseRegistry.ALARM_LIGHT);
+			de.rcm.ballistic.base.BaseRegistry.STEEL_GRATE, de.rcm.ballistic.base.BaseRegistry.ALARM_LIGHT,
+			de.rcm.ballistic.base.BaseRegistry.STREET_LAMP);
 		BlockEntityRenderers.register(ModRegistry.COMMAND_CENTER_BE, de.rcm.ballistic.client.render.CommandCenterRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.LAUNCH_PAD_BE, LaunchPadRenderer::new);
 		BlockEntityRenderers.register(ModRegistry.INCLINED_LAUNCHER_BE, de.rcm.ballistic.client.render.InclinedLauncherRenderer::new);

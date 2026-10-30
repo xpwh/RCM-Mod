@@ -77,6 +77,7 @@ public final class DetonationManager {
 			return;
 		}
 		broadcast(level, pos, warhead);
+		powerCut(level, pos, warhead);
 		float replay = switch (warhead) {
 			case TSAR -> 320.0F;
 			case HYDROGEN -> 200.0F;
@@ -124,6 +125,23 @@ public final class DetonationManager {
 			case DRONE -> highExplosive(level, pos, source, 6.5F, 2, 8); // ~50 kg warhead
 			case CLUSTER -> highExplosive(level, pos, source, 6.0F, 1, 8); // hit the ground before opening
 			default -> highExplosive(level, pos, source, 11.0F, 4, 18);
+		}
+	}
+
+	/**
+	 * The blast takes the cities' power out round it (see CityPower): a conventional warhead the district it hits,
+	 * a nuclear one a whole city and more, for longer.
+	 */
+	private static void powerCut(ServerLevel level, Vec3 pos, Warhead warhead) {
+		switch (warhead) {
+			case TSAR -> de.rcm.ballistic.base.CityPower.strike(level, pos, 1000.0, 20 * 60 * 30);
+			case HYDROGEN -> de.rcm.ballistic.base.CityPower.strike(level, pos, 750.0, 20 * 60 * 25);
+			case NUCLEAR, MIRV -> de.rcm.ballistic.base.CityPower.strike(level, pos, 520.0, 20 * 60 * 20);
+			case MIRV_WARHEAD, TACTICAL_NUKE, ANTIMATTER -> de.rcm.ballistic.base.CityPower.strike(level, pos, 320.0, 20 * 60 * 12);
+			case THERMOBARIC -> de.rcm.ballistic.base.CityPower.strike(level, pos, 200.0, 20 * 60 * 6);
+			case HYPERSONIC, BUNKER_BUSTER -> de.rcm.ballistic.base.CityPower.strike(level, pos, 170.0, 20 * 60 * 5);
+			case DRONE -> de.rcm.ballistic.base.CityPower.strike(level, pos, 60.0, 20 * 60 * 2);
+			default -> de.rcm.ballistic.base.CityPower.strike(level, pos, 130.0, 20 * 60 * 4);
 		}
 	}
 
@@ -196,6 +214,7 @@ public final class DetonationManager {
 		broadcast(level, pos, Warhead.EMP);
 		final double radius = 220.0;
 		EmpManager.addZone(level, pos, radius, 20 * 90);
+		de.rcm.ballistic.base.CityPower.strike(level, pos, radius * 1.5, 20 * 60 * 8); // the EMP burns out the grid
 		for (AirThreat threat : ThreatTracker.threats(level)) {
 			Entity e = threat.asEntity();
 			if (e != source && Math.hypot(e.getX() - pos.x, e.getZ() - pos.z) < radius) {
@@ -338,6 +357,7 @@ public final class DetonationManager {
 		}
 		Killcam.trigger(level, surface, 70.0F);
 		broadcast(level, surface, Warhead.EARTH_PENETRATOR);
+		de.rcm.ballistic.base.CityPower.strike(level, surface, 420.0, 20 * 60 * 15);
 		FlyingDebris.launch(level, surface, 24.0, 300, 3.2);
 		NUKES.add(new NukeDetonation(level, surface, source, NukeDetonation.Yield.FISSION, NukeDetonation.Mode.UNDERGROUND));
 	}
@@ -354,6 +374,7 @@ public final class DetonationManager {
 		}
 		Killcam.trigger(level, pos, 110.0F);
 		broadcast(level, pos, Warhead.POSEIDON);
+		de.rcm.ballistic.base.CityPower.strike(level, pos, 900.0, 20 * 60 * 25);
 		BlockPos.MutableBlockPos m = BlockPos.containing(pos).mutable();
 		for (int i = 0; i < 64 && !level.getFluidState(m).isEmpty(); i++) {
 			m.move(0, 1, 0);
@@ -380,6 +401,7 @@ public final class DetonationManager {
 	public static void detonateKineticRod(ServerLevel level, Vec3 pos, Vec3 dir, @Nullable Entity source) {
 		Killcam.trigger(level, pos, 45.0F);
 		broadcast(level, pos, Warhead.KINETIC_ROD);
+		de.rcm.ballistic.base.CityPower.strike(level, pos, 260.0, 20 * 60 * 8);
 		FlyingDebris.launch(level, pos, 16.0, 260, 3.4);
 		Vec3 d = dir.lengthSqr() < 1.0E-6 ? new Vec3(0, -1, 0) : dir.normalize();
 		Vec3 deep = pos.add(d.scale(5.0));
@@ -611,6 +633,7 @@ public final class DetonationManager {
 	public static void detonateMoab(ServerLevel level, Vec3 pos, @Nullable Entity source) {
 		Killcam.trigger(level, pos, 55.0F);
 		broadcast(level, pos, Warhead.MOAB);
+		de.rcm.ballistic.base.CityPower.strike(level, pos, 240.0, 20 * 60 * 7);
 		FlyingDebris.launch(level, pos, 14.0, 220, 2.8);
 		highExplosive(level, pos.add(0, 2.0, 0), source, 15.0F, 8, 42, 0.18); // air burst: wide but shallow
 		double radius = 80.0;

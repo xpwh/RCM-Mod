@@ -1,10 +1,16 @@
 {
 	"variants": {
-		"lit=true": {
+		"emergency=false,lit=true": {
 			"model": "ballisticmissiles:block/room_light"
 		},
-		"lit=false": {
+		"emergency=false,lit=false": {
 			"model": "ballisticmissiles:block/room_light_off"
+		},
+		"emergency=true,lit=true": {
+			"model": "ballisticmissiles:block/room_light"
+		},
+		"emergency=true,lit=false": {
+			"model": "ballisticmissiles:block/room_light_emergency"
 		}
 	}
 }

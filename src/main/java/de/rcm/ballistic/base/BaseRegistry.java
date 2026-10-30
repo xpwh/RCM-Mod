@@ -51,6 +51,12 @@ public final class BaseRegistry {
 		BlockBehaviour.Properties.of().mapColor(MapColor.QUARTZ).strength(0.6F).sound(SoundType.GLASS));
 	public static final Block NEON_SIGN = block("neon_sign", CityLights.Neon::new,
 		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(0.8F).sound(SoundType.GLASS));
+	public static final Block STREET_LAMP = block("street_lamp", CityLights.StreetLamp::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5F, 4.0F).sound(SoundType.LANTERN).noOcclusion());
+	public static final Block TRAFFIC_LIGHT = block("traffic_light", CityLights.TrafficLight::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL));
+	public static final Block HEADLIGHT = block("car_headlight", CityLights.Headlight::new,
+		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(1.0F, 3.0F).sound(SoundType.METAL));
 	public static final Block CORRUGATED_OLIVE = block("corrugated_olive", Block::new,
 		BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(3.0F, 8.0F).sound(SoundType.COPPER).requiresCorrectToolForDrops());
 	public static final Block CORRUGATED_GREY = block("corrugated_grey", Block::new,
@@ -78,6 +84,14 @@ public final class BaseRegistry {
 	public static final BlockEntityType<BaseBlocks.LampBlockEntity> LAMP_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("base_lamp"),
 		FabricBlockEntityTypeBuilder.create(BaseBlocks.LampBlockEntity::new, FLOODLIGHT, ALARM_LIGHT).build()
+	);
+	public static final BlockEntityType<CityLights.Glow> STREET_LAMP_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("street_lamp"),
+		FabricBlockEntityTypeBuilder.<CityLights.Glow>create((pos, state) -> new CityLights.Glow(BaseRegistry.STREET_LAMP_BE, pos, state), STREET_LAMP).build()
+	);
+	public static final BlockEntityType<CityLights.Glow> HEADLIGHT_BE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("car_headlight"),
+		FabricBlockEntityTypeBuilder.<CityLights.Glow>create((pos, state) -> new CityLights.Glow(BaseRegistry.HEADLIGHT_BE, pos, state), HEADLIGHT).build()
 	);
 	public static final BlockEntityType<BaseFlagBlockEntity> FLAG_BE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE, BallisticMissiles.id("base_flag"),
@@ -112,7 +126,8 @@ public final class BaseRegistry {
 	}
 
 	public static void init() {
-		// Static initializers do the work.
+		// Static initializers do the work; the grid's outages tick with the worlds.
+		CityPower.init();
 	}
 
 	private static Item item(String name, Item.Properties props) {
