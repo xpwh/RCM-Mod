@@ -31,7 +31,7 @@ public abstract class SoundEngineMixin {
 			cir.setReturnValue(0.0F);
 			return;
 		}
-		float muffle = ClientEffects.hearing();
+		float muffle = ClientEffects.hearing() * ClientEffects.silence();
 		if (muffle >= 0.999F) {
 			return;
 		}

@@ -204,6 +204,7 @@
 	"message.ballisticmissiles.truck_too_big": "Too big for the truck – ICBMs belong in a silo or on a pad.",
 	"message.ballisticmissiles.truck_full": "The launcher is already loaded.",
 	"message.ballisticmissiles.truck_loaded": "Missile loaded onto the launcher.",
+	"message.ballisticmissiles.heat_flash": "Heat flash! Your skin is burning – get behind cover!",
 	"message.ballisticmissiles.emp_hit": "ELECTROMAGNETIC PULSE – electronics knocked out!",
 	"message.ballisticmissiles.long_range": "⌖ Long-range fix: target on the horizon about %s blocks away (ground height is resolved at launch)",
 	"radar.ballisticmissiles.class.unknown": "UNKNOWN",

@@ -579,5 +579,15 @@ void main() {
         col = mix(col, vec3(clamp(h, 0.0, 1.0)), thermalView);
     }
 
+    // ---- an EMP through the goggles' electronics: snow, torn lines, the picture dropping out in fits
+    float emp = param(14).b * max(p8.r, p8.g);
+    if (emp > 0.0) {
+        float line = hash(vec2(floor(texCoord.y * OutSize.y / 3.0), floor(time * 30.0)));
+        float tear = step(1.0 - 0.1 * emp, line);
+        vec3 snow = vec3(hash(texCoord * OutSize + fract(time * 13.7) * 97.0));
+        col = mix(col, snow, clamp(emp * 0.35 + tear * 0.55 * emp, 0.0, 1.0));
+        col *= 1.0 - 0.3 * emp * step(0.6, hash(vec2(floor(time * 12.0), 3.1)));
+    }
+
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

@@ -95,11 +95,11 @@ public final class Vision {
 
 	/** How far the night-vision picture is up (0-1). */
 	public static float nightVision(float partialTick) {
-		return Mth.lerp(partialTick, nightVisionO, nightVision);
+		return Mth.lerp(partialTick, nightVisionO, nightVision) * TsarAftermath.electronics();
 	}
 
 	public static float thermal(float partialTick) {
-		return Mth.lerp(partialTick, thermalO, thermal);
+		return Mth.lerp(partialTick, thermalO, thermal) * TsarAftermath.electronics();
 	}
 
 	/** The goggles are down and working: infrared shows. */

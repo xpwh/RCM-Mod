@@ -111,7 +111,10 @@ public final class DetonationManager {
 		switch (warhead) {
 			case NUCLEAR, MIRV -> NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.FISSION));
 			case HYDROGEN -> NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.THERMONUCLEAR));
-			case TSAR -> NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.TSAR));
+			case TSAR -> {
+				NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.TSAR));
+				tsarPulse(level, pos, source);
+			}
 			case ANTIMATTER -> ANNIHILATIONS.add(new AntimatterDetonation(level, pos, source));
 			case MIRV_WARHEAD, TACTICAL_NUKE -> NUKES.add(new NukeDetonation(level, pos, source, NukeDetonation.Yield.TACTICAL));
 			case INCENDIARY -> {
@@ -253,6 +256,26 @@ public final class DetonationManager {
 				player.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 120, 0));
 			}
 		}
+	}
+
+	/**
+	 * The Tsar Bomba's electromagnetic pulse: radars, batteries and silos for a long way round go dark, missiles in
+	 * flight close by lose their guidance, drones drop out of the sky, redstone near ground zero burns out.
+	 */
+	private static void tsarPulse(ServerLevel level, Vec3 pos, @Nullable Entity source) {
+		double radius = 1200.0;
+		EmpManager.addZone(level, pos, radius, 20 * 120);
+		for (AirThreat threat : ThreatTracker.threats(level)) {
+			Entity e = threat.asEntity();
+			if (e != source && Math.hypot(e.getX() - pos.x, e.getZ() - pos.z) < radius * 0.6) {
+				threat.destroyByInterceptor(level);
+			}
+		}
+		for (de.rcm.ballistic.entity.FpvDroneEntity drone : level.getEntitiesOfClass(de.rcm.ballistic.entity.FpvDroneEntity.class,
+			new net.minecraft.world.phys.AABB(pos, pos).inflate(radius, 400.0, radius))) {
+			drone.empStrike(level);
+		}
+		fryElectronics(level, pos, 160);
 	}
 
 	private static boolean empSensitive(BlockState state) {

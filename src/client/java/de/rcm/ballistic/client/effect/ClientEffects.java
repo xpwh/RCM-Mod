@@ -134,6 +134,7 @@ public final class ClientEffects {
 			case TSAR -> {
 				// the bang, the quake and the echoes come with the visible shock front (TsarShockwave), not on their own
 				EFFECTS.add(new TsarShockwave(pos));
+				TsarAftermath.detonated(pos);
 				yield new NukeEffect(pos, 2.2, true);
 			}
 			case ANTIMATTER -> new AntimatterEffect(pos);
@@ -162,6 +163,14 @@ public final class ClientEffects {
 	public static void addShake(float amount) {
 		shake = Math.min(6.0F, Math.max(shake, amount));
 		BlastShader.kick(amount / 1.6F);
+	}
+
+	/** The hush before a shock front you can see coming (0 none .. 1 dead quiet), set by TsarShockwave. */
+	static float hush;
+
+	/** Volume multiplier for everything but the blast while the front comes on (1 = normal). */
+	public static float silence() {
+		return 1.0F - 0.88F * hush;
 	}
 
 	/** Volume multiplier for all non-explosion sounds (1 = normal). */
@@ -1318,8 +1327,14 @@ public final class ClientEffects {
 				double height = 10.0 + 45.0 * Math.exp(-this.radius / 900.0);
 				this.wall(mc, Math.atan2(dz, dx), d, height, v);
 			}
+			// ---- the hush before it: the birds stop, the wind drops, everything holds its breath
+			if (!this.arrived) {
+				double eta = (d - this.radius) / Math.max(v, 1.0);
+				hush = (float) Mth.clamp(1.0 - (eta - 15.0) / 90.0, 0.0, 1.0);
+			}
 			// ---- it reaches you
 			if (!this.arrived && this.radius >= d) {
+				hush = 0.0F;
 				this.arrived = true;
 				this.sinceArrival = 0;
 				this.hit(mc, d);
@@ -1340,7 +1355,11 @@ public final class ClientEffects {
 					}
 				}
 			}
-			return this.arrived && this.echoes.isEmpty() && this.sinceArrival > 30 && this.radius > d + 600.0 || t > 2400;
+			boolean done = this.arrived && this.echoes.isEmpty() && this.sinceArrival > 30 && this.radius > d + 600.0 || t > 2400;
+			if (done || mc.level == null) {
+				hush = 0.0F;
+			}
+			return done;
 		}
 
 		private void wall(Minecraft mc, double bearing, double d, double height, double v) {
@@ -1448,14 +1467,59 @@ public final class ClientEffects {
 			this.frontSound = frontSound;
 			this.pos = pos;
 			this.scale = scale;
-			this.cloudHeight = 130.0 * scale;
-			this.capRadius = 42.0 * scale;
+			// the Tsar's cloud: far up through the cloud deck, its cap miles across
+			this.cloudHeight = frontSound ? 560.0 : 130.0 * scale;
+			this.capRadius = frontSound ? 175.0 : 42.0 * scale;
 			Minecraft mc = Minecraft.getInstance();
 			this.distance = distanceToCamera(mc, pos);
 			this.soundDelay = (int) (this.distance / SPEED_OF_SOUND);
 			setFlash((float) Mth.clamp(1.25 - this.distance / (2400.0 * scale), 0.25, 1.0), 0xFFFFFF);
 			// ground tremor arrives first (through the rock, faster than the air carries the blast)
 			addShake((float) Mth.clamp((1.5 - this.distance / 600.0) * scale, 0.0, frontSound ? 0.7 : 2.0));
+		}
+
+		/** The cloud deck it rose through, punched open once (the Tsar). */
+		private boolean punched;
+
+		/**
+		 * What only a cloud this size does: punches a hole through the cloud deck as the cap goes through it, wears a
+		 * cap of ice (the pileus - air pushed up ahead of it, cooled to a smooth white veil), and throws condensation
+		 * collars round the stem where it passes the moist layers.
+		 */
+		private void tsarCap(Minecraft mc, int t, double cx, double cy, double cz, double capY, double rc, float ps) {
+			float base = VolumetricClouds.base();
+			if (!this.punched && !Float.isNaN(base) && capY > base) {
+				this.punched = true;
+				VolumetricClouds.blast(new Vec3(cx, base, cz), (float) (rc * 2.2), 0.4F);
+			}
+			// the ice cap: a thin white dome hugging the top of the cap while it still climbs
+			if (t > 40 && t < 420 && t % 2 == 0) {
+				double top = capY + rc * 0.45;
+				for (int i = 0; i < 18; i++) {
+					double a = rand() * Mth.TWO_PI;
+					double r = rc * 1.05 * Math.sqrt(rand());
+					double y = top + (1.0 - (r * r) / (rc * rc * 1.1)) * rc * 0.18 + 6.0;
+					CloudParticle p = cloud(false, cx + Math.cos(a) * r, y, cz + Math.sin(a) * r, 0.0, (this.capHeight(t + 1) - this.capHeight(t)) * 0.9, 0.0);
+					if (p != null) {
+						p.configure(60 + RANDOM.nextInt(40), 10.0F * ps, 18.0F * ps, 0xFBFDFF, 0xE8EEF4, 0.5F).physics(0.99F, 0.0F).wind(0.3F);
+					}
+				}
+			}
+			// collars of condensation round the stem at the heights of the moist layers
+			if (t > 60 && t < 300 && t % 3 == 0) {
+				double h = this.capHeight(t);
+				for (double frac : new double[] {0.35, 0.6}) {
+					double y = cy + h * frac;
+					double ring = (22.0 + 14.0 * frac) * this.scale;
+					for (int i = 0; i < 14; i++) {
+						double a = rand() * Mth.TWO_PI;
+						CloudParticle p = cloud(false, cx + Math.cos(a) * ring, y + gauss() * 3.0, cz + Math.sin(a) * ring, Math.cos(a) * 0.4, 0.0, Math.sin(a) * 0.4);
+						if (p != null) {
+							p.configure(90, 8.0F * ps, 14.0F * ps, 0xF2F2F2, 0xD6D6D6, 0.6F).physics(0.97F, 0.0F);
+						}
+					}
+				}
+			}
 		}
 
 		private double capHeight(double t) {
@@ -1470,7 +1534,7 @@ public final class ClientEffects {
 		public boolean tick(Minecraft mc) {
 			int t = this.age++;
 			double s = this.scale;
-			float ps = (float) Math.sqrt(s); // particles grow slower than the cloud, more of them fill it
+			float ps = (float) Math.sqrt(s) * (this.frontSound ? 1.7F : 1.0F); // particles grow slower than the cloud, more of them fill it
 			double cx = this.pos.x;
 			double cy = this.pos.y;
 			double cz = this.pos.z;
@@ -1568,7 +1632,10 @@ public final class ClientEffects {
 				double capY = cy + h;
 
 				// cap: a torus that rolls outward on top and inward underneath
-				int capCount = t < 200 ? 28 : 15;
+				int capCount = (t < 200 ? 28 : 15) * (this.frontSound ? 2 : 1);
+				if (this.frontSound) {
+					this.tsarCap(mc, t, cx, cy, cz, capY, rc, ps);
+				}
 				for (int i = 0; i < capCount; i++) {
 					double a = rand() * Mth.TWO_PI;
 					double minor = rand() * Mth.TWO_PI;

@@ -110,6 +110,10 @@ public class NukeDetonation {
 	private final RadiationManager.Plume plume;
 	private final Mode mode;
 	private final int seaLevel;
+	/** How far the heat flash burns what stands in the open (0: none). */
+	private final double thermalRadius;
+	/** A fireball so hot the crater floor is left glowing far out from the middle. */
+	private final double molten;
 
 	public NukeDetonation(ServerLevel level, Vec3 pos, @Nullable Entity source, Yield yield) {
 		this(level, pos, source, yield, Mode.SURFACE);
@@ -119,6 +123,8 @@ public class NukeDetonation {
 		this.mode = mode;
 		this.seaLevel = level.getSeaLevel();
 		this.craterRadius = yield.crater;
+		this.thermalRadius = mode == Mode.SURFACE && yield == Yield.TSAR ? 1500.0 : 0.0;
+		this.molten = yield == Yield.TSAR ? 0.8 : 0.5;
 		this.craterDepth = mode == Mode.SURFACE ? yield.depth : yield.depth * (mode == Mode.UNDERGROUND ? 1.9 : 0.8);
 		// the scorched zone and the blast reach past the rim, however wide the crater
 		this.blastRadius = Math.max(yield.craterRadius * switch (mode) {
@@ -133,7 +139,7 @@ public class NukeDetonation {
 		}, yield.crater * 1.8);
 		this.falloutTicks = yield.falloutTicks;
 		// contamination lingers far longer than the acute fallout phase
-		RadiationManager.addZone(level, pos, yield.craterRadius * 3.2, yield.craterRadius * 400.0, yield.falloutTicks * 12L);
+		RadiationManager.addZone(level, pos, Math.max(yield.craterRadius * 3.2, yield.crater * 1.7), yield.craterRadius * 400.0, yield.falloutTicks * 12L);
 		// soot from the firestorm rises into the stratosphere: it takes a real nuclear war - a dozen or
 		// so strategic warheads, or three Tsar Bombas - to bring on a nuclear winter
 		double soot = switch (yield) {
@@ -168,6 +174,9 @@ public class NukeDetonation {
 	public boolean tick() {
 		if (this.age % 20 == 0) {
 			this.level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, new ChunkPos(this.center), Mth.ceil(this.blastRadius / 16.0) + 1);
+		}
+		if (this.age == 0 && this.thermalRadius > 0.0) {
+			this.heatFlash();
 		}
 		if (this.shockRadius <= this.damageRadius) {
 			this.blastWave();
@@ -282,6 +291,42 @@ public class NukeDetonation {
 		}
 	}
 
+	/**
+	 * The heat flash, at the speed of light, long before the blast: whatever stands in the open with a line to the
+	 * fireball has its skin burnt and its clothes set alight, worse the closer it is. A wall, a hill, a roof
+	 * between - in the shade of it - and nothing happens.
+	 */
+	private void heatFlash() {
+		Vec3 fireball = this.exact.add(0.0, 40.0, 0.0);
+		AABB box = new AABB(this.center).inflate(this.thermalRadius, 300.0, this.thermalRadius);
+		for (LivingEntity living : this.level.getEntitiesOfClass(LivingEntity.class, box)) {
+			if (living instanceof Player player && (player.isCreative() || player.isSpectator())) {
+				continue;
+			}
+			double d = living.position().distanceTo(this.exact);
+			if (d > this.thermalRadius || d < this.craterRadius * 0.85) {
+				continue; // in the fireball itself the blast does the rest
+			}
+			Vec3 eye = living.getEyePosition();
+			var hit = this.level.clip(new net.minecraft.world.level.ClipContext(eye, fireball, net.minecraft.world.level.ClipContext.Block.VISUAL,
+				net.minecraft.world.level.ClipContext.Fluid.ANY, living));
+			if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+				continue; // in the shade
+			}
+			float f = (float) (1.0 - d / this.thermalRadius);
+			// looking that way: the flash burns itself into the eyes
+			if (living.getLookAngle().dot(fireball.subtract(eye).normalize()) > 0.4) {
+				living.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60 + (int) (140 * f), 0));
+			}
+			living.hurtServer(this.level, this.level.damageSources().inFire(), 3.0F + 28.0F * f * f);
+			living.igniteForSeconds(3.0F + 12.0F * f);
+			if (living instanceof Player player) {
+				player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.ballisticmissiles.heat_flash")
+					.withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD), true);
+			}
+		}
+	}
+
 	// ------------------------------------------------------------------ crater
 
 	/** Slices are processed in order 0, +1, -1, +2, -2 ... so the crater grows from the middle. */
@@ -381,7 +426,7 @@ public class NukeDetonation {
 	private BlockState floorBlock(double relative, int layer) {
 		float roll = this.random.nextFloat();
 		if (layer == 1) {
-			if (relative < 0.5 && roll < 0.35F) {
+			if (relative < this.molten && roll < 0.35F) {
 				return ModRegistry.MOLTEN_ROCK.defaultBlockState();
 			}
 			if (roll < 0.7F - relative * 0.3) {

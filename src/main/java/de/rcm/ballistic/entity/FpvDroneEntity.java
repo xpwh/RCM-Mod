@@ -545,6 +545,11 @@ public class FpvDroneEntity extends Entity {
 		return best;
 	}
 
+	/** A nuclear EMP: the electronics are fried - the picture dies and it drops out of the sky. */
+	public void empStrike(ServerLevel level) {
+		this.loseLink(level, "message.ballisticmissiles.drone_link_lost");
+	}
+
 	private void loseLink(ServerLevel level, String messageKey) {
 		if (this.dead) {
 			return;

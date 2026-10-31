@@ -112,6 +112,8 @@ public final class DynamicLights {
 		boolean steady;
 		/** Fire: its brightness wavers. */
 		boolean flicker;
+		/** Runs on electricity: an EMP makes it flicker and die (TsarAftermath). */
+		boolean powered;
 		/** A warhead's flash: it cools from white to red as it dies. */
 		boolean cooling;
 		float seed;
@@ -175,10 +177,20 @@ public final class DynamicLights {
 		l.born = System.nanoTime();
 		l.decayMs = 110.0F;
 		l.steady = true;
+		l.powered = true;
 		l.spotCos = 0.0F;
 		l.spotX = 0.0F;
 		l.spotY = -1.0F;
 		l.spotZ = 0.0F;
+	}
+
+	/** Like {@link #lamp}, but a glow of its own - not a powered lamp, so an EMP leaves it be. */
+	public static void glow(long key, Vec3 at, int rgb, float strength, float radius) {
+		lamp(key, at, rgb, strength, radius);
+		Light l = LAMPS.get(key);
+		if (l != null) {
+			l.powered = false;
+		}
 	}
 
 	/**
@@ -291,6 +303,7 @@ public final class DynamicLights {
 		Vec3 cam = camera.position();
 		// by day the sun drowns a muzzle flash out; at night it lights the whole street
 		float dark = Mth.clamp(mc.level.getSkyDarken() / 11.0F, 0.0F, 1.0F);
+		float emp = TsarAftermath.electronics();
 		List<Light> drawn = new ArrayList<>();
 		for (Iterator<Light> it = java.util.stream.Stream.concat(LIGHTS.stream(), LAMPS.values().stream()).iterator(); it.hasNext(); ) {
 			Light l = it.next();
@@ -329,7 +342,7 @@ public final class DynamicLights {
 			float block = (packed & 0xFFFF) / 16 / 15.0F;
 			float sky = (packed >>> 16) / 16 / 15.0F * (1.0F - dark);
 			float ambient = Math.max(block, sky);
-			l.now = l.strength * s * (0.12F + 0.88F * (1.0F - ambient));
+			l.now = l.strength * s * (0.12F + 0.88F * (1.0F - ambient)) * (l.powered ? emp : 1.0F);
 			if (l.now > 0.01F) {
 				drawn.add(l);
 			}

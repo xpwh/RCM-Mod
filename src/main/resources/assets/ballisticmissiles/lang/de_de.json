@@ -204,6 +204,7 @@
 	"message.ballisticmissiles.truck_too_big": "Zu groß für den LKW – Interkontinentalraketen gehören ins Silo oder auf die Rampe.",
 	"message.ballisticmissiles.truck_full": "Der Werfer ist schon beladen.",
 	"message.ballisticmissiles.truck_loaded": "Rakete auf den Werfer geladen.",
+	"message.ballisticmissiles.heat_flash": "Hitzeblitz! Deine Haut verbrennt – geh in Deckung!",
 	"message.ballisticmissiles.emp_hit": "ELEKTROMAGNETISCHER PULS – Elektronik ausgefallen!",
 	"message.ballisticmissiles.long_range": "⌖ Fernpeilung: Ziel am Horizont in ca. %s Blöcken (Bodenhöhe wird beim Start ermittelt)",
 	"radar.ballisticmissiles.class.unknown": "UNBEKANNT",

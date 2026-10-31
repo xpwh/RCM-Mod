@@ -357,7 +357,7 @@ public final class BlastShader {
 		img.setPixel(12, 0, argb(255, RealmFx.heat() * k, AshStorm.amount(), RealmFx.portalShimmer() * k));
 		img.setPixel(13, 0, byteOf(RealmFx.portal() * k) << 24 | (RealmFx.portalColor() & 0xFFFFFF));
 		// a flash through night vision: the bloom, and the gain throttled down after it
-		img.setPixel(14, 0, argb(255, Vision.flare(), Vision.gainDip(), 0.0F));
+		img.setPixel(14, 0, argb(255, Vision.flare(), Vision.gainDip(), TsarAftermath.noise()));
 		params.upload();
 	}
 
