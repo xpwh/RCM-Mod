@@ -44,15 +44,25 @@ public class NukeDetonation {
 		FISSION(36, 1200),
 		/** Hydrogen bomb: much larger crater, blast zone and fallout. */
 		THERMONUCLEAR(58, 2400),
-		/** Tsar Bomba: the biggest of them all. */
-		TSAR(80, 3600);
+		/** Tsar Bomba: the biggest of them all - a crater three times as wide, shallow for its size, a dish of glass. */
+		TSAR(80, 3600, 240, 0.22);
 
+		/** The size of the bomb: blast, heat, fallout and the cloud scale with it. */
 		final int craterRadius;
 		final int falloutTicks;
+		/** The crater it digs, and how deep for its width (of a surface burst). */
+		final int crater;
+		final double depth;
 
 		Yield(int craterRadius, int falloutTicks) {
+			this(craterRadius, falloutTicks, craterRadius, 0.5);
+		}
+
+		Yield(int craterRadius, int falloutTicks, int crater, double depth) {
 			this.craterRadius = craterRadius;
 			this.falloutTicks = falloutTicks;
+			this.crater = crater;
+			this.depth = depth;
 		}
 	}
 
@@ -70,10 +80,12 @@ public class NukeDetonation {
 		UNDERWATER
 	}
 
-	private static final int SLICES_PER_TICK = 2;
+	/** Crater columns carved a tick at most (a big crater takes longer rather than freezing the server). */
+	private static final int COLUMNS_PER_TICK = 900;
 	private static final int MAX_WAIT_FOR_CHUNKS = 60;
 
 	private final int craterRadius;
+	private final double craterDepth;
 	private final double blastRadius;
 	private final double damageRadius;
 	private final int falloutTicks;
@@ -106,17 +118,19 @@ public class NukeDetonation {
 	public NukeDetonation(ServerLevel level, Vec3 pos, @Nullable Entity source, Yield yield, Mode mode) {
 		this.mode = mode;
 		this.seaLevel = level.getSeaLevel();
-		this.craterRadius = yield.craterRadius;
-		this.blastRadius = yield.craterRadius * switch (mode) {
+		this.craterRadius = yield.crater;
+		this.craterDepth = mode == Mode.SURFACE ? yield.depth : yield.depth * (mode == Mode.UNDERGROUND ? 1.9 : 0.8);
+		// the scorched zone and the blast reach past the rim, however wide the crater
+		this.blastRadius = Math.max(yield.craterRadius * switch (mode) {
 			case SURFACE -> 2.6;
 			case UNDERGROUND -> 1.7;
 			case UNDERWATER -> 2.2;
-		};
-		this.damageRadius = yield.craterRadius * switch (mode) {
+		}, yield.crater * 1.55);
+		this.damageRadius = Math.max(yield.craterRadius * switch (mode) {
 			case SURFACE -> 3.0;
 			case UNDERGROUND -> 2.1;
 			case UNDERWATER -> 2.8;
-		};
+		}, yield.crater * 1.8);
 		this.falloutTicks = yield.falloutTicks;
 		// contamination lingers far longer than the acute fallout phase
 		RadiationManager.addZone(level, pos, yield.craterRadius * 3.2, yield.craterRadius * 400.0, yield.falloutTicks * 12L);
@@ -168,11 +182,14 @@ public class NukeDetonation {
 		this.age++;
 
 		if (this.falloutAge < 0) {
-			if (!this.areaLoaded() && this.age < MAX_WAIT_FOR_CHUNKS) {
+			// a wide crater needs more of the world loaded round it: wait a little longer for it
+			if (!this.areaLoaded() && this.age < Math.max(MAX_WAIT_FOR_CHUNKS, this.outer / 2)) {
 				return false;
 			}
-			for (int i = 0; i < SLICES_PER_TICK && this.falloutAge < 0; i++) {
-				this.carveNextSlice();
+			// slices across the crater, as many as fit the tick's budget (always at least one)
+			int columns = 0;
+			while (this.falloutAge < 0 && (columns == 0 || columns < COLUMNS_PER_TICK)) {
+				columns += this.carveNextSlice();
 			}
 			return false;
 		}
@@ -268,17 +285,20 @@ public class NukeDetonation {
 	// ------------------------------------------------------------------ crater
 
 	/** Slices are processed in order 0, +1, -1, +2, -2 ... so the crater grows from the middle. */
-	private void carveNextSlice() {
+	/** @return how many columns it worked (a crater column counts in full, a scorched one a little) */
+	private int carveNextSlice() {
 		int n = this.nextSlice++;
 		int dx = (n % 2 == 0) ? n / 2 : -(n + 1) / 2;
 		if (Math.abs(dx) > this.outer) {
 			this.falloutAge = 0;
-			return;
+			return 1;
 		}
 		int span = (int) Math.sqrt(Math.max(0, (double) this.outer * this.outer - (double) dx * dx));
+		int work = 1;
 		for (int dz = -span; dz <= span; dz++) {
-			this.processColumn(dx, dz);
+			work += this.processColumn(dx, dz);
 		}
+		return work;
 	}
 
 	private double craterRadiusAt(int dx, int dz) {
@@ -287,11 +307,11 @@ public class NukeDetonation {
 		return this.craterRadius * (1.0 + wobble);
 	}
 
-	private void processColumn(int dx, int dz) {
+	private int processColumn(int dx, int dz) {
 		int x = this.center.getX() + dx;
 		int z = this.center.getZ() + dz;
 		if (!this.level.hasChunk(x >> 4, z >> 4)) {
-			return;
+			return 0;
 		}
 		double d = Math.sqrt(dx * dx + dz * dz);
 		double r = this.craterRadiusAt(dx, dz);
@@ -299,21 +319,20 @@ public class NukeDetonation {
 
 		if (d < r) {
 			this.carveCraterColumn(x, z, d, r, pos);
+			return 1;
 		} else if (d < r * 1.4) {
 			this.scorchSurface(x, z, d, r, pos);
 			this.placeRim(x, z, d, r, pos);
+			return 1;
 		} else if (d < this.blastRadius) {
 			this.scorchSurface(x, z, d, r, pos);
 		}
+		return 0;
 	}
 
 	private void carveCraterColumn(int x, int z, double d, double r, BlockPos.MutableBlockPos pos) {
 		double f = Math.sqrt(1.0 - (d / r) * (d / r));
-		double depth = switch (this.mode) {
-			case SURFACE -> 0.5;
-			case UNDERGROUND -> 0.95; // the buried charge throws out a deep, steep-sided crater
-			case UNDERWATER -> 0.4;
-		};
+		double depth = this.craterDepth; // a buried charge throws out a deep, steep-sided crater
 		int floorY = this.center.getY() - (int) Math.round(this.craterRadius * depth * f + this.random.nextFloat());
 		int topY = Math.min(this.level.getMaxY(), this.center.getY() + this.craterRadius + 12);
 		floorY = Math.max(floorY, this.level.getMinY() + 1);
@@ -500,7 +519,8 @@ public class NukeDetonation {
 
 	private void placeRim(int x, int z, double d, double r, BlockPos.MutableBlockPos pos) {
 		double t = 1.0 - (d - r) / (r * 0.4);
-		double lipHeight = this.mode == Mode.UNDERGROUND ? 9.0 : 5.0;
+		// the ejecta piled round the rim: higher round a wider crater
+		double lipHeight = (this.mode == Mode.UNDERGROUND ? 9.0 : 5.0) * Math.max(1.0, this.craterRadius / 80.0);
 		int lip = (int) Math.round(lipHeight * t * (0.6 + 0.8 * this.random.nextFloat()));
 		int y = this.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
 		for (int i = 0; i < lip; i++) {

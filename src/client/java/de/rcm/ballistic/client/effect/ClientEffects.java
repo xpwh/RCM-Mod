@@ -64,7 +64,7 @@ public final class ClientEffects {
 		switch (warhead) {
 			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, INTERCEPT -> {
 			}
-			case TSAR -> Wind.blast(pos, 900.0F, 150.0F, 1.1F);
+			case TSAR -> Wind.blast(pos, 1600.0F, 343.0F, 1.2F);
 			case HYDROGEN -> Wind.blast(pos, 700.0F, 140.0F, 1.1F);
 			case MOAB, THERMOBARIC -> Wind.blast(pos, 180.0F, 90.0F, 0.9F);
 			case BOMBLET, DRONE -> Wind.blast(pos, 35.0F, 50.0F, 0.6F);
@@ -131,7 +131,11 @@ public final class ClientEffects {
 			case DRONE -> new BlastEffect(pos, 0.55);
 			case AERIAL_BOMB -> new BlastEffect(pos, 0.5);
 			case MOAB -> new NukeEffect(pos, 0.42);
-			case TSAR -> new NukeEffect(pos, 2.2);
+			case TSAR -> {
+				// the bang, the quake and the echoes come with the visible shock front (TsarShockwave), not on their own
+				EFFECTS.add(new TsarShockwave(pos));
+				yield new NukeEffect(pos, 2.2, true);
+			}
 			case ANTIMATTER -> new AntimatterEffect(pos);
 			case METEOR_IMPACT -> new BlastEffect(pos, 0.75);
 			case SEA_MINE -> new WaterBlastEffect(pos);
@@ -1273,6 +1277,156 @@ public final class ClientEffects {
 
 	// ------------------------------------------------------------------ nuclear blast
 
+	/**
+	 * The Tsar Bomba's shock front made visible: a wall of dust and smoke boiling up off the ground, racing out over
+	 * the land - faster than sound close in, slowing to it further out (the same front the server's blast wave
+	 * rides, so what you see hit is what hits you). Watch it come; nothing is heard until it gets to you. Then the
+	 * crack, the roar, the ground heaving, the dust storming past - and the thunder of it rolling back off the hills
+	 * and the sky for long seconds after.
+	 */
+	static final class TsarShockwave implements Effect {
+		private static final int DUST = 0xB4A58C;
+		private static final int DUST_DARK = 0x6E655A;
+		private final Vec3 pos;
+		private double radius;
+		private int age;
+		private boolean arrived;
+		/** Echoes still to come: ticks after arrival, volume, pitch, bearing. */
+		private final java.util.List<double[]> echoes = new java.util.ArrayList<>();
+		private int sinceArrival = -1;
+
+		TsarShockwave(Vec3 pos) {
+			this.pos = pos;
+		}
+
+		/** Blocks per tick: as the server's blast wave (NukeDetonation): supersonic close in, sound speed out there. */
+		private static double speed(int age) {
+			return SPEED_OF_SOUND + 60.0 * Math.exp(-age / 6.0);
+		}
+
+		@Override
+		public boolean tick(Minecraft mc) {
+			int t = this.age++;
+			this.radius = t == 0 ? Math.max(204.0, speed(0)) : this.radius + speed(t);
+			Vec3 cam = mc.gameRenderer.getMainCamera().position();
+			double dx = cam.x - this.pos.x;
+			double dz = cam.z - this.pos.z;
+			double d = Math.sqrt(dx * dx + dz * dz);
+			double v = speed(t);
+			// ---- the wall: a thin ring all the way round, thick where it is coming for you
+			if (this.radius < 3000.0 && (!this.arrived || this.radius < d + 600.0)) {
+				double height = 10.0 + 45.0 * Math.exp(-this.radius / 900.0);
+				this.wall(mc, Math.atan2(dz, dx), d, height, v);
+			}
+			// ---- it reaches you
+			if (!this.arrived && this.radius >= d) {
+				this.arrived = true;
+				this.sinceArrival = 0;
+				this.hit(mc, d);
+			}
+			if (this.sinceArrival >= 0) {
+				int a = this.sinceArrival++;
+				if (a < 30 && a % 2 == 0) {
+					this.storm(mc, cam, Math.atan2(dz, dx), 1.0 - a / 30.0);
+				}
+				var it = this.echoes.iterator();
+				while (it.hasNext()) {
+					double[] e = it.next();
+					if (a >= e[0]) {
+						it.remove();
+						Vec3 from = cam.add(Math.cos(e[3]) * 400.0, 30.0, Math.sin(e[3]) * 400.0);
+						playLoud(mc, e[4] > 0.5 ? ModRegistry.NUKE_FAR : ModRegistry.THUNDER_FAR, from, (float) e[1], (float) e[2]);
+						addShake((float) (e[1] * 0.6));
+					}
+				}
+			}
+			return this.arrived && this.echoes.isEmpty() && this.sinceArrival > 30 && this.radius > d + 600.0 || t > 2400;
+		}
+
+		private void wall(Minecraft mc, double bearing, double d, double height, double v) {
+			// all the way round: a sparse ring (from afar a grey-brown wall rolling over the horizon)
+			int around = 40;
+			for (int i = 0; i < around; i++) {
+				this.puff(mc, rand() * Mth.TWO_PI, height, v, 1.6F);
+			}
+			// towards you: dense, tall and boiling, as far to either side as you could see it
+			double gap = Math.abs(this.radius - d);
+			if (gap < 900.0) {
+				int n = (int) (150 * (1.0 - gap / 1200.0));
+				double spread = 260.0 / Math.max(this.radius, 1.0);
+				for (int i = 0; i < n; i++) {
+					this.puff(mc, bearing + gauss() * spread, height * (0.8 + 0.5 * rand()), v, 1.0F);
+				}
+			}
+		}
+
+		private void puff(Minecraft mc, double a, double height, double v, float big) {
+			double r = this.radius - rand() * v;
+			double x = this.pos.x + Math.cos(a) * r;
+			double z = this.pos.z + Math.sin(a) * r;
+			double gy = groundY(mc, x, Double.NaN, z);
+			if (Double.isNaN(gy)) {
+				return; // not loaded out there
+			}
+			double h = rand();
+			double y = gy + h * h * height;
+			// thrown out with the front, slowing fast behind it
+			double out = v * (0.25 + 0.2 * rand());
+			CloudParticle p = cloud(false, x, y, z, Math.cos(a) * out, 0.05 + rand() * 0.25, Math.sin(a) * out);
+			if (p != null) {
+				float size = (float) (9.0 + 10.0 * rand() + height * 0.12) * big;
+				p.configure(70 + RANDOM.nextInt(70), size * 0.6F, size * (1.6F + rand() * 0.6F), mix(DUST, 0xD6CBB8, rand() * 0.4F), DUST_DARK, 0.8F)
+					.physics(0.9F, 0.004F)
+					.turbulence(0.03F);
+			}
+		}
+
+		/** The front gets to you: the crack, the roar, the quake - and the echoes queued up. */
+		private void hit(Minecraft mc, double d) {
+			double s = 2.2;
+			float f = (float) Mth.clamp(1.0 - d / 3500.0, 0.0, 1.0);
+			shockCrack(mc, ModRegistry.SHOCK_NUKE, this.pos, d, 3500.0 * s, 0.8F);
+			if (d < 900.0) {
+				playLoud(mc, ModRegistry.NUKE_NEAR, this.pos, 1.0F, 0.8F);
+				playLoud(mc, ModRegistry.NUKE_SUB, this.pos, 1.0F, 0.7F);
+				playLoud(mc, ModRegistry.NUKE_WIND, this.pos, 1.0F, 0.8F);
+				playLoud(mc, ModRegistry.EXPLOSION_SUB, this.pos, 1.0F, 0.6F);
+				playDistant(mc, ModRegistry.EXPLOSION_DEBRIS, this.pos, 1.0F, 0.75F);
+				deafen(mc, (float) (1.05 - d / 1600.0), 260);
+			} else {
+				float volume = (float) Mth.clamp(1.3 - d / 4000.0, 0.3, 1.0);
+				playLoud(mc, ModRegistry.NUKE_MID, this.pos, volume, 0.8F);
+				playLoud(mc, ModRegistry.NUKE_SUB, this.pos, volume, 0.7F);
+				playDistant(mc, ModRegistry.NUKE_WIND, this.pos, volume * 0.8F, 0.75F);
+				deafen(mc, (float) (0.7 - d / 5000.0), 80);
+			}
+			addShake((float) Mth.clamp(6.0 - d / 400.0, 1.2, 6.0));
+			BlastShader.kick(Math.max(0.4F, 2.0F * f));
+			// the thunder of it coming back off the hills, the ground and the sky: from all round, later, lower
+			double base = Math.atan2(this.pos.z - mc.gameRenderer.getMainCamera().position().z, this.pos.x - mc.gameRenderer.getMainCamera().position().x);
+			double[][] reflections = {{14, 0.75, 0.78}, {26, 0.6, 0.72}, {41, 0.5, 0.7}, {58, 0.4, 0.66}, {80, 0.3, 0.62}, {108, 0.22, 0.6}, {140, 0.15, 0.58}};
+			for (int i = 0; i < reflections.length; i++) {
+				double[] r = reflections[i];
+				double bearing = base + Math.PI * (0.4 + 1.2 * rand()) * (i % 2 == 0 ? 1 : -1);
+				this.echoes.add(new double[] {r[0] + rand() * 6, r[1] * (0.6F + 0.4F * f), r[2] * (0.95 + rand() * 0.1), bearing, i % 3 == 0 ? 1.0 : 0.0});
+			}
+		}
+
+		/** The dust storming past you, the way the front was going. */
+		private void storm(Minecraft mc, Vec3 cam, double away, double k) {
+			for (int i = 0; i < (int) (40 * k) + 6; i++) {
+				double a = away + gauss() * 0.5;
+				double x = cam.x + gauss() * 14.0;
+				double z = cam.z + gauss() * 14.0;
+				double gy = groundY(mc, x, cam.y - 1.6, z);
+				CloudParticle p = cloud(false, x - Math.cos(a) * 20.0, gy + rand() * 6.0, z - Math.sin(a) * 20.0, Math.cos(a) * (2.0 + 2.0 * k), 0.08, Math.sin(a) * (2.0 + 2.0 * k));
+				if (p != null) {
+					p.configure(40 + RANDOM.nextInt(30), 3.0F, 9.0F, DUST, DUST_DARK, (float) (0.5 + 0.3 * k)).physics(0.92F, 0.002F).turbulence(0.06F);
+				}
+			}
+		}
+	}
+
 	static final class NukeEffect implements Effect {
 		private static final int DURATION = 900;
 
@@ -1282,9 +1436,16 @@ public final class ClientEffects {
 		private final double capRadius;
 		private final double distance;
 		private final int soundDelay;
+		/** The shock front's arrival (bang, quake, deafness) is played by a TsarShockwave instead. */
+		private final boolean frontSound;
 		private int age;
 
 		NukeEffect(Vec3 pos, double scale) {
+			this(pos, scale, false);
+		}
+
+		NukeEffect(Vec3 pos, double scale, boolean frontSound) {
+			this.frontSound = frontSound;
 			this.pos = pos;
 			this.scale = scale;
 			this.cloudHeight = 130.0 * scale;
@@ -1293,7 +1454,8 @@ public final class ClientEffects {
 			this.distance = distanceToCamera(mc, pos);
 			this.soundDelay = (int) (this.distance / SPEED_OF_SOUND);
 			setFlash((float) Mth.clamp(1.25 - this.distance / (2400.0 * scale), 0.25, 1.0), 0xFFFFFF);
-			addShake((float) Mth.clamp((1.5 - this.distance / 600.0) * scale, 0.0, 2.0)); // ground tremor arrives first
+			// ground tremor arrives first (through the rock, faster than the air carries the blast)
+			addShake((float) Mth.clamp((1.5 - this.distance / 600.0) * scale, 0.0, frontSound ? 0.7 : 2.0));
 		}
 
 		private double capHeight(double t) {
@@ -1314,7 +1476,7 @@ public final class ClientEffects {
 			double cz = this.pos.z;
 
 			// ---- audio + shock arrival
-			if (t == this.soundDelay) {
+			if (t == this.soundDelay && !this.frontSound) {
 				shockCrack(mc, ModRegistry.SHOCK_NUKE, this.pos, this.distance, 3500.0 * this.scale, this.scale > 1.2 ? 0.8F : this.scale < 0.7 ? 1.12F : 1.0F);
 				float pitch = s > 1.2 ? 0.8F : 1.0F;
 				if (this.distance < 320 * s) {
