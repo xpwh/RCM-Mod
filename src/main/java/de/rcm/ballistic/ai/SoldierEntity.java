@@ -2,6 +2,7 @@ package de.rcm.ballistic.ai;
 
 import de.rcm.ballistic.ModRegistry;
 import de.rcm.ballistic.gun.AkItem;
+import de.rcm.ballistic.gun.GunState;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -70,7 +71,6 @@ public class SoldierEntity extends PathfinderMob {
 	private static final double COS_SHARP = Math.cos(Math.toRadians(60.0));
 	private static final double COS_DIM = Math.cos(Math.toRadians(100.0));
 	public static final int MAGAZINE = 30;
-	private static final int RELOAD_TICKS = 50;
 
 	/** Whether creative-mode players are ignored (for watching the AI work you can switch it off: {@code /bmai kreativ an}). */
 	public static boolean ignoreCreative = true;
@@ -154,7 +154,10 @@ public class SoldierEntity extends PathfinderMob {
 
 	public SoldierEntity(EntityType<? extends SoldierEntity> type, Level level) {
 		super(type, level);
-		this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.AK47));
+		ItemStack rifle = new ItemStack(ModRegistry.AK47);
+		// a full magazine in it (the model shows it, and the reload plays from there)
+		AkItem.setState(rifle, GunState.DEFAULT.loaded(MAGAZINE, GunState.BALL));
+		this.setItemSlot(EquipmentSlot.MAINHAND, rifle);
 		this.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
 		this.setPersistenceRequired();
 	}
@@ -1046,10 +1049,39 @@ public class SoldierEntity extends PathfinderMob {
 		}
 	}
 
+	/** The kind of reload under way (GunState.TACTICAL or EMPTY), its variant and how long it takes in all. */
+	private int reloadKind;
+	private int reloadVariant;
+	private int reloadLength;
+
+	/**
+	 * A reload, played as the player's is (the rifle's state on the stack drives the same Blender clips: the magazine
+	 * rocked out or knocked away, the fresh one from the pouch, the handle racked from empty) - and under fire he
+	 * fumbles it or drops the magazine like anyone else.
+	 */
 	private void startReload(ServerLevel level) {
-		this.reload = RELOAD_TICKS;
 		this.burst = 0;
-		level.playSound(null, this.getX(), this.getEyeY(), this.getZ(), ModRegistry.AK_MAG_OUT, SoundSource.HOSTILE, 0.8F, 1.0F);
+		this.reloadKind = this.rounds > 0 ? GunState.TACTICAL : GunState.EMPTY;
+		this.reloadVariant = GunState.CLEAN;
+		if (this.reloadKind == GunState.TACTICAL && this.suppression > 0.3F) {
+			float f = this.getRandom().nextFloat();
+			float n = this.suppression;
+			this.reloadVariant = f < 0.22F * n * n ? GunState.DROPPED : f < 0.6F * n ? GunState.FUMBLE : GunState.CLEAN;
+		}
+		this.reloadLength = this.reloadKind == GunState.EMPTY ? AkItem.RELOAD_EMPTY : AkItem.RELOAD_TACTICAL + AkItem.delay(this.reloadVariant);
+		this.reload = this.reloadLength;
+		ItemStack rifle = this.getMainHandItem();
+		if (rifle.getItem() instanceof AkItem) {
+			GunState s = AkItem.state(rifle);
+			if (!s.hasMag()) {
+				s = s.loaded(this.rounds, GunState.BALL);
+			}
+			AkItem.setState(rifle, s.withRounds(this.rounds).startReload(level.getGameTime(), this.reloadKind, GunState.BALL, this.reloadVariant));
+		}
+	}
+
+	private void sound(ServerLevel level, net.minecraft.sounds.SoundEvent sound) {
+		level.playSound(null, this.getX(), this.getEyeY(), this.getZ(), sound, SoundSource.HOSTILE, 0.8F, 0.96F + this.getRandom().nextFloat() * 0.08F);
 	}
 
 	private void reloadTick(ServerLevel level) {
@@ -1057,12 +1089,25 @@ public class SoldierEntity extends PathfinderMob {
 			return;
 		}
 		this.reload--;
-		if (this.reload == 22) {
-			level.playSound(null, this.getX(), this.getEyeY(), this.getZ(), ModRegistry.AK_MAG_IN, SoundSource.HOSTILE, 0.8F, 1.0F);
-		} else if (this.reload == 8) {
-			level.playSound(null, this.getX(), this.getEyeY(), this.getZ(), ModRegistry.AK_CHARGE, SoundSource.HOSTILE, 0.8F, 1.0F);
-		} else if (this.reload == 0) {
-			this.rounds = MAGAZINE;
+		int t = this.reloadLength - this.reload;
+		boolean tactical = this.reloadKind == GunState.TACTICAL;
+		int delay = AkItem.delay(this.reloadVariant);
+		int tacOut = AkItem.T_TAC_OUT + (this.reloadVariant == GunState.DROPPED ? AkItem.DROP_DELAY : 0);
+		if (t == (tactical ? tacOut : AkItem.T_MAG_OUT)) {
+			this.sound(level, ModRegistry.AK_MAG_OUT);
+		} else if (this.reloadVariant == GunState.FUMBLE && t == AkItem.T_FUMBLE_HIT) {
+			level.playSound(null, this.getX(), this.getEyeY(), this.getZ(), ModRegistry.AK_MAG_OUT, SoundSource.HOSTILE, 0.8F, 0.75F);
+		} else if (t == (tactical ? AkItem.T_TAC_IN + delay : AkItem.T_MAG_IN)) {
+			this.sound(level, ModRegistry.AK_MAG_IN);
+		} else if (!tactical && t == AkItem.T_CHARGE) {
+			this.sound(level, ModRegistry.AK_CHARGE);
+		}
+		if (this.reload == 0) {
+			this.rounds = MAGAZINE + (tactical ? 1 : 0);
+			ItemStack rifle = this.getMainHandItem();
+			if (rifle.getItem() instanceof AkItem) {
+				AkItem.setState(rifle, AkItem.state(rifle).loaded(this.rounds, GunState.BALL));
+			}
 		}
 	}
 

@@ -54,6 +54,11 @@ processResources {
 	filesMatching("fabric.mod.json") {
 		expand "version": version
 	}
+	// the changelog ships in the jar: the patch notes shown in game after an update read it
+	from(rootProject.file("CHANGELOG.md")) {
+		into "assets/ballisticmissiles"
+		rename { "changelog.md" }
+	}
 }
 
 tasks.withType(JavaCompile).configureEach {

@@ -398,7 +398,8 @@ public final class GlockMotion {
 		Vector3f ls = new Vector3f(LEFT_SHOULDER).lerp(AIM_LEFT_SHOULDER, a);
 		// reloading, the shooting elbow comes up and out so the forearm runs off to the side, clear of the magwell
 		float r = f.reload();
-		int length = f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL + GlockItem.delay(f.variant());
+		int length = f.variant() == GlockClips.CLEARING ? GlockItem.CLEAR_LENGTH
+			: f.empty() ? GlockItem.RELOAD_EMPTY : GlockItem.RELOAD_TACTICAL + GlockItem.delay(f.variant());
 		float in = r < 0.0F ? 0.0F : ramp(r, 0.0F, 4.0F) * (1.0F - ramp(r, length - 6.0F, length));
 		Vector3f rightPole = new Vector3f(RIGHT_POLE).lerp(new Vector3f(1.0F, 0.1F, 0.5F), in);
 		float[] clip = sample(f);

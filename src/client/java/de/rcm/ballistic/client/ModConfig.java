@@ -85,6 +85,9 @@ public final class ModConfig {
 	public static boolean smoothMove = true;
 	/** Your own body (legs, chest) seen when you look down in first person. */
 	public static boolean firstPersonBody = true;
+	/** The mod version last started (for the patch notes after an update) and whether to show them. */
+	public static String lastSeenVersion = "";
+	public static boolean patchNotes = true;
 	// ---- effects
 	/** The screen effects of blasts (flash, haze, god rays, shell shock...), percent. */
 	public static int screenEffects = 100;
@@ -180,6 +183,8 @@ public final class ModConfig {
 			smoothLook = bool(p, "smoothLook", smoothLook);
 			smoothMove = bool(p, "smoothMove", smoothMove);
 			firstPersonBody = bool(p, "firstPersonBody", firstPersonBody);
+			lastSeenVersion = p.getProperty("lastSeenVersion", lastSeenVersion).trim();
+			patchNotes = bool(p, "patchNotes", patchNotes);
 			screenEffects = percent(p, "screenEffects", screenEffects);
 			smokeAmount = percent(p, "smokeAmount", smokeAmount);
 			fastSmoke = "fast".equals(p.getProperty("smokeFade", fastSmoke ? "fast" : "long"));
@@ -241,6 +246,8 @@ public final class ModConfig {
 			p.setProperty("smoothLook", Boolean.toString(smoothLook));
 			p.setProperty("smoothMove", Boolean.toString(smoothMove));
 			p.setProperty("firstPersonBody", Boolean.toString(firstPersonBody));
+			p.setProperty("lastSeenVersion", lastSeenVersion);
+			p.setProperty("patchNotes", Boolean.toString(patchNotes));
 			p.setProperty("screenEffects", Integer.toString(screenEffects));
 			p.setProperty("smokeAmount", Integer.toString(smokeAmount));
 			p.setProperty("smokeFade", fastSmoke ? "fast" : "long");

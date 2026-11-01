@@ -47,6 +47,16 @@ public class AkItem extends Item {
 	public static final int T_MAG_IN = 30;
 	public static final int T_CHARGE = 52;
 	/**
+	 * Clearing a stoppage (GunState.CLEAR): the rifle rolled to show the port, the magazine tapped home, the charging
+	 * handle racked hard and let fly - the stuck case spins out - and back on target.
+	 */
+	public static final int CLEAR_TAP = 6;
+	public static final int CLEAR_RACK = 15;
+	public static final int CLEAR_RELEASE = 17;
+	public static final int CLEAR_LENGTH = 28;
+	/** Chance per round of a stovepipe: an AK is famously reliable. */
+	private static final double STOPPAGE = 0.003;
+	/**
 	 * A reload with rounds left goes magazine to magazine: the fresh one comes up from behind and knocks
 	 * the old one out of the well and away forward at {@code T_TAC_OUT} (it lands on the ground, with
 	 * the rounds still in it), and goes straight in, seated at {@code T_TAC_IN}.
@@ -152,6 +162,12 @@ public class AkItem extends Item {
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.ak_safe").withStyle(ChatFormatting.YELLOW), true);
 			return;
 		}
+		if (state.jammed()) {
+			// the bolt is held open on the stuck case: the hammer falls on nothing
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_DRY, SoundSource.PLAYERS, 0.6F, 0.8F);
+			Stoppage.tell(player);
+			return;
+		}
 		if (state.rounds() <= 0) {
 			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_DRY, SoundSource.PLAYERS, 0.7F, 1.0F);
 			player.displayClientMessage(Component.translatable("message.ballisticmissiles.ak_empty").withStyle(ChatFormatting.RED), true);
@@ -178,6 +194,10 @@ public class AkItem extends Item {
 		}
 		if (level.getGameTime() - state.lastShot() < CYCLE) {
 			return; // the bolt has not come back yet: no faster than the rifle can cycle, however the trigger is worked
+		}
+		if (state.jammed()) {
+			TRIGGERS.remove(player.getUUID());
+			return;
 		}
 		if (state.rounds() <= 0) {
 			// the hammer falls on an empty chamber
@@ -225,6 +245,14 @@ public class AkItem extends Item {
 		// shows in the shooter's own fire before the hammer falls on nothing
 		boolean tracer = GunState.tracer(state.ammo()) && (state.rounds() % 4 == 0 || state.rounds() <= 3);
 		shoot(level, player, eye, muzzle, dir, tracer, state.ammo() == GunState.TRACER_RED, left == 0);
+		// now and then the case does not get out: the bolt closes on it, the next pull of the trigger only clicks
+		if (left > 0 && Stoppage.roll(level, player, STOPPAGE, burst)) {
+			setState(stack, state(stack).withJam(true));
+			TRIGGERS.remove(player.getUUID());
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.AK_DRY, SoundSource.PLAYERS, 0.8F, 0.65F);
+			Stoppage.tell(player);
+			return;
+		}
 		if (left == 0) {
 			TRIGGERS.remove(player.getUUID()); // the bolt stays forward on an empty chamber: the next pull just clicks
 		}
@@ -270,6 +298,12 @@ public class AkItem extends Item {
 		}
 		GunState state = state(stack);
 		if (state.reloading()) {
+			return;
+		}
+		if (state.jammed()) {
+			// a stoppage first: tap, rack, the case out
+			player.stopUsingItem();
+			setState(stack, state.startReload(player.level().getGameTime(), GunState.CLEAR, state.ammo()));
 			return;
 		}
 		// R: the same kind again (or, with none left, the next kind there is); sneak + R: the next kind
@@ -351,6 +385,16 @@ public class AkItem extends Item {
 			return;
 		}
 		long t = level.getGameTime() - state.reloadStart();
+		if (state.reloadKind() == GunState.CLEAR) {
+			if (t == CLEAR_TAP) {
+				this.sound(level, player, ModRegistry.AK_MAG_IN, 0.6F);
+			} else if (t == CLEAR_RACK) {
+				this.sound(level, player, ModRegistry.AK_CHARGE, 1.0F);
+			} else if (t >= CLEAR_LENGTH) {
+				setState(stack, state.cancelReload().withJam(false));
+			}
+			return;
+		}
 		boolean tactical = state.reloadKind() == GunState.TACTICAL;
 		int variant = tactical ? state.reloadVariant() : GunState.CLEAN;
 		// a dropped magazine holds everything up from the strike on; a fumble only the seating

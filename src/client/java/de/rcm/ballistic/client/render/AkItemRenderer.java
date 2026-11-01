@@ -48,6 +48,10 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunAttachmentM
 	/** The bolt carrier with the charging handle. */
 	static final BoxMesh HANDLE = PARTS.get("carrier");
 	static final BoxMesh SELECTOR = PARTS.get("selector");
+	/** A spent 7.62x39 case (lacquered steel, the colour of the rounds in the magazine): stuck in the port on a stoppage. */
+	static final BoxMesh STUCK_CASE = new BoxMesh.Builder().box(-0.0055F, 0.0F, -0.0055F, 0.0055F, 0.039F, 0.0055F, 0).build().withUv(0.1302F, 0.7825F);
+	/** Where the case sticks out of the ejection port (on the carrier's right side). */
+	private static final Vector3f STUCK_AT = new Vector3f(0.022F, 0.086F, -0.092F);
 	static final BoxMesh MAG = magazine(GunState.BALL, true);
 	static final BoxMesh MAG_TRACER = magazine(GunState.TRACER, true);
 	static final BoxMesh MAG_TRACER_RED = magazine(GunState.TRACER_RED, true);
@@ -151,6 +155,20 @@ public final class AkItemRenderer implements SpecialModelRenderer<GunAttachmentM
 		poseStack.pushPose();
 		poseStack.translate(0.0F, 0.0F, travel);
 		collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> HANDLE.emit(pose, consumer, light));
+		// a stoppage: the case pinched by the carrier, standing up out of the port, until the rack throws it out
+		float r = now - state.reloadStart();
+		boolean clearing = state.reloading() && state.reloadKind() == GunState.CLEAR;
+		if (clearing && r >= de.rcm.ballistic.gun.AkItem.CLEAR_RELEASE && context.firstPerson()) {
+			AkClient.stuckCaseOut(state.reloadStart());
+		}
+		if (state.jammed() && !(clearing && r >= de.rcm.ballistic.gun.AkItem.CLEAR_RELEASE)) {
+			poseStack.pushPose();
+			poseStack.translate(STUCK_AT.x, STUCK_AT.y, STUCK_AT.z);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-32.0F));
+			poseStack.mulPose(Axis.XP.rotationDegrees(-12.0F));
+			collector.submitCustomGeometry(poseStack, TYPE, (pose, consumer) -> STUCK_CASE.emit(pose, consumer, light));
+			poseStack.popPose();
+		}
 		poseStack.popPose();
 
 		// ---- magazine

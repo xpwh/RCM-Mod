@@ -23,17 +23,17 @@ public final class ThirdPersonReload {
 	private ThirdPersonReload() {
 	}
 
-	/** After the model's own pose (crossbow hold): bend it to the reload, if the player with this id is reloading. */
-	public static void pose(PlayerModel model, int id, float partialTick) {
+	/** After the model's own pose (crossbow hold): bend it to the reload, if the player (or soldier) with this id is reloading. */
+	public static void pose(net.minecraft.client.model.HumanoidModel<?> model, int id, float partialTick) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null) {
 			return;
 		}
 		Entity e = mc.level.getEntity(id);
-		if (!(e instanceof Player player)) {
+		if (!(e instanceof net.minecraft.world.entity.LivingEntity holder)) {
 			return;
 		}
-		ItemStack stack = player.getMainHandItem();
+		ItemStack stack = holder.getMainHandItem();
 		float now = mc.level.getGameTime() + partialTick;
 		float[] s;
 		Vector3f rest;

@@ -55,6 +55,12 @@ public class GlockItem extends Item {
 	public static final int T_RACK_BACK = 25;
 	public static final int T_RACK_FORWARD = 28;
 	public static final int RELOAD_EMPTY = 35;
+	/** Clearing a stoppage (GunState.CLEAR): tap the magazine, rack the slide overhand, let it go - the case flies. */
+	public static final int CLEAR_TAP = 5;
+	public static final int CLEAR_RACK = 11;
+	public static final int CLEAR_RELEASE = 13;
+	public static final int CLEAR_LENGTH = 22;
+	private static final double STOPPAGE = 0.004;
 	/**
 	 * A speed reload with rounds left gone wrong under pressure (see {@link Nerves}): fumbled - the magazine's nose
 	 * catches the edge of the well at {@code T_FUMBLE_HIT} and goes in at the second go, nine ticks late - or dropped,
@@ -137,6 +143,12 @@ public class GlockItem extends Item {
 		if (state.reloading() || now - state.lastShot() < CYCLE) {
 			return;
 		}
+		if (state.jammed()) {
+			// the slide is held open a crack on the stuck case: the trigger goes back dead
+			sound(level, player, ModRegistry.GLOCK_DRY, 0.6F);
+			Stoppage.tell(player);
+			return;
+		}
 		if (state.rounds() <= 0) {
 			// the striker is not set: the trigger goes back dead
 			sound(level, player, ModRegistry.GLOCK_DRY, 0.7F);
@@ -185,6 +197,12 @@ public class GlockItem extends Item {
 			de.rcm.ballistic.ai.SoldierEntity.flash(player); // a suppressor hides the flash too
 		}
 		de.rcm.ballistic.ai.Senses.noise(level, muzzle, de.rcm.ballistic.ai.Senses.shotRange(player), de.rcm.ballistic.ai.Senses.GUNSHOT, player);
+		// fired fast, the slide is still hot and fouled: now and then the case is caught (a stovepipe)
+		if (left > 0 && Stoppage.roll(level, player, STOPPAGE, since < 6 ? 6 : 0)) {
+			setState(stack, state(stack).withJam(true));
+			sound(level, player, ModRegistry.GLOCK_DRY, 0.7F);
+			Stoppage.tell(player);
+		}
 	}
 
 	// ------------------------------------------------------------------ magazines
@@ -197,6 +215,12 @@ public class GlockItem extends Item {
 		}
 		GunState state = state(stack);
 		if (state.reloading()) {
+			return;
+		}
+		if (state.jammed()) {
+			// a stoppage first: tap, rack, the case out
+			player.stopUsingItem();
+			setState(stack, state.startReload(player.level().getGameTime(), GunState.CLEAR, state.ammo()));
 			return;
 		}
 		int current = state.hasMag() ? state.ammo() : GlockMagazineItem.STANDARD;
@@ -248,6 +272,18 @@ public class GlockItem extends Item {
 			return;
 		}
 		long t = level.getGameTime() - state.reloadStart();
+		if (state.reloadKind() == GunState.CLEAR) {
+			if (t == CLEAR_TAP) {
+				sound(level, player, ModRegistry.GLOCK_MAG_IN, 0.6F);
+			} else if (t == CLEAR_RACK) {
+				sound(level, player, ModRegistry.GLOCK_SLIDE_BACK, 0.9F);
+			} else if (t == CLEAR_RELEASE) {
+				sound(level, player, ModRegistry.GLOCK_SLIDE_FORWARD, 1.0F);
+			} else if (t >= CLEAR_LENGTH) {
+				setState(stack, state.cancelReload().withJam(false));
+			}
+			return;
+		}
 		boolean empty = state.reloadKind() == GunState.EMPTY;
 		int variant = empty ? GunState.CLEAN : state.reloadVariant();
 		int in = T_IN + delay(variant);

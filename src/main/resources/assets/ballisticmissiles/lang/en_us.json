@@ -1,4 +1,13 @@
 {
+	"options.ballisticmissiles.patch_notes_show": "Show what's new",
+	"options.ballisticmissiles.patch_notes.tooltip": "After an update, a window at start-up shows what changed since the version you last played.",
+	"options.ballisticmissiles.patch_notes": "What's new after updates",
+	"patch_notes.ballisticmissiles.hint": "Enter to continue · any time in the settings under \"Show what's new\"",
+	"patch_notes.ballisticmissiles.continue": "Continue",
+	"patch_notes.ballisticmissiles.version": "Installed: version %s",
+	"patch_notes.ballisticmissiles.badge": "NEW",
+	"patch_notes.ballisticmissiles.title": "What's new",
+	"message.ballisticmissiles.stoppage": "Stoppage! Case stuck – R to clear",
 	"itemGroup.ballisticmissiles.vehicles": "Ballistic Missiles: Drones & Jets",
 	"itemGroup.ballisticmissiles.weapons": "Ballistic Missiles: Weapons",
 	"itemGroup.ballisticmissiles.main": "Ballistic Missiles: Missiles & Bombs",

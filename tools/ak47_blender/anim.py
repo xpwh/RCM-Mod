@@ -733,6 +733,61 @@ def clip_draw():
     return 12
 
 
+CLEAR_TAP, CLEAR_RACK, CLEAR_RELEASE, CLEAR_LENGTH = 6, 15, 17, 28  # AkItem.CLEAR_*
+
+
+def clip_clear_jam():
+    """Tap, rack: a stovepipe cleared the drilled way. The rifle is brought in and rolled a little to show the port,
+    the support hand drops under the magazine and slaps it home from below (a jolt through the rifle), comes back to
+    the handguard; the rifle rolls further over, the right hand reaches across, grabs the charging handle and rips it
+    back to the stop - the stuck case spins out - lets it fly; the carrier slams home and the rifle comes back up."""
+    gun_keys({
+        0: (0, 0, 0, 0, 0, 0, "B"),
+        3: (-0.03, 0.06, -0.03, 8, 4, 10, "B"),
+        CLEAR_TAP - 0.6: (-0.04, 0.08, -0.04, 10, 5, 14, "IN"),
+        CLEAR_TAP: (-0.041, 0.096, -0.04, 9, 9, 14, "OUT"),          # the slap from below lifts the rifle
+        8: (-0.04, 0.086, -0.045, 14, 6, 20, "B"),
+        11.5: (-0.04, 0.17, -0.1, 21, 6, 44, "B"),                   # rolled over for the handle
+        CLEAR_RACK: (-0.045, 0.18, -0.11, 22, 7, 46, "IN"),
+        CLEAR_RACK + 1.6: (-0.05, 0.186, -0.095, 24, 8, 46, "B"),    # the hard pull drags the rifle back
+        CLEAR_RELEASE: (-0.047, 0.176, -0.122, 21, 3, 45, "OUT"),    # let fly: the carrier slams home
+        19.5: (-0.045, 0.17, -0.11, 19, 5, 42, "B"),
+        23: (-0.03, 0.09, -0.06, 8, 3, 22, "B"),
+        26: (0.004, -0.006, 0.003, -1.2, -0.8, -1.5, "B"),
+        CLEAR_LENGTH: (0, 0, 0, 0, 0, 0, "B"),
+    })
+    mag_keys(mag, {0: (*SEATED, "C"), CLEAR_TAP - 0.3: (*SEATED, "QUAD"), CLEAR_TAP: (0, 0.0015, 0, 0, 0, 0, "OUT"), CLEAR_TAP + 1: (*SEATED, "C")})
+    for p, v in (("magVis", 1), ("mag2Vis", 0), ("magFresh", 0)):
+        prop_keys(p, {0: v})
+    # the support hand: down under the magazine, the slap, back to the handguard for the rack
+    free_keys("L", {
+        0: (HANDGUARD, "B"),
+        3.5: ((-0.03, -0.13, -0.25), "B"),
+        CLEAR_TAP - 0.6: ((-0.004, -0.255, -0.24), "IN"),
+        CLEAR_TAP: ((-0.004, -0.205, -0.24), "OUT"),
+        CLEAR_TAP + 1.5: ((-0.012, -0.235, -0.25), "B"),
+        10: ((-0.03, -0.06, -0.3), "B"),
+        12.5: (HANDGUARD, "B"),
+    })
+    # the right hand: over the top to the handle, rips it back, lets go, back to the grip
+    free_keys("R", {
+        0: (GRIP, "B"),
+        9: (GRIP, "B"),
+        12: ((0.07, 0.11, 0.02), "B"),
+        14: (add(HANDLE, (0.012, 0.03, 0.006)), "B"),
+        CLEAR_RELEASE: (add(HANDLE, (0.02, 0.01, BOLT_TRAVEL + 0.01)), "B"),
+        19: (add(HANDLE, (0.04, 0.025, BOLT_TRAVEL + 0.01)), "B"),
+        22: ((0.06, 0.02, 0.1), "B"),
+        25: (GRIP, "B"),
+    })
+    influence_keys(C_R_HANDLE, {0: (0, "C"), 14: (0, "QUAD"), 14.8: (1, "C"), CLEAR_RACK + 1.9: (1, "QUADO"), CLEAR_RELEASE + 0.3: (0, "C")})
+    bolt_keys({0: (0, "C"), CLEAR_RACK: (0, "IN"), CLEAR_RACK + 1.6: (1, "C"), CLEAR_RACK + 1.9: (1, "QUAD"), CLEAR_RELEASE + 0.7: (0, "QUADO"),
+               CLEAR_RELEASE + 1.1: (0.035, "QUAD"), CLEAR_RELEASE + 1.6: (0, "C")})
+    curve_keys("twistR", {0: 0, 10: 0, 14: 60, 18: 55, 24: 0})
+    curve_keys("look", {0: 0, 4: 2, 8: 4, 13: 5, 18: 2, 24: 0})
+    return CLEAR_LENGTH
+
+
 CLIPS = {
     "reload_tactical": clip_reload_tactical,
     "reload_tactical_fumble": clip_reload_tactical_fumble,
@@ -743,6 +798,7 @@ CLIPS = {
     "inspect": clip_inspect,
     "dry": clip_dry,
     "draw": clip_draw,
+    "clear_jam": clip_clear_jam,
 }
 
 
@@ -767,7 +823,7 @@ def sample():
     return out
 
 
-TAKES = ("reload_tactical", "reload_tactical_fumble", "reload_tactical_drop", "reload_empty", "reload_nomag")
+TAKES = ("reload_tactical", "reload_tactical_fumble", "reload_tactical_drop", "reload_empty", "reload_nomag", "clear_jam")
 
 
 def jobs():
@@ -881,6 +937,11 @@ if __name__ == "__main__":
         samples = [s[:-1] + h for s, h in zip(samples, head)]
         blob.append((name, length, samples))
         print(name, length, "ticks", len(samples), "samples", flush=True)
+        blend = [x.split("=", 1)[1] for x in sys.argv if x.startswith("--save-blend=")]
+        if blend and ONLY:
+            # the scene as keyed, to open in Blender and scrub through (the timeline runs FPT frames a tick)
+            scene.frame_start, scene.frame_end = 0, length * FPT
+            bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(blend[0]))
         if PREVIEW:
             from PIL import Image  # noqa: E402 (system Python's PIL, see the venv)
             frames = []

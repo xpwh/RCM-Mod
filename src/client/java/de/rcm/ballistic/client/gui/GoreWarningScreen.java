@@ -189,7 +189,10 @@ public final class GoreWarningScreen extends Screen {
 			if (!shown && mc.screen instanceof TitleScreen title) {
 				shown = true;
 				// then the note on how updates come, unless that was turned off too
-				Screen after = ModConfig.updateNotice ? new UpdateNoticeScreen(title) : title;
+				// after an update: what is new (last, right before the title screen)
+				Screen notes = PatchNotesScreen.afterUpdate(title);
+				Screen beforeTitle = notes != null ? notes : title;
+				Screen after = ModConfig.updateNotice ? new UpdateNoticeScreen(beforeTitle) : beforeTitle;
 				if (ModConfig.goreWarning) {
 					mc.setScreen(new GoreWarningScreen(after));
 				} else if (after != title) {

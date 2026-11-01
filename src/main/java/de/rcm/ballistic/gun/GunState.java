@@ -41,6 +41,10 @@ public record GunState(int rounds, int ammo, boolean hasMag, int mode, long last
 	public static final int SAFE = 2;
 	public static final int TACTICAL = 1;
 	public static final int EMPTY = 2;
+	/** Not a magazine change: clearing a stoppage (tap the magazine, rack the action, the stuck case out). */
+	public static final int CLEAR = 3;
+	/** A stoppage: the spent case caught in the ejection port (a stovepipe) - kept in a bit of {@code mode} above the fire mode. */
+	private static final int JAM = 16;
 
 	/** How a (tactical) reload goes: cleanly, a fumble (the magazine catches the well's lip and has to be put in again), or the
 	 * fresh magazine slipping out of the fingers - kept in the bits of {@code reloadAmmo} above the ammunition type. */
@@ -54,7 +58,7 @@ public record GunState(int rounds, int ammo, boolean hasMag, int mode, long last
 		Codec.INT.fieldOf("rounds").forGetter(GunState::rounds),
 		Codec.INT.fieldOf("ammo").forGetter(GunState::ammo),
 		Codec.BOOL.fieldOf("mag").forGetter(GunState::hasMag),
-		Codec.INT.fieldOf("mode").forGetter(GunState::mode),
+		Codec.INT.fieldOf("mode").forGetter(GunState::rawMode),
 		Codec.LONG.optionalFieldOf("last_shot", -100L).forGetter(GunState::lastShot),
 		Codec.LONG.optionalFieldOf("reload_start", -1L).forGetter(GunState::reloadStart),
 		Codec.INT.optionalFieldOf("reload_kind", 0).forGetter(GunState::reloadKind),
@@ -65,13 +69,34 @@ public record GunState(int rounds, int ammo, boolean hasMag, int mode, long last
 		ByteBufCodecs.VAR_INT, GunState::rounds,
 		ByteBufCodecs.VAR_INT, GunState::ammo,
 		ByteBufCodecs.BOOL, GunState::hasMag,
-		ByteBufCodecs.VAR_INT, GunState::mode,
+		ByteBufCodecs.VAR_INT, GunState::rawMode,
 		ByteBufCodecs.VAR_LONG, GunState::lastShot,
 		ByteBufCodecs.VAR_LONG, GunState::reloadStart,
 		ByteBufCodecs.VAR_INT, GunState::reloadKind,
 		ByteBufCodecs.VAR_INT, GunState::rawReloadAmmo,
 		GunState::new
 	);
+
+	/** The fire mode ({@link #AUTO}, {@link #SEMI}, {@link #SAFE}). */
+	@Override
+	public int mode() {
+		return this.mode & 0xF;
+	}
+
+	/** The mode as stored, with the stoppage bit: for the codecs. */
+	public int rawMode() {
+		return this.mode;
+	}
+
+	/** A spent case is stuck in the port: the trigger only clicks until it is cleared. */
+	public boolean jammed() {
+		return (this.mode & JAM) != 0;
+	}
+
+	public GunState withJam(boolean jam) {
+		return new GunState(this.rounds, this.ammo, this.hasMag, jam ? this.mode | JAM : this.mode & ~JAM, this.lastShot, this.reloadStart, this.reloadKind,
+			this.reloadAmmo);
+	}
 
 	/** The kind of magazine going in (the low bits; above them how the reload goes, see {@link #reloadVariant()}). */
 	@Override
@@ -102,7 +127,7 @@ public record GunState(int rounds, int ammo, boolean hasMag, int mode, long last
 	}
 
 	public GunState withMode(int mode) {
-		return new GunState(this.rounds, this.ammo, this.hasMag, mode, this.lastShot, this.reloadStart, this.reloadKind, this.reloadAmmo);
+		return new GunState(this.rounds, this.ammo, this.hasMag, this.mode & ~0xF | mode, this.lastShot, this.reloadStart, this.reloadKind, this.reloadAmmo);
 	}
 
 	public GunState startReload(long time, int kind, int ammo) {

@@ -27,6 +27,7 @@ public class SoldierRenderer extends HumanoidMobRenderer<SoldierEntity, SoldierR
 		public int captive;
 		/** Seconds since he gave up (or was tied). */
 		public float since;
+		public int id;
 	}
 
 	@Override
@@ -39,6 +40,7 @@ public class SoldierRenderer extends HumanoidMobRenderer<SoldierEntity, SoldierR
 		super.extractRenderState(soldier, state, partialTick);
 		state.captive = soldier.captive();
 		state.since = (soldier.level().getGameTime() - soldier.captiveSince() + partialTick) / 20.0F;
+		state.id = soldier.getId();
 	}
 
 	@Override
@@ -80,6 +82,9 @@ public class SoldierRenderer extends HumanoidMobRenderer<SoldierEntity, SoldierR
 		public void setupAnim(State s) {
 			super.setupAnim(s);
 			if (s.captive == SoldierEntity.FREE) {
+				// reloading: the same clip as a player's, read for his arms and head
+				de.rcm.ballistic.client.gun.ThirdPersonReload.pose(this, s.id,
+					net.minecraft.client.Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false));
 				return;
 			}
 			float t = s.since;

@@ -81,6 +81,9 @@ public final class AkClips {
 	 * old magazine to let fall or, when there was none, straight to the pouch.
 	 */
 	static Clip reload(GunState state, float r) {
+		if (state.reloadKind() == GunState.CLEAR) {
+			return take(CLIPS, "clear_jam", state.reloadStart());
+		}
 		if (state.reloadKind() != GunState.EMPTY) {
 			// under pressure it can go wrong: fumbled at the well, or the fresh magazine dropped
 			return take(CLIPS, switch (state.reloadVariant()) {

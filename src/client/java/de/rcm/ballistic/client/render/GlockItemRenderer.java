@@ -75,8 +75,8 @@ public final class GlockItemRenderer implements SpecialModelRenderer<GunAttachme
 	 * none) with the shot's seed.
 	 */
 	public record Pose(float slide, boolean magIn, int kind, Matrix4f mag, int dropKind, Matrix4f drop, float eject, boolean chambered, float flash,
-		long seed) {
-		public static final Pose REST = new Pose(0.0F, true, GlockMagazineItem.STANDARD, null, 0, null, -1.0F, true, -1.0F, 0L);
+		long seed, boolean stovepipe) {
+		public static final Pose REST = new Pose(0.0F, true, GlockMagazineItem.STANDARD, null, 0, null, -1.0F, true, -1.0F, 0L, false);
 	}
 
 	public static void register() {
@@ -123,6 +123,15 @@ public final class GlockItemRenderer implements SpecialModelRenderer<GunAttachme
 		poseStack.pushPose();
 		poseStack.translate(0.0F, 0.0F, back);
 		collector.submitCustomGeometry(poseStack, TYPE, (pp, consumer) -> SLIDE.emit(pp, consumer, light));
+		if (p.stovepipe()) {
+			// a stovepipe: the spent case caught by the slide, standing up out of the port, mouth up, leaning out
+			poseStack.pushPose();
+			poseStack.translate(W * 0.4F, BORE_Y + 0.004F, PORT_Z + 0.004F);
+			poseStack.mulPose(Axis.ZP.rotationDegrees(-28.0F));
+			poseStack.mulPose(Axis.XP.rotationDegrees(-78.0F));
+			collector.submitCustomGeometry(poseStack, TYPE, (pp, consumer) -> CASE.emit(pp, consumer, light));
+			poseStack.popPose();
+		}
 		poseStack.popPose();
 		// the magazine: seated, or where the hand has it (third person only once it is nearly in: there is no hand to carry it)
 		if (p.magIn()) {

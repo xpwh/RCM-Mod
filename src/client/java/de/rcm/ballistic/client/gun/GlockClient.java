@@ -127,7 +127,7 @@ public final class GlockClient {
 			me ? now - busyTick : 0.0F, me ? now - equipTick : 100.0F, me ? GlockMotion.smooth(Mth.lerp(partialTick, prevSprint, sprint)) : 0.0F,
 			me ? player.walkAnimation.position(partialTick) : 0.0F, me ? Mth.lerp(partialTick, prevWalk, walk) : 0.0F,
 			me ? Mth.lerp(partialTick, prevStrafe, strafe) : 0.0F, me ? now - landTick : 100.0F, landHard, me ? Fatigue.level() : 0.0F,
-			me ? Fatigue.breathPhase(partialTick) : 0.0F, me ? Injuries.get(player).arm() : 0, s.reloadKind() == GunState.EMPTY ? 0 : s.reloadVariant(), s.reloadStart());
+			me ? Fatigue.breathPhase(partialTick) : 0.0F, me ? Injuries.get(player).arm() : 0, s.reloadKind() == GunState.CLEAR ? GlockClips.CLEARING : s.reloadKind() == GunState.EMPTY ? 0 : s.reloadVariant(), s.reloadStart());
 	}
 
 	/** Everything that moves on this gun right now, for its model. */
@@ -145,10 +145,16 @@ public final class GlockClient {
 		int kind = r >= 0.0F ? s.reloadAmmo() : s.ammo();
 		float shot = f.shot();
 		float eject = shot - 0.3F;
+		// a stoppage: the case stuck upright in the port until the rack throws it out
+		boolean clearing = s.reloading() && s.reloadKind() == GunState.CLEAR;
+		boolean stovepipe = s.jammed() && !(clearing && r >= GlockItem.CLEAR_RELEASE);
+		if (clearing && r >= GlockItem.CLEAR_RELEASE) {
+			eject = r - GlockItem.CLEAR_RELEASE;
+		}
 		boolean chambered = s.rounds() > 0 && !(r >= 0.0F && f.empty() && r < GlockItem.T_RACK_FORWARD);
 		return new GlockItemRenderer.Pose(GlockMotion.slide(f), magIn, kind, GlockMotion.newMag(f), f.oldKind(), GlockMotion.oldMag(f),
 			eject >= 0.0F && eject < 6.0F ? eject : -1.0F, chambered, shot >= 0.0F && shot < 1.2F ? shot : -1.0F,
-			local ? shotSeed : (long) s.lastShot());
+			local ? shotSeed : (long) s.lastShot(), stovepipe);
 	}
 
 	// ------------------------------------------------------------------ input

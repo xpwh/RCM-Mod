@@ -21,7 +21,13 @@ final class GlockClips {
 	}
 
 	/** @param seed picks the take (the reload's start tick) */
+	/** The variant the Glock's frame uses for clearing a stoppage (GunState.CLEAR) rather than a reload. */
+	static final int CLEARING = 3;
+
 	static AkClips.Clip reload(boolean empty, int newKind, int variant, long seed) {
+		if (variant == CLEARING) {
+			return AkClips.take(CLIPS, "clear_jam", seed);
+		}
 		String name = "reload_" + (empty ? "empty" : "tac") + "_" + (newKind == GlockMagazineItem.EXTENDED ? "ext" : "std");
 		if (!empty && variant == de.rcm.ballistic.gun.GunState.FUMBLE) {
 			name += "_fumble";

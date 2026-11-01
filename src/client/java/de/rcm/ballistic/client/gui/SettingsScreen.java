@@ -293,6 +293,9 @@ public class SettingsScreen extends Screen {
 		this.list.row(toggle("smooth_look", ModConfig.smoothLook, "smooth_look", v -> ModConfig.smoothLook = v),
 			toggle("smooth_move", ModConfig.smoothMove, "smooth_move", v -> ModConfig.smoothMove = v));
 		this.list.row(toggle("first_person_body", ModConfig.firstPersonBody, "first_person_body", v -> ModConfig.firstPersonBody = v));
+		this.list.row(toggle("patch_notes", ModConfig.patchNotes, "patch_notes", v -> ModConfig.patchNotes = v),
+			Button.builder(Component.translatable("options.ballisticmissiles.patch_notes_show"),
+				b -> this.minecraft.setScreen(PatchNotesScreen.latest(this))).build());
 		this.list.header("options.ballisticmissiles.section.world", 0xFFC0C0C0);
 		this.list.row(new IntSlider(0, 100, "options.ballisticmissiles.smoke_amount", ModConfig.smokeAmount, v -> ModConfig.smokeAmount = v),
 			toggle("bullet_holes", ModConfig.bulletHoles, null, v -> ModConfig.bulletHoles = v));

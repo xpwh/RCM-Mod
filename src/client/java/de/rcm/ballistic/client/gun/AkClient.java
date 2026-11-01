@@ -369,6 +369,24 @@ public final class AkClient {
 		return cam.add(right.x * v.x + up.x * v.y - fwd.x * v.z, right.y * v.x + up.y * v.y - fwd.y * v.z, right.z * v.x + up.z * v.y - fwd.z * v.z);
 	}
 
+	/** The stoppage cleared (the rack let go): the stuck case spins out of the port, once per clearing. */
+	private static long clearedAt = Long.MIN_VALUE;
+
+	public static void stuckCaseOut(long reloadStart) {
+		Minecraft mc = Minecraft.getInstance();
+		if (reloadStart == clearedAt || mc.player == null) {
+			return;
+		}
+		clearedAt = reloadStart;
+		Vec3 look = mc.player.getLookAngle();
+		Vec3 right = look.cross(new Vec3(0, 1, 0));
+		right = right.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : right.normalize();
+		Vec3 port = viewMuzzleInWorld(mc).subtract(look.scale(0.55)).add(right.scale(0.05));
+		// thrown harder than a normal ejection: the carrier slams forward off the hand
+		Vec3 v = right.scale(0.3 + ClientEffects.rand() * 0.08).add(0, 0.2 + ClientEffects.rand() * 0.06, 0);
+		ShellCasings.eject(port, v.add(mc.player.getDeltaMovement()));
+	}
+
 	/** Brass and powder smoke. */
 	private static void effects(Entity player, Vec3 muzzle, Vec3 look, boolean own) {
 		Minecraft mc = Minecraft.getInstance();

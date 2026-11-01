@@ -1,4 +1,13 @@
 {
+	"options.ballisticmissiles.patch_notes_show": "Neuerungen anzeigen",
+	"options.ballisticmissiles.patch_notes.tooltip": "Nach einem Update zeigt ein Fenster beim Start, was sich seit deiner letzten Version geändert hat.",
+	"options.ballisticmissiles.patch_notes": "Neuerungen nach Updates",
+	"patch_notes.ballisticmissiles.hint": "Enter zum Fortfahren · jederzeit in den Einstellungen unter „Neuerungen anzeigen“",
+	"patch_notes.ballisticmissiles.continue": "Weiter",
+	"patch_notes.ballisticmissiles.version": "Installiert: Version %s",
+	"patch_notes.ballisticmissiles.badge": "NEU",
+	"patch_notes.ballisticmissiles.title": "Was ist neu",
+	"message.ballisticmissiles.stoppage": "Ladehemmung! Hülse klemmt – R zum Beheben",
 	"itemGroup.ballisticmissiles.vehicles": "Ballistic Missiles: Drohnen & Jets",
 	"itemGroup.ballisticmissiles.weapons": "Ballistic Missiles: Waffen",
 	"itemGroup.ballisticmissiles.main": "Ballistic Missiles: Raketen & Bomben",

@@ -656,6 +656,53 @@ def clip_idle():
     return 50
 
 
+CLEAR_TAP, CLEAR_RACK, CLEAR_RELEASE, CLEAR_LENGTH = 5, 11, 13, 22  # GlockItem.CLEAR_*
+
+
+def clip_clear_jam():
+    """Tap, rack: a stovepipe cleared. The pistol canted in, the support hand slaps the magazine's base home from
+    below (a jolt), comes over the top, grips the rear serrations and rips the slide back - the stuck case flies -
+    lets it go; the slide slams home and the pistol is pushed back out on target."""
+    kind = "std"
+    gun_keys({
+        0: (0, 0, 0, 0, 0, 0, "B"),
+        3: (-0.03, 0.07, 0.015, -16, 8, 6, "B"),
+        CLEAR_TAP - 0.5: (-0.031, 0.072, 0.015, -17, 8.5, 6, "IN"),
+        CLEAR_TAP: (-0.03, 0.086, 0.012, -14, 12.5, 6, "OUT"),       # the slap lifts it
+        7: (-0.02, 0.09, 0.0, -6, 8, 3, "B"),
+        9: (-0.012, 0.098, -0.012, -4, 7, 2, "IN"),                   # upright, for the hand over the top
+        CLEAR_RACK: (-0.008, 0.094, -0.04, -2, 4.5, 1, "B"),          # pushed out as the hand rips back
+        CLEAR_RELEASE - 0.4: (-0.008, 0.095, -0.038, -2, 5, 1, "QUADO"),
+        CLEAR_RELEASE + 0.3: (-0.006, 0.09, -0.03, -1, 2, 0.5, "OUT"),  # the slide slams home
+        16: (-0.004, 0.04, -0.012, 0, 2, 0, "B"),
+        CLEAR_LENGTH - 2: (0.003, -0.005, 0.002, 0.8, -0.6, -0.8, "B"),
+        CLEAR_LENGTH: (0, 0, 0, 0, 0, 0, "B"),
+    })
+    mag_keys(OLD, {0: (*SEATED, "C"), CLEAR_TAP - 0.3: (*SEATED, "QUAD"), CLEAR_TAP: (*(MAG_DOWN * -0.0015), 0, 0, 0, "OUT"), CLEAR_TAP + 1: (*SEATED, "C")})
+    prop_keys("oldVis", {0: 1})
+    prop_keys("newVis", {0: 0})
+    prop_keys("newIn", {0: 0})
+    base = SEAT + MAG_DOWN * LENGTH[kind]
+    free_keys("L", {
+        0: (SUPPORT, "B"),
+        2.5: ((-0.05, -0.1, 0.0), "B"),
+        CLEAR_TAP - 0.5: (tuple(base + MAG_DOWN * 0.035 + Vector((-0.004, 0, 0))), "IN"),
+        CLEAR_TAP: (tuple(base + MAG_DOWN * 0.006 + Vector((-0.004, 0, 0))), "OUT"),
+        6.5: ((-0.06, -0.05, 0.02), "B"),
+        8.5: ((-0.06, 0.06, 0.03), "B"),
+        CLEAR_RELEASE + 1.0: (tuple(OVERHAND + Vector((-0.04, 0.04, 0.07))), "B"),
+        16.5: ((-0.06, -0.03, 0.02), "B"),
+        CLEAR_LENGTH - 2: (SUPPORT, "B"),
+    })
+    influence_keys(C_L_RACK, {0: (0, "C"), 8.6: (0, "QUAD"), 9.6: (1, "C"), CLEAR_RELEASE - 0.6: (1, "QUADO"), CLEAR_RELEASE + 0.1: (0, "C")})
+    free_keys("R", {0: (GRIP, "C")})
+    # the slide sits a little open on the stuck case until it is ripped back to the stop and let go
+    slide_keys({0: (0.25, "C"), 9.4: (0.25, "SINE"), CLEAR_RACK: (1.12, "C"), CLEAR_RELEASE - 0.5: (1.12, "QUAD"), CLEAR_RELEASE: (0.0, "C")})
+    curve_keys("twistL", {0: 0, 8: 0, 9.6: -70, CLEAR_RELEASE + 0.5: -60, 17: 0})
+    curve_keys("look", {0: 0, 3: 3, 6: 4, 11: 3, 16: 0})
+    return CLEAR_LENGTH
+
+
 CLIPS = {
     "reload_tac_std": lambda: reload("std", False),
     "reload_tac_ext": lambda: reload("ext", False),
@@ -669,6 +716,7 @@ CLIPS = {
     "dry": clip_dry,
     "draw": clip_draw,
     "idle": clip_idle,
+    "clear_jam": clip_clear_jam,
 }
 
 
@@ -697,7 +745,7 @@ def jobs():
     """Every clip, and the takes of the reloads: (name, build, take)."""
     for name, build in CLIPS.items():
         yield name, build, 0
-        if name.startswith("reload_"):
+        if name.startswith("reload_") or name == "clear_jam":
             for n in (1, 2):
                 yield f"{name}@{n}", build, n
 
@@ -823,6 +871,11 @@ if __name__ == "__main__":
         samples = [s[:-1] + h for s, h in zip(samples, head)]
         blob.append((name, length, samples))
         print(name, length, "ticks", len(samples), "samples", flush=True)
+        blend = [x.split("=", 1)[1] for x in sys.argv if x.startswith("--save-blend=")]
+        if blend and ONLY:
+            # the scene as keyed, to open in Blender and scrub through (the timeline runs FPT frames a tick)
+            scene.frame_start, scene.frame_end = 0, length * FPT
+            bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(blend[0]))
         if PREVIEW:
             from PIL import Image  # noqa: E402
             frames = []

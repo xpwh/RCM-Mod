@@ -1,8 +1,27 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.35.0** (31.10.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.38.0** (01.11.2026).
 
 ---
+
+### 12.38.0 – Ladehemmungen, KI lädt realistisch nach, Neuerungen im Spiel
+- Ladehemmungen bei AK und Glock: Ab und zu bleibt die leere Hülse in der Auswurföffnung stecken. Häufiger bei langen Feuerstößen, Regen oder Wasser und mit Schalldämpfer.
+- Solange die Waffe klemmt, klickt der Abzug nur. Die Hülse steht sichtbar aus der Auswurföffnung.
+- **R** behebt die Hemmung mit einer in Blender gemachten Animation (je 3 Varianten): Magazin von unten festschlagen, Hebel bzw. Schlitten kräftig durchziehen, die Hülse fliegt heraus.
+- KI-Soldaten laden mit denselben Blender-Animationen nach wie du, inklusive Fummeln und fallengelassenem Magazin unter Beschuss.
+- Nach einem Update zeigt ein Fenster beim Start, was neu ist. Abschaltbar und jederzeit über „Neuerungen anzeigen“ in den Einstellungen.
+
+### 12.37.1 – AK-Visier korrigiert
+- Die Kimme sitzt wieder am hinteren Ende des Visierblatts, das Auge 22 cm dahinter.
+- Hand und Waffe werden erst 5 mm statt 5 cm vor dem Auge abgeschnitten: Der Verschlussdeckel bricht beim Zielen nicht mehr als graue Fläche auf.
+
+### 12.37.0 – Matte Waffen, sortiertes Kreativ-Inventar
+- AK und Glock sind matt statt glänzend, das Holz wirkt geölt statt lackiert.
+- Das Kreativ-Inventar ist in 7 sortierte Tabs aufgeteilt, mit neuen Tabs „Waffen“ und „Drohnen & Jets“.
+
+### 12.36.0 – 18+-Warnung neu gestaltet
+- Symbol-Kacheln zeigen, was dich erwartet.
+- Drei Stufen zur Wahl: Aus, Nur Blut, Alles. Für „Alles“ muss der Knopf gedrückt gehalten werden.
 
 ### 12.35.0 – Tsar Bomba: Riesenpilz, Stille, Hitzeblitz, EMP
 - Pilzwolke im echten Maßstab: rund 560 Blöcke hoch, Hut rund 175 Blöcke breit, mit Eiskappe (Pileus) und Kondensationsringen am Stiel.
