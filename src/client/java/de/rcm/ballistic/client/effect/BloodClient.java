@@ -79,6 +79,7 @@ public final class BloodClient {
 		ClientPlayNetworking.registerGlobalReceiver(BloodPayload.TYPE, (payload, context) -> receive(payload));
 		ClientTickEvents.END_CLIENT_TICK.register(BloodClient::tick);
 		WorldRenderEvents.BEFORE_ENTITIES.register(BloodClient::render);
+		BloodPools.init();
 	}
 
 	private static void receive(BloodPayload p) {
@@ -157,7 +158,21 @@ public final class BloodClient {
 				BlockHitResult hit = mc.level.clip(new ClipContext(at, at.add(0, -3.0, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
 					CollisionContext.empty()));
 				if (hit.getType() == HitResult.Type.BLOCK) {
-					stain(mc, hit.getLocation(), hit.getDirection(), Mth.clamp(0.5F + n * 0.06F, 0.6F, 2.0F), Vec3.ZERO, 160, POOL_STAIN);
+					// what runs out lies as a liquid: it spreads, runs on, drips over edges (BloodPools)
+					BloodPools.add(mc.level, hit.getLocation(), n * 0.075F);
+				}
+			}
+			case Blood.MIST -> {
+				// a fine red mist out of the exit wound, hanging a moment and settling; the finest drops with it
+				double heavy = dir.length();
+				Vec3 d = heavy < 1.0E-4 ? new Vec3(0, 0, 1) : dir.scale(1.0 / heavy);
+				for (int i = 0; i < Math.max(3, n / 3); i++) {
+					Vec3 v = d.scale((0.05 + RANDOM.nextDouble() * 0.12) * heavy).add(gauss(0.015));
+					SmokeField.puff(at.x, at.y, at.z, v.x, v.y, v.z, 16 + RANDOM.nextInt(14), 0.06F, (float) (0.22 + 0.3 * heavy * RANDOM.nextDouble()),
+						RANDOM.nextBoolean() ? 0x6E0B08 : 0x8A1610, 0.32F, 0.0F, -0.0015F);
+				}
+				for (int i = 0; i < n; i++) {
+					spawn(at, d.scale((0.5 + RANDOM.nextDouble() * 0.6) * heavy).add(gauss(0.06)), 0.012F + RANDOM.nextFloat() * 0.012F);
 				}
 			}
 			default -> {
@@ -281,6 +296,10 @@ public final class BloodClient {
 					// big drops make big splashes; the faster, the wider it spreads
 					float speed = (float) Math.sqrt(d.vx * d.vx + d.vy * d.vy + d.vz * d.vz);
 					stain(mc, hit.getLocation(), hit.getDirection(), d.size * (2.2F + speed * 3.5F), new Vec3(d.vx, d.vy, d.vz), 0, SPLAT);
+					if (hit.getDirection() == Direction.UP) {
+						// and what lands on the ground collects there
+						BloodPools.add(mc.level, hit.getLocation(), d.size * 0.9F);
+					}
 				}
 				DROPS.remove(i);
 				continue;

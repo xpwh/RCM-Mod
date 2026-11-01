@@ -292,20 +292,43 @@ public class BulletEntity extends Entity {
 		if (!head && h > 0.3 && h < 0.7 && living.getBbHeight() > 0.6 && r.nextFloat() < (this.pellet ? (range < 5 ? 0.22F : 0.0F) : 0.14F)) {
 			kind = de.rcm.ballistic.injury.Blood.ENTRAILS;
 		}
-		de.rcm.ballistic.injury.Blood.wound(living, at, 0.2, this.pellet, head, kind);
-		if (!this.pellet) {
-			// out the other side: where the line leaves the body's box
-			AABB box = living.getBoundingBox().inflate(0.2);
-			Vec3 far = at.add(line.scale(box.getXsize() + box.getYsize() + box.getZsize()));
-			var out = box.clip(far, at);
-			if (out.isPresent() && out.get().distanceTo(at) > 0.25) {
-				de.rcm.ballistic.injury.Blood.wound(living, out.get(), 0.2, false, head, de.rcm.ballistic.injury.Blood.EXIT);
-				de.rcm.ballistic.injury.Blood.send((ServerLevel) living.level(), out.get(), line, head ? 30 : 18, de.rcm.ballistic.injury.Blood.SPRAY);
-				// and what it carried out with it, thrown onto whatever is behind
-				de.rcm.ballistic.injury.Blood.send((ServerLevel) living.level(), out.get(), line, head ? 34 : 24, de.rcm.ballistic.injury.Blood.EXIT_SPATTER);
-			}
-		}
+		float calibre = this.calibre();
+		de.rcm.ballistic.injury.Blood.wound(living, at, 0.2, this.pellet, head, kind, null, 0.78F + 0.22F * calibre);
+		this.exitWound(living, at, line, head, true);
 		de.rcm.ballistic.injury.Injuries.bleedCreature(living, kind == de.rcm.ballistic.injury.Blood.HOLE ? 200 : 500);
+	}
+
+	/** How heavy a round this is, for its wounds: a rifle's 1, a pistol's 0.7, a ball of buckshot about half. */
+	private float calibre() {
+		return this.pellet ? 0.55F : this.power;
+	}
+
+	/**
+	 * Where the round comes out the far side (if it does - a pistol round often stays in the body, a ball of
+	 * buckshot always): an exit wound far bigger than the entry for a rifle (the cavity it tears), only a little
+	 * for a pistol; what it carries out thrown onto whatever is behind, and a fine red mist hanging in the air.
+	 */
+	private void exitWound(LivingEntity living, Vec3 at, Vec3 line, boolean head, boolean mark) {
+		if (this.pellet || !de.rcm.ballistic.injury.Blood.bleeds(living)) {
+			return;
+		}
+		float calibre = this.calibre();
+		if (calibre < 0.9F && this.random.nextFloat() > (head ? 0.85F : 0.5F)) {
+			return; // it stayed in
+		}
+		AABB box = living.getBoundingBox().inflate(0.2);
+		Vec3 far = at.add(line.scale(box.getXsize() + box.getYsize() + box.getZsize()));
+		var out = box.clip(far, at);
+		if (out.isEmpty() || out.get().distanceTo(at) <= 0.25) {
+			return;
+		}
+		ServerLevel level = (ServerLevel) living.level();
+		if (mark) {
+			de.rcm.ballistic.injury.Blood.wound(living, out.get(), 0.2, false, head, de.rcm.ballistic.injury.Blood.EXIT, null, 0.62F + 0.48F * calibre * calibre);
+		}
+		de.rcm.ballistic.injury.Blood.send(level, out.get(), line, Math.round((head ? 30 : 18) * calibre), de.rcm.ballistic.injury.Blood.SPRAY);
+		de.rcm.ballistic.injury.Blood.send(level, out.get(), line, Math.round((head ? 34 : 24) * calibre * calibre), de.rcm.ballistic.injury.Blood.EXIT_SPATTER);
+		de.rcm.ballistic.injury.Blood.send(level, out.get(), line.scale(calibre * (head ? 1.3 : 1.0)), Math.round(6 + 10 * calibre), de.rcm.ballistic.injury.Blood.MIST);
 	}
 
 	private void hitEntity(ServerLevel level, Entity e, Vec3 from, Vec3 to) {
@@ -343,8 +366,10 @@ public class BulletEntity extends Entity {
 				if (armor.plate()) {
 					level.sendParticles(ModRegistry.SPARK, at.x, at.y, at.z, 6, 0.03, 0.03, 0.03, 0.2);
 					level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_METAL, SoundSource.PLAYERS, 1.1F, 1.15F + this.random.nextFloat() * 0.2F);
+					level.playSound(null, at.x, at.y, at.z, ModRegistry.GORE_VEST, SoundSource.PLAYERS, 0.6F, 0.8F + this.random.nextFloat() * 0.15F);
 				} else {
-					level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 0.9F, 0.55F + this.random.nextFloat() * 0.1F);
+					// a soft vest: a dull, padded blow
+					level.playSound(null, at.x, at.y, at.z, ModRegistry.GORE_VEST, SoundSource.PLAYERS, 1.0F, 0.9F + this.random.nextFloat() * 0.2F);
 				}
 				if (this.shooter instanceof net.minecraft.server.level.ServerPlayer shooterPlayer) {
 					shooterPlayer.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
@@ -389,7 +414,14 @@ public class BulletEntity extends Entity {
 				de.rcm.ballistic.injury.Blood.send(level, at, line, (head ? 22 : 12) * (living instanceof net.minecraft.world.entity.player.Player ? 1 : 2),
 					de.rcm.ballistic.injury.Blood.SPRAY);
 			}
+			if (living instanceof net.minecraft.world.entity.player.Player) {
+				// players have their own wound marks; the blood out of the far side is the same
+				this.exitWound(living, at, line, head, false);
+			}
 			level.playSound(null, at.x, at.y, at.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.0F, 0.9F + this.random.nextFloat() * 0.2F);
+			if (head && !this.pellet && de.rcm.ballistic.injury.Blood.bleeds(living)) {
+				level.playSound(null, at.x, at.y, at.z, ModRegistry.GORE_BONE, SoundSource.PLAYERS, 0.5F + 0.4F * this.calibre(), 1.0F + this.random.nextFloat() * 0.2F);
+			}
 		} else {
 			// an airframe or a vehicle: sparks off the metal
 			level.sendParticles(ModRegistry.SPARK, at.x, at.y, at.z, 8, 0.05, 0.05, 0.05, 0.25);

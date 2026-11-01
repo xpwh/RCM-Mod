@@ -1012,15 +1012,27 @@
 		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
 		"sounds": [
 			{
-				"name": "minecraft:damage/hit1",
+				"name": "ballisticmissiles:gore/hit1",
 				"attenuation_distance": 24
 			},
 			{
-				"name": "minecraft:damage/hit2",
+				"name": "ballisticmissiles:gore/hit2",
 				"attenuation_distance": 24
 			},
 			{
-				"name": "minecraft:damage/hit3",
+				"name": "ballisticmissiles:gore/hit3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/hit4",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/hit5",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/hit6",
 				"attenuation_distance": 24
 			}
 		]
@@ -2301,6 +2313,208 @@
 			{
 				"name": "ballisticmissiles:nether/ash_storm",
 				"stream": true
+			}
+		]
+	},
+	"gore.bone": {
+		"subtitle": "subtitles.ballisticmissiles.gore_bone",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/bone1",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone2",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone3",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone4",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone5",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone6",
+				"attenuation_distance": 20
+			}
+		]
+	},
+	"gore.vest": {
+		"subtitle": "subtitles.ballisticmissiles.gore_vest",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/vest1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/vest2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/vest3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/vest4",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"gore.pain": {
+		"subtitle": "subtitles.ballisticmissiles.gore_pain",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/pain1",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain2",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain3",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain4",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain5",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain6",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain7",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain8",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain9",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain10",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain11",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain12",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain13",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain14",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain15",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain16",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain17",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain18",
+				"attenuation_distance": 20
+			}
+		]
+	},
+	"gore.death": {
+		"subtitle": "subtitles.ballisticmissiles.gore_death",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/death1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death4",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death5",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death6",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death7",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death8",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"gore.spurt": {
+		"subtitle": "subtitles.ballisticmissiles.gore_spurt",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/spurt1",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt2",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt3",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt4",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"gore.gurgle": {
+		"subtitle": "subtitles.ballisticmissiles.gore_gurgle",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/gurgle1",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle2",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle3",
+				"attenuation_distance": 8
 			}
 		]
 	}

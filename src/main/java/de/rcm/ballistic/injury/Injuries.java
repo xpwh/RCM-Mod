@@ -66,6 +66,11 @@ public final class Injuries {
 		int drip;
 		/** Ticks since the last spurt from a cut artery. */
 		int pulse;
+		/** Ticks until the beat's second, weaker surge (the dicrotic wave), and how hard it comes. */
+		int echo;
+		float echoStrength;
+		/** When this one last cried out. */
+		long lastCry;
 		/** Buckshot in a leg this tick: the tick, and the balls in the left and the right leg. */
 		long pelletTick;
 		int pelletsLeft;
@@ -113,6 +118,14 @@ public final class Injuries {
 				// shot or blown down: the body torn open
 				Blood.open(entity);
 				bleedCreature(entity, 700);
+			}
+			if (entity.level() instanceof ServerLevel level && human(entity)) {
+				// the last breath (a shot through the head has none: that one fell silent)
+				Wounds last = get(entity);
+				if (last.collapse() <= 0) {
+					level.playSound(null, entity.getX(), entity.getEyeY(), entity.getZ(), ModRegistry.GORE_DEATH, SoundSource.VOICE, 0.9F,
+						0.9F + level.getRandom().nextFloat() * 0.15F);
+				}
 			}
 			if (entity.level() instanceof ServerLevel level && Blood.bleeds(entity)) {
 				// a pool spreading under the body
@@ -165,6 +178,51 @@ public final class Injuries {
 			dir = lying ? new Vec3(0, 0.8, 0).add(facing.scale(0.3)) : facing.scale(0.7).add(0, 0.25, 0);
 		}
 		Blood.send(level, at, dir.normalize().scale(strength), Math.round(10 + 8 * strength), Blood.JET);
+		level.playSound(null, at.x, at.y, at.z, ModRegistry.GORE_SPURT, SoundSource.PLAYERS, 0.25F + 0.35F * strength, 0.9F + p.getRandom().nextFloat() * 0.2F);
+	}
+
+	/**
+	 * The heart pumping out of a cut artery: one spurt a beat, and a fraction of a second after it a second,
+	 * weaker surge. The heart races as the blood goes - from about 80 beats a minute to 150 - but every beat
+	 * throws less, the jet sinking lower and lower.
+	 */
+	private static void heartbeat(ServerPlayer p, Wounds w, Clock c, float fill) {
+		if (c.echo > 0 && --c.echo == 0) {
+			spurt(p, w, c.echoStrength);
+		}
+		int bpm = Math.round(80 + 70 * (1.0F - fill));
+		if (++c.pulse >= Math.max(7, Math.round(1200.0F / bpm))) {
+			c.pulse = 0;
+			float strength = 0.35F + 0.75F * fill;
+			spurt(p, w, strength);
+			c.echo = 3;
+			c.echoStrength = strength * 0.45F;
+		}
+	}
+
+	/** A man hit cries out (not every graze, not over and over). */
+	private static void cry(LivingEntity e, ServerLevel level, float taken, boolean dying) {
+		long now = level.getGameTime();
+		Clock c = e instanceof ServerPlayer p ? clock(p) : null;
+		long last = c != null ? c.lastCry : CRIES.getOrDefault(e, 0L);
+		if (now - last < (dying ? 70 : 24) || !dying && taken < 1.0F) {
+			return;
+		}
+		if (c != null) {
+			c.lastCry = now;
+		} else {
+			CRIES.put(e, now);
+		}
+		var sound = dying ? (level.getRandom().nextFloat() < 0.35F ? ModRegistry.GORE_GURGLE : ModRegistry.GORE_DEATH) : ModRegistry.GORE_PAIN;
+		level.playSound(null, e.getX(), e.getEyeY(), e.getZ(), sound, SoundSource.VOICE, dying ? 0.7F : Math.min(1.2F, 0.6F + taken * 0.08F),
+			0.88F + level.getRandom().nextFloat() * 0.22F);
+	}
+
+	private static final Map<LivingEntity, Long> CRIES = new java.util.WeakHashMap<>();
+
+	/** People cry out: players and the soldiers (animals have their own voices). */
+	private static boolean human(LivingEntity e) {
+		return e instanceof net.minecraft.world.entity.player.Player || e instanceof de.rcm.ballistic.ai.SoldierEntity;
 	}
 
 	/** Animals and monsters bleeding from their wounds, and for how many ticks more. */
@@ -197,6 +255,8 @@ public final class Injuries {
 					double a = level.getRandom().nextDouble() * Math.PI * 2;
 					Blood.send(level, e.position().add(0, e.getBbHeight() * 0.55, 0), new Vec3(Math.cos(a) * 0.6, 0.45, Math.sin(a) * 0.6).scale(0.9), 12,
 						Blood.JET);
+					level.playSound(null, e.getX(), e.getY() + e.getBbHeight() * 0.55, e.getZ(), ModRegistry.GORE_SPURT, net.minecraft.sounds.SoundSource.NEUTRAL, 0.35F,
+						0.9F + level.getRandom().nextFloat() * 0.2F);
 				}
 			} else if (left % 60 < 6) {
 				Blood.send(level, e.position().add(0, 0.3, 0), Vec3.ZERO, 6 + left / 60, Blood.POOL);
@@ -429,6 +489,7 @@ public final class Injuries {
 		Blood.send(level, elbow, new Vec3(0, -0.3, 0), 40, Blood.SPRAY);
 		level.playSound(null, elbow.x, elbow.y, elbow.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 2.0F, 0.6F);
 		level.playSound(null, elbow.x, elbow.y, elbow.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.6F, 0.85F);
+		level.playSound(null, elbow.x, elbow.y, elbow.z, ModRegistry.GORE_BONE, SoundSource.PLAYERS, 1.4F, 0.85F + p.getRandom().nextFloat() * 0.2F);
 		message(p, get(p).armsLost() == Wounds.BOTH ? "message.ballisticmissiles.arms_lost" : "message.ballisticmissiles.arm_lost");
 		handsGone(p, get(p));
 	}
@@ -469,6 +530,7 @@ public final class Injuries {
 		Blood.send(level, knee, new Vec3(0, -0.2, 0), 40, Blood.SPRAY);
 		level.playSound(null, knee.x, knee.y, knee.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 2.0F, 0.55F);
 		level.playSound(null, knee.x, knee.y, knee.z, ModRegistry.BULLET_IMPACT_FLESH, SoundSource.PLAYERS, 1.6F, 0.8F);
+		level.playSound(null, knee.x, knee.y, knee.z, ModRegistry.GORE_BONE, SoundSource.PLAYERS, 1.4F, 0.8F + p.getRandom().nextFloat() * 0.2F);
 		message(p, get(p).lost() == Wounds.BOTH ? "message.ballisticmissiles.legs_lost" : "message.ballisticmissiles.leg_lost");
 	}
 
@@ -682,6 +744,9 @@ public final class Injuries {
 				}
 			}
 		}
+		if (human(entity) && entity.isAlive() && !bleeding && !dying(entity)) {
+			cry(entity, level, taken, false);
+		}
 		if (!(entity instanceof ServerPlayer p)) {
 			return;
 		}
@@ -747,10 +812,18 @@ public final class Injuries {
 				if (w.bleed() == Wounds.ARTERIAL) {
 					// the heart failing: the spurts weaker and further apart
 					float left = w.dying() / (float) DYING;
+					if (c.echo > 0 && --c.echo == 0) {
+						spurt(p, w, c.echoStrength);
+					}
 					if (++c.pulse >= 12 + Math.round((1.0F - left) * 14)) {
 						c.pulse = 0;
 						spurt(p, w, 0.35F + 0.5F * left);
+						c.echo = 3;
+						c.echoStrength = (0.35F + 0.5F * left) * 0.4F;
 					}
+				}
+				if (w.dying() % 50 == 25 && w.dying() > 30) {
+					cry(p, level, 0.0F, true);
 				}
 				if (w.dying() <= 1) {
 					die(p);
@@ -767,12 +840,8 @@ public final class Injuries {
 					p.hurtServer(level, new DamageSource(level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(BLEEDING)), 1.0F);
 				}
 				if (w.bleed() == Wounds.ARTERIAL) {
-					// a cut artery pumps it out with every beat: faster the more blood is gone
-					float health = p.getHealth() / Math.max(1.0F, p.getMaxHealth());
-					if (++c.pulse >= 9 + Math.round(health * 7)) {
-						c.pulse = 0;
-						spurt(p, w, 0.8F + 0.25F * health);
-					}
+					// a cut artery pumps it out with every beat: faster the more blood is gone, weaker too
+					heartbeat(p, w, c, p.getHealth() / Math.max(1.0F, p.getMaxHealth()));
 				}
 				// the drops it leaves behind
 				int every = w.bleed() == Wounds.ARTERIAL ? 4 : w.bleed() == 2 ? 12 : 30;

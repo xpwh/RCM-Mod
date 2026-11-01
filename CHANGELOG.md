@@ -1,8 +1,29 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.0.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.1.0** (01.11.2026).
 
 ---
+
+### 13.1.0 – Gore: fließendes Blut, Austrittswunden, Arterienpuls, echte Klänge
+- Blut verhält sich wie eine Flüssigkeit:
+  - Es sammelt sich auf dem Block, auf den es fällt, und läuft weiter, wenn zu viel da ist: über ebenen Boden zu den Nachbarblöcken, Stufen hinunter (mit Rinnspur an der Kante) und über Kanten, wo es tropfenweise heruntertropft.
+  - Die Tropfen bilden unten neue Lachen.
+  - Erde, Gras und Sand saugen es schneller auf als Stein.
+  - Frisch ist es hellrot und glänzend, über Minuten trocknet es dunkel ein.
+- Austrittswunden je nach Waffe:
+  - Gewehrkugeln reißen eine viel größere Austrittswunde als die Einschusswunde und werfen viel Blut auf die Wand dahinter.
+  - Pistolenkugeln bleiben oft im Körper stecken und machen kleinere Austrittswunden.
+  - Schrotkugeln treten nie aus.
+  - Hinter dem Ziel hängt kurz ein feiner roter Blutnebel.
+- Arterienblutung im Herzschlag: Jeder Schlag wirft einen Strahl, kurz danach eine schwächere zweite Welle. Mit dem Blutverlust rast das Herz (80 bis 150 Schläge pro Minute), die Strahlen werden aber schwächer und sinken tiefer.
+- Echte Klänge aus Aufnahmen (Quellen in CREDITS.md):
+  - Kugeleinschläge in den Körper.
+  - Knochenbrüche bei Kopftreffern und abgetrennten Gliedmaßen.
+  - Dumpfe Treffer auf Schutzwesten.
+  - Schmerzensschreie von Spielern und Soldaten.
+  - Sterbendes Stöhnen und Röcheln in der Sterbephase.
+  - Spritzende Arterien.
+- Schreie und Stöhnen laufen über den Lautstärkeregler „Stimme/Sprache“ und lassen sich dort leiser stellen.
 
 ### 13.0.0 – Bauwerke neu in Blender modelliert
 Startrampe, Raketensilo, Rundluken-Silo, U-Boot und die Wolframstab-Bodenstation sind in Blender komplett neu und realistisch gebaut. Schmutz, Rostschlieren, abgenutzte Kanten, Ruß und Schatten in den Ecken sind in die Texturen gebacken und werden mit dem PBR-Shader der Waffen gezeichnet. Maße und alle Animationen bleiben gleich.

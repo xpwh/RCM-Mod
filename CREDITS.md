@@ -229,3 +229,17 @@ outlines and proportions; the photograph itself is not shipped.
 | Close strike | https://opengameart.org/content/thunder-very-close-rain-01 "Thunder, Very Close, Rain, 01" | InspectorJ (www.jshaw.co.uk) | CC BY 3.0 |
 | Close strike, long roll | https://opengameart.org/content/rain-long-thunder "Rain + Long Thunder" | wuxiascrub | CC0 1.0 |
 | Close and distant thunder | https://opengameart.org/node/140426 "Thunder / Lightning Ambience - Field Recording" | Gregor Quendel | CC BY 4.0 |
+
+## Gore (`tools/import_gore_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Bullet into a body (thud) | https://opengameart.org/content/40-wet-towel-clubpoundhitattack-sounds | qubodup | CC0 1.0 |
+| Bullet into a body (wet part) | https://opengameart.org/content/8-wet-squish-slurp-impacts | qubodup / Johannes Pinter | CC0 1.0 |
+| Bone breaking | https://opengameart.org/content/fleshy-bone-breaksnap-sfx | Zane Little Music | CC0 1.0 |
+| Hit on a soft vest | https://opengameart.org/content/fleshy-fight-sounds | willleamon | OGA-BY 3.0 |
+| Pain voices | https://opengameart.org/content/pain-sounds-by-emopreben | emopreben | CC0 1.0 |
+| Pain and death voices | https://opengameart.org/content/11-male-human-paindeath-sounds | Michel Baradari | CC BY 3.0 |
+| Pain grunts | https://opengameart.org/content/male-gruntyelling-sounds | haeldb | CC0 1.0 |
+| Death groans | https://opengameart.org/content/grunts-male-death-and-pain | thebardofblasphemy | CC0 1.0 |
+| Spurting, gurgling | https://opengameart.org/content/40-cc0-water-splash-slime-sfx | rubberduck | CC0 1.0 |

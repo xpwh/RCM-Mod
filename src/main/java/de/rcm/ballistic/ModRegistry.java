@@ -913,6 +913,12 @@ public final class ModRegistry {
 	public static final SoundEvent BULLET_IMPACT_METAL = sound("bullet.impact_metal");
 	public static final SoundEvent BULLET_IMPACT_WOOD = sound("bullet.impact_wood");
 	public static final SoundEvent BULLET_IMPACT_FLESH = sound("bullet.impact_flesh");
+	public static final SoundEvent GORE_BONE = sound("gore.bone");
+	public static final SoundEvent GORE_VEST = sound("gore.vest");
+	public static final SoundEvent GORE_PAIN = sound("gore.pain");
+	public static final SoundEvent GORE_DEATH = sound("gore.death");
+	public static final SoundEvent GORE_SPURT = sound("gore.spurt");
+	public static final SoundEvent GORE_GURGLE = sound("gore.gurgle");
 	public static final SoundEvent SHELL_DROP = sound("ak.shell");
 	public static final SoundEvent PLAYER_BREATH = sound("player.breath");
 	public static final SoundEvent KNIFE_SWISH = sound("knife.swish");

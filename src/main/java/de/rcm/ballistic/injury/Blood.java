@@ -21,6 +21,8 @@ public final class Blood {
 	public static final int EXIT_SPATTER = 5;
 	/** Torn out by a blast: {@code amount} bits of flesh (and blood with them) flung up and out along {@code dir}, as hard as it is long. */
 	public static final int CHUNKS = 6;
+	/** Behind an exit wound: a fine red mist hanging in the air along {@code dir} (longer the heavier the round). */
+	public static final int MIST = 7;
 
 	private Blood() {
 	}
@@ -77,6 +79,11 @@ public final class Blood {
 
 	/** {@code facing}: which way the struck surface faces (null: worked out from the creature's box). */
 	public static void wound(LivingEntity e, Vec3 at, double grown, boolean pellet, boolean head, int kind, Vec3 facing) {
+		wound(e, at, grown, pellet, head, kind, facing, 1.0F);
+	}
+
+	/** {@code scale}: how much bigger than a rifle round's this wound is (a pistol's smaller, its exit much smaller). */
+	public static void wound(LivingEntity e, Vec3 at, double grown, boolean pellet, boolean head, int kind, Vec3 facing, float scale) {
 		if (!(e.level() instanceof ServerLevel level) || !bleeds(e)) {
 			return;
 		}
@@ -103,7 +110,7 @@ public final class Blood {
 		Vec3 onBody = at.subtract(n.scale(grown));
 		Vec3 rel = onBody.subtract(e.position());
 		float size = (pellet ? 0.1F : 0.16F) * (head ? 1.4F : 1.0F) * (0.85F + level.getRandom().nextFloat() * 0.3F)
-			* (kind == EXIT ? 1.7F : kind == GAPING ? 1.9F : kind == ENTRAILS ? 1.8F : 1.0F);
+			* (kind == EXIT ? 1.7F : kind == GAPING ? 1.9F : kind == ENTRAILS ? 1.8F : 1.0F) * scale;
 		var payload = new de.rcm.ballistic.network.ModNetworking.WoundPayload(e.getId(), (float) rel.x, (float) rel.y, (float) rel.z, (float) n.x,
 			(float) n.y, (float) n.z, size, (kind == EXIT ? 3 : level.getRandom().nextInt(3)) | kind << 4);
 		for (ServerPlayer player : net.fabricmc.fabric.api.networking.v1.PlayerLookup.tracking(e)) {
