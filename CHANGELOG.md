@@ -1,8 +1,15 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.44.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.45.0** (01.11.2026).
 
 ---
+
+### 12.45.0 – Nasse Kleidung
+- Regen macht dich in etwa einer halben Minute nass (im Gewitter schneller, mit Lederjacke langsamer), Wasser sofort.
+- Nass fühlt sich die Luft bis zu 5 °C kälter an, im Freien im Wind bis zu 8 °C. Dein Körper kühlt doppelt so schnell aus. Bei Hitze kühlt Nässe angenehm.
+- Kleidung trocknet von selbst: langsam in der Kälte, schneller in Wärme und Sonne, am schnellsten an Lagerfeuer, Ofen oder Lava. Dort dampft die Kleidung sichtbar.
+- Nasse Spieler tropfen, das sehen auch andere.
+- Im Temperatur-Abzeichen steht Wasser so hoch, wie nass du bist, mit wogender Oberfläche. Unten sammeln sich Tropfen, schwellen an und fallen.
 
 ### 12.44.0 – Rundes Temperatur-Abzeichen
 - Die Temperatur ist jetzt ein rundes Abzeichen rechts neben der Hotbar, nur mit der Gradzahl. Der Rand hat die Farbe der Luft, ein Lichtpunkt läuft um den Rand, das Glas hat einen Glanz.

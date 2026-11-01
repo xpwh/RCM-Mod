@@ -25,6 +25,7 @@ public final class BodyHeatClient {
 	private static float body;
 	private static float shownBody;
 	private static float air = 15.0F;
+	private static float wet;
 	private static float lastYaw;
 	private static float lastPitch;
 
@@ -41,14 +42,21 @@ public final class BodyHeatClient {
 		return Mth.clamp((-shownBody - 0.3F) / 0.5F, 0.0F, 1.0F);
 	}
 
-	public static void receive(float b, float a) {
+	public static void receive(float b, float a, float w) {
 		body = b;
 		air = a;
+		wet = w;
+	}
+
+	/** How wet you are, 0-1 (as the server last said). */
+	public static float wet() {
+		return wet;
 	}
 
 	private static void tick(Minecraft mc) {
 		if (mc.level == null || mc.player == null) {
 			body = shownBody = 0.0F;
+			wet = 0.0F;
 			return;
 		}
 		if (mc.isPaused()) {
@@ -128,6 +136,6 @@ public final class BodyHeatClient {
 		if (mc.player == null || mc.options.hideGui || mc.player.isCreative() || mc.player.isSpectator() || !de.rcm.ballistic.client.ModConfig.temperatureHud) {
 			return;
 		}
-		de.rcm.ballistic.client.gui.ThermoHud.render(g, air, shownBody);
+		de.rcm.ballistic.client.gui.ThermoHud.render(g, air, shownBody, wet);
 	}
 }

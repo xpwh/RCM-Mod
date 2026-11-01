@@ -451,13 +451,14 @@ public final class ModNetworking {
 		}
 	}
 
-	/** Server -> client: your body's heat (-1 freezing .. 1 heat stroke) and the air's temperature (deg C). */
-	public record BodyHeatPayload(float body, float air) implements CustomPacketPayload {
+	/** Server -> client: your body's heat (-1 freezing .. 1 heat stroke), the air's temperature as you feel it (deg C), how wet you are (0-1). */
+	public record BodyHeatPayload(float body, float air, float wet) implements CustomPacketPayload {
 		public static final Type<BodyHeatPayload> TYPE = new Type<>(BallisticMissiles.id("body_heat"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, BodyHeatPayload> CODEC = StreamCodec.of((buf, p) -> {
 			buf.writeFloat(p.body);
 			buf.writeFloat(p.air);
-		}, buf -> new BodyHeatPayload(buf.readFloat(), buf.readFloat()));
+			buf.writeFloat(p.wet);
+		}, buf -> new BodyHeatPayload(buf.readFloat(), buf.readFloat(), buf.readFloat()));
 
 		@Override
 		public Type<? extends CustomPacketPayload> type() {

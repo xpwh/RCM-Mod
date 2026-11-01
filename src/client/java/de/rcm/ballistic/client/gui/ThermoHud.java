@@ -16,7 +16,9 @@ import net.minecraft.util.RandomSource;
  *   the tips - sparks fly off it trailing light, the badge glows from inside and the figures shimmer in the hot
  *   air;</li>
  *   <li>cold: frost grows out from the rim as a crown of ice spikes with side twigs, ice ferns creep in over the
- *   glass, the rim catches glints that twinkle, and six-armed snowflakes turn as they drift down past it.</li>
+ *   glass, the rim catches glints that twinkle, and six-armed snowflakes turn as they drift down past it;</li>
+ *   <li>wet: water stands in the glass as high as you are soaked, its surface rocking, and drops gather under the
+ *   badge, swell and fall.</li>
  * </ul>
  * Everything fades in and out with the weather.
  */
@@ -27,11 +29,13 @@ public final class ThermoHud {
 	private static long last = -1L;
 	private static float heatShown;
 	private static float coldShown;
+	private static float wetShown;
+	private static float spawnDrop;
 	private static float spawnFlame;
 	private static float spawnSpark;
 	private static float spawnSnow;
 
-	/** A flame tongue (0), a spark with its trail (1) or a snowflake (2), relative to the badge's centre. */
+	/** A flame tongue (0), a spark with its trail (1), a snowflake (2) or a drop of water (3), relative to the badge's centre. */
 	private static final class Bit {
 		final int kind;
 		float x;
@@ -75,8 +79,11 @@ public final class ThermoHud {
 		return col[col.length - 1];
 	}
 
-	/** @param air the air's temperature (deg C); @param body the body, -1 freezing .. 0 fine .. 1 heat stroke */
-	public static void render(GuiGraphics g, float air, float body) {
+	/**
+	 * @param air the air's temperature as felt (deg C); @param body the body, -1 freezing .. 0 fine .. 1 heat stroke;
+	 * @param wet how wet the clothes are, 0-1
+	 */
+	public static void render(GuiGraphics g, float air, float body, float wet) {
 		Minecraft mc = Minecraft.getInstance();
 		UiKit.init();
 		long now = net.minecraft.util.Util.getMillis();
@@ -87,6 +94,7 @@ public final class ThermoHud {
 		float cold = Mth.clamp(Math.max((6.0F - air) / 20.0F, (-body - 0.1F) / 0.6F), 0.0F, 1.0F);
 		heatShown = UiKit.approach(heatShown, heat, dt * 0.8F);
 		coldShown = UiKit.approach(coldShown, cold, dt * 0.5F);
+		wetShown = UiKit.approach(wetShown, wet, dt * 0.6F);
 		float cx = g.guiWidth() / 2.0F + 91.0F + 9.0F + RADIUS;
 		float cy = g.guiHeight() - RADIUS - 2.0F;
 		int airC = airColour(air);
@@ -138,6 +146,9 @@ public final class ThermoHud {
 			UiKit.orb(g, cx - RADIUS * 0.95F, cy - RADIUS * 0.95F, RADIUS * 1.9F, RADIUS * 1.9F, 0xCFEFFF, 0.3F * icy);
 			ferns(g, cx, cy, coldShown);
 		}
+		if (wetShown > 0.02F) {
+			water(g, cx, cy, wetShown, t);
+		}
 		UiKit.orb(g, cx - RADIUS * 0.75F, cy - RADIUS * 0.95F, RADIUS * 1.5F, RADIUS * 0.9F, 0xFFFFFF, 0.1F);
 
 		// ---- the degrees: shimmering in the heat, frosted in the cold
@@ -149,6 +160,51 @@ public final class ThermoHud {
 			glints(g, cx, cy, icy, t);
 		}
 		drawSnow(g, cx, cy, t);
+		drawDrops(g, cx, cy);
+	}
+
+	/** Water in the glass: a level as high as you are wet, its surface rocking in two slow waves, a bright rim. */
+	private static void water(GuiGraphics g, float cx, float cy, float wet, float t) {
+		float inner = RADIUS - 1.8F;
+		float level = cy + inner - wet * inner * 1.6F;
+		int x0 = Mth.floor(cx - inner);
+		int x1 = Mth.ceil(cx + inner);
+		for (int x = x0; x < x1; x++) {
+			float dx = x + 0.5F - cx;
+			float half = inner * inner - dx * dx;
+			if (half <= 0.0F) {
+				continue;
+			}
+			float chord = Mth.sqrt(half);
+			float bottom = cy + chord;
+			float top = Math.max(cy - chord, level + 0.9F * Mth.sin(t * 2.6F + x * 0.45F) + 0.5F * Mth.sin(t * 4.1F - x * 0.8F));
+			if (top >= bottom) {
+				continue;
+			}
+			int yt = Math.round(top);
+			int yb = Math.round(bottom);
+			g.fillGradient(x, yt, x + 1, yb, UiKit.argb(0.5F * Math.min(1.0F, wet * 2.0F), 0x4AA0F0), UiKit.argb(0.7F * Math.min(1.0F, wet * 2.0F), 0x1A4C8C));
+			g.fill(x, yt, x + 1, yt + 1, UiKit.argb(0.75F * Math.min(1.0F, wet * 2.0F), 0xBFE8FF));
+		}
+	}
+
+	private static void drawDrops(GuiGraphics g, float cx, float cy) {
+		for (Bit b : BITS) {
+			if (b.kind != 3) {
+				continue;
+			}
+			float p = b.age / b.life;
+			// hanging and swelling first, then falling, drawn out a little as it goes
+			float swell = Math.min(1.0F, b.age / 0.6F);
+			float a = Math.min(1.0F, (1.0F - p) * 4.0F) * Math.min(1.0F, wetShown * 2.0F);
+			float px = cx + b.x;
+			float py = cy + b.y;
+			float r = b.size * (0.5F + 0.5F * swell);
+			float stretch = b.vy > 1.0F ? Math.min(2.2F, 1.0F + b.vy / 40.0F) : 1.0F;
+			UiKit.orb(g, px - r * 1.6F, py - r * 1.6F * stretch, r * 3.2F, r * 3.2F * stretch, 0x6AB8FF, a * 0.35F);
+			UiKit.disc(g, px, py, r, UiKit.argb(a * 0.85F, 0x5AAEF5));
+			UiKit.disc(g, px - r * 0.35F, py - r * 0.35F, r * 0.35F, UiKit.argb(a, 0xE8F6FF));
+		}
 	}
 
 	private static void figures(GuiGraphics g, Font font, String text, float cx, float cy, int airC, float t) {
@@ -200,6 +256,15 @@ public final class ThermoHud {
 					4.0F + R.nextFloat() * 2.0F, 1.6F + R.nextFloat() * 1.8F));
 			}
 		}
+		if (wetShown > 0.05F) {
+			spawnDrop += dt * 1.6F * wetShown;
+			while (spawnDrop >= 1.0F) {
+				spawnDrop -= 1.0F;
+				// a drop gathers under the badge's lower rim
+				float a = Mth.HALF_PI + (R.nextFloat() - 0.5F) * 1.4F;
+				BITS.add(new Bit(3, Mth.cos(a) * RADIUS, Mth.sin(a) * RADIUS, 0.0F, 0.0F, 1.6F + R.nextFloat() * 0.6F, 1.1F + R.nextFloat() * 0.7F));
+			}
+		}
 		while (BITS.size() > 320) {
 			BITS.removeFirst();
 		}
@@ -222,8 +287,11 @@ public final class ThermoHud {
 				b.vx += Mth.sin(t * 7.0F + b.seed) * 40.0F * dt;
 				b.vx *= 1.0F - dt * 0.8F;
 				b.vy += 6.0F * dt;
-			} else {
+			} else if (b.kind == 2) {
 				b.vx = Mth.sin(t * 1.1F + b.seed) * 5.0F;
+			} else if (b.age > 0.6F) {
+				// it lets go and falls
+				b.vy += 160.0F * dt;
 			}
 			b.x += b.vx * dt;
 			b.y += b.vy * dt;

@@ -133,7 +133,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.effect.EndFx.init();
 		de.rcm.ballistic.client.effect.BodyHeatClient.init();
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.BodyHeatPayload.TYPE,
-			(payload, context) -> de.rcm.ballistic.client.effect.BodyHeatClient.receive(payload.body(), payload.air()));
+			(payload, context) -> de.rcm.ballistic.client.effect.BodyHeatClient.receive(payload.body(), payload.air(), payload.wet()));
 		HudElementRegistry.addLast(BallisticMissiles.id("body_heat"), (graphics, tickCounter) -> de.rcm.ballistic.client.effect.BodyHeatClient.hud(graphics));
 		ClientPlayNetworking.registerGlobalReceiver(de.rcm.ballistic.network.ModNetworking.AshStormPayload.TYPE,
 			(payload, context) -> de.rcm.ballistic.client.effect.AshStorm.receive(payload.ticks()));
