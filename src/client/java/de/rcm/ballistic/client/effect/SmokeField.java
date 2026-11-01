@@ -470,6 +470,19 @@ public final class SmokeField {
 			}
 		}
 
+		if (de.rcm.ballistic.client.ModConfig.smokeStyle == de.rcm.ballistic.client.ModConfig.SmokeStyle.VOXEL) {
+			// built of blocks: the grid once a tick (puffs move by the tick), the cubes every frame
+			if (voxelsBuilt != clock) {
+				voxelsBuilt = clock;
+				buildVoxels(cam, day);
+			}
+			boolean moon = Math.sin((mc.level.getDayTime() % 24000L) / 24000.0 * Math.PI * 2.0) < -0.05;
+			float strength = (moon ? 0.15F : Mth.clamp(day * 1.1F - 0.1F, 0.0F, 1.0F)) * (1.0F - 0.6F * mc.level.getRainLevel(partial));
+			SmokeVoxels.draw(context, cam, fwd, sun, strength);
+			return;
+		}
+		voxelsBuilt = -1L;
+
 		// back to front
 		int n = 0;
 		if (order.length < count) {
@@ -531,6 +544,53 @@ public final class SmokeField {
 			float[] sky = {0.08F + 0.47F * day, 0.09F + 0.54F * day, 0.12F + 0.62F * day};
 			SmokeVolume.draw(context, dir, strength, sky);
 		}
+	}
+
+	private static long voxelsBuilt = -1L;
+	private static long[] voxelOrder = new long[CAP];
+
+	/**
+	 * Fills the voxel grid from the puffs, nearest first (so if there are too many cubes it is the far ones that go):
+	 * each puff's ball as big as its smoke is thick - thinning smoke does not fade, it shrinks and crumbles.
+	 */
+	private static void buildVoxels(Vec3 cam, float day) {
+		int n = 0;
+		for (int i = 0; i < count; i++) {
+			double dx = X[i] - cam.x;
+			double dy = Y[i] - cam.y;
+			double dz = Z[i] - cam.z;
+			double d2 = dx * dx + dy * dy + dz * dz;
+			if (d2 > MAX_DISTANCE * MAX_DISTANCE || VEIL[i] < 0.02F) {
+				continue;
+			}
+			voxelOrder[n++] = (long) Float.floatToIntBits((float) d2) << 32 | i;
+		}
+		Arrays.sort(voxelOrder, 0, n);
+		SmokeVoxels.begin(cam);
+		for (int k = 0; k < n && !SmokeVoxels.full(); k++) {
+			int i = (int) voxelOrder[k];
+			float age = clock - BORN[i];
+			float t = Math.min(1.0F, age / LIFE[i]);
+			float a = opacity(i, t, age) * VEIL[i];
+			if (a < 0.03F) {
+				continue;
+			}
+			// the sprite's soft ball is about 0.7 of its size; thin smoke fills less of it
+			float filled = radius(i, t) * 0.7F * (0.3F + 0.7F * (float) Math.sqrt(Math.min(1.0F, a * 1.4F)));
+			int c = COLOR[i];
+			LIT[0] = 0.0F;
+			LIT[1] = 0.0F;
+			LIT[2] = 0.0F;
+			DynamicLights.lightAt(X[i], Y[i], Z[i], LIT);
+			float cr = (c >> 16 & 255) / 255.0F * day + LIT[0] * 1.6F;
+			float cg = (c >> 8 & 255) / 255.0F * day + LIT[1] * 1.6F;
+			float cb = (c & 255) / 255.0F * day + LIT[2] * 1.6F;
+			int lit = (int) (Mth.clamp(cr, 0.0F, 1.0F) * 255.0F) << 16 | (int) (Mth.clamp(cg, 0.0F, 1.0F) * 255.0F) << 8
+				| (int) (Mth.clamp(cb, 0.0F, 1.0F) * 255.0F);
+			float hot = GLOW[i] * Mth.clamp(1.0F - age / 6.0F, 0.0F, 1.0F);
+			SmokeVoxels.add(X[i], Y[i], Z[i], filled, lit, hot, Math.sqrt(Float.intBitsToFloat((int) (voxelOrder[k] >>> 32))));
+		}
+		SmokeVoxels.finish();
 	}
 
 	/** Marks a puff in the sort order as raymarched (the order holds the index in its low bits). */

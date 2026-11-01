@@ -100,8 +100,30 @@ public final class ModConfig {
 	 * time, like real smoke in moving air; false: the long-hanging smoke as before.
 	 */
 	public static boolean fastSmoke = false;
-	/** Smoke near the camera raymarched as a volume instead of sprites. */
-	public static boolean volumetricSmoke = true;
+	/** How smoke is drawn: raymarched as a volume near the camera, flat sprites, or blocky voxels. */
+	public enum SmokeStyle {
+		VOLUME,
+		SPRITES,
+		VOXEL;
+
+		public String key() {
+			return name().toLowerCase(java.util.Locale.ROOT);
+		}
+
+		public static SmokeStyle parse(String s, SmokeStyle fallback) {
+			if (s == null) {
+				return fallback;
+			}
+			return switch (s.trim().toLowerCase(java.util.Locale.ROOT)) {
+				case "volume", "volumetric", "true" -> VOLUME;
+				case "sprites", "classic", "false" -> SPRITES;
+				case "voxel", "voxels" -> VOXEL;
+				default -> fallback;
+			};
+		}
+	}
+
+	public static SmokeStyle smokeStyle = SmokeStyle.VOLUME;
 	/** Loudness of explosions and other big bangs, percent. */
 	public static int explosionVolume = 100;
 	public static boolean bulletHoles = true;
@@ -166,7 +188,8 @@ public final class ModConfig {
 			cumulusClouds = "cumulus".equals(p.getProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer"));
 			lightShafts = bool(p, "lightShafts", lightShafts);
 			realSky = bool(p, "realSky", realSky);
-			volumetricSmoke = bool(p, "volumetricSmoke", volumetricSmoke);
+			// older configs had only volumetric on/off
+			smokeStyle = SmokeStyle.parse(p.getProperty("smokeStyle", p.getProperty("volumetricSmoke")), smokeStyle);
 			nightSky = bool(p, "nightSky", nightSky);
 			eyeAdaptation = bool(p, "eyeAdaptation", eyeAdaptation);
 			realWater = bool(p, "realWater", realWater);
@@ -230,7 +253,7 @@ public final class ModConfig {
 			p.setProperty("cloudStyle", cumulusClouds ? "cumulus" : "layer");
 			p.setProperty("lightShafts", Boolean.toString(lightShafts));
 			p.setProperty("realSky", Boolean.toString(realSky));
-			p.setProperty("volumetricSmoke", Boolean.toString(volumetricSmoke));
+			p.setProperty("smokeStyle", smokeStyle.key());
 			p.setProperty("nightSky", Boolean.toString(nightSky));
 			p.setProperty("eyeAdaptation", Boolean.toString(eyeAdaptation));
 			p.setProperty("realWater", Boolean.toString(realWater));

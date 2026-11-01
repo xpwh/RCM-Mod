@@ -1,8 +1,15 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.4.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.5.0** (01.11.2026).
 
 ---
+
+### 13.5.0 – Voxel-Rauch
+- Dritte Rauch-Darstellung neben „Volumetrisch“ und „Klassisch“: **Voxel** (Einstellungen → Effekte → Rauch-Darstellung, durchschalten). Der Rauch von Raketen, Jets, Startrampen und Rückstrahl wird aus Würfeln auf einem festen Weltraster gebaut, passend zur Minecraft-Welt.
+- Rauchspuren werden zu einer zusammenhängenden, kantigen Säule statt einer Kette von Kisten: Wolken gleicher Größe teilen sich ihre Würfel, innen liegende Flächen werden weggelassen. Kleine, frische Wolken bestehen aus feinen Würfeln (ab 1/8 Block), große alte aus groben (bis 64 Blöcke), weit entfernte werden gröber.
+- Jede Würfelseite ist flach schattiert: oben hell, seitlich dunkler, unten am dunkelsten, auf der Sonnenseite heller, unter darüberliegenden Würfeln im Schatten; feiner dunkler Rand pro Würfel. Frischer Abgasstrahl an der Düse glüht orange, Lichter in der Nähe färben den Rauch.
+- Dünner werdender Rauch blendet nicht aus, sondern zerfällt: die Wolke schrumpft und bröckelt in immer weniger Würfel.
+- Würfel sind massiv und verdecken richtig (Tiefe), Rauch hinter Wolken bleibt versteckt. Alte Einstellung „Volumetrisch an/aus“ wird übernommen.
 
 ### 13.4.0 – Blut läuft echt an Wänden herunter
 - Statt dunkler Streifen über die ganze Blockseite sammelt sich Blut, das über eine Kante läuft, zu wenigen unregelmäßig verteilten Rinnsalen: oben ein nasser Rand und ein Trichter, so breit wie die Stelle, an der es überläuft (bei viel Blut erst ein Film, der sich weiter unten aufteilt), darunter dünne, leicht geschlängelte Bahnen mit ungleicher Breite, in der Mitte dunkler, am Rand dünn und durchscheinend.

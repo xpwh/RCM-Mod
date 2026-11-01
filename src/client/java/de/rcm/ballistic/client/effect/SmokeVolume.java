@@ -81,7 +81,7 @@ public final class SmokeVolume {
 	}
 
 	public static boolean enabled() {
-		return ModConfig.volumetricSmoke;
+		return ModConfig.smokeStyle == ModConfig.SmokeStyle.VOLUME;
 	}
 
 	/** How many puffs are raymarched (the rest are sprites), by the quality setting. */
