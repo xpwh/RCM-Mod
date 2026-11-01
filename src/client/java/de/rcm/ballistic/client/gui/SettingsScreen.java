@@ -61,10 +61,31 @@ import net.minecraft.world.item.Items;
  * shown as it is now.
  */
 public class SettingsScreen extends Screen {
-	private static final int ROW = 310;
-	private static final int FOOTER = 36;
-	private static final int SEARCH = 28;
+	private static final int FOOTER = 38;
+	private static final int SEARCH = 26;
 	private static final int ITEM = 22;
+	/** The sidebar with the pages, and the header over the content. */
+	private static final int SIDE = 132;
+	private static final int HEAD = 46;
+	// the palette of the mod's other cards: near-black, off-white for what matters, each page its own colour
+	private static final int BACKDROP = 0x07090C;
+	private static final int PANEL = 0x12161C;
+	private static final int SIDEBAR = 0x0D1015;
+	private static final int CARD = 0x1A1F27;
+	private static final int CARD_HOVER = 0x232A34;
+	private static final int TEXT = 0xEDEDEF;
+	private static final int BODY = 0xB4B4BB;
+	private static final int MUTED = 0x8E8E95;
+	private static final int FAINT = 0x5E5E66;
+	/** How wide a row of controls is (the content column), set by the layout. */
+	private int rowW = 310;
+	private long opened = -1L;
+	private long lastFrame;
+	/** Each page's highlight in the sidebar, easing in and out. */
+	private final float[] sideHover = new float[7];
+	private float pageSwitch = 1.0F;
+	/** The toggles' knobs, sliding over. */
+	private final java.util.Map<AbstractWidget, Float> knobs = new java.util.WeakHashMap<>();
 	private static Page lastPage = Page.GRAPHICS;
 	/** The soldier spawner's choices, kept while the game runs. */
 	private static int soldierCount = 3;
@@ -75,9 +96,6 @@ public class SettingsScreen extends Screen {
 	private static String goreTarget = "@s";
 
 	private final Screen parent;
-	private final TabManager tabs = new TabManager(this::addRenderableWidget, this::removeWidget, this::selected, t -> {
-	});
-	private TabNavigationBar bar;
 	private Rows list;
 	private EditBox search;
 	private Button done;
@@ -104,30 +122,45 @@ public class SettingsScreen extends Screen {
 		Component title() {
 			return Component.translatable("options.ballisticmissiles.tab." + this.name().toLowerCase(Locale.ROOT));
 		}
-	}
 
-	private record PageTab(Page page) implements Tab {
-		@Override
-		public Component getTabTitle() {
-			return this.page.title();
+		Component description() {
+			return Component.translatable("options.ballisticmissiles.tab." + this.name().toLowerCase(Locale.ROOT) + ".desc");
 		}
 
-		@Override
-		public Component getTabExtraNarration() {
-			return Component.empty();
+		/** The page's colour: its highlight in the sidebar, its headings, its switches. */
+		int accent() {
+			return switch (this) {
+				case GRAPHICS -> 0x4C9AFF;
+				case EFFECTS -> 0xF5A524;
+				case NATURE -> 0x3FCF8E;
+				case GORE -> 0xE5484D;
+				case AI -> 0x9B7BFF;
+				case SPAWN -> 0xF0C04A;
+				case SERVER -> 0x5FC9D8;
+			};
 		}
 
-		@Override
-		public void visitChildren(Consumer<AbstractWidget> consumer) {
-		}
-
-		@Override
-		public void doLayout(ScreenRectangle area) {
+		ItemStack icon() {
+			return new ItemStack(switch (this) {
+				case GRAPHICS -> Items.SPYGLASS;
+				case EFFECTS -> Items.FIREWORK_ROCKET;
+				case NATURE -> Items.OAK_SAPLING;
+				case GORE -> Items.REDSTONE;
+				case AI -> de.rcm.ballistic.ModRegistry.AK47;
+				case SPAWN -> Items.CHEST;
+				case SERVER -> Items.COMMAND_BLOCK;
+			});
 		}
 	}
 
 	@Override
 	protected void init() {
+		UiKit.init();
+		if (this.opened < 0L) {
+			this.opened = net.minecraft.util.Util.getMillis();
+			this.lastFrame = this.opened;
+		}
+		this.rowW = Math.max(200, this.panelW() - SIDE - 44);
 		this.list = new Rows(this.minecraft, this.width, this.height, 0);
 		this.addRenderableWidget(this.list);
 		this.search = new EditBox(this.font, 0, 0, 200, 18, Component.translatable("options.ballisticmissiles.search"));
@@ -140,42 +173,83 @@ public class SettingsScreen extends Screen {
 			}
 		});
 		this.addRenderableWidget(this.search);
-		this.done = this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> this.onClose()).width(200).build());
-		this.bar = TabNavigationBar.builder(this.tabs, this.width)
-			.addTabs(Arrays.stream(Page.values()).map(PageTab::new).toArray(Tab[]::new))
-			.build();
-		this.addRenderableWidget(this.bar);
-		this.bar.selectTab(this.page.ordinal(), false);
-		// built here too: after a resize the same tab is selected again, which selects nothing new
+		this.done = this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> this.onClose()).width(110).build());
 		this.build();
 		this.repositionElements();
 	}
 
-	private void selected(Tab tab) {
-		if (tab instanceof PageTab(Page p)) {
-			this.page = p;
-			lastPage = p;
-			if (this.list != null && this.bar != null) {
-				this.build();
-				this.repositionElements();
+	// ---------------------------------------------------------------- layout
+
+	private int panelW() {
+		return Math.min(this.width - 16, 620);
+	}
+
+	private int panelX() {
+		return (this.width - this.panelW()) / 2;
+	}
+
+	private int panelY() {
+		return 10;
+	}
+
+	private int panelH() {
+		return this.height - 20;
+	}
+
+	private int contentX() {
+		return this.panelX() + SIDE + 20;
+	}
+
+	/** The sidebar's page buttons: where the i-th one is. */
+	private int sideItemY(int i) {
+		return this.panelY() + 52 + i * 26;
+	}
+
+	private void select(Page p) {
+		if (p == this.page) {
+			return;
+		}
+		this.page = p;
+		lastPage = p;
+		this.pageSwitch = 0.0F;
+		this.list.setScrollAmount(0.0);
+		this.build();
+		this.repositionElements();
+		this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+			net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.3F, 0.25F));
+	}
+
+	@Override
+	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+		if (event.button() == 0) {
+			int x = this.panelX() + 8;
+			for (Page p : Page.values()) {
+				int y = this.sideItemY(p.ordinal());
+				if (event.x() >= x && event.x() < x + SIDE - 16 && event.y() >= y && event.y() < y + 22) {
+					this.select(p);
+					return true;
+				}
 			}
 		}
+		return super.mouseClicked(event, doubleClick);
 	}
 
 	@Override
 	public void repositionElements() {
-		if (this.bar == null) {
+		if (this.list == null) {
 			return;
 		}
-		this.bar.setWidth(this.width);
-		this.bar.arrangeElements();
-		int top = this.bar.getRectangle().bottom();
+		int cx = this.contentX();
+		int top = this.panelY() + HEAD + 8;
 		boolean spawn = this.page == Page.SPAWN;
 		this.search.visible = spawn;
-		this.search.setPosition(this.width / 2 - 100, top + 6);
+		this.search.setWidth(Math.min(220, this.rowW));
+		this.search.setPosition(cx, top + 2);
 		int listTop = top + (spawn ? SEARCH : 0);
-		this.list.updateSizeAndPosition(this.width, this.height - FOOTER - listTop, listTop);
-		this.done.setPosition(this.width / 2 - 100, this.height - FOOTER + 8);
+		int bottom = this.panelY() + this.panelH() - FOOTER;
+		this.list.updateSizeAndPosition(this.rowW + 14, bottom - listTop, cx - 7, listTop);
+		this.done.setWidth(110);
+		this.done.setPosition(this.panelX() + this.panelW() - 110 - 14, bottom + 10);
 	}
 
 	@Override
@@ -408,7 +482,7 @@ public class SettingsScreen extends Screen {
 		if (buttons.isEmpty()) {
 			this.list.note("options.ballisticmissiles.items.none");
 		}
-		int perRow = ROW / ITEM;
+		int perRow = Math.max(1, (this.rowW + 2) / ITEM);
 		for (int i = 0; i < buttons.size(); i += perRow) {
 			this.list.grid(buttons.subList(i, Math.min(buttons.size(), i + perRow)));
 		}
@@ -544,21 +618,183 @@ public class SettingsScreen extends Screen {
 	// ---------------------------------------------------------------- drawing
 
 	@Override
+	public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+		long now = net.minecraft.util.Util.getMillis();
+		float dt = Math.min(0.1F, (now - this.lastFrame) / 1000.0F);
+		this.lastFrame = now;
+		float t = (now - this.opened) / 1000.0F;
+		this.pageSwitch = UiKit.approach(this.pageSwitch, 1.0F, dt * 5.0F);
+		int accent = this.page.accent();
+		// the backdrop: the world (or the menu) sunk into the dark, the page's colour glowing faintly behind the panel
+		g.fill(0, 0, this.width, this.height, UiKit.argb(this.minecraft.level == null ? 1.0F : 0.82F, BACKDROP));
+		UiKit.orb(g, this.width * 0.5F - this.width * 0.6F, this.height * 0.5F - this.height * 0.8F, this.width * 1.2F, this.height * 1.6F, accent,
+			0.16F + 0.04F * Mth.sin(t * 1.2F));
+		int x0 = this.panelX();
+		int y0 = this.panelY();
+		int pw = this.panelW();
+		int ph = this.panelH();
+		UiKit.orb(g, x0 - 40, y0 - 24, pw + 80, ph + 60, 0x000000, 0.7F);
+		UiKit.round(g, UiKit.FILL, x0, y0, pw, ph, 12, UiKit.argb(0.97F, PANEL));
+		UiKit.round(g, UiKit.EDGE, x0, y0, pw, ph, 12, UiKit.argb(0.35F, accent));
+		// the sidebar
+		UiKit.round(g, UiKit.FILL, x0 + 1, y0 + 1, SIDE, ph - 2, 11, UiKit.argb(1.0F, SIDEBAR));
+		g.fill(x0 + SIDE, y0 + 10, x0 + SIDE + 1, y0 + ph - 10, UiKit.argb(0.6F, 0x262B33));
+		// the name, a badge of a missile in a red dot
+		UiKit.disc(g, x0 + 22, y0 + 24, 9.0F, UiKit.argb(1.0F, 0xE5484D));
+		g.renderItem(new ItemStack(de.rcm.ballistic.ModRegistry.missileItem(de.rcm.ballistic.entity.MissileType.NUCLEAR)), x0 + 14, y0 + 16);
+		g.drawString(this.font, Component.literal("BALLISTIC").withStyle(ChatFormatting.BOLD), x0 + 36, y0 + 15, UiKit.argb(1.0F, TEXT), false);
+		g.drawString(this.font, Component.literal("MISSILES").withStyle(ChatFormatting.BOLD), x0 + 36, y0 + 25, UiKit.argb(1.0F, 0xE5484D), false);
+		for (Page p : Page.values()) {
+			int i = p.ordinal();
+			int y = this.sideItemY(i);
+			int x = x0 + 8;
+			int w = SIDE - 16;
+			boolean over = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + 22;
+			this.sideHover[i] = UiKit.approach(this.sideHover[i], p == this.page ? 1.0F : over ? 0.5F : 0.0F, dt * 12.0F);
+			float k = this.sideHover[i];
+			if (k > 0.01F) {
+				UiKit.round(g, UiKit.FILL, x, y, w, 22, 7, UiKit.argb(0.12F * k + (p == this.page ? 0.06F : 0.0F), p.accent()));
+			}
+			if (p == this.page) {
+				UiKit.round(g, UiKit.FILL, x - 4, y + 5, 3, 12, 1, UiKit.argb(1.0F, p.accent()));
+			}
+			g.renderItem(p.icon(), x + 4, y + 3);
+			int ink = p == this.page ? TEXT : UiKit.lerpColor(MUTED, BODY, k * 2.0F);
+			g.drawString(this.font, p.title(), x + 26, y + 7, UiKit.argb(1.0F, ink), false);
+		}
+		// the page's header: its title, big, and what it is for
+		int cx = this.contentX();
+		float e = UiKit.easeOutExpo(this.pageSwitch);
+		int slide = Math.round((1.0F - e) * 8.0F);
+		g.pose().pushMatrix();
+		g.pose().translate(cx + slide, y0 + 13);
+		g.pose().scale(1.5F, 1.5F);
+		g.drawString(this.font, this.page.title().copy().withStyle(ChatFormatting.BOLD), 0, 0, UiKit.argb(e, TEXT), false);
+		g.pose().popMatrix();
+		g.drawString(this.font, this.page.description(), cx + slide, y0 + 31, UiKit.argb(e, MUTED), false);
+		g.fill(cx, y0 + HEAD + 2, x0 + pw - 16, y0 + HEAD + 3, UiKit.argb(0.5F, 0x262B33));
+		UiKit.round(g, UiKit.FILL, cx, y0 + HEAD + 1, Math.round(60 * e), 3, 1, UiKit.argb(1.0F, accent));
+	}
+
+	@Override
 	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+		this.done.setAlpha(0.0F);
 		super.render(graphics, mouseX, mouseY, partialTick);
-		graphics.blit(RenderPipelines.GUI_TEXTURED, this.minecraft.level == null ? Screen.FOOTER_SEPARATOR : Screen.INWORLD_FOOTER_SEPARATOR, 0,
-			this.height - FOOTER - 2, 0.0F, 0.0F, this.width, 2, 32, 2);
+		int x0 = this.panelX();
+		int pw = this.panelW();
+		int fy = this.panelY() + this.panelH() - FOOTER;
+		graphics.fill(this.contentX(), fy, x0 + pw - 16, fy + 1, UiKit.argb(0.5F, 0x262B33));
 		String version = FabricLoader.getInstance().getModContainer(BallisticMissiles.MOD_ID)
 			.map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("?");
-		graphics.drawString(this.font, Component.literal("Ballistic Missiles " + version).withStyle(ChatFormatting.GRAY), 8, this.height - FOOTER + 9, 0xFFFFFFFF);
-		graphics.drawString(this.font, Component.translatable("options.ballisticmissiles.alpha").withStyle(ChatFormatting.GOLD), 8, this.height - FOOTER + 20,
-			0xFFFFFFFF);
+		// the version, and the alpha note, bottom left under the sidebar
+		Component v = Component.literal("v" + version);
+		int vy = this.panelY() + this.panelH() - 30;
+		UiKit.round(graphics, UiKit.FILL, x0 + 12, vy, this.font.width(v) + 10, 13, 6, UiKit.argb(1.0F, 0x1E242C));
+		graphics.drawString(this.font, v, x0 + 17, vy + 3, UiKit.argb(1.0F, BODY), false);
+		graphics.drawString(this.font, Component.translatable("options.ballisticmissiles.alpha"), x0 + 12, vy + 16, UiKit.argb(1.0F, 0xC08A30), false);
+		// done: a solid light button
+		boolean over = this.done.isMouseOver(mouseX, mouseY);
+		UiKit.round(graphics, UiKit.FILL, this.done.getX(), this.done.getY(), this.done.getWidth(), this.done.getHeight(), 7,
+			UiKit.argb(1.0F, over ? 0xFFFFFF : 0xE8E8EA));
+		Component d = this.done.getMessage().copy().withStyle(ChatFormatting.BOLD);
+		graphics.drawString(this.font, d, this.done.getX() + (this.done.getWidth() - this.font.width(d)) / 2, this.done.getY() + 6, UiKit.argb(1.0F, 0x111113),
+			false);
+		// what a command just did, fading
 		if (this.status != null && System.currentTimeMillis() < this.statusUntil) {
+			float a = (float) Mth.clamp((this.statusUntil - System.currentTimeMillis()) / 600.0, 0.0, 1.0);
 			int w = this.font.width(this.status);
-			int x = this.width - 8 - w;
-			int alpha = (int) Mth.clamp((this.statusUntil - System.currentTimeMillis()) / 600.0 * 255.0, 0.0, 255.0);
-			graphics.drawString(this.font, this.status, Math.max(this.width / 2 + 106, x), this.height - FOOTER + 14, (alpha << 24) | 0x80FF80);
+			int sx = this.done.getX() - 12 - w - 10;
+			UiKit.round(graphics, UiKit.FILL, sx, this.done.getY() + 2, w + 10, 16, 7, UiKit.argb(0.25F * a, 0x3FCF8E));
+			graphics.drawString(this.font, this.status, sx + 5, this.done.getY() + 6, UiKit.argb(a, 0x9FF0C8), false);
 		}
+	}
+
+	/** How far a toggle's knob is over (0 off .. 1 on), easing towards where it is. */
+	private float knob(AbstractWidget w, boolean on) {
+		float k = this.knobs.getOrDefault(w, on ? 1.0F : 0.0F);
+		k = UiKit.approach(k, on ? 1.0F : 0.0F, 0.25F);
+		this.knobs.put(w, k);
+		return k;
+	}
+
+	/**
+	 * A control drawn in the panel's style - a dark card with its name on the left and its state on the right: a
+	 * switch for on/off, a chip with the value for a choice, a thin track with a knob for a slider, a filled button
+	 * for an action. The widget itself still handles the mouse and the keys (and its tooltip), drawn invisibly.
+	 */
+	private void paint(GuiGraphics g, AbstractWidget w, int mouseX, int mouseY, float partialTick) {
+		int x = w.getX();
+		int y = w.getY();
+		int ww = w.getWidth();
+		int h = w.getHeight();
+		int accent = this.page.accent();
+		boolean over = w.active && mouseX >= x && mouseX < x + ww && mouseY >= y && mouseY < y + h;
+		float a = w.active ? 1.0F : 0.4F;
+		var font = this.font;
+		if (w instanceof Button) {
+			UiKit.round(g, UiKit.FILL, x, y, ww, h, 6, UiKit.argb(a, over ? UiKit.lerpColor(CARD_HOVER, accent, 0.35F) : UiKit.lerpColor(CARD, accent, 0.18F)));
+			UiKit.round(g, UiKit.EDGE, x, y, ww, h, 6, UiKit.argb(a * (over ? 0.9F : 0.45F), accent));
+			Component m = w.getMessage();
+			int tw = Math.min(font.width(m), ww - 8);
+			g.drawString(font, font.substrByWidth(m, ww - 8).getString(), x + (ww - tw) / 2, y + (h - 8) / 2, UiKit.argb(a, TEXT), false);
+			w.setAlpha(0.0F);
+			w.render(g, mouseX, mouseY, partialTick);
+			return;
+		}
+		UiKit.round(g, UiKit.FILL, x, y, ww, h, 6, UiKit.argb(a, over ? CARD_HOVER : CARD));
+		if (w instanceof IntSlider slider) {
+			String text = w.getMessage().getString();
+			int cut = text.lastIndexOf(": ");
+			String name = cut > 0 ? text.substring(0, cut) : text;
+			String value = cut > 0 ? text.substring(cut + 2) : "";
+			int vw = font.width(value);
+			g.drawString(font, font.plainSubstrByWidth(name, ww - vw - 18), x + 7, y + 3, UiKit.argb(a, BODY), false);
+			g.drawString(font, value, x + ww - 7 - vw, y + 3, UiKit.argb(a, accent), false);
+			int tx = x + 7;
+			int tw = ww - 14;
+			int ty = y + h - 5;
+			float f = (float) slider.fraction();
+			UiKit.round(g, UiKit.FILL, tx, ty, tw, 2, 1, UiKit.argb(a, 0x343B46));
+			UiKit.round(g, UiKit.FILL, tx, ty, Math.max(2, Math.round(tw * f)), 2, 1, UiKit.argb(a, accent));
+			UiKit.disc(g, tx + tw * f, ty + 1.0F, over ? 3.5F : 3.0F, UiKit.argb(a, 0xFFFFFF));
+		} else if (w instanceof CycleButton<?> cycle) {
+			Component msg = w.getMessage();
+			Component name = msg;
+			Component value = Component.empty();
+			if (msg.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents tc && tc.getArgs().length == 2
+				&& tc.getArgs()[0] instanceof Component n && tc.getArgs()[1] instanceof Component v) {
+				name = n;
+				value = v;
+			}
+			String vs = value.getString();
+			boolean onOff = cycle.getValue() instanceof Boolean
+				&& (vs.equals(CommonComponents.OPTION_ON.getString()) || vs.equals(CommonComponents.OPTION_OFF.getString()));
+			if (onOff) {
+				boolean on = (Boolean) cycle.getValue();
+				float k = this.knob(w, on);
+				int sw = 22;
+				int sx = x + ww - sw - 6;
+				int sy = y + (h - 12) / 2;
+				UiKit.round(g, UiKit.FILL, sx, sy, sw, 12, 6, UiKit.argb(a, UiKit.lerpColor(0x3A414C, accent, k)));
+				UiKit.disc(g, sx + 6 + 10 * k, sy + 6, 4.5F, UiKit.argb(a, 0xFFFFFF));
+				g.drawString(font, font.substrByWidth(name, ww - sw - 18).getString(), x + 7, y + (h - 8) / 2, UiKit.argb(a, on ? TEXT : BODY), false);
+			} else {
+				int vw = Math.min(font.width(value), ww / 2);
+				int chipX = x + ww - vw - 22;
+				UiKit.round(g, UiKit.FILL, chipX, y + 3, vw + 16, h - 6, 5, UiKit.argb(a, UiKit.lerpColor(0x262C35, accent, over ? 0.3F : 0.15F)));
+				int ink = value.getStyle().getColor() != null ? value.getStyle().getColor().getValue() : TEXT;
+				g.drawString(font, font.substrByWidth(value, ww / 2).getString(), chipX + 8, y + (h - 8) / 2, UiKit.argb(a, ink), false);
+				g.drawString(font, "\u2039", chipX + 2, y + (h - 8) / 2, UiKit.argb(a * 0.6F, MUTED), false);
+				g.drawString(font, "\u203A", chipX + vw + 10, y + (h - 8) / 2, UiKit.argb(a * 0.6F, MUTED), false);
+				g.drawString(font, font.substrByWidth(name, chipX - x - 12).getString(), x + 7, y + (h - 8) / 2, UiKit.argb(a, BODY), false);
+			}
+		} else {
+			w.render(g, mouseX, mouseY, partialTick);
+			return;
+		}
+		// the widget itself, invisibly: hover, focus, tooltip
+		w.setAlpha(0.0F);
+		w.render(g, mouseX, mouseY, partialTick);
 	}
 
 	@Override
@@ -578,7 +814,29 @@ public class SettingsScreen extends Screen {
 
 		@Override
 		public int getRowWidth() {
-			return ROW;
+			return SettingsScreen.this.rowW;
+		}
+
+		@Override
+		protected void renderListBackground(GuiGraphics graphics) {
+		}
+
+		@Override
+		protected void renderListSeparators(GuiGraphics graphics) {
+		}
+
+		@Override
+		protected int scrollBarX() {
+			return this.getRowRight() + 4;
+		}
+
+		@Override
+		protected void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+			if (this.scrollbarVisible()) {
+				int x = this.scrollBarX() + 2;
+				UiKit.round(graphics, UiKit.FILL, x, this.getY(), 2, this.getHeight(), 1, UiKit.argb(0.5F, 0x262B33));
+				UiKit.round(graphics, UiKit.FILL, x, this.scrollBarY(), 2, this.scrollerHeight(), 1, UiKit.argb(0.8F, SettingsScreen.this.page.accent()));
+			}
 		}
 
 		void clear() {
@@ -590,8 +848,8 @@ public class SettingsScreen extends Screen {
 		}
 
 		void note(String key) {
-			var lines = SettingsScreen.this.font.split(Component.translatable(key).withStyle(ChatFormatting.GRAY), ROW);
-			this.addEntry(new Note(lines), lines.size() * 10 + 4);
+			var lines = SettingsScreen.this.font.split(Component.translatable(key), SettingsScreen.this.rowW - 16);
+			this.addEntry(new Note(lines), lines.size() * 10 + 12);
 		}
 
 		void text(Component text) {
@@ -623,13 +881,13 @@ public class SettingsScreen extends Screen {
 			public void renderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
 				int x = this.getX();
 				boolean stretch = !(this.widgets.get(0) instanceof ItemButton);
-				int w = stretch ? (ROW - this.gap * (this.widgets.size() - 1)) / this.widgets.size() : 0;
+				int w = stretch ? (SettingsScreen.this.rowW - this.gap * (this.widgets.size() - 1)) / this.widgets.size() : 0;
 				for (AbstractWidget widget : this.widgets) {
 					if (stretch) {
 						widget.setWidth(w);
 					}
 					widget.setPosition(x, this.getY());
-					widget.render(graphics, mouseX, mouseY, partialTick);
+					SettingsScreen.this.paint(graphics, widget, mouseX, mouseY, partialTick);
 					x += widget.getWidth() + this.gap;
 				}
 			}
@@ -657,15 +915,15 @@ public class SettingsScreen extends Screen {
 
 			@Override
 			public void renderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+				// a section: a small dot in the page's colour, the title in capitals, a hairline running on
 				var font = SettingsScreen.this.font;
-				int y = this.getY() + this.getHeight() - 13;
-				int mid = this.getX() + ROW / 2;
-				int half = font.width(this.text) / 2;
-				graphics.drawCenteredString(font, this.text, mid, y, this.colour);
-				int line = y + 4;
-				int dim = (this.colour & 0x00FFFFFF) | 0x50000000;
-				graphics.fill(this.getX(), line, mid - half - 6, line + 1, dim);
-				graphics.fill(mid + half + 6, line, this.getX() + ROW, line + 1, dim);
+				int y = this.getY() + this.getHeight() - 14;
+				int colour = SettingsScreen.this.page.accent();
+				Component title = Component.literal(this.text.getString().toUpperCase(Locale.ROOT)).withStyle(ChatFormatting.BOLD);
+				UiKit.disc(graphics, this.getX() + 3, y + 4, 2.5F, UiKit.argb(1.0F, colour));
+				graphics.drawString(font, title, this.getX() + 10, y, UiKit.argb(1.0F, UiKit.lerpColor(colour, 0xFFFFFF, 0.25F)), false);
+				int lx = this.getX() + 16 + font.width(title);
+				graphics.fill(lx, y + 4, this.getX() + SettingsScreen.this.rowW, y + 5, UiKit.argb(0.5F, 0x2A3039));
 			}
 
 			@Override
@@ -689,9 +947,12 @@ public class SettingsScreen extends Screen {
 
 			@Override
 			public void renderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
-				int y = this.getY() + 1;
+				int h = this.lines.size() * 10 + 6;
+				UiKit.round(graphics, UiKit.FILL, this.getX(), this.getY(), SettingsScreen.this.rowW, h, 6, UiKit.argb(0.6F, 0x161B22));
+				UiKit.round(graphics, UiKit.FILL, this.getX(), this.getY(), 2, h, 1, UiKit.argb(0.8F, SettingsScreen.this.page.accent()));
+				int y = this.getY() + 4;
 				for (var line : this.lines) {
-					graphics.drawString(SettingsScreen.this.font, line, this.getX(), y, 0xFFA0A0A0);
+					graphics.drawString(SettingsScreen.this.font, line, this.getX() + 8, y, UiKit.argb(1.0F, 0xA8ADB5), false);
 					y += 10;
 				}
 			}
@@ -730,9 +991,9 @@ public class SettingsScreen extends Screen {
 			int x = this.getX();
 			int y = this.getY();
 			boolean lit = this.active && this.isHoveredOrFocused();
-			graphics.fill(x, y, x + 20, y + 20, lit ? 0x60FFFFFF : 0x40000000);
+			UiKit.round(graphics, UiKit.FILL, x, y, 20, 20, 5, lit ? 0xFF2E3640 : 0xFF1A1F27);
 			if (lit) {
-				graphics.renderOutline(x, y, 20, 20, 0xFFFFFFFF);
+				UiKit.round(graphics, UiKit.EDGE, x, y, 20, 20, 5, 0xFFF0C04A);
 			}
 			graphics.renderItem(this.stack, x + 2, y + 2);
 			if (!this.active) {
@@ -768,6 +1029,10 @@ public class SettingsScreen extends Screen {
 
 		private int current() {
 			return Mth.clamp((int) Math.round(this.min + this.value * (this.max - this.min)), this.min, this.max);
+		}
+
+		double fraction() {
+			return this.value;
 		}
 
 		@Override

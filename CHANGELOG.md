@@ -1,8 +1,16 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.38.2** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.39.0** (01.11.2026).
 
 ---
+
+### 12.39.0 – Einstellungsmenü (/bmmenu) komplett neu gestaltet
+- Seitenleiste links mit Logo, Symbol und Farbe je Bereich. Die aktive Seite ist farbig markiert, Hover wird weich eingeblendet.
+- Großer Seitentitel mit kurzer Beschreibung, beim Seitenwechsel gleitet er herein.
+- Schalter statt „An/Aus“-Knöpfen: Pillen mit gleitendem Knopf in der Farbe der Seite.
+- Regler mit schmaler Spur, Knopf und farbigem Wert. Auswahl-Optionen zeigen ihren Wert in einem Chip mit ‹ ›.
+- Abschnitts-Überschriften mit Farbpunkt, Hinweise in eigenen Boxen, dünne farbige Scrollleiste.
+- Fußzeile mit Versionsnummer und neuem „Fertig“-Knopf, Statusmeldungen als grüne Pille.
 
 ### 12.38.2 – Neue Welten laden wieder
 - Die häufigeren Städte aus 12.38.1 sind zurückgenommen: wieder seltener und mit der alten Platzwahl. Neue Welten hingen beim Laden („Loading terrain“).
