@@ -56,16 +56,16 @@ X, Y = np.meshgrid(g, g)  # x right (+u), y down (+v), -1..1
 def shade(depth, seed, gloss=1.0):
     """Colour and alpha of blood `depth` thick (0 at the very edge, 1 deep): thin films brighter and clearer,
     deep blood near black; a soft reflection of the sky across the wet top, and a darker drying rim."""
-    deep = np.array([52, 0, 4], float)
-    mid = np.array([118, 4, 10], float)
-    thin = np.array([170, 22, 26], float)
+    deep = np.array([40, 1, 3], float)
+    mid = np.array([92, 4, 8], float)
+    thin = np.array([140, 16, 18], float)
     t = np.clip(depth, 0, 1)[..., None]
     col = np.where(t > 0.35, mid + (deep - mid) * ((t - 0.35) / 0.65), thin + (mid - thin) * (t / 0.35))
     col = col * (0.88 + 0.24 * fbm(X * 6, Y * 6, seed)[..., None])
     # the wet surface catching the light: a broad soft sheen and a few sharp glints
     sheen = smoothstep(0.55, 0.8, fbm(X * 1.6 + 3, Y * 1.6, seed + 1)) * smoothstep(0.15, 0.5, depth) * gloss
     glint = smoothstep(0.86, 0.95, fbm(X * 5, Y * 5, seed + 2)) * smoothstep(0.25, 0.6, depth) * gloss
-    col = col + sheen[..., None] * np.array([70, 40, 42]) + glint[..., None] * np.array([150, 120, 120])
+    col = col + sheen[..., None] * np.array([18, 6, 6]) + glint[..., None] * np.array([40, 22, 22])
     # the rim, thinnest, dries first: darker, a little brown
     rim = smoothstep(0.12, 0.0, depth) * (depth > 0)
     col = col * (1 - 0.35 * rim[..., None]) + rim[..., None] * np.array([20, 4, 2])

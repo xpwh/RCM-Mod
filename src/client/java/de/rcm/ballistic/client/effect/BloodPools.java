@@ -33,10 +33,16 @@ import org.joml.Vector3f;
  * faster than stone. Fresh it is bright and wet; it dries dark over minutes and stays a while as a brown stain.
  */
 public final class BloodPools {
-	private static final RenderType TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/effect/blood_ground.png"));
-	private static final RenderType GLOSS = RenderTypes.eyes(BallisticMissiles.id("textures/effect/blood_ground_gloss.png"));
+	/** The pools: tiles that join up with their neighbours (tools/gen_blood_pool.py), and their wet shine. */
+	private static final RenderType TYPE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/effect/blood_pool.png"));
+	private static final RenderType GLOSS = RenderTypes.eyes(BallisticMissiles.id("textures/effect/blood_pool_gloss.png"));
+	/** The runs down a step, from the stains' atlas. */
+	private static final RenderType RUNS = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/effect/blood_ground.png"));
+	private static final int GRID = 12;
+	/** For each of the 256 neighbour masks: which of the 47 tile patterns (as gen_blood_pool.py numbers them). */
+	private static final int[] PATTERN = patterns();
 	/** The film a block's top holds before it runs on (in "pool" units: a body empties about 1.5). */
-	private static final float HOLD = 0.28F;
+	private static final float HOLD = 0.3F;
 	/** What one drop falling off an edge carries. */
 	private static final float DROP = 0.035F;
 	private static final int LIFE = 7200;
@@ -79,6 +85,39 @@ public final class BloodPools {
 	private static final Direction[] SIDES = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
 
 	private BloodPools() {
+	}
+
+	/** A corner counts only when both its sides are wet; the patterns numbered in the order the masks first meet them. */
+	private static int canonical(int mask) {
+		int m = mask & 15;
+		int[][] corners = {{16, 1, 2}, {32, 4, 2}, {64, 4, 8}, {128, 1, 8}};
+		for (int[] c : corners) {
+			if ((mask & c[0]) != 0 && (m & c[1]) != 0 && (m & c[2]) != 0) {
+				m |= c[0];
+			}
+		}
+		return m;
+	}
+
+	private static int[] patterns() {
+		int[] out = new int[256];
+		List<Integer> seen = new ArrayList<>();
+		for (int m = 0; m < 256; m++) {
+			int c = canonical(m);
+			int i = seen.indexOf(c);
+			if (i < 0) {
+				seen.add(c);
+				i = seen.size() - 1;
+			}
+			out[m] = i;
+		}
+		return out;
+	}
+
+	/** Whether the block top at pos (as high as {@code top}) has blood on it to join up with. */
+	private static boolean wet(BlockPos pos, double top) {
+		Cell c = CELLS.get(pos.asLong());
+		return c != null && c.shown > 0.12F && Math.abs(c.top - top) < 0.05;
 	}
 
 	public static void init() {
@@ -223,17 +262,14 @@ public final class BloodPools {
 				if (c.shown < 0.02F || c.pos.distToCenterSqr(cam) > 64.0 * 64.0) {
 					continue;
 				}
-				float alpha = Mth.clamp((LIFE - (now - c.born)) / (float) FADE, 0.0F, 1.0F);
-				// drying: bright red while it is fed, dark over minutes, brown-black at the last
-				float age = Mth.clamp((now - c.fed) / 3000.0F, 0.0F, 1.0F);
-				age = age * age * (3.0F - 2.0F * age);
-				int r = (int) (255 * (1.0F - 0.55F * age));
-				int g = (int) (255 * (1.0F - 0.45F * age));
-				int b = (int) (255 * (1.0F - 0.52F * age));
-				int colour = (int) (alpha * 230.0F) << 24 | r << 16 | g << 8 | b;
-				int light = LevelRenderer.getLightColor(mc.level, c.pos.above());
-				pool(pose, consumer, c, cam, colour, light);
-				runs(pose, consumer, c, cam, colour, light);
+				pool(pose, consumer, c, cam, colour(c, now), LevelRenderer.getLightColor(mc.level, c.pos.above()));
+			}
+		});
+		context.commandQueue().submitCustomGeometry(context.matrices(), RUNS, (pose, consumer) -> {
+			for (Cell c : CELLS.values()) {
+				if (c.runs != 0 && c.shown >= 0.02F && c.pos.distToCenterSqr(cam) < 48.0 * 48.0) {
+					runs(pose, consumer, c, cam, colour(c, now), LevelRenderer.getLightColor(mc.level, c.pos.above()));
+				}
 			}
 		});
 		context.commandQueue().order(1).submitCustomGeometry(context.matrices(), GLOSS, (pose, consumer) -> {
@@ -247,34 +283,51 @@ public final class BloodPools {
 				}
 				int light = LevelRenderer.getLightColor(mc.level, c.pos.above());
 				Vector3f p = new Vector3f((float) (c.pos.getX() + 0.5 - cam.x), (float) (c.top - cam.y), (float) (c.pos.getZ() + 0.5 - cam.z));
-				int a = (int) (255.0F * wet * wet * de.rcm.ballistic.client.render.WetShine.at(p, new Vector3f(0, 1, 0), light));
+				int a = (int) (200.0F * wet * de.rcm.ballistic.client.render.WetShine.at(p, new Vector3f(0, 1, 0), light));
 				pool(pose, consumer, c, cam, a << 24 | 0xFFFFFF, light);
 			}
 		});
 	}
 
-	/** The pool on the block's top: a stain of the pool row, as big as the blood there, kept on the block where it drops away. */
+	/** The pool's colour: dark and fresh while it is fed, drying darker and browner over minutes, fading at the end. */
+	private static int colour(Cell c, long now) {
+		float alpha = Mth.clamp((LIFE - (now - c.born)) / (float) FADE, 0.0F, 1.0F) * Mth.clamp(c.shown / 0.25F, 0.0F, 1.0F);
+		float age = Mth.clamp((now - c.fed) / 3000.0F, 0.0F, 1.0F);
+		age = age * age * (3.0F - 2.0F * age);
+		int r = (int) (255 * (1.0F - 0.5F * age));
+		int g = (int) (255 * (1.0F - 0.35F * age));
+		int b = (int) (255 * (1.0F - 0.45F * age));
+		return (int) (alpha * 255.0F) << 24 | r << 16 | g << 8 | b;
+	}
+
+	/**
+	 * The blood on a block's top: the whole top, with the tile that matches which neighbours are wet too (so a big
+	 * pool is one sheet) and how much stands here.
+	 */
 	private static void pool(com.mojang.blaze3d.vertex.PoseStack.Pose pose, com.mojang.blaze3d.vertex.VertexConsumer consumer, Cell c, Vec3 cam, int colour,
 		int light) {
-		float rad = c.shown;
-		// over open sides it stays on the block; towards the same-level neighbours it may spread across
-		float ox = c.ox * Math.max(0.0F, 0.5F - rad * 0.7F);
-		float oz = c.oz * Math.max(0.0F, 0.5F - rad * 0.7F);
-		if (c.open != 0) {
-			rad = Math.min(rad, 0.5F);
+		BlockPos p = c.pos;
+		int mask = 0;
+		BlockPos[] around = {p.north(), p.east(), p.south(), p.west(), p.north().east(), p.south().east(), p.south().west(), p.north().west()};
+		for (int i = 0; i < 8; i++) {
+			if (wet(around[i], c.top)) {
+				mask |= 1 << i;
+			}
 		}
-		float cx = (float) (c.pos.getX() + 0.5 + ox - cam.x);
-		float cz = (float) (c.pos.getZ() + 0.5 + oz - cam.z);
-		float y = (float) (c.top + 0.004 + (c.pos.hashCode() & 7) * 0.0006 - cam.y);
-		float ca = Mth.cos(c.angle) * rad;
-		float sa = Mth.sin(c.angle) * rad;
-		float tu = c.variant * 0.25F;
-		float tv = 0.5F;
-		float[][] q = {{-1, -1, tu, tv + 0.25F}, {-1, 1, tu, tv}, {1, 1, tu + 0.25F, tv}, {1, -1, tu + 0.25F, tv + 0.25F}};
-		for (float[] p : q) {
-			float x = cx + ca * p[0] - sa * p[1];
-			float z = cz + sa * p[0] + ca * p[1];
-			consumer.addVertex(pose, x, y, z).setColor(colour).setUv(p[2], p[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
+		int level = c.vol < HOLD * 0.6F ? 0 : c.vol < HOLD * 1.5F ? 1 : 2;
+		if (c.shown < 0.3F) {
+			level = 0;
+		}
+		int tile = level * 47 + PATTERN[mask];
+		float u0 = (tile % GRID) / (float) GRID;
+		float v0 = (tile / GRID) / (float) GRID;
+		float d = 1.0F / GRID;
+		float x0 = (float) (p.getX() - cam.x);
+		float z0 = (float) (p.getZ() - cam.z);
+		float y = (float) (c.top + 0.004 - cam.y);
+		float[][] q = {{0, 0, u0, v0}, {0, 1, u0, v0 + d}, {1, 1, u0 + d, v0 + d}, {1, 0, u0 + d, v0}};
+		for (float[] k : q) {
+			consumer.addVertex(pose, x0 + k[0], y, z0 + k[1]).setColor(colour).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
 				.setNormal(pose, 0.0F, 1.0F, 0.0F);
 		}
 	}

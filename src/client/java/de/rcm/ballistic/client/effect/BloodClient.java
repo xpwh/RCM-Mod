@@ -159,7 +159,7 @@ public final class BloodClient {
 					CollisionContext.empty()));
 				if (hit.getType() == HitResult.Type.BLOCK) {
 					// what runs out lies as a liquid: it spreads, runs on, drips over edges (BloodPools)
-					BloodPools.add(mc.level, hit.getLocation(), n * 0.075F);
+					BloodPools.add(mc.level, hit.getLocation(), n * 0.05F);
 				}
 			}
 			case Blood.MIST -> {
@@ -298,7 +298,7 @@ public final class BloodClient {
 					stain(mc, hit.getLocation(), hit.getDirection(), d.size * (2.2F + speed * 3.5F), new Vec3(d.vx, d.vy, d.vz), 0, SPLAT);
 					if (hit.getDirection() == Direction.UP) {
 						// and what lands on the ground collects there
-						BloodPools.add(mc.level, hit.getLocation(), d.size * 0.9F);
+						BloodPools.add(mc.level, hit.getLocation(), d.size * 0.35F);
 					}
 				}
 				DROPS.remove(i);

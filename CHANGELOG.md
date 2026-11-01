@@ -1,8 +1,14 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.1.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.2.0** (01.11.2026).
 
 ---
+
+### 13.2.0 – Realistischeres Blut
+- Blutlachen sind keine einzelnen roten Scheiben mehr, sondern eine zusammenhängende Fläche. Jeder Block wählt passend zu seinen acht Nachbarn ein Kachelstück, die Ränder gehen nahtlos ineinander über, und große Lachen werden eine geschlossene Fläche mit unregelmäßigem Rand.
+- Farbe wie echtes Blut: dick fast schwarzrot, nur der dünne Film am Rand heller und durchscheinend. Der nasse Glanz kommt vom Licht, nicht mehr von rosa Flecken in der Textur.
+- Deutlich weniger Menge: Tropfen und Leichen füllen nicht mehr ganze Wiesen.
+- Spritzer und Tropfen sind dunkler und weniger rosa.
 
 ### 13.1.0 – Gore: fließendes Blut, Austrittswunden, Arterienpuls, echte Klänge
 - Blut verhält sich wie eine Flüssigkeit:
