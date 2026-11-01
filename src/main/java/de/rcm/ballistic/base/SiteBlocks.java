@@ -76,6 +76,12 @@ public final class SiteBlocks {
 			if (!(entity instanceof LivingEntity || entity instanceof VehicleEntity) || entity instanceof Player p && (p.isCreative() || p.isSpectator())) {
 				return;
 			}
+			// an animal or a monster wandering into the field only sets a mine off with someone near enough to see
+			// it: otherwise every outpost in the loaded chunks would go off unwatched, heard kilometres away
+			if (!(entity instanceof Player || entity instanceof VehicleEntity || entity instanceof de.rcm.ballistic.ai.SoldierEntity)
+				&& !server.hasNearbyAlivePlayer(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 48.0)) {
+				return;
+			}
 			this.arm(server, pos, state, 9);
 		}
 

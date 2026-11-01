@@ -726,6 +726,7 @@ public final class DetonationManager {
 		double range = warhead == Warhead.HYDROGEN || warhead == Warhead.POSEIDON ? HYDROGEN_EFFECT_RANGE
 			: warhead == Warhead.TSAR ? HYDROGEN_EFFECT_RANGE * 1.4
 			: warhead == Warhead.BOMBLET ? 600.0
+			: warhead == Warhead.GRENADE ? 800.0 // a hand grenade or a mine: not heard across the whole map
 			: EFFECT_RANGE;
 		if (warhead == Warhead.MIRV_WARHEAD) {
 			range = 4000.0;

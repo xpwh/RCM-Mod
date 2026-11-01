@@ -1,8 +1,12 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.39.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.39.1** (01.11.2026).
 
 ---
+
+### 12.39.1 – Keine Zufalls-Explosionen mehr beim Spawnen
+- Tiere und Monster lösen die Landminen in den Minenfeldern der Schützengraben-Basen nur noch aus, wenn ein Spieler in der Nähe ist (48 Blöcke). Spieler, Soldaten und Fahrzeuge lösen sie wie bisher immer aus.
+- Handgranaten und Minen sind nur noch bis 800 Blöcke zu hören statt bis 3.000.
 
 ### 12.39.0 – Einstellungsmenü (/bmmenu) komplett neu gestaltet
 - Seitenleiste links mit Logo, Symbol und Farbe je Bereich. Die aktive Seite ist farbig markiert, Hover wird weich eingeblendet.
