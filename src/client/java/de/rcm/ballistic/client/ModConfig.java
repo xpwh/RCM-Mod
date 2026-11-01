@@ -104,7 +104,9 @@ public final class ModConfig {
 	public enum SmokeStyle {
 		VOLUME,
 		SPRITES,
-		VOXEL;
+		VOXEL,
+		/** "Voxel 2": flat pixel-art puffs. */
+		PIXEL;
 
 		public String key() {
 			return name().toLowerCase(java.util.Locale.ROOT);
@@ -118,6 +120,7 @@ public final class ModConfig {
 				case "volume", "volumetric", "true" -> VOLUME;
 				case "sprites", "classic", "false" -> SPRITES;
 				case "voxel", "voxels" -> VOXEL;
+				case "pixel", "voxel2", "voxel 2" -> PIXEL;
 				default -> fallback;
 			};
 		}

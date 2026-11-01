@@ -1,8 +1,15 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.5.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.6.0** (01.11.2026).
 
 ---
+
+### 13.6.0 – Voxel 2: Pixel-Art-Rauch
+- Vierte Rauch-Darstellung **Voxel 2** (Einstellungen → Effekte → Rauch-Darstellung): flacher Pixel-Art-Rauch wie Minecrafts eigene Partikel statt 3D-Würfeln.
+- Jede Rauchwolke ist ein grobes 12×12-Pixel-Wölkchen (8 Formen), immer bildschirmgerade, damit die Pixel sauber treppenförmig stehen; weiß mit wenigen flachen Grautönen (Licht von oben links), ausgefranster Rand mit einzelnen Streupixeln.
+- Massiv statt durchsichtig: die Wölkchen verschmelzen zu einer einzigen weißen Rauchspur mit Pixelkanten.
+- Dünner werdender Rauch blendet nicht aus, sondern zerfällt von außen nach innen Pixel für Pixel.
+- Frischer Abgasstrahl glüht orange, Tageszeit und Lichter in der Nähe färben den Rauch. Schnell (kein Sortieren, kein Raymarching).
 
 ### 13.5.0 – Voxel-Rauch
 - Dritte Rauch-Darstellung neben „Volumetrisch“ und „Klassisch“: **Voxel** (Einstellungen → Effekte → Rauch-Darstellung, durchschalten). Der Rauch von Raketen, Jets, Startrampen und Rückstrahl wird aus Würfeln auf einem festen Weltraster gebaut, passend zur Minecraft-Welt.

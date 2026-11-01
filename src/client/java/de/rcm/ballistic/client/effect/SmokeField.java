@@ -36,6 +36,8 @@ import org.joml.Vector3f;
  */
 public final class SmokeField {
 	private static final RenderType TYPE = RenderTypes.entityTranslucentEmissive(BallisticMissiles.id("textures/effect/smoke_volume.png"));
+	/** "Voxel 2": flat pixel-art puffs, cut out (solid, no blending), so a trail is one white body with pixel edges. */
+	private static final RenderType PIXEL_TYPE = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/effect/smoke_pixel.png"));
 	private static final int CAP = 16000;
 	private static final int BUDGET = 11000;
 	private static final double MAX_DISTANCE = 1400.0;
@@ -525,16 +527,18 @@ public final class SmokeField {
 		// entities the clouds were painted over it wherever a trail crossed in front of one (smoke beyond the
 		// cloud layer is dimmed by VEIL above instead)
 		PoseStack.Pose pose = context.matrices().last();
-		VertexConsumer consumer = context.consumers().getBuffer(TYPE);
+		boolean pixel = de.rcm.ballistic.client.ModConfig.smokeStyle == de.rcm.ballistic.client.ModConfig.SmokeStyle.PIXEL;
+		RenderType spriteType = pixel ? PIXEL_TYPE : TYPE;
+		VertexConsumer consumer = context.consumers().getBuffer(spriteType);
 		for (int k = total - 1; k >= 0; k--) {
 			if ((order[k] & VOLUME_BIT) != 0) {
 				continue;
 			}
 			int i = (int) order[k];
-			emit(pose, consumer, i, cam, right, up, theta, day, partial);
+			emit(pose, consumer, i, cam, right, up, theta, day, partial, pixel);
 		}
 		if (context.consumers() instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers) {
-			buffers.endBatch(TYPE);
+			buffers.endBatch(spriteType);
 		}
 		if (volumetric > 0) {
 			Vector3f dir = lightDir(mc);
@@ -627,7 +631,7 @@ public final class SmokeField {
 	}
 
 	private static void emit(PoseStack.Pose pose, VertexConsumer consumer, int i, Vec3 cam, Vector3f right, Vector3f up, float theta, float day,
-		float partial) {
+		float partial, boolean pixel) {
 		float age = clock - BORN[i] + partial;
 		float t = Math.min(1.0F, age / LIFE[i]);
 		float rad = radius(i, t);
@@ -665,6 +669,30 @@ public final class SmokeField {
 		}
 		int argb = (int) (Mth.clamp(a, 0.0F, 1.0F) * 255.0F) << 24 | (int) (Mth.clamp(cr, 0.0F, 1.0F) * 255.0F) << 16
 			| (int) (Mth.clamp(cg, 0.0F, 1.0F) * 255.0F) << 8 | (int) (Mth.clamp(cb, 0.0F, 1.0F) * 255.0F);
+		if (pixel) {
+			// pixel art: square to the screen (so its pixels line up with the screen's), one of eight puffs. Its
+			// alpha is not see-through but how thick the smoke still is: the texture's alpha is how deep inside the
+			// puff each pixel lies, and what falls under the cut-out goes - thinning smoke crumbles from its edge
+			// in, pixel by pixel
+			int pa = (int) (Mth.clamp(a * 1.8F, 0.0F, 1.0F) * 255.0F) << 24 | argb & 0xFFFFFF;
+			float pu0 = ((int) SEED[i] & 7) * 0.125F;
+			float pu1 = pu0 + 0.125F;
+			float k = rad * 0.85F;
+			float px = (float) dx;
+			float py = (float) dy;
+			float pz = (float) dz;
+			float rx = right.x * k;
+			float ry = right.y * k;
+			float rz = right.z * k;
+			float ux = up.x * k;
+			float uy = up.y * k;
+			float uz = up.z * k;
+			vertex(consumer, pose, px - rx - ux, py - ry - uy, pz - rz - uz, pu0, 1.0F, pa);
+			vertex(consumer, pose, px + rx - ux, py + ry - uy, pz + rz - uz, pu1, 1.0F, pa);
+			vertex(consumer, pose, px + rx + ux, py + ry + uy, pz + rz + uz, pu1, 0.0F, pa);
+			vertex(consumer, pose, px - rx + ux, py - ry + uy, pz - rz + uz, pu0, 0.0F, pa);
+			return;
+		}
 		// sprite: one of four shapes, dissolving through four stages as it ages
 		int shape = (int) SEED[i] & 3;
 		int stage = Mth.clamp((int) (t * t * 4.6F), 0, 3);

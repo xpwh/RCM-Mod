@@ -391,7 +391,11 @@ public class SettingsScreen extends Screen {
 			.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.smoke_fade"), (b, v) -> ModConfig.fastSmoke = v));
 		this.list.row(CycleButton.builder((ModConfig.SmokeStyle st) -> {
 					Component c = Component.translatable("options.ballisticmissiles.smoke_render." + st.key());
-					return st == ModConfig.SmokeStyle.SPRITES ? c : c.copy().withStyle(st == ModConfig.SmokeStyle.VOXEL ? ChatFormatting.GOLD : ChatFormatting.AQUA);
+					return switch (st) {
+						case SPRITES -> c;
+						case VOLUME -> c.copy().withStyle(ChatFormatting.AQUA);
+						default -> c.copy().withStyle(ChatFormatting.GOLD);
+					};
 				}, ModConfig.smokeStyle)
 			.withValues(ModConfig.SmokeStyle.values())
 			.withTooltip(v -> Tooltip.create(Component.translatable("options.ballisticmissiles.smoke_render.tooltip")))
