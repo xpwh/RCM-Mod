@@ -158,8 +158,9 @@ public final class BloodClient {
 				BlockHitResult hit = mc.level.clip(new ClipContext(at, at.add(0, -3.0, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
 					CollisionContext.empty()));
 				if (hit.getType() == HitResult.Type.BLOCK) {
-					// what runs out lies as a liquid: it spreads, runs on, drips over edges (BloodPools)
-					BloodPools.add(mc.level, hit.getLocation(), n * 0.05F);
+					// what runs out lies as a liquid: it wells up under the body for a while, spreads, runs on, drips
+					// over edges (BloodPools)
+					BloodPools.pour(hit.getLocation(), n * 45.0F, 80 + n * 8);
 				}
 			}
 			case Blood.MIST -> {
@@ -196,7 +197,11 @@ public final class BloodClient {
 		BlockHitResult hit = mc.level.clip(new ClipContext(at.add(0, 0.3, 0), at.add(0, -1.5, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
 			CollisionContext.empty()));
 		if (hit.getType() == HitResult.Type.BLOCK) {
-			stain(mc, hit.getLocation(), hit.getDirection(), size, Vec3.ZERO, 30, size > 0.5F ? POOL_STAIN : SPLAT);
+			if (hit.getDirection() == Direction.UP) {
+				BloodPools.add(mc.level, hit.getLocation(), size * 60.0F);
+			} else {
+				stain(mc, hit.getLocation(), hit.getDirection(), size, Vec3.ZERO, 30, SPLAT);
+			}
 		}
 	}
 
@@ -295,10 +300,11 @@ public final class BloodClient {
 				if (mc.level.getFluidState(hit.getBlockPos()).isEmpty()) {
 					// big drops make big splashes; the faster, the wider it spreads
 					float speed = (float) Math.sqrt(d.vx * d.vx + d.vy * d.vy + d.vz * d.vz);
-					stain(mc, hit.getLocation(), hit.getDirection(), d.size * (2.2F + speed * 3.5F), new Vec3(d.vx, d.vy, d.vz), 0, SPLAT);
 					if (hit.getDirection() == Direction.UP) {
-						// and what lands on the ground collects there
-						BloodPools.add(mc.level, hit.getLocation(), d.size * 0.35F);
+						// on the ground it is liquid: it lies where it fell, flung out in droplets, and runs (BloodPools)
+						BloodPools.splash(mc.level, hit.getLocation(), d.size, speed);
+					} else {
+						stain(mc, hit.getLocation(), hit.getDirection(), d.size * (2.2F + speed * 3.5F), new Vec3(d.vx, d.vy, d.vz), 0, SPLAT);
 					}
 				}
 				DROPS.remove(i);

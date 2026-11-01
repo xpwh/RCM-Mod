@@ -1,8 +1,16 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.2.1** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.3.0** (01.11.2026).
 
 ---
+
+### 13.3.0 – Blut fließt wie echte Flüssigkeit
+- Blut am Boden wird jetzt als Flüssigkeit simuliert: jede Blockoberfläche ist ein Raster aus 12 × 12 Zellen, das Blut läuft von hoch nach tief über die kleinen Unebenheiten des Bodens – es kriecht in Mulden, bildet Finger und Ausläufer, fließt um Erhebungen und bleibt erst als dünner Film liegen, der hier dicker, dort dünner ist (keine runden oder eckigen Lachen mehr, nicht ans Blockraster gebunden).
+- Es fließt über ebenen Boden in den nächsten Block weiter, läuft Stufen hinunter (mit Blutspuren an der Stufenkante) und sammelt sich an Abbruchkanten, bis es Tropfen für Tropfen hinunterfällt (mit Tropfgeräusch).
+- Unter Verletzten und Toten quillt das Blut über einige Sekunden nach: die Lache wächst langsam.
+- Tropfen und Spritzer, die auf dem Boden landen, werden Teil der Flüssigkeit; schnelle Tropfen spritzen in kleine Tröpfchen auseinander.
+- Aussehen: dünner Film klar rot und durchscheinend, tiefe Stellen fast schwarzrot und leicht erhaben, nasser Glanz im Licht; stehendes Blut dunkelt über Minuten nach und trocknet zu einem braunen Fleck. Erde, Sand und Gras saugen es schneller auf als Stein.
+- Kostet etwas mehr Leistung als die alten Lachen.
 
 ### 13.2.1 – Echtere Gurgel- und Blutgeräusche
 - Röcheln neu aus echten Aufnahmen: schweres, verletztes Atmen mit Blut im Hals, das im Rhythmus des Atems gluckert, nasses Blut-Husten und Würgen. Sterbende röcheln öfter, als dass sie stöhnen.
