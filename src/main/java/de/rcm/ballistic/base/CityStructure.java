@@ -34,8 +34,8 @@ public class CityStructure extends Structure {
 				int sz = z + j * 32;
 				int top = context.chunkGenerator().getFirstOccupiedHeight(sx, sz, Heightmap.Types.WORLD_SURFACE_WG, context.heightAccessor(), context.randomState());
 				int floor = context.chunkGenerator().getFirstOccupiedHeight(sx, sz, Heightmap.Types.OCEAN_FLOOR_WG, context.heightAccessor(), context.randomState());
-				if (top - floor > 6) {
-					return Optional.empty(); // a lake or a river right through it
+				if (top - floor > 3) {
+					return Optional.empty();
 				}
 				if (top != floor) {
 					wet++;
@@ -44,7 +44,7 @@ public class CityStructure extends Structure {
 			}
 		}
 		Arrays.sort(heights);
-		if (wet > 6 || heights[44] - heights[4] > 20 || heights[48] - heights[0] > 34) {
+		if (wet > 3 || heights[44] - heights[4] > 14 || heights[48] - heights[0] > 26) {
 			return Optional.empty();
 		}
 		int y = heights[24];
