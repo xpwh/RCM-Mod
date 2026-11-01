@@ -1,8 +1,14 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.42.1** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.43.0** (01.11.2026).
 
 ---
+
+### 12.43.0 – Lebendiges Thermometer
+- Das Thermometer ist größer und schöner: Glasröhre mit Skala und Kugel, Gradzahl, darunter ein Farbverlauf für den Körper (blau – grau – orange) mit Markierung.
+- Hitze: Unter dem Thermometer lodern Flammen, die über den Rand züngeln. Funken fliegen, alles glüht orange, die Quecksilbersäule pulsiert. Je heißer, desto stärker.
+- Kälte: Eisblumen wachsen von den Ecken und Rändern herein, das Glas beschlägt, ein Lichtreflex wandert über den gefrorenen Rand, Schneeflocken rieseln und ein ❄ erscheint. Je kälter, desto weiter wächst das Eis.
+- Die Effekte blenden sanft ein und aus.
 
 ### 12.42.1 – Thermometer immer sichtbar
 - Das Thermometer rechts neben der Hotbar ist jetzt immer da, nicht nur bei großer Hitze oder Kälte.

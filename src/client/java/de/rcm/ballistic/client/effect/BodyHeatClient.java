@@ -122,69 +122,12 @@ public final class BodyHeatClient {
 		lastPitch = pitch;
 	}
 
-	/** The air's colour on the thermometer: deep blue in frost, through cool and mild to orange and red heat. */
-	private static int airColour(float t) {
-		float[] at = {-20.0F, 0.0F, 10.0F, 20.0F, 30.0F, 42.0F};
-		int[] col = {0x5A8CFF, 0x7FC4FF, 0xBFE6FF, 0xE8F0E0, 0xFFB050, 0xFF5A3C};
-		if (t <= at[0]) {
-			return col[0];
-		}
-		for (int i = 1; i < at.length; i++) {
-			if (t <= at[i]) {
-				return de.rcm.ballistic.client.gui.UiKit.lerpColor(col[i - 1], col[i], (t - at[i - 1]) / (at[i] - at[i - 1]));
-			}
-		}
-		return col[col.length - 1];
-	}
-
-	/**
-	 * The thermometer right of the hotbar, always there: a little glass with the air's temperature risen in it,
-	 * the degrees beside it, and under them how the body copes - a bar from blue (freezing) over the middle
-	 * (fine) to orange (overheating), which blinks when it gets dangerous.
-	 */
+	/** The thermometer right of the hotbar, always there: flames in the heat, frost in the cold ({@link de.rcm.ballistic.client.gui.ThermoHud}). */
 	public static void hud(GuiGraphics g) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player == null || mc.options.hideGui || mc.player.isCreative() || mc.player.isSpectator() || !de.rcm.ballistic.client.ModConfig.temperatureHud) {
 			return;
 		}
-		de.rcm.ballistic.client.gui.UiKit.init();
-		var font = mc.font;
-		String text = Math.round(air) + "°C";
-		int w = 20 + Math.max(36, font.width(text) + 2);
-		int h = 20;
-		int x = g.guiWidth() / 2 + 98;
-		int y = g.guiHeight() - 21;
-		// the plate
-		de.rcm.ballistic.client.gui.UiKit.round(g, de.rcm.ballistic.client.gui.UiKit.FILL, x, y, w, h, 5, 0xA0101318);
-		de.rcm.ballistic.client.gui.UiKit.round(g, de.rcm.ballistic.client.gui.UiKit.EDGE, x, y, w, h, 5, 0x40FFFFFF);
-		// the glass: a tube and its bulb, filled as high as it is warm (-20 .. 45 degrees)
-		int airC = airColour(air);
-		int tx = x + 6;
-		int ty = y + 3;
-		int th = 10;
-		g.fill(tx, ty, tx + 4, ty + th + 1, 0xFF2A2F37);
-		g.fill(tx + 1, ty + 1, tx + 3, ty + th + 1, 0xFF15181D);
-		float level = Mth.clamp((air + 20.0F) / 65.0F, 0.0F, 1.0F);
-		int fillTop = ty + 1 + Math.round((1.0F - level) * (th - 1));
-		g.fill(tx + 1, fillTop, tx + 3, ty + th + 1, 0xFF000000 | airC);
-		de.rcm.ballistic.client.gui.UiKit.disc(g, tx + 2.0F, ty + th + 3.0F, 3.6F, 0xFF2A2F37);
-		de.rcm.ballistic.client.gui.UiKit.disc(g, tx + 2.0F, ty + th + 3.0F, 2.6F, 0xFF000000 | airC);
-		// the degrees
-		g.drawString(font, text, x + 16, y + 3, 0xFF000000 | airC, true);
-		// the body: a bar with its middle marked, a knob where the body is now
-		int bx = x + 16;
-		int bw = w - 21;
-		int by = y + 14;
-		int mid = bx + bw / 2;
-		g.fill(bx, by, bx + bw, by + 2, 0xFF2A2F37);
-		g.fill(bx, by, mid, by + 2, 0x507FC4FF);
-		g.fill(mid, by, bx + bw, by + 2, 0x50FFB050);
-		g.fill(mid, by - 1, mid + 1, by + 3, 0xFF8A919B);
-		int bodyC = shownBody < -0.05F ? 0x7FC4FF : shownBody > 0.05F ? 0xFF9A40 : 0xE8EEF2;
-		float danger = Math.max(0.0F, Math.abs(shownBody) - 0.55F) / 0.45F;
-		float blink = danger > 0.0F ? 0.55F + 0.45F * Mth.sin((System.currentTimeMillis() % 100000L) / 1000.0F * (4.0F + 6.0F * danger)) : 1.0F;
-		int pos = Math.round(mid + Mth.clamp(shownBody, -1.0F, 1.0F) * (bw / 2.0F - 1.0F));
-		int a = Math.round(255 * blink);
-		g.fill(pos - 1, by - 1, pos + 2, by + 3, a << 24 | bodyC);
+		de.rcm.ballistic.client.gui.ThermoHud.render(g, air, shownBody);
 	}
 }
