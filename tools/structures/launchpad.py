@@ -63,7 +63,7 @@ M_INSUL = paint("insulation", (0.74, 0.73, 0.69), rough=0.75, grime=0.6, wear=0.
 M_GREY = paint("grey_paint", (0.5, 0.52, 0.52), rough=0.5, grime=0.55, wear=0.3, streaks=0.6, rust=0.15)
 M_STEEL = paint("steel", (0.2, 0.21, 0.22), rough=0.5, metal=0.6, grime=0.45, wear=0.4, rust=0.3, wear_col=(0.42, 0.42, 0.42))
 M_GUN = paint("gunmetal", (0.09, 0.095, 0.1), rough=0.45, metal=0.5, grime=0.4, wear=0.4, rust=0.2, wear_col=(0.35, 0.35, 0.35))
-M_GALV = galvanized("galvanized")
+M_GALV = galvanized("galvanized", (0.42, 0.43, 0.44), rough=0.55, grime=0.45)
 M_RED = paint("red_paint", (0.5, 0.045, 0.025), rough=0.5, grime=0.5, wear=0.35, streaks=0.5, rust=0.2)
 M_YELLOW = paint("safety_yellow", (0.72, 0.5, 0.03), rough=0.5, grime=0.5, wear=0.4, streaks=0.3, wear_col=(0.25, 0.24, 0.22))
 M_SHELTER = paint("shelter", (0.68, 0.69, 0.66), rough=0.5, grime=0.65, wear=0.2, streaks=0.7)
@@ -118,7 +118,7 @@ def apron_mat():
     col = _mix(nt, _math(nt, "MULTIPLY", ring, chip), col, (0.6, 0.42, 0.03))
     # soot: round the table, down the trench and fanning out over the spillway
     r = _math(nt, "POWER", _math(nt, "ADD", _math(nt, "MULTIPLY", X, X), _math(nt, "MULTIPLY", Y, Y)), 0.5)
-    soot = _ramp(nt, r, 3.3, 0.7)
+    soot = _ramp(nt, r, 4.6, 0.9)
     width = _math(nt, "ADD", 1.7, _math(nt, "MULTIPLY", _math(nt, "MAXIMUM", _math(nt, "SUBTRACT", X, 5.5), 0.0), 0.4))
     across = _ramp(nt, _math(nt, "DIVIDE", ay, width), 1.0, 0.45)
     along = _math(nt, "MULTIPLY", _ramp(nt, X, 0.0, 1.0), _ramp(nt, X, 14.0, 6.5))
@@ -171,7 +171,22 @@ def scorched_mat():
     return _finish(m, nt, bsdf, col, _mixf(nt, soot, 0.6, 0.15), _mixf(nt, soot, 0.55, 0.9))
 
 
+def sooty_concrete():
+    """The trench's concrete: dark, blackened in clouds where the exhaust plays."""
+    m, nt, bsdf = node_mat("sooty_concrete")
+    pos = _coords(nt)
+    c = (0.27, 0.265, 0.25)
+    col = _mix(nt, _noise(nt, 0.35, 6, 0.6, pos), tuple(k * 0.86 for k in c), tuple(k * 1.06 for k in c))
+    fine = _noise(nt, 40.0, 4, 0.6, pos)
+    col = _mix(nt, _math(nt, "MULTIPLY", _ramp(nt, fine, 0.35, 0.75), 0.25), col, tuple(k * 0.75 for k in c))
+    soot = _ramp(nt, _noise(nt, 0.9, 6, 0.65, pos), 0.3, 0.62)
+    col = _mix(nt, _math(nt, "MULTIPLY", soot, 0.92), col, (0.02, 0.019, 0.018))
+    col = weathered(nt, col, 0.5, 0.0, 0.4, 0.0)
+    return _finish(m, nt, bsdf, col, 0.0, _mixf(nt, fine, 0.8, 0.95))
+
+
 M_APRON = apron_mat()
+M_SOOT = sooty_concrete()
 M_REFR = refractory_mat()
 M_SCORCH = scorched_mat()
 
@@ -332,21 +347,19 @@ P = "pad"
 box("apron", -5.5, 0.0, -5.5, 5.5, 0.1, 5.5, M_APRON, P, bevel=0.03)
 box("spillway", 5.5, 0.0, -2.6, 9.2, 0.06, 2.6, M_APRON, P, bevel=0.02)
 for s in (-1, 1):
-    prism("spill_wing", [(5.5, 0.0), (8.6, 0.0), (8.6, 0.12), (5.5, 0.55)], s * 2.6, s * 2.85, M_CONC_D, P, bevel=0.02)
+    prism("spill_wing", [(5.5, 0.0), (8.6, 0.0), (8.6, 0.12), (5.5, 0.55)], s * 2.6, s * 2.85, M_SOOT, P, bevel=0.02)
 # drain channels along the apron's edges
 for s in (-1, 1):
     bx("drain", -4.6, 0.1, s * 4.95, 4.6, 0.104, s * 5.15, M_GRATE, P)
 
 # ---- the flame trench to +x: walls lined with refractory brick, a curved steel deflector, the spillway beyond
-WALL = [(0.5, 0.1), (5.5, 0.1), (5.5, 1.45), (4.5, 0.8), (0.5, 0.8)]
+WALL = [(0.5, 0.1), (6.7, 0.06), (6.7, 0.3), (5.6, 1.45), (5.45, 1.45), (4.5, 0.8), (0.5, 0.8)]
 LINER = [(0.5, 0.1), (5.5, 0.1), (5.5, 1.41), (4.52, 0.76), (0.5, 0.76)]
 for s in (-1, 1):
-    prism("trench_wall", WALL, s * 1.0, s * 1.45, M_CONC_D, P, bevel=0.02)
+    prism("trench_wall", WALL, s * 1.0, s * 1.45, M_SOOT, P, bevel=0.02)
     prism("refractory", LINER, s * 0.94, s * 1.0, M_REFR, P)
-    bx("wall_cap", 0.5, 0.8, s * 1.0, 4.5, 0.83, s * 1.45, M_HAZ, P)
-    prism("wall_cap", [(4.5, 0.8), (5.5, 1.45), (5.5, 1.48), (4.5, 0.83)], s * 1.0, s * 1.45, M_HAZ, P)
-    # end pilaster of the wall, scorched
-    bx("wall_end", 5.5, 0.1, s * 0.94, 5.65, 1.5, s * 1.5, M_CONC_D, P, bevel=0.015)
+    bx("wall_coping", 0.47, 0.8, s * 0.97, 4.5, 0.84, s * 1.49, M_CONC, P, bevel=0.01)
+    bx("wall_hazard", 0.465, 0.12, s * 1.02, 0.5, 0.78, s * 1.43, M_HAZ, P)
 
 
 def curve(t):
@@ -357,7 +370,8 @@ ts = [i / 12 for i in range(13)]
 top = [curve(t) for t in ts]
 prism("deflector", top + [(x, y - 0.06) for x, y in reversed(top)], -0.94, 0.94, M_SCORCH, P)
 under = [(x, y - 0.06) for x, y in top if y - 0.06 > 0.1]
-prism("deflector_base", [(3.25, 0.1)] + under + [(5.5, 0.1)], -0.94, 0.94, M_CONC_D, P)
+prism("deflector_base", [(3.25, 0.1)] + under + [(5.5, 1.19), (6.7, 0.06), (5.5, 0.06)], -0.94, 0.94, M_SOOT, P)
+bx("deflector_lip", 5.47, 1.08, -0.94, 5.56, 1.27, 0.94, M_SCORCH, P, bevel=0.01)
 # stiffening ribs across the deflector's face
 for t in (0.35, 0.6, 0.82):
     x, y = curve(t)
@@ -825,8 +839,14 @@ valve("lox_main_valve", (LOX[0], 0.5, LOX[1] + 3.2), (0, 0, 1), 0.07, M_STEEL, S
 line("fuel_line", [(FUEL[0], 0.66, FUEL[1]), (FUEL[0], 0.3, FUEL[1] + 0.3), (FUEL[0], 0.3, -6.2), (FUEL_J[0], 0.3, -6.2), FUEL_J], 0.055, M_GREY, S, bend=0.25)
 flange("fuel_j", FUEL_J, (0, 0, 1), 0.085, M_STEEL, S)
 valve("fuel_main_valve", (6.5, 0.3, -6.2), (1, 0, 0), 0.055, M_STEEL, S)
+box("lox_slab", LOX[0] - 3.1, 0.0, LOX[1] - 3.1, LOX[0] + 3.1, 0.08, LOX[1] + 3.1, M_CONC, S, bevel=0.02)
+box("fuel_slab", FUEL[0] - 3.3, 0.0, FUEL[1] - 3.3, FUEL[0] + 3.3, 0.06, FUEL[1] + 3.3, M_CONC, S, bevel=0.02)
+for (x0, z0, x1, z1) in ((-3.3, -3.3, 3.3, -3.15), (-3.3, 3.15, 3.3, 3.3), (-3.3, -3.15, -3.15, 3.15), (3.15, -3.15, 3.3, 3.15)):
+    box("fuel_dike", FUEL[0] + x0, 0.0, FUEL[1] + z0, FUEL[0] + x1, 0.5, FUEL[1] + z1, M_CONC_D, S, bevel=0.015)
+for k in range(2):
+    box("dike_step", FUEL[0] - 0.3, 0.0, FUEL[1] - 3.3 - 0.3 * (2 - k), FUEL[0] + 0.3, 0.25 * (k + 1), FUEL[1] - 3.3 - 0.3 * (1 - k), M_CONC_D, S, bevel=0.01)
 for (x, z), rr in ((LOX, 2.4), (FUEL, 2.0)):
-    sign("tank_sign", x + 0.9, 1.2, z + rr + 1.3, (0.0, 1.0), S)
+    sign("tank_sign", x + 0.9, 1.2, z + rr + 1.6, (0.0, 1.0), S)
 
 # ---- the water tower: four battered legs with struts and rods, the tank, its balcony, riser and ladder
 WX, WZ = WATER
@@ -931,10 +951,8 @@ for k in range(5):
 sign("cab_sign", -3.48, 1.3, 2.8, (1.0, 0.0), S, w=0.3, h=0.2, post=False)
 
 # ---- cable trench covers from the bunker to the tower, hydrants, perimeter signs
-for (ax_, az), (bx_, bz) in (((2.6, -3.0), (-1.2, -3.0)), ((-1.2, -3.0), (-1.2, -1.6)), ((-1.2, -1.6), (-2.45, -1.6))):
-    x0, x1 = sorted((ax_, bx_))
-    z0, z1 = sorted((az, bz))
-    box("trench_cover", x0 - 0.2, 0.1, z0 - 0.2, x1 + 0.2, 0.112, z1 + 0.2, M_GALV, S, bevel=0)
+for x0, z0, x1, z1 in ((-1.4, -3.2, 2.8, -2.8), (-1.4, -2.8, -1.0, -1.4), (-2.45, -1.8, -1.4, -1.4)):
+    box("trench_cover", x0, 0.1, z0, x1, 0.112, z1, M_GALV, S, bevel=0)
 for hx, hz in ((-5.1, -2.0), (5.0, 4.6)):
     lathe("hydrant", (hx, 0.1, hz), (0, 1, 0), [(0.0, 0.0), (0.0, 0.11), (0.05, 0.11), (0.05, 0.08), (0.55, 0.08), (0.6, 0.1), (0.66, 0.1), (0.76, 0.05), (0.8, 0.0)],
           M_RED, S, k=10)
@@ -958,14 +976,40 @@ PAD_PARTS = ["pad", "arm0", "arm1", "arm2", "arm3", "clamp", "elevator"]
 for part in PAD_PARTS + ["site", V]:
     join_part(part)
 
+
+def drop_bottoms(part):
+    """Faces looking down onto the ground or the apron are never seen: away with them (texture space for the rest)."""
+    for ob in PARTS.get(part, []):
+        bm = bmesh.new()
+        bm.from_mesh(ob.data)
+        bm.normal_update()
+        kill = [f for f in bm.faces if f.normal.z < -0.98 and f.calc_center_median().z < 0.105]
+        bmesh.ops.delete(bm, geom=kill, context="FACES")
+        bm.to_mesh(ob.data)
+        bm.free()
+
+
+for part in ("pad", "site"):
+    drop_bottoms(part)
+
 if "shots" in ARGS:
     import bpy  # noqa: E402
     # the other three clamps and the elevator up the shaft, for the pictures
+    from mathutils import Matrix  # noqa: E402
+    # RETRACT=1: the arms swung back and the clamps flung open (as the renderer poses them), to check for clashes
+    swing = 1.35 if os.environ.get("RETRACT") else 0.0
+    opened = 1.0 if os.environ.get("RETRACT") else 0.0
+    hinge = mc(HINGE_X, 0.0, 0.0)
+    for i in range(4):
+        PARTS[f"arm{i}"][0].matrix_world = Matrix.Translation(hinge) @ Matrix.Rotation(swing, 4, "Z") @ Matrix.Translation(-hinge)
     src = PARTS["clamp"][0]
+    piv = mc(CLAMP_PIVOT, CLAMP_Y, CLAMP_PIVOT)
+    flip = Matrix.Translation(piv) @ Matrix.Rotation(-opened * 1.9, 4, mc(-1.0, 0.0, 1.0).normalized()) @ Matrix.Translation(-piv)
+    src.matrix_world = flip
     for c in (1, 2, 3):
         ob = src.copy()
         bpy.context.scene.collection.objects.link(ob)
-        ob.rotation_euler = (0.0, 0.0, c * math.pi / 2)
+        ob.matrix_world = Matrix.Rotation(c * math.pi / 2, 4, "Z") @ flip
     PARTS["elevator"][0].location = mc(0.0, 10.5, 0.0)
     if os.environ.get("NOMISSILE"):
         for ob in PARTS[V]:
@@ -973,8 +1017,10 @@ if "shots" in ARGS:
     outdoor(sun_elevation=34.0, sun_rotation=140.0)
     which = os.environ.get("SHOTS", "all")
     shots = {
-        "lp_overview": ((24.0, 15.0, 22.0), (-1.0, 7.0, 0.0), 26),
-        "lp_pad": ((6.5, 3.2, 5.5), (-0.5, 1.2, 0.0), 30),
+        "lp_overview": ((21.0, 11.0, 17.0), (-2.0, 6.5, -1.0), 28),
+        "lp_table": ((2.4, 1.7, 2.1), (0.0, 0.45, 0.0), 28),
+        "lp_arms": ((0.2, 7.0, 3.6), (-2.0, 5.2, 0.0), 30),
+        "lp_pad": ((5.0, 3.6, 2.6), (-1.0, 1.0, -0.6), 30),
         "lp_tower": ((4.0, 12.0, 7.0), (-3.2, 11.0, 0.0), 26),
         "lp_trench": ((12.5, 3.0, 3.5), (3.0, 0.6, 0.0), 32),
         "lp_tank_farm": ((-1.0, 7.0, -21.0), (-6.0, 4.0, -7.0), 26),
