@@ -50,6 +50,10 @@ public final class BloodPools {
 	private static final float FLOW = 0.13F;
 	/** What gathers on an edge before a drop falls. */
 	private static final float DROP = 3.2F;
+	/** The film a run leaves on the wall per block it runs down (at a half-width of 0.015). */
+	private static final float CLING = 5.0F;
+	/** The longest wall a run follows down. */
+	private static final int WALL_BLOCKS = 6;
 	private static final int MAX = 900;
 	private static final int LIFE = 18000;
 	private static final RandomSource RANDOM = RandomSource.create();
@@ -71,11 +75,15 @@ public final class BloodPools {
 		/** The ground's small unevenness and how thick a film clings where it stops, per cell. */
 		final float[] ground = new float[CELLS];
 		final float[] film = new float[CELLS];
-		final float[] runs = new float[4 * RES];
-		final float[] drips = new float[4 * RES];
+		/** How much has lately been pouring over each edge cell (the wet lip it leaves). */
+		final float[] lip = new float[4 * RES];
 		final int[] side = {-1, -1, -1, -1};
 		final BlockPos[] target = new BlockPos[4];
 		final double[] targetTop = new double[4];
+		/** Down a step or a drop: how far the wall face below the edge goes, the runs on it, which run each edge cell feeds. */
+		final float[] wall = new float[4];
+		final Run[][] rivulets = new Run[4][];
+		final int[][] catchment = new int[4][];
 		boolean awake = true;
 		int quiet;
 		long lastDrip;
@@ -95,6 +103,38 @@ public final class BloodPools {
 					this.film[iz * RES + ix] = 0.55F + 1.0F * noise(wx, wz, 4.0F, 37) + 0.35F * noise(wx, wz, 1.5F, 41);
 				}
 			}
+		}
+	}
+
+	/**
+	 * One run of blood down a wall. What pours over the edge does not come down as a sheet: it gathers into a few
+	 * rivulets (where the lip is a little lower), each a thin winding line with a bead of blood at its front. The front
+	 * creeps down only as fast as blood is fed into it, and leaves a film clinging to the wall as it goes - a run fed
+	 * too little stops halfway, its bead hanging there. Only once a run reaches the foot does the blood in it run into
+	 * the ground below (or, over an overhang, gather in a hanging drop at its end until it falls).
+	 */
+	private static final class Run {
+		/** Where along the edge (0..1) it comes down. */
+		final float x;
+		final int seed;
+		/** Blood in it on the way down, not yet at the front. */
+		float stream;
+		/** Fed this tick; the smoothed rate of it; the most it has carried (sets its width). */
+		float inflow;
+		float rate;
+		float peak;
+		/** 1 while blood runs in it, falling as it drains to a film; the stain it leaves. */
+		float wet;
+		float stain;
+		float front;
+		float prevFront;
+		/** The drop gathering at its end, over an overhang. */
+		float hang;
+		long fed;
+
+		Run(float x, int seed) {
+			this.x = x;
+			this.seed = seed;
 		}
 	}
 
@@ -157,29 +197,117 @@ public final class BloodPools {
 		return s.getCollisionShape(level, pos).isEmpty() && s.getFluidState().isEmpty();
 	}
 
-	/** What lies past each side of the patch: more of the same ground, a step down, a drop, a wall. */
+	/**
+	 * What lies past each side of the patch: more of the same ground, a wall, or open air - and then how far the face
+	 * below the edge goes down: to the ground at its foot (a step), or to where it ends over empty air (a drop).
+	 */
 	private static void classify(ClientLevel level, Patch p) {
 		for (int s = 0; s < 4; s++) {
+			int was = p.side[s];
+			float wasWall = p.wall[s];
 			BlockPos n = p.pos.relative(SIDES[s]);
 			double t = topOf(level, n);
+			p.target[s] = null;
 			if (!Double.isNaN(t) && Math.abs(t - p.top) < 0.05 && passable(level, n.above())) {
 				p.side[s] = SAME;
 				p.target[s] = n;
 				p.targetTop[s] = t;
 			} else if (Double.isNaN(t) && passable(level, n) || !Double.isNaN(t) && t < p.top - 0.05 && passable(level, n.above())) {
-				BlockPos low = Double.isNaN(t) ? n.below() : n;
-				double tl = Double.isNaN(t) ? topOf(level, low) : t;
-				if (!Double.isNaN(tl) && p.top - tl < 1.6) {
+				double foot = Double.NaN;
+				double end = p.pos.getY();
+				if (!Double.isNaN(t)) {
+					// a lower block right beside it (a slab, a path)
+					foot = t;
+					p.target[s] = n;
+				} else {
+					for (int k = 1; k <= WALL_BLOCKS; k++) {
+						BlockPos g = n.below(k);
+						double tg = topOf(level, g);
+						if (!Double.isNaN(tg)) {
+							foot = tg;
+							p.target[s] = g;
+							break;
+						}
+						if (!passable(level, g)) {
+							// it runs down into water: gone at the foot
+							foot = g.getY() + 0.9;
+							break;
+						}
+						if (Double.isNaN(topOf(level, p.pos.below(k)))) {
+							// the wall stops over empty air: an overhang
+							break;
+						}
+						end = p.pos.getY() - k;
+					}
+				}
+				if (!Double.isNaN(foot)) {
 					p.side[s] = STEP;
-					p.target[s] = low;
-					p.targetTop[s] = tl;
+					p.targetTop[s] = foot;
+					p.wall[s] = (float) (p.top - foot);
 				} else {
 					p.side[s] = LEDGE;
+					p.wall[s] = (float) (p.top - end);
 				}
 			} else {
 				p.side[s] = WALL;
 			}
+			if (p.side[s] != STEP && p.side[s] != LEDGE) {
+				p.rivulets[s] = null;
+			} else if (p.rivulets[s] == null || was != p.side[s] || Math.abs(wasWall - p.wall[s]) > 0.02F) {
+				anchors(p, s);
+			}
 		}
+	}
+
+	/**
+	 * Where along an edge its runs come down: three to five, unevenly spaced (the same for the same edge every time,
+	 * matched along the world, not the block), and each edge cell pouring into the nearest.
+	 */
+	private static void anchors(Patch p, int s) {
+		boolean alongX = s == 0 || s == 2;
+		int line = alongX ? p.pos.getZ() + (s == 2 ? 1 : 0) : p.pos.getX() + (s == 1 ? 1 : 0);
+		int origin = alongX ? p.pos.getX() : p.pos.getZ();
+		int key = line * 31 + p.pos.getY() * 7 + (alongX ? 0 : 1);
+		List<Run> runs = new ArrayList<>();
+		float a = 0.06F + 0.12F * hash(key, origin, 101);
+		for (int i = 0; a < 0.95F; i++) {
+			runs.add(new Run(a, (int) (hash(key, origin * 16 + i, 107) * 1.0E6F)));
+			a += 0.16F + 0.22F * hash(key, origin * 16 + i, 103);
+		}
+		Run[] rs = runs.toArray(new Run[0]);
+		int[] c = new int[RES];
+		for (int e = 0; e < RES; e++) {
+			float at = (e + 0.5F) / RES;
+			int best = 0;
+			for (int i = 1; i < rs.length; i++) {
+				if (Math.abs(rs[i].x - at) < Math.abs(rs[best].x - at)) {
+					best = i;
+				}
+			}
+			c[e] = best;
+		}
+		p.rivulets[s] = rs;
+		p.catchment[s] = c;
+	}
+
+	/** Smooth 1D value noise, 0..1, one wave per unit of t. */
+	private static float wave(int seed, float t) {
+		int i = Mth.floor(t);
+		float f = t - i;
+		f = f * f * (3 - 2 * f);
+		float a = hash(i, seed, 61);
+		return a + (hash(i + 1, seed, 61) - a) * f;
+	}
+
+	/** How wide a run is (half of it): thin for a trickle, up to a finger's width for a stream. */
+	private static float halfWidth(Run r) {
+		return 0.006F + 0.018F * (float) Math.sqrt(Math.min(1.0F, r.peak / 0.4F));
+	}
+
+	/** How far it has wandered sideways (along the edge) at depth y below the edge: the wall is never quite even. */
+	private static float meander(Run r, float y) {
+		float m = 0.026F * (wave(r.seed, y * 4.0F) - 0.5F) * 2.0F + 0.009F * (wave(r.seed + 17, y * 15.0F) - 0.5F) * 2.0F;
+		return m * smooth(0.0F, 0.15F, y);
 	}
 
 	private static Patch patch(ClientLevel level, BlockPos pos, double top, boolean create) {
@@ -296,13 +424,87 @@ public final class BloodPools {
 				any |= h > 0.01F || p.stain[i] > 0.03F;
 			}
 			for (int k = 0; k < 4 * RES; k++) {
-				p.runs[k] *= 0.9985F;
-				any |= p.runs[k] > 0.03F;
+				p.lip[k] *= 0.995F;
 			}
+			any |= trickle(level, p, now);
 			if (!any || now - p.born > LIFE) {
 				PATCHES.remove(p.pos.asLong());
 			}
 		}
+	}
+
+	/** The runs down the walls: their fronts creep on as far as their blood takes them. True while any is still to be seen. */
+	private static boolean trickle(ClientLevel level, Patch p, long now) {
+		boolean any = false;
+		for (int s = 0; s < 4; s++) {
+			Run[] rs = p.rivulets[s];
+			if (rs == null) {
+				continue;
+			}
+			float wall = p.wall[s];
+			for (Run r : rs) {
+				r.prevFront = r.front;
+				r.rate = r.rate * 0.9F + r.inflow * 0.1F;
+				r.inflow = 0.0F;
+				r.peak = Math.max(r.peak * 0.9997F, r.rate);
+				if (r.rate > 0.003F) {
+					r.wet = Math.min(1.0F, Math.max(r.wet, r.rate * 5.0F));
+					r.fed = now;
+				} else {
+					r.wet *= 0.995F;
+				}
+				r.stain *= 0.99997F;
+				if (r.front < wall && r.stream > 0.0F) {
+					// the front goes on as fast as it is fed, and only as far as there is blood to wet the wall with
+					float cling = CLING * (0.5F + 0.5F * halfWidth(r) / 0.015F);
+					float v = 0.004F + 0.03F * Math.min(1.0F, (r.rate + r.stream * 0.04F) / 0.4F);
+					float need = v * cling;
+					if (r.stream >= need) {
+						r.front += v;
+						r.stream -= need;
+					} else {
+						r.front += r.stream / cling;
+						r.stream = 0.0F;
+					}
+					r.front = Math.min(r.front, wall);
+					r.stain = 1.0F;
+				}
+				if (r.front >= wall && r.stream > 0.0F) {
+					if (p.side[s] == STEP) {
+						if (p.target[s] != null) {
+							// down at the foot: into the ground there, beside the wall
+							int e = Mth.clamp((int) ((r.x + meander(r, wall)) * RES), 0, RES - 1);
+							int jx = s == 1 ? 0 : s == 3 ? RES - 1 : e;
+							int jz = s == 2 ? 0 : s == 0 ? RES - 1 : e;
+							Patch o = patch(level, p.target[s], p.targetTop[s], true);
+							o.h[jz * RES + jx] += r.stream;
+							o.awake = true;
+							o.quiet = 0;
+							o.fed = Math.max(o.fed, now);
+						}
+					} else {
+						r.hang += r.stream;
+					}
+					r.stream = 0.0F;
+				}
+				if (r.hang >= DROP) {
+					// heavy enough: the hanging drop lets go
+					r.hang -= DROP;
+					float a = Mth.clamp(r.x + meander(r, wall), 0.02F, 0.98F);
+					Direction d = SIDES[s];
+					double ex = p.pos.getX() + (s == 1 ? 1.02 : s == 3 ? -0.02 : a);
+					double ez = p.pos.getZ() + (s == 2 ? 1.02 : s == 0 ? -0.02 : a);
+					double ey = p.top - wall - 0.03;
+					BloodClient.drop(new Vec3(ex, ey, ez), new Vec3(d.getStepX() * 0.002, -0.01, d.getStepZ() * 0.002), 0.042F);
+					if (now - p.lastDrip > 10) {
+						p.lastDrip = now;
+						level.playLocalSound(ex, ey - 1.0, ez, ModRegistry.GORE_DRIP, SoundSource.NEUTRAL, 0.2F, 0.85F + RANDOM.nextFloat() * 0.3F, false);
+					}
+				}
+				any |= r.stain > 0.03F || r.stream > 0.0F || r.hang > 0.0F;
+			}
+		}
+		return any;
 	}
 
 	private static void flow(ClientLevel level, Patch p, long now) {
@@ -377,29 +579,13 @@ public final class BloodPools {
 							o.quiet = 0;
 							o.fed = Math.max(o.fed, p.fed);
 						}
-						case STEP -> {
-							// over the edge and down its face, into the ground below at the foot of it
-							p.runs[s * RES + e] = Math.min(4.0F, p.runs[s * RES + e] + m);
-							Patch o = patch(level, p.target[s], p.targetTop[s], true);
-							o.h[jz * RES + jx] += m;
-							o.awake = true;
-							o.quiet = 0;
-							o.fed = Math.max(o.fed, p.fed);
-						}
 						default -> {
-							// gathering on the edge until a drop falls
-							p.drips[s * RES + e] += m;
-							if (p.drips[s * RES + e] >= DROP) {
-								p.drips[s * RES + e] -= DROP;
-								double ex = p.pos.getX() + (s == 1 ? 1.02 : s == 3 ? -0.02 : (ix + 0.5) / RES);
-								double ez = p.pos.getZ() + (s == 2 ? 1.02 : s == 0 ? -0.02 : (iz + 0.5) / RES);
-								BloodClient.drop(new Vec3(ex, p.top - 0.03, ez), new Vec3(SIDES[s].getStepX() * 0.004, -0.02, SIDES[s].getStepZ() * 0.004),
-									0.042F);
-								if (now - p.lastDrip > 10) {
-									p.lastDrip = now;
-									level.playLocalSound(ex, p.top - 1.5, ez, ModRegistry.GORE_DRIP, SoundSource.NEUTRAL, 0.2F, 0.85F + RANDOM.nextFloat() * 0.3F,
-										false);
-								}
+							// over the edge: wetting the lip, gathering into the run below it (trickle takes it down)
+							p.lip[s * RES + e] = Math.min(3.0F, p.lip[s * RES + e] + m);
+							if (p.rivulets[s] != null) {
+								Run r = p.rivulets[s][p.catchment[s][e]];
+								r.stream += m;
+								r.inflow += m;
 							}
 						}
 					}
@@ -465,6 +651,7 @@ public final class BloodPools {
 		}
 		Vec3 cam = mc.gameRenderer.getMainCamera().position();
 		long now = mc.level.getGameTime();
+		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		List<Patch> near = new ArrayList<>();
 		for (Patch p : PATCHES.values()) {
 			if (p.pos.distToCenterSqr(cam) < 72.0 * 72.0) {
@@ -474,13 +661,14 @@ public final class BloodPools {
 		context.commandQueue().submitCustomGeometry(context.matrices(), TYPE, (pose, consumer) -> {
 			for (Patch p : near) {
 				surface(pose, consumer, p, cam, now, mc, false);
-				runs(pose, consumer, p, cam, mc);
+				walls(pose, consumer, p, cam, now, partial, mc, false);
 			}
 		});
 		context.commandQueue().order(1).submitCustomGeometry(context.matrices(), GLOSS, (pose, consumer) -> {
 			for (Patch p : near) {
 				if (p.pos.distToCenterSqr(cam) < 40.0 * 40.0) {
 					surface(pose, consumer, p, cam, now, mc, true);
+					walls(pose, consumer, p, cam, now, partial, mc, true);
 				}
 			}
 		});
@@ -560,43 +748,199 @@ public final class BloodPools {
 			.setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
 	}
 
-	/** Where it poured down a step: runs down the face, as wide as the cells that fed them. */
-	private static void runs(PoseStack.Pose pose, VertexConsumer consumer, Patch p, Vec3 cam, Minecraft mc) {
-		int light = LevelRenderer.getLightColor(mc.level, p.pos.above());
+	// ---------------------------------------------------------------- down the walls
+
+	/** A point on the wall face below side s's edge: {@code a} along the edge, {@code y} below it, {@code out} off the face. */
+	private static void facePoint(float[] o, int s, float bx, float top, float bz, float a, float y, float out) {
+		switch (s) {
+			case 0 -> {
+				o[0] = bx + a;
+				o[2] = bz - out;
+			}
+			case 2 -> {
+				o[0] = bx + a;
+				o[2] = bz + 1.0F + out;
+			}
+			case 1 -> {
+				o[0] = bx + 1.0F + out;
+				o[2] = bz + a;
+			}
+			default -> {
+				o[0] = bx - out;
+				o[2] = bz + a;
+			}
+		}
+		o[1] = top - y;
+	}
+
+	/** Same colour, less of it. */
+	private static int thin(int argb, float k) {
+		return (int) ((argb >>> 24) * k) << 24 | argb & 0xFFFFFF;
+	}
+
+	/** The faces below the edges it ran over: the wet lip, and the runs coming down. */
+	private static void walls(PoseStack.Pose pose, VertexConsumer consumer, Patch p, Vec3 cam, long now, float partial, Minecraft mc, boolean gloss) {
+		float fade = Mth.clamp((LIFE - (now - p.born)) / 900.0F, 0.0F, 1.0F);
+		float bx = (float) (p.pos.getX() - cam.x);
+		float bz = (float) (p.pos.getZ() - cam.z);
+		float top = (float) (p.top - cam.y);
+		float[] q = new float[3];
+		Vector3f probe = new Vector3f();
 		for (int s = 0; s < 4; s++) {
-			if (p.side[s] != STEP) {
+			Run[] rs = p.rivulets[s];
+			if (rs == null) {
 				continue;
 			}
 			Direction d = SIDES[s];
-			float drop = (float) (p.top - p.targetTop[s]);
+			Vector3f normal = new Vector3f(d.getStepX(), 0.0F, d.getStepZ());
+			int light = LevelRenderer.getLightColor(mc.level, p.pos.relative(d));
+			// the lip: a film of blood over the edge where it pours over, running out in a soft line just below it
 			for (int e = 0; e < RES; e++) {
-				float r = p.runs[s * RES + e];
-				if (r < 0.03F) {
+				float v = p.lip[s * RES + e];
+				if (v < 0.02F) {
 					continue;
 				}
-				int colour = colour(0.4F + r * 2.0F, Math.min(1.0F, r), 1.0F, Mth.clamp((mc.level.getGameTime() - p.fed) / 2400.0F, 0.0F, 1.0F));
-				if (colour >>> 24 == 0) {
-					continue;
-				}
-				float a = (e + 0.1F) / RES;
-				float b = (e + 0.9F) / RES;
-				float fx = (float) (p.pos.getX() - cam.x);
-				float fz = (float) (p.pos.getZ() - cam.z);
-				float top = (float) (p.top - cam.y);
-				float bottom = top - drop * Math.min(1.0F, 0.35F + r * 0.8F);
-				float[][] pts;
-				if (s == 0 || s == 2) {
-					float z = fz + (s == 2 ? 1.003F : -0.003F);
-					pts = new float[][] {{fx + a, top, z}, {fx + b, top, z}, {fx + b, bottom, z}, {fx + a, bottom, z}};
+				float a0 = Math.max(0.0F, (e - 0.15F) / RES);
+				float a1 = Math.min(1.0F, (e + 1.15F) / RES);
+				float depth = 0.012F + 0.035F * Math.min(1.0F, v);
+				int c;
+				if (gloss) {
+					facePoint(q, s, bx, top, bz, (a0 + a1) * 0.5F, 0.0F, 0.003F);
+					c = (int) (Mth.clamp(smooth(0.05F, 0.6F, v) * fade * de.rcm.ballistic.client.render.WetShine.at(probe.set(q[0], q[1], q[2]), normal, light), 0.0F, 1.0F) * 190.0F) << 24
+						| 0xFFFFFF;
 				} else {
-					float x = fx + (s == 1 ? 1.003F : -0.003F);
-					pts = new float[][] {{x, top, fz + a}, {x, top, fz + b}, {x, bottom, fz + b}, {x, bottom, fz + a}};
+					c = colour(0.6F + Math.min(1.0F, v), Math.min(1.0F, v), fade, Mth.clamp((now - p.fed) / 2400.0F, 0.0F, 1.0F));
 				}
-				for (float[] q : pts) {
-					consumer.addVertex(pose, q[0], q[1], q[2]).setColor(colour).setUv(q[0] * 0.5F + q[2] * 0.5F, q[1] * 0.5F)
-						.setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, d.getStepX(), 0.0F, d.getStepZ());
+				if (c >>> 24 == 0) {
+					continue;
+				}
+				wallVertex(pose, consumer, q, s, bx, top, bz, a0, 0.0F, 0.003F, c, light, normal);
+				wallVertex(pose, consumer, q, s, bx, top, bz, a1, 0.0F, 0.003F, c, light, normal);
+				wallVertex(pose, consumer, q, s, bx, top, bz, a1, depth, 0.003F, c & 0xFFFFFF, light, normal);
+				wallVertex(pose, consumer, q, s, bx, top, bz, a0, depth, 0.003F, c & 0xFFFFFF, light, normal);
+			}
+			for (int i = 0; i < rs.length; i++) {
+				ribbon(pose, consumer, p, s, i, rs[i], bx, top, bz, now, partial, fade, light, normal, q, probe, gloss);
+			}
+		}
+	}
+
+	private static void wallVertex(PoseStack.Pose pose, VertexConsumer consumer, float[] q, int s, float bx, float top, float bz, float a, float y, float out,
+		int colour, int light, Vector3f n) {
+		facePoint(q, s, bx, top, bz, a, y, out);
+		consumer.addVertex(pose, q[0], q[1], q[2]).setColor(colour).setUv(a * 0.6F + s * 0.25F, y * 0.22F).setOverlay(OverlayTexture.NO_OVERLAY)
+			.setLight(light).setNormal(pose, n.x, n.y, n.z);
+	}
+
+	/**
+	 * One run down the wall, as a soft ribbon: at the top a funnel as wide as the stretch of edge pouring into it
+	 * (a sheet for a heavy pour, breaking up lower down), then a thin winding line of uneven width, darker and
+	 * thicker down its middle, thin and clear red at its edges, and at its front a round bead of blood (or, at the
+	 * end over an overhang, a drop hanging, growing until it falls).
+	 */
+	private static void ribbon(PoseStack.Pose pose, VertexConsumer consumer, Patch p, int s, int index, Run r, float bx, float top, float bz, long now,
+		float partial, float fade, int light, Vector3f normal, float[] q, Vector3f probe, boolean gloss) {
+		float front = Mth.lerp(partial, r.prevFront, r.front);
+		if (front < 0.003F || r.stain < 0.03F && r.stream <= 0.0F) {
+			return;
+		}
+		float wall = p.wall[s];
+		boolean arrived = r.front >= wall - 1.0E-4F;
+		float hw = halfWidth(r);
+		// the bead at its front; at the end over an overhang, the drop gathering there
+		boolean bead = !arrived || p.side[s] == LEDGE;
+		float rb = hw * 1.6F + 0.003F;
+		float headAt = front;
+		if (arrived && p.side[s] == LEDGE) {
+			rb = Math.max(rb * 0.8F, 0.008F + 0.03F * (float) Math.sqrt(Math.min(1.0F, r.hang / DROP)));
+			headAt = wall + rb * 0.55F;
+		}
+		float end = bead ? headAt + rb : front;
+		// the funnel at the top, from the cells pouring into it
+		float lo = 2.0F;
+		float hi = -1.0F;
+		for (int e = 0; e < RES; e++) {
+			if (p.catchment[s][e] == index && p.lip[s * RES + e] > 0.02F) {
+				lo = Math.min(lo, e / (float) RES);
+				hi = Math.max(hi, (e + 1) / (float) RES);
+			}
+		}
+		float topC = hi > lo ? (lo + hi) * 0.5F : r.x;
+		float topW = hi > lo ? Math.max(hw, (hi - lo) * 0.42F) : hw * 1.4F;
+		float funnel = 0.05F + 0.28F * Math.min(1.0F, r.rate / 0.5F) + 0.05F * Math.min(1.0F, r.peak);
+		// how it looks: wet and bright while it runs, draining to a dark film, drying brown over minutes
+		float dried = Mth.clamp((now - r.fed) / 4800.0F, 0.0F, 1.0F);
+		float age = Mth.clamp((now - r.fed) / 2400.0F, 0.0F, 1.0F);
+		float base = 0.3F + 0.3F * (1.0F - dried) + r.wet * (0.5F + 0.6F * Math.min(1.0F, r.rate * 2.0F));
+		float stain = r.stain;
+		// the rows down it
+		int n = 0;
+		float[] ys = new float[160];
+		float y = 0.0F;
+		while (n < ys.length) {
+			ys[n++] = y;
+			if (y >= end) {
+				break;
+			}
+			float step = bead && y > headAt - 2.5F * rb ? rb * 0.3F : y < funnel ? 0.022F : 0.045F;
+			y = Math.min(end, y + Math.max(0.004F, step));
+		}
+		float pc = 0.0F;
+		float pw = 0.0F;
+		int pe = 0;
+		int pm = 0;
+		float pyy = 0.0F;
+		for (int k = 0; k < n; k++) {
+			float yy = ys[k];
+			float fz = 1.0F - smooth(0.0F, funnel, yy);
+			float body = hw * (0.75F + 0.5F * wave(r.seed + 5, yy * 7.0F));
+			float h = base;
+			if (bead) {
+				// thinner just above the bead, the bead round below
+				body *= 1.0F - 0.3F * smooth(headAt - 4.0F * rb, headAt - 1.2F * rb, yy);
+				float u = yy - headAt;
+				if (u > -1.4F * rb) {
+					float t = u < 0.0F ? u / (1.4F * rb) : u / rb;
+					float b = rb * (float) Math.sqrt(Math.max(0.0F, 1.0F - t * t));
+					body = u >= 0.0F ? b : Math.max(body, b);
+					h += 1.1F * (b / rb);
 				}
 			}
+			if (!bead) {
+				// spreading a little at the foot, where it runs into the blood on the ground
+				body *= 1.0F + 0.9F * smooth(wall - 0.06F, wall, yy);
+			}
+			float w = Mth.lerp(fz, body, topW);
+			float c = Mth.lerp(fz, r.x + meander(r, Math.min(yy, wall)), topC);
+			c = Mth.clamp(c, Math.min(0.5F, w + 0.005F), Math.max(0.5F, 0.995F - w));
+			int mid;
+			int edge;
+			if (gloss) {
+				facePoint(q, s, bx, top, bz, c, yy, 0.004F);
+				float shine = smooth(0.4F, 1.8F, h) * fade * de.rcm.ballistic.client.render.WetShine.at(probe.set(q[0], q[1], q[2]), normal, light);
+				mid = (int) (Mth.clamp(shine, 0.0F, 1.0F) * 200.0F) << 24 | 0xFFFFFF;
+				edge = 0x00FFFFFF;
+			} else {
+				mid = colour(h, stain, fade, age);
+				edge = thin(colour(Math.max(0.3F, h * 0.45F), stain * 0.5F, fade, age), 0.55F);
+			}
+			if (k > 0) {
+				float[] as = {pc - pw, pc - pw * 0.45F, pc + pw * 0.45F, pc + pw};
+				float[] bs = {c - w, c - w * 0.45F, c + w * 0.45F, c + w};
+				int[] ac = {pe, pm, pm, pe};
+				int[] bc = {edge, mid, mid, edge};
+				for (int lane = 0; lane < 3; lane++) {
+					wallVertex(pose, consumer, q, s, bx, top, bz, as[lane], pyy, 0.004F, ac[lane], light, normal);
+					wallVertex(pose, consumer, q, s, bx, top, bz, as[lane + 1], pyy, 0.004F, ac[lane + 1], light, normal);
+					wallVertex(pose, consumer, q, s, bx, top, bz, bs[lane + 1], yy, 0.004F, bc[lane + 1], light, normal);
+					wallVertex(pose, consumer, q, s, bx, top, bz, bs[lane], yy, 0.004F, bc[lane], light, normal);
+				}
+			}
+			pc = c;
+			pw = w;
+			pe = edge;
+			pm = mid;
+			pyy = yy;
 		}
 	}
 }

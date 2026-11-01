@@ -1,8 +1,15 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.3.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.4.0** (01.11.2026).
 
 ---
+
+### 13.4.0 – Blut läuft echt an Wänden herunter
+- Statt dunkler Streifen über die ganze Blockseite sammelt sich Blut, das über eine Kante läuft, zu wenigen unregelmäßig verteilten Rinnsalen: oben ein nasser Rand und ein Trichter, so breit wie die Stelle, an der es überläuft (bei viel Blut erst ein Film, der sich weiter unten aufteilt), darunter dünne, leicht geschlängelte Bahnen mit ungleicher Breite, in der Mitte dunkler, am Rand dünn und durchscheinend.
+- Die Rinnsale kriechen sichtbar die Wand hinunter, so schnell, wie Blut nachkommt, mit einem runden Bluttropfen an der Spitze. Wenig Blut bleibt auf halber Höhe stehen, der Tropfen hängt dann dort. Erst wenn ein Rinnsal unten ankommt, läuft das Blut in die Lache am Boden, wo es sich leicht verbreitert.
+- An Überhängen bildet sich am Ende ein hängender Tropfen, der wächst und abfällt (mit Tropfgeräusch).
+- Läuft über ganze Wände (bis 6 Blöcke) bis zum Boden; Blut, das in Wasser läuft, verschwindet.
+- Nass und glänzend, solange Blut nachfließt, danach dunkler, matter Film, nach Minuten braun angetrocknet.
 
 ### 13.3.0 – Blut fließt wie echte Flüssigkeit
 - Blut am Boden wird jetzt als Flüssigkeit simuliert: jede Blockoberfläche ist ein Raster aus 12 × 12 Zellen, das Blut läuft von hoch nach tief über die kleinen Unebenheiten des Bodens – es kriecht in Mulden, bildet Finger und Ausläufer, fließt um Erhebungen und bleibt erst als dünner Film liegen, der hier dicker, dort dünner ist (keine runden oder eckigen Lachen mehr, nicht ans Blockraster gebunden).
