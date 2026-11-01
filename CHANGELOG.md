@@ -1,8 +1,20 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.45.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.0.0** (01.11.2026).
 
 ---
+
+### 13.0.0 – Bauwerke neu in Blender modelliert
+Startrampe, Raketensilo, Rundluken-Silo, U-Boot und die Wolframstab-Bodenstation sind in Blender komplett neu und realistisch gebaut. Schmutz, Rostschlieren, abgenutzte Kanten, Ruß und Schatten in den Ecken sind in die Texturen gebacken und werden mit dem PBR-Shader der Waffen gezeichnet. Maße und alle Animationen bleiben gleich.
+- Startrampe:
+  - Betonfläche mit Fugen, Ölflecken und Ruß, ausgemauerter Flammengraben mit gebogenem Stahl-Ablenker.
+  - Serviceturm aus rot-weißen Doppel-T-Trägern mit Gitterböden, Geländern, Treppen, Aufzugsschacht und Kran.
+  - Schwenkarme als Fachwerk mit Schläuchen, gefräste Halteklammern.
+  - Kugeltanks mit Leitern, Plattformen und Rohrleitungen, Wasserturm, Blitzschutzmasten mit Abspannseilen, Flutlichtmasten.
+- Silo: Betonfläche mit schweren Schiebetoren auf Schienen, Lüftungsgehäuse, Schaltschrank, Personenluke, Antenne, Zaun mit Stacheldraht und Tor. Rundes Abschussrohr im Schacht.
+- Rundluken-Silo: Panzerluke mit Verriegelungsbolzen am massiven Ring, Hydraulikzylinder und Hydraulikaggregat.
+- U-Boot: glatter Turm mit Tiefenrudern und Masten, Raketendeck mit zwei Reihen bündiger Luken, Gummibeschichtung, Heckruder und Propeller.
+- Bodenstation: Cassegrain-Schüssel mit Panelnähten, Fangspiegel und Rippen, Drehkopf mit Plattform, Container mit Wellblech und Klimageräten, rot-weißer Flugwarnmast, Generator mit Tank, Maschendrahtzaun.
 
 ### 12.45.0 – Nasse Kleidung
 - Regen macht dich in etwa einer halben Minute nass (im Gewitter schneller, mit Lederjacke langsamer), Wasser sofort.
