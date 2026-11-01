@@ -40,6 +40,9 @@ import org.jspecify.annotations.Nullable;
  */
 public final class TitleScene {
 	private static final RenderType SOLID = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/entity/structures.png"));
+	/** The launch complex's two Blender models (LaunchPadRenderer), each on its own texture. */
+	private static final RenderType PAD = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/entity/launchpad.png"));
+	private static final RenderType PAD_SITE = RenderTypes.entityCutoutNoCull(BallisticMissiles.id("textures/entity/launchpad_site.png"));
 	private static final RenderType SMOKE = RenderTypes.entityTranslucent(BallisticMissiles.id("textures/entity/title_smoke.png"));
 	private static final RenderType SKY = MissileRenderer.GLOW_TYPE;
 	private static final MissileType MISSILE = MissileType.NUCLEAR;
@@ -235,6 +238,11 @@ public final class TitleScene {
 			Matrix4f id = new Matrix4f();
 			this.still(solid, pose, HILLS.vertices(), 0.55F, 0.6F, 0.7F);
 			this.still(solid, pose, GROUND.vertices(), 0.6F, 0.66F, 0.55F);
+			out.flush(SOLID);
+			VertexConsumer site = out.get(PAD_SITE);
+			this.still(site, pose, LaunchPadRenderer.SITE.vertices(), 1.0F, 1.0F, 1.0F);
+			out.flush(PAD_SITE);
+			solid = out.get(PAD);
 			this.still(solid, pose, LaunchPadRenderer.COMPLEX.vertices(), 1.0F, 1.0F, 1.0F);
 			// the arms swing back before the launch
 			float swing = smooth((t - ARMS_AWAY) / 4.0F);
@@ -253,7 +261,7 @@ public final class TitleScene {
 			}
 			float lift = 0.3F + (LaunchPadRenderer.TOWER_TOP - 2.0F) * (0.5F - 0.5F * Mth.cos(total * 0.12F));
 			this.lit(solid, pose, LaunchPadRenderer.ELEVATOR.vertices(), new Matrix4f().translate(LaunchPadRenderer.TOWER_X, lift, 0.0F), 1.0F, 1.0F, 1.0F);
-			out.flush(SOLID);
+			out.flush(PAD);
 
 			boolean flying = flight < 60.0F;
 			if (flying) {
