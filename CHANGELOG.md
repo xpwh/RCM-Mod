@@ -1,8 +1,13 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.43.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.44.0** (01.11.2026).
 
 ---
+
+### 12.44.0 – Rundes Temperatur-Abzeichen
+- Die Temperatur ist jetzt ein rundes Abzeichen rechts neben der Hotbar, nur mit der Gradzahl. Der Rand hat die Farbe der Luft, ein Lichtpunkt läuft um den Rand, das Glas hat einen Glanz.
+- Hitze: Eine Feuerkrone lodert rund um das Abzeichen (Flammen weiß-gelb, orange, rot, verglühend zu Rauch). Funken fliegen mit Leuchtspur davon, das Innere glüht und pulsiert, die Ziffern flimmern in der heißen Luft.
+- Kälte: Eine Krone aus Eisstacheln mit Verästelungen wächst aus dem Rand, Eisblumen kriechen über das Glas. Funkelnde Sterne blitzen am gefrorenen Rand auf, sechsarmige Schneeflocken drehen sich beim Herabschweben.
 
 ### 12.43.0 – Lebendiges Thermometer
 - Das Thermometer ist größer und schöner: Glasröhre mit Skala und Kugel, Gradzahl, darunter ein Farbverlauf für den Körper (blau – grau – orange) mit Markierung.

@@ -3,28 +3,35 @@ package de.rcm.ballistic.client.gui;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 
 /**
- * The thermometer right of the hotbar: a glass with the air's temperature risen in it, the degrees, and how the
- * body copes. It lives with the weather: in the heat flames lick up from under it, sparks fly and it glows; in
- * hard cold frost grows in from its corners as ice ferns, the glass mists over and snow drifts down past it.
+ * The temperature right of the hotbar: a round badge with nothing on it but the degrees, its rim in the air's
+ * colour. It lives with the weather:
+ * <ul>
+ *   <li>heat: a crown of fire licks up round the badge - tongues white-yellow at the root, orange, red, dark at
+ *   the tips - sparks fly off it trailing light, the badge glows from inside and the figures shimmer in the hot
+ *   air;</li>
+ *   <li>cold: frost grows out from the rim as a crown of ice spikes with side twigs, ice ferns creep in over the
+ *   glass, the rim catches glints that twinkle, and six-armed snowflakes turn as they drift down past it.</li>
+ * </ul>
+ * Everything fades in and out with the weather.
  */
 public final class ThermoHud {
-	private static final int W = 76;
-	private static final int H = 24;
+	private static final float RADIUS = 17.0F;
 	private static final RandomSource R = RandomSource.create();
 	private static final List<Bit> BITS = new ArrayList<>();
 	private static long last = -1L;
 	private static float heatShown;
 	private static float coldShown;
-	private static float spawnHeat;
-	private static float spawnEmber;
+	private static float spawnFlame;
+	private static float spawnSpark;
 	private static float spawnSnow;
 
-	/** A flame tongue (0), a spark (1) or a snowflake (2), placed relative to the plate's corner. */
+	/** A flame tongue (0), a spark with its trail (1) or a snowflake (2), relative to the badge's centre. */
 	private static final class Bit {
 		final int kind;
 		float x;
@@ -35,6 +42,8 @@ public final class ThermoHud {
 		final float life;
 		final float size;
 		final float seed;
+		final float[] trail = new float[10];
+		int trailN;
 
 		Bit(int kind, float x, float y, float vx, float vy, float life, float size) {
 			this.kind = kind;
@@ -54,7 +63,7 @@ public final class ThermoHud {
 	/** The air's colour: deep blue in frost, through cool and mild to orange and red heat. */
 	static int airColour(float t) {
 		float[] at = {-20.0F, 0.0F, 10.0F, 20.0F, 30.0F, 42.0F};
-		int[] col = {0x5A8CFF, 0x7FC4FF, 0xBFE6FF, 0xE8F0E0, 0xFFB050, 0xFF5A3C};
+		int[] col = {0x4F86FF, 0x7FC4FF, 0xB8E4FF, 0xE6EEE8, 0xFFB050, 0xFF5A3C};
 		if (t <= at[0]) {
 			return col[0];
 		}
@@ -74,120 +83,124 @@ public final class ThermoHud {
 		float dt = last < 0L ? 0.0F : Mth.clamp((now - last) / 1000.0F, 0.0F, 0.1F);
 		last = now;
 		float t = (now % 1_000_000L) / 1000.0F;
-		// how hot or cold it is to look at: the air's extremes, or the body feeling it
 		float heat = Mth.clamp(Math.max((air - 27.0F) / 13.0F, (body - 0.1F) / 0.6F), 0.0F, 1.0F);
 		float cold = Mth.clamp(Math.max((6.0F - air) / 20.0F, (-body - 0.1F) / 0.6F), 0.0F, 1.0F);
 		heatShown = UiKit.approach(heatShown, heat, dt * 0.8F);
 		coldShown = UiKit.approach(coldShown, cold, dt * 0.5F);
-		int x0 = g.guiWidth() / 2 + 98;
-		int y0 = g.guiHeight() - H - 1;
+		float cx = g.guiWidth() / 2.0F + 91.0F + 9.0F + RADIUS;
+		float cy = g.guiHeight() - RADIUS - 2.0F;
+		int airC = airColour(air);
+		float hot = Math.min(1.0F, heatShown * 1.4F);
+		float icy = Math.min(1.0F, coldShown * 1.4F);
 
-		// ---- what is round the plate: the glow of the heat or the cold
-		if (heatShown > 0.01F) {
-			float pulse = 0.85F + 0.15F * Mth.sin(t * 7.0F) * Mth.sin(t * 3.1F + 1.0F);
-			UiKit.orb(g, x0 - 18, y0 - 22, W + 36, H + 34, 0xFF6A1E, 0.55F * heatShown * pulse);
-		}
-		if (coldShown > 0.01F) {
-			UiKit.orb(g, x0 - 16, y0 - 14, W + 32, H + 28, 0x8FD8FF, 0.38F * coldShown);
-		}
-		// ---- the plate
-		int tint = UiKit.lerpColor(UiKit.lerpColor(0x111419, 0x2A1309, heatShown), 0x0E1E2C, coldShown);
-		UiKit.round(g, UiKit.FILL, x0, y0, W, H, 6, UiKit.argb(0.82F, tint));
-		int edge = heatShown > coldShown ? UiKit.lerpColor(0x5A6270, 0xFF8A3A, heatShown) : UiKit.lerpColor(0x5A6270, 0xCDEFFF, coldShown);
-		UiKit.round(g, UiKit.EDGE, x0, y0, W, H, 6, UiKit.argb(0.55F + 0.35F * Math.max(heatShown, coldShown), edge));
-
-		// ---- the flames and sparks under and over the plate, the snow drifting past
 		spawn(dt);
 		step(dt, t);
-		drawBits(g, x0, y0, 0);
 
-		// ---- frost on the plate: a misted glaze, ice ferns grown in from the corners and along the edges
-		if (coldShown > 0.02F) {
-			g.fillGradient(x0 + 2, y0 + 1, x0 + W - 2, y0 + 6, UiKit.argb(0.35F * coldShown, 0xDDF4FF), UiKit.argb(0.0F, 0xDDF4FF));
-			g.fillGradient(x0 + 2, y0 + H - 6, x0 + W - 2, y0 + H - 1, UiKit.argb(0.0F, 0xDDF4FF), UiKit.argb(0.3F * coldShown, 0xDDF4FF));
-			frost(g, x0, y0, coldShown);
-			// a glint running along the frozen rim
-			float gx = x0 + ((t * 22.0F) % (W + 40)) - 20;
-			UiKit.orb(g, gx - 6, y0 - 3, 12, 6, 0xFFFFFF, 0.5F * coldShown);
+		// ---- under the badge: its shadow, the glow of the heat or the cold, the fire behind it
+		UiKit.orb(g, cx - RADIUS * 1.6F, cy - RADIUS * 1.5F, RADIUS * 3.2F, RADIUS * 3.3F, 0x000000, 0.6F);
+		if (hot > 0.01F) {
+			float flicker = 0.8F + 0.2F * Mth.sin(t * 13.0F) * Mth.sin(t * 5.3F + 2.0F);
+			UiKit.orb(g, cx - RADIUS * 2.4F, cy - RADIUS * 2.9F, RADIUS * 4.8F, RADIUS * 4.6F, 0xFF5A14, 0.5F * hot * flicker);
+			UiKit.orb(g, cx - RADIUS * 1.6F, cy - RADIUS * 1.9F, RADIUS * 3.2F, RADIUS * 3.2F, 0xFFB040, 0.35F * hot * flicker);
 		}
-
-		// ---- the glass: tube with marks, bulb, the column risen as warm as it is (-20 .. 45 degrees)
-		int airC = airColour(air);
-		int tx = x0 + 6;
-		int ty = y0 + 3;
-		int th = 12;
-		UiKit.round(g, UiKit.FILL, tx - 1, ty - 1, 6, th + 3, 3, 0xFF2C323B);
-		g.fill(tx + 1, ty, tx + 3, ty + th + 1, 0xFF0E1014);
-		for (int i = 0; i < 4; i++) {
-			g.fill(tx + 4, ty + 2 + i * 3, tx + 6, ty + 3 + i * 3, 0x90A0A8B4);
+		if (icy > 0.01F) {
+			float breathe = 0.85F + 0.15F * Mth.sin(t * 1.4F);
+			UiKit.orb(g, cx - RADIUS * 2.1F, cy - RADIUS * 2.1F, RADIUS * 4.2F, RADIUS * 4.2F, 0x8FD8FF, 0.38F * icy * breathe);
 		}
-		float level = Mth.clamp((air + 20.0F) / 65.0F, 0.0F, 1.0F);
-		int top = ty + Math.round((1.0F - level) * th);
-		int mercury = heatShown > 0.3F ? UiKit.lerpColor(airC, 0xFFF0C0, 0.35F * (0.5F + 0.5F * Mth.sin(t * 9.0F)) * heatShown) : airC;
-		g.fill(tx + 1, top, tx + 3, ty + th + 1, 0xFF000000 | mercury);
-		UiKit.disc(g, tx + 2.0F, ty + th + 3.5F, 4.2F, 0xFF2C323B);
-		UiKit.disc(g, tx + 2.0F, ty + th + 3.5F, 3.0F, 0xFF000000 | mercury);
-		UiKit.disc(g, tx + 1.2F, ty + th + 2.7F, 0.9F, 0xB0FFFFFF);
-		if (coldShown > 0.3F) {
-			// the glass misted over
-			g.fill(tx + 1, ty, tx + 3, ty + th + 1, UiKit.argb(0.35F * coldShown, 0xE8F8FF));
+		drawFlames(g, cx, cy);
+		if (icy > 0.02F) {
+			crown(g, cx, cy, coldShown, t);
 		}
 
-		// ---- the degrees, and under them the body
-		String text = Math.round(air) + "°C";
-		int textC = UiKit.lerpColor(airC, 0xFFFFFF, 0.15F);
-		g.drawString(mc.font, text, x0 + 17, y0 + 4, 0xFF000000 | textC, true);
-		String icon = heatShown > 0.35F ? "🔥" : coldShown > 0.35F ? "❄" : null;
-		if (icon != null && "❄".equals(icon)) {
-			g.drawString(mc.font, icon, x0 + W - 11, y0 + 4, UiKit.argb(0.9F, 0xDDF4FF), true);
+		// ---- the badge: a rim in the air's colour (turning fire or ice), the glass inside, its sheen
+		int rim = UiKit.lerpColor(UiKit.lerpColor(UiKit.lerpColor(airC, 0x2A3038, 0.35F), 0xFF7A2A, hot), 0xD8F2FF, icy);
+		UiKit.disc(g, cx, cy, RADIUS, UiKit.argb(1.0F, rim));
+		// a light running round the rim: fast and fiery in the heat, slow and cold in the frost
+		float spin = t * (1.2F + 3.0F * hot) * (icy > hot ? 0.5F : 1.0F);
+		for (int i = 0; i < 40; i++) {
+			float a = i / 40.0F * Mth.TWO_PI;
+			float lit = Mth.cos(a - spin);
+			lit = lit * lit * lit * lit * Math.max(0.0F, Math.signum(lit));
+			if (lit < 0.05F) {
+				continue;
+			}
+			int c = hot > icy ? 0xFFE8A0 : icy > 0.05F ? 0xFFFFFF : UiKit.lerpColor(airC, 0xFFFFFF, 0.6F);
+			UiKit.disc(g, cx + Mth.cos(a) * (RADIUS - 0.9F), cy + Mth.sin(a) * (RADIUS - 0.9F), 1.1F, UiKit.argb(lit * (0.35F + 0.5F * Math.max(hot, icy)), c));
 		}
-		int bx = x0 + 17;
-		int bw = W - 23;
-		int by = y0 + 16;
-		int mid = bx + bw / 2;
-		// a gradient from blue (freezing) over grey (fine) to orange (overheating)
-		for (int i = 0; i < bw; i++) {
-			float f = i / (float) (bw - 1) * 2.0F - 1.0F;
-			int c = f < 0.0F ? UiKit.lerpColor(0x6A7480, 0x5AA8FF, -f) : UiKit.lerpColor(0x6A7480, 0xFF7A30, f);
-			g.fill(bx + i, by, bx + i + 1, by + 2, UiKit.argb(0.55F, c));
+		int glass = UiKit.lerpColor(UiKit.lerpColor(0x13171D, 0x2C1206, hot), 0x112434, icy);
+		UiKit.disc(g, cx, cy, RADIUS - 1.8F, UiKit.argb(1.0F, glass));
+		// inside: lit from below by the fire, misted by the frost; a sheen across the top as on glass
+		if (hot > 0.01F) {
+			float pulse = 0.75F + 0.25F * Mth.sin(t * 6.0F);
+			UiKit.orb(g, cx - RADIUS * 0.9F, cy - RADIUS * 0.2F, RADIUS * 1.8F, RADIUS * 1.3F, 0xFF7A1E, 0.55F * hot * pulse);
 		}
-		g.fill(mid, by - 1, mid + 1, by + 3, 0xFFA8B0BA);
-		float danger = Math.max(0.0F, Math.abs(body) - 0.55F) / 0.45F;
-		float blink = danger > 0.0F ? 0.55F + 0.45F * Mth.sin(t * (4.0F + 7.0F * danger)) : 1.0F;
-		int pos = Math.round(mid + Mth.clamp(body, -1.0F, 1.0F) * (bw / 2.0F - 1.0F));
-		int knob = body < -0.05F ? 0x9AD4FF : body > 0.05F ? 0xFFAA50 : 0xF2F5F8;
-		UiKit.disc(g, pos + 0.5F, by + 1.0F, 2.6F, UiKit.argb(blink, 0x0B0D10));
-		UiKit.disc(g, pos + 0.5F, by + 1.0F, 1.9F, UiKit.argb(blink, knob));
+		if (icy > 0.01F) {
+			UiKit.orb(g, cx - RADIUS * 0.95F, cy - RADIUS * 0.95F, RADIUS * 1.9F, RADIUS * 1.9F, 0xCFEFFF, 0.3F * icy);
+			ferns(g, cx, cy, coldShown);
+		}
+		UiKit.orb(g, cx - RADIUS * 0.75F, cy - RADIUS * 0.95F, RADIUS * 1.5F, RADIUS * 0.9F, 0xFFFFFF, 0.1F);
 
-		// ---- the tongues that lick over the top edge, drawn over the plate
-		drawBits(g, x0, y0, 1);
+		// ---- the degrees: shimmering in the heat, frosted in the cold
+		figures(g, mc.font, Math.round(air) + "°C", cx, cy, airC, t);
+
+		// ---- over it all: sparks with their trails, glints on the frozen rim, the snow
+		drawSparks(g, cx, cy);
+		if (icy > 0.05F) {
+			glints(g, cx, cy, icy, t);
+		}
+		drawSnow(g, cx, cy, t);
+	}
+
+	private static void figures(GuiGraphics g, Font font, String text, float cx, float cy, int airC, float t) {
+		float hot = Math.min(1.0F, heatShown * 1.4F);
+		float icy = Math.min(1.0F, coldShown * 1.4F);
+		int ink = UiKit.lerpColor(UiKit.lerpColor(UiKit.lerpColor(airC, 0xFFFFFF, 0.55F), 0xFFF2C8, hot), 0xF2FBFF, icy);
+		if (hot > 0.05F) {
+			UiKit.orb(g, cx - 14, cy - 8, 28, 16, 0xFFC060, 0.35F * hot);
+		}
+		float x = cx - font.width(text) / 2.0F;
+		for (int i = 0; i < text.length(); i++) {
+			String ch = String.valueOf(text.charAt(i));
+			// the hot air bends the light: each figure wavers on its own
+			float wave = hot * 0.7F * Mth.sin(t * 9.0F + i * 1.7F);
+			g.pose().pushMatrix();
+			g.pose().translate(x, cy - 3.5F + wave);
+			g.drawString(font, ch, 0, 0, 0xFF000000 | ink, true);
+			g.pose().popMatrix();
+			x += font.width(ch);
+		}
 	}
 
 	private static void spawn(float dt) {
 		if (heatShown > 0.02F) {
-			spawnHeat += dt * (18.0F + 50.0F * heatShown) * heatShown;
-			while (spawnHeat >= 1.0F) {
-				spawnHeat -= 1.0F;
-				float x = 3.0F + R.nextFloat() * (W - 6);
-				BITS.add(new Bit(0, x, H - 1.0F, (R.nextFloat() - 0.5F) * 5.0F, -(12.0F + R.nextFloat() * 14.0F) * (0.6F + 0.6F * heatShown),
-					0.45F + R.nextFloat() * 0.45F, (2.5F + R.nextFloat() * 3.0F) * (0.7F + 0.6F * heatShown)));
+			spawnFlame += dt * (30.0F + 80.0F * heatShown) * Math.min(1.0F, heatShown * 1.5F);
+			while (spawnFlame >= 1.0F) {
+				spawnFlame -= 1.0F;
+				// from the rim, mostly its upper half, licking up and a little outward
+				float a = -Mth.HALF_PI + (float) R.nextGaussian() * 1.05F;
+				float ox = Mth.cos(a);
+				float oy = Mth.sin(a);
+				float sp = 0.6F + 0.6F * heatShown;
+				BITS.add(new Bit(0, ox * (RADIUS - 2.0F), oy * (RADIUS - 2.0F), ox * 7.0F * sp, (oy * 6.0F - 14.0F - R.nextFloat() * 12.0F) * sp,
+					0.4F + R.nextFloat() * 0.45F, (2.6F + R.nextFloat() * 3.2F) * (0.7F + 0.6F * heatShown)));
 			}
-			spawnEmber += dt * 9.0F * heatShown;
-			while (spawnEmber >= 1.0F) {
-				spawnEmber -= 1.0F;
-				BITS.add(new Bit(1, 4.0F + R.nextFloat() * (W - 8), H * 0.6F, (R.nextFloat() - 0.5F) * 8.0F, -(22.0F + R.nextFloat() * 22.0F),
-					0.8F + R.nextFloat() * 0.8F, 1.0F));
+			spawnSpark += dt * 10.0F * heatShown;
+			while (spawnSpark >= 1.0F) {
+				spawnSpark -= 1.0F;
+				float a = -Mth.HALF_PI + (float) R.nextGaussian() * 0.8F;
+				BITS.add(new Bit(1, Mth.cos(a) * RADIUS, Mth.sin(a) * RADIUS, Mth.cos(a) * 14.0F + (R.nextFloat() - 0.5F) * 10.0F,
+					-(26.0F + R.nextFloat() * 26.0F), 0.9F + R.nextFloat() * 0.9F, 1.0F));
 			}
 		}
 		if (coldShown > 0.02F) {
-			spawnSnow += dt * 7.0F * coldShown;
+			spawnSnow += dt * 6.0F * coldShown;
 			while (spawnSnow >= 1.0F) {
 				spawnSnow -= 1.0F;
-				BITS.add(new Bit(2, -6.0F + R.nextFloat() * (W + 12), -10.0F, 0.0F, 6.0F + R.nextFloat() * 6.0F, 3.0F + R.nextFloat() * 2.0F,
-					0.7F + R.nextFloat() * 0.9F));
+				BITS.add(new Bit(2, (R.nextFloat() - 0.5F) * RADIUS * 4.0F, -RADIUS * 2.2F, 0.0F, 5.0F + R.nextFloat() * 6.0F,
+					4.0F + R.nextFloat() * 2.0F, 1.6F + R.nextFloat() * 1.8F));
 			}
 		}
-		while (BITS.size() > 260) {
+		while (BITS.size() > 320) {
 			BITS.removeFirst();
 		}
 	}
@@ -195,95 +208,174 @@ public final class ThermoHud {
 	private static void step(float dt, float t) {
 		BITS.removeIf(b -> (b.age += dt) >= b.life);
 		for (Bit b : BITS) {
-			if (b.kind == 1) {
-				b.vx += Mth.sin(t * 6.0F + b.seed) * 30.0F * dt;
-			} else if (b.kind == 2) {
-				b.vx = Mth.sin(t * 1.3F + b.seed) * 4.0F;
+			if (b.kind == 0) {
+				// a tongue flickers sideways and speeds up as it rises
+				b.vx += Mth.sin(t * 12.0F + b.seed) * 22.0F * dt;
+				b.vy -= 14.0F * dt;
+			} else if (b.kind == 1) {
+				for (int i = b.trail.length - 1; i >= 2; i--) {
+					b.trail[i] = b.trail[i - 2];
+				}
+				b.trail[0] = b.x;
+				b.trail[1] = b.y;
+				b.trailN = Math.min(b.trail.length / 2, b.trailN + 1);
+				b.vx += Mth.sin(t * 7.0F + b.seed) * 40.0F * dt;
+				b.vx *= 1.0F - dt * 0.8F;
+				b.vy += 6.0F * dt;
 			} else {
-				// a flame flickers sideways and speeds up as it rises
-				b.vx += Mth.sin(t * 11.0F + b.seed) * 18.0F * dt;
-				b.vy -= 10.0F * dt;
+				b.vx = Mth.sin(t * 1.1F + b.seed) * 5.0F;
 			}
 			b.x += b.vx * dt;
 			b.y += b.vy * dt;
 		}
 	}
 
-	/** Layer 0: what lies under the plate's content (flame bodies, snow); 1: the tongue tips over the top edge. */
-	private static void drawBits(GuiGraphics g, int x0, int y0, int layer) {
+	/** The fire round the badge: each tongue a soft flame, hot white at its root, burning out red into smoke. */
+	private static void drawFlames(GuiGraphics g, float cx, float cy) {
+		float hot = Math.min(1.0F, heatShown * 1.6F);
 		for (Bit b : BITS) {
+			if (b.kind != 0) {
+				continue;
+			}
 			float p = b.age / b.life;
-			float px = x0 + b.x;
-			float py = y0 + b.y;
-			if (b.kind == 0) {
-				boolean over = b.y < 4.0F;
-				if (over != (layer == 1)) {
-					continue;
-				}
-				// white-yellow at the root, orange, red, then dark smoke as it dies away
-				int c = p < 0.25F ? UiKit.lerpColor(0xFFF4C0, 0xFFB43C, p / 0.25F)
-					: p < 0.6F ? UiKit.lerpColor(0xFFB43C, 0xFF4E1A, (p - 0.25F) / 0.35F) : UiKit.lerpColor(0xFF4E1A, 0x3A1A10, (p - 0.6F) / 0.4F);
-				float a = (float) Math.pow(1.0F - p, 1.1) * 0.95F * Math.min(1.0F, heatShown * 1.6F);
-				float s = b.size * (1.0F - 0.55F * p);
-				UiKit.orb(g, px - s, py - s * 1.5F, s * 2.0F, s * 3.0F, c, a);
-				if (p < 0.4F) {
-					UiKit.orb(g, px - s * 0.5F, py - s * 0.8F, s, s * 1.6F, 0xFFFBE0, a * 0.7F);
-				}
-			} else if (b.kind == 1) {
-				if (layer != 1) {
-					continue;
-				}
-				float a = (1.0F - p) * Math.min(1.0F, heatShown * 1.5F);
-				int c = UiKit.lerpColor(0xFFE6A0, 0xFF5A20, p);
-				g.fill(Math.round(px), Math.round(py), Math.round(px) + 1, Math.round(py) + 1, UiKit.argb(a, c));
-				UiKit.orb(g, px - 2, py - 2, 5, 5, c, a * 0.5F);
-			} else {
-				if (layer != 1) {
-					continue;
-				}
-				float a = Math.min(1.0F, p * 6.0F) * (1.0F - p) * Math.min(1.0F, coldShown * 1.6F);
-				UiKit.disc(g, px, py, b.size, UiKit.argb(a * 0.9F, 0xF4FBFF));
+			int c = p < 0.2F ? UiKit.lerpColor(0xFFF6D0, 0xFFC040, p / 0.2F)
+				: p < 0.55F ? UiKit.lerpColor(0xFFC040, 0xFF5418, (p - 0.2F) / 0.35F) : UiKit.lerpColor(0xFF5418, 0x40180E, (p - 0.55F) / 0.45F);
+			float a = (float) Math.pow(1.0F - p, 1.2) * hot;
+			float s = b.size * (1.0F - 0.5F * p);
+			float px = cx + b.x;
+			float py = cy + b.y;
+			UiKit.orb(g, px - s, py - s * 1.7F, s * 2.0F, s * 3.4F, c, a);
+			if (p < 0.35F) {
+				UiKit.orb(g, px - s * 0.45F, py - s * 0.9F, s * 0.9F, s * 1.8F, 0xFFFDF0, a * 0.8F);
 			}
 		}
 	}
 
-	/** Ice ferns: rays grown in from the corners and the edges, with side twigs, as far as the cold has got. */
-	private static void frost(GuiGraphics g, int x0, int y0, float cold) {
-		float[][] roots = {
-			{0, 0, 0.35F}, {W, 0, 2.8F}, {0, H, -0.4F}, {W, H, 3.6F},
-			{W * 0.3F, 0, 1.45F}, {W * 0.62F, 0, 1.75F}, {W * 0.45F, H, -1.5F}, {W * 0.8F, H, -1.8F}
-		};
-		for (int n = 0; n < roots.length; n++) {
-			float[] root = roots[n];
-			// the same fern every frame: its shape fixed, only how far it has grown follows the cold
-			RandomSource r = RandomSource.create(7331L + n * 101L);
-			int rays = 2 + r.nextInt(2);
-			for (int k = 0; k < rays; k++) {
-				float a = root[2] + (r.nextFloat() - 0.5F) * 0.9F;
-				float len = 5.0F + r.nextFloat() * 9.0F;
-				ray(g, x0 + root[0], y0 + root[1], a, len, cold, 0.75F * Math.min(1.0F, cold * 1.5F), r, 2);
+	private static void drawSparks(GuiGraphics g, float cx, float cy) {
+		float hot = Math.min(1.0F, heatShown * 1.5F);
+		for (Bit b : BITS) {
+			if (b.kind != 1) {
+				continue;
 			}
+			float p = b.age / b.life;
+			float a = (1.0F - p) * hot;
+			int c = UiKit.lerpColor(0xFFF0B0, 0xFF5A20, p);
+			// the trail it leaves, fading behind it
+			for (int i = 0; i < b.trailN; i++) {
+				float f = 1.0F - (i + 1.0F) / (b.trailN + 1.0F);
+				UiKit.disc(g, cx + b.trail[i * 2], cy + b.trail[i * 2 + 1], 0.6F * f + 0.25F, UiKit.argb(a * f * 0.7F, c));
+			}
+			UiKit.orb(g, cx + b.x - 3, cy + b.y - 3, 6, 6, c, a * 0.6F);
+			UiKit.disc(g, cx + b.x, cy + b.y, 0.8F, UiKit.argb(a, 0xFFFBE8));
 		}
 	}
 
-	private static void ray(GuiGraphics g, float sx, float sy, float a, float len, float grown, float alpha, RandomSource r, int depth) {
+	/** Snowflakes: six arms with twigs, turning slowly as they drift down. */
+	private static void drawSnow(GuiGraphics g, float cx, float cy, float t) {
+		float icy = Math.min(1.0F, coldShown * 1.6F);
+		for (Bit b : BITS) {
+			if (b.kind != 2) {
+				continue;
+			}
+			float p = b.age / b.life;
+			float a = Math.min(1.0F, p * 5.0F) * Math.min(1.0F, (1.0F - p) * 3.0F) * icy;
+			if (a < 0.02F) {
+				continue;
+			}
+			float px = cx + b.x;
+			float py = cy + b.y;
+			float rot = t * 0.8F + b.seed;
+			for (int k = 0; k < 6; k++) {
+				float ang = rot + k * Mth.PI / 3.0F;
+				line(g, px, py, ang, b.size, UiKit.argb(a * 0.9F, 0xF4FBFF));
+				float mx = px + Mth.cos(ang) * b.size * 0.55F;
+				float my = py + Mth.sin(ang) * b.size * 0.55F;
+				line(g, mx, my, ang + 0.9F, b.size * 0.35F, UiKit.argb(a * 0.7F, 0xF4FBFF));
+				line(g, mx, my, ang - 0.9F, b.size * 0.35F, UiKit.argb(a * 0.7F, 0xF4FBFF));
+			}
+			UiKit.orb(g, px - b.size, py - b.size, b.size * 2.0F, b.size * 2.0F, 0xFFFFFF, a * 0.25F);
+		}
+	}
+
+	/** A thin line of soft dots (half a pixel apart, so it reads smooth at any angle). */
+	private static void line(GuiGraphics g, float x, float y, float angle, float length, int argb) {
+		float ca = Mth.cos(angle);
+		float sa = Mth.sin(angle);
+		for (float i = 0; i <= length; i += 0.5F) {
+			UiKit.disc(g, x + ca * i, y + sa * i, 0.45F, argb);
+		}
+	}
+
+	/** The frost crown: ice spikes grown out from the rim, each with side twigs, as far as the cold has got. */
+	private static void crown(GuiGraphics g, float cx, float cy, float cold, float t) {
+		float grown = Mth.clamp(cold * 1.3F, 0.0F, 1.0F);
+		RandomSource r = RandomSource.create(4242L);
+		int spikes = 22;
+		for (int i = 0; i < spikes; i++) {
+			float a = i / (float) spikes * Mth.TWO_PI + (r.nextFloat() - 0.5F) * 0.2F;
+			float len = 3.0F + r.nextFloat() * 6.5F;
+			float sx = cx + Mth.cos(a) * (RADIUS - 0.5F);
+			float sy = cy + Mth.sin(a) * (RADIUS - 0.5F);
+			float shimmer = 0.75F + 0.25F * Mth.sin(t * 2.0F + i * 1.3F);
+			ice(g, sx, sy, a, len, grown, 0.85F * shimmer * Math.min(1.0F, cold * 1.6F), r, 1);
+		}
+	}
+
+	/** Ice ferns creeping in over the glass from the rim (faint, the figures stay readable). */
+	private static void ferns(GuiGraphics g, float cx, float cy, float cold) {
+		float grown = Mth.clamp((cold - 0.15F) * 1.4F, 0.0F, 1.0F);
+		if (grown <= 0.0F) {
+			return;
+		}
+		RandomSource r = RandomSource.create(9191L);
+		for (int i = 0; i < 9; i++) {
+			float a = i / 9.0F * Mth.TWO_PI + r.nextFloat() * 0.5F;
+			float len = 4.0F + r.nextFloat() * 5.0F;
+			float sx = cx + Mth.cos(a) * (RADIUS - 2.2F);
+			float sy = cy + Mth.sin(a) * (RADIUS - 2.2F);
+			ice(g, sx, sy, a + Mth.PI + (r.nextFloat() - 0.5F) * 0.6F, len, grown, 0.45F * grown, r, 1);
+		}
+	}
+
+	private static void ice(GuiGraphics g, float sx, float sy, float a, float len, float grown, float alpha, RandomSource r, int depth) {
 		float ca = Mth.cos(a);
 		float sa = Mth.sin(a);
 		float shown = len * grown;
-		for (float i = 0; i < shown; i += 1.0F) {
-			int px = Math.round(sx + ca * i);
-			int py = Math.round(sy + sa * i);
-			g.fill(px, py, px + 1, py + 1, UiKit.argb(alpha * (1.0F - 0.6F * i / len), 0xE4F6FF));
+		for (float i = 0; i < shown; i += 0.5F) {
+			float f = 1.0F - 0.65F * i / len;
+			UiKit.disc(g, sx + ca * i, sy + sa * i, 0.5F * f + 0.15F, UiKit.argb(alpha * f, 0xE6F7FF));
 		}
 		if (depth <= 0) {
 			return;
 		}
-		// twigs off both sides, shorter towards the tip
-		for (float i = 2.0F; i < len - 1.0F; i += 2.0F + r.nextFloat() * 1.5F) {
-			float tl = (len - i) * (0.35F + r.nextFloat() * 0.2F);
+		// twigs off both sides, the shape fixed, only how far it has grown follows the cold
+		for (float i = 1.5F; i < len - 1.0F; i += 1.8F + r.nextFloat() * 1.2F) {
+			float tl = (len - i) * (0.35F + r.nextFloat() * 0.25F);
 			float at = i * grown;
-			ray(g, sx + ca * at, sy + sa * at, a + 1.0F, tl, grown, alpha * 0.8F, r, depth - 1);
-			ray(g, sx + ca * at, sy + sa * at, a - 1.0F, tl, grown, alpha * 0.8F, r, depth - 1);
+			ice(g, sx + ca * at, sy + sa * at, a + 1.05F, tl, grown, alpha * 0.75F, r, depth - 1);
+			ice(g, sx + ca * at, sy + sa * at, a - 1.05F, tl, grown, alpha * 0.75F, r, depth - 1);
+		}
+	}
+
+	/** Light catching the frozen rim: four-pointed stars twinkling here and there. */
+	private static void glints(GuiGraphics g, float cx, float cy, float icy, float t) {
+		for (int i = 0; i < 4; i++) {
+			float phase = t * 0.7F + i * 1.618F;
+			float k = phase - Mth.floor(phase);
+			float tw = Mth.sin(k * Mth.PI);
+			tw = tw * tw * tw;
+			if (tw < 0.05F) {
+				continue;
+			}
+			int cycle = Mth.floor(phase);
+			float a = (cycle * 2.399F + i * 1.7F) % Mth.TWO_PI;
+			float px = cx + Mth.cos(a) * (RADIUS + 0.5F);
+			float py = cy + Mth.sin(a) * (RADIUS + 0.5F);
+			float s = 2.0F + 3.0F * tw;
+			int c = UiKit.argb(tw * icy, 0xFFFFFF);
+			line(g, px - s, py, 0.0F, s * 2.0F, c);
+			line(g, px, py - s, Mth.HALF_PI, s * 2.0F, c);
+			UiKit.orb(g, px - s, py - s, s * 2.0F, s * 2.0F, 0xFFFFFF, 0.5F * tw * icy);
 		}
 	}
 }
