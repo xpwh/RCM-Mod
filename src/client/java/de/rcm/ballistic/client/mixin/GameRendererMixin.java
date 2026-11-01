@@ -103,4 +103,23 @@ public abstract class GameRendererMixin {
 			ci.cancel();
 		}
 	}
+
+	/**
+	 * The hand and what it holds are drawn with their own projection, cut off 5 cm in front of the eye. Aiming down a
+	 * rifle's sights the receiver runs right under the eye - cut that close it shows as a broken sheet across the
+	 * view. A near plane of 5 mm keeps it whole (the depth buffer has precision to spare out to 100 blocks).
+	 */
+	@org.spongepowered.asm.mixin.Unique
+	private static net.minecraft.client.renderer.CachedPerspectiveProjectionMatrixBuffer ballisticmissiles$handProjection;
+
+	@org.spongepowered.asm.mixin.injection.Redirect(method = "renderLevel", at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/client/renderer/CachedPerspectiveProjectionMatrixBuffer;getBuffer(IIF)Lcom/mojang/blaze3d/buffers/GpuBufferSlice;"),
+		require = 0)
+	private com.mojang.blaze3d.buffers.GpuBufferSlice ballisticmissiles$nearHand(net.minecraft.client.renderer.CachedPerspectiveProjectionMatrixBuffer buffer,
+		int width, int height, float fov) {
+		if (ballisticmissiles$handProjection == null) {
+			ballisticmissiles$handProjection = new net.minecraft.client.renderer.CachedPerspectiveProjectionMatrixBuffer("ballisticmissiles hand", 0.005F, 100.0F);
+		}
+		return ballisticmissiles$handProjection.getBuffer(width, height, fov);
+	}
 }
