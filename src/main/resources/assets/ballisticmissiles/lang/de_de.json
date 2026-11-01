@@ -730,6 +730,8 @@
 	"options.ballisticmissiles.auto_exposure.tooltip": "Kommst du aus einem dunklen Bunker oder einer Höhle ins Tageslicht, ist erst alles überstrahlt weiß, bis sich das Auge gewöhnt hat.",
 	"options.ballisticmissiles.real_water": "Realistisches Wasser",
 	"options.ballisticmissiles.real_water.tooltip": "Wasser spiegelt Himmel, Ufer, Bäume und Lichter, hat Wellen und Sonnenglitzern. Flach geschaut spiegelt es, steil schaut man hinein. Funktioniert mit Grafik 'Schön' (nicht 'Fabulös').",
+	"options.ballisticmissiles.real_rain": "Realistischer Regen",
+	"options.ballisticmissiles.real_rain.tooltip": "Dünne Tropfenstreifen, die der Wind schräg treibt, statt blauer Regenwände. Dazu Spritzer am Boden, Ringe auf Wasser und Pfützen und feine Gischt bei Starkregen.",
 	"options.ballisticmissiles.sun_shadows": "Sonnenschatten",
 	"options.ballisticmissiles.sun_shadows.classic": "Klassisch",
 	"options.ballisticmissiles.sun_shadows.new": "Neu (Beta)",

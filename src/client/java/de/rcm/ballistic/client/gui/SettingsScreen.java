@@ -336,6 +336,7 @@ public class SettingsScreen extends Screen {
 				.create(0, 0, 150, 20, Component.translatable("options.ballisticmissiles.nature_quality"), (b, v) -> ModConfig.natureQuality = v));
 		this.list.row(toggle("wildlife", ModConfig.wildlife, "wildlife", v -> ModConfig.wildlife = v),
 			toggle("night_sounds", ModConfig.nightSounds, "night_sounds", v -> ModConfig.nightSounds = v));
+		this.list.row(toggle("real_rain", ModConfig.realRain, "real_rain", v -> ModConfig.realRain = v));
 		this.list.row(toggle("storm_front", ModConfig.stormFront, "storm_front", v -> ModConfig.stormFront = v),
 			toggle("rainbow", ModConfig.rainbow, "rainbow", v -> ModConfig.rainbow = v));
 		this.list.row(toggle("heat_shimmer", ModConfig.heatShimmer, "heat_shimmer", v -> ModConfig.heatShimmer = v),

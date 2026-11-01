@@ -730,6 +730,8 @@
 	"options.ballisticmissiles.auto_exposure.tooltip": "Stepping out of a dark bunker or cave into daylight, everything is blown out white at first until your eyes adjust.",
 	"options.ballisticmissiles.real_water": "Realistic water",
 	"options.ballisticmissiles.real_water.tooltip": "Water mirrors the sky, banks, trees and lights, with waves and sun glitter. At a glancing look it mirrors, looking down you see into it. Works with 'Fancy' graphics (not 'Fabulous').",
+	"options.ballisticmissiles.real_rain": "Realistic rain",
+	"options.ballisticmissiles.real_rain.tooltip": "Thin falling streaks slanted by the wind instead of blue rain sheets, with splashes on the ground, rings on water and puddles and fine spray in heavy rain.",
 	"options.ballisticmissiles.sun_shadows": "Sun shadows",
 	"options.ballisticmissiles.sun_shadows.classic": "Classic",
 	"options.ballisticmissiles.sun_shadows.new": "New (beta)",

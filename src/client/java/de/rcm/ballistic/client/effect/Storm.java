@@ -370,7 +370,7 @@ public final class Storm {
 					}
 					int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
 					if (Math.abs(y - cam.y) < 24.0) {
-						mc.level.addParticle(ParticleTypes.RAIN, x + RANDOM.nextDouble(), y + 0.05, z + RANDOM.nextDouble(), 0.0, 0.0, 0.0);
+						RealRain.splash(mc.level, ParticleTypes.RAIN, x + RANDOM.nextDouble(), y + 0.02, z + RANDOM.nextDouble(), 0.0, 0.0, 0.0);
 					}
 				}
 			}

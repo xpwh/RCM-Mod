@@ -1,8 +1,14 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.41.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.42.0** (01.11.2026).
 
 ---
+
+### 12.42.0 – Realistischer Regen
+- Statt der blauen Regenwände fallen einzelne Tropfen: dünne, blasse, halbdurchsichtige Streifen, durch die Fallbewegung verwischt, unterschiedlich groß und schnell. In der Ferne verblassen sie ins Grau.
+- Der Wind treibt den Regen schräg, im Gewitter stärker. Bei Starkregen und Gewitter fallen mehr Tropfen.
+- Die blauen „V“-Spritzer sind weg. Am Boden springen kleine Wasserperlen hoch, auf Wasser und Pfützen breiten sich Ringe aus, bei Wolkenbruch hängt feine Gischt über dem Boden.
+- Abschaltbar in den Einstellungen unter „Welt & Natur“ → „Realistischer Regen“.
 
 ### 12.41.0 – Echter Donner
 - Der künstlich erzeugte Donner ist durch echte Gewitter-Aufnahmen ersetzt.

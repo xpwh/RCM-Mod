@@ -57,6 +57,8 @@ public final class ModConfig {
 	public static boolean eyeAdaptation = true;
 	/** Water mirrors the sky and what is round it, with waves (screen-space reflections). */
 	public static boolean realWater = true;
+	/** Rain as thin falling streaks, slanted by the wind, with splashes, rings and spray (instead of Minecraft's blue sheets). */
+	public static boolean realRain = true;
 	/** Thunderstorms: lightning in the clouds and to the ground, delayed thunder, heavy rain, wet ground and puddles. */
 	public static boolean storms = true;
 	/** Sunlight casts shadows (traced through the depth of the picture). */
@@ -168,6 +170,7 @@ public final class ModConfig {
 			nightSky = bool(p, "nightSky", nightSky);
 			eyeAdaptation = bool(p, "eyeAdaptation", eyeAdaptation);
 			realWater = bool(p, "realWater", realWater);
+			realRain = bool(p, "realRain", realRain);
 			storms = bool(p, "storms", storms);
 			sunShadows = bool(p, "sunShadows", sunShadows);
 			ambientOcclusion = bool(p, "ambientOcclusion", ambientOcclusion);
@@ -231,6 +234,7 @@ public final class ModConfig {
 			p.setProperty("nightSky", Boolean.toString(nightSky));
 			p.setProperty("eyeAdaptation", Boolean.toString(eyeAdaptation));
 			p.setProperty("realWater", Boolean.toString(realWater));
+			p.setProperty("realRain", Boolean.toString(realRain));
 			p.setProperty("storms", Boolean.toString(storms));
 			p.setProperty("sunShadows", Boolean.toString(sunShadows));
 			p.setProperty("ambientOcclusion", Boolean.toString(ambientOcclusion));
