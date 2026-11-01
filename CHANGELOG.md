@@ -1,8 +1,14 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.2.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.2.1** (01.11.2026).
 
 ---
+
+### 13.2.1 – Echtere Gurgel- und Blutgeräusche
+- Röcheln neu aus echten Aufnahmen: schweres, verletztes Atmen mit Blut im Hals, das im Rhythmus des Atems gluckert, nasses Blut-Husten und Würgen. Sterbende röcheln öfter, als dass sie stöhnen.
+- Spritzende Arterien klingen nach einem nassen Spritzer mit nachprasselnden Tropfen statt nach Schleim.
+- Neu: Blut, das über eine Kante tropft, hört man Tropfen für Tropfen.
+- Vier zusätzliche Knochenbrüche.
 
 ### 13.2.0 – Realistischeres Blut
 - Blutlachen sind keine einzelnen roten Scheiben mehr, sondern eine zusammenhängende Fläche. Jeder Block wählt passend zu seinen acht Nachbarn ein Kachelstück, die Ränder gehen nahtlos ineinander über, und große Lachen werden eine geschlossene Fläche mit unregelmäßigem Rand.

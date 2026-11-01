@@ -2342,6 +2342,22 @@
 			{
 				"name": "ballisticmissiles:gore/bone6",
 				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone7",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone8",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone9",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone10",
+				"attenuation_distance": 20
 			}
 		]
 	},
@@ -2498,6 +2514,14 @@
 			{
 				"name": "ballisticmissiles:gore/spurt4",
 				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt5",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt6",
+				"attenuation_distance": 10
 			}
 		]
 	},
@@ -2506,14 +2530,91 @@
 		"sounds": [
 			{
 				"name": "ballisticmissiles:gore/gurgle1",
-				"attenuation_distance": 8
+				"attenuation_distance": 10
 			},
 			{
 				"name": "ballisticmissiles:gore/gurgle2",
-				"attenuation_distance": 8
+				"attenuation_distance": 10
 			},
 			{
 				"name": "ballisticmissiles:gore/gurgle3",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle4",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle5",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle6",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle7",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle8",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle9",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle10",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle11",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"gore.drip": {
+		"subtitle": "subtitles.ballisticmissiles.gore_drip",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/drip1",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip2",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip3",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip4",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip5",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip6",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip7",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip8",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip9",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip10",
 				"attenuation_distance": 8
 			}
 		]

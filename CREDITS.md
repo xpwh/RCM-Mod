@@ -242,4 +242,10 @@ outlines and proportions; the photograph itself is not shipped.
 | Pain and death voices | https://opengameart.org/content/11-male-human-paindeath-sounds | Michel Baradari | CC BY 3.0 |
 | Pain grunts | https://opengameart.org/content/male-gruntyelling-sounds | haeldb | CC0 1.0 |
 | Death groans | https://opengameart.org/content/grunts-male-death-and-pain | thebardofblasphemy | CC0 1.0 |
-| Spurting, gurgling | https://opengameart.org/content/40-cc0-water-splash-slime-sfx | rubberduck | CC0 1.0 |
+| Gagging on blood | https://opengameart.org/content/sick-noises | frosty-ham | CC0 1.0 |
+| Wet coughing | https://opengameart.org/content/old-man-cough | antumdeluge | CC0 1.0 |
+| Liquid gurgling in the throat | https://opengameart.org/content/gastric-distress | lfa | CC0 1.0 |
+| Laboured, injured breathing | https://opengameart.org/content/voice-pack%E2%94%82universal-spurts | Alba MacKenna | CC BY 4.0 |
+| Tired breathing | https://opengameart.org/content/breathing-tired | mikeask | CC0 1.0 |
+| Spurting (squish) | https://opengameart.org/content/squish-sounds-effects | ezduzziteh | CC0 1.0 |
+| Blood drips, bone cracks | https://opengameart.org/content/horror-sound-effects-library | Little Robot Sound Factory | CC BY 3.0 |

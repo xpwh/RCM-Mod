@@ -213,7 +213,7 @@ public final class Injuries {
 		} else {
 			CRIES.put(e, now);
 		}
-		var sound = dying ? (level.getRandom().nextFloat() < 0.35F ? ModRegistry.GORE_GURGLE : ModRegistry.GORE_DEATH) : ModRegistry.GORE_PAIN;
+		var sound = dying ? (level.getRandom().nextFloat() < 0.55F ? ModRegistry.GORE_GURGLE : ModRegistry.GORE_DEATH) : ModRegistry.GORE_PAIN;
 		level.playSound(null, e.getX(), e.getEyeY(), e.getZ(), sound, SoundSource.VOICE, dying ? 0.7F : Math.min(1.2F, 0.6F + taken * 0.08F),
 			0.88F + level.getRandom().nextFloat() * 0.22F);
 	}

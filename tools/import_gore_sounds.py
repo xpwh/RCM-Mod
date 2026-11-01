@@ -11,6 +11,13 @@ usage: python3 import_gore_sounds.py <dir with the 44.1 kHz mono WAVs, named as 
   haeldb_*      haeldb, "Male grunt/yelling sounds" (CC0)
   bard_long     thebardofblasphemy, "Grunts - male death and pain" (CC0)
   rd_*          rubberduck, "40 CC0 water / splash / slime SFX" (CC0)
+  sickness      frosty-ham, "Sick noises" (CC0)                                   - gagging, retching
+  cough         antumdeluge, "Old man cough" (CC0)                                 - a wet cough
+  gastric       lfa, "Gastric distress" (CC0)                                      - liquid gurgling
+  breath_tired  mikeask, "Breathing tired" (CC0)
+  alba_*        Alba MacKenna, "Voice pack: universal spurts" (CC BY 4.0)          - injured, laboured breathing
+  sq_*          ezduzziteh, "Squish sound effects" (CC0)
+  hr_*          Little Robot Sound Factory, "Horror sound effects library" (CC BY 3.0) - blood drips, bone cracks
 """
 import numpy as np
 
@@ -77,18 +84,49 @@ def main():
     deaths += takes(load("bard_long"), 5, 2.2)
     for k, x in enumerate(deaths):
         save("gore/death%d" % (k + 1), fade(x[: int(2.4 * SR)], 0.005, 0.4), highpass=80.0)
-    # ---- an artery spurting: a short wet squirt
-    for k, i in enumerate((2, 5, 9, 13)):
-        x = trim(load("rd_slime_%02d" % i))
-        x = fft_filter(stretch(x, 0.85), low=250.0, high=6000.0)
-        save("gore/spurt%d" % (k + 1), fade(x[: int(0.4 * SR)], 0.002, 0.1), highpass=200.0)
-    # ---- a throat full of blood: bubbles slowed and darkened
-    for k, i in enumerate((1, 2, 3)):
-        x = trim(load("rd_bubble_%02d" % i))
-        x = fft_filter(stretch(x, 1.6), high=1800.0)
-        x = mix(x, stretch(x, 1.2), 0.6, 0.12)
-        save("gore/gurgle%d" % (k + 1), fade(x[: int(1.4 * SR)], 0.01, 0.3), highpass=70.0)
-
+    # ---- an artery spurting: a squirt of liquid under pressure - a wet squish, a splash of drops after it
+    drips = [trim(load("hr_Blood_Drip_%02d" % i)) for i in range(10)]
+    for k, i in enumerate((1, 2, 3, 4, 5, 6)):
+        x = trim(load("sq_squish_%02d" % i if i > 1 else "sq_squish_01_0"))
+        x = fft_filter(x, low=250.0)
+        x = mix(x, drips[k] * 0.6, 1.0, 0.09 + 0.03 * k)
+        save("gore/spurt%d" % (k + 1), fade(x[: int(0.55 * SR)], 0.002, 0.12), highpass=180.0)
+    # ---- blood dripping off an edge, drop by drop
+    for k, x in enumerate(drips):
+        save("gore/drip%d" % (k + 1), fade(x[: int(0.6 * SR)], 0.001, 0.1), highpass=120.0)
+    # ---- a throat full of blood. Breathing through it: a laboured breath with the liquid bubbling in it (the
+    # bubbling follows the breath); coughing it up; gagging on it
+    gastric = load("gastric")
+    gurgles = [gastric[int(a * SR):int(b * SR)] for a, b in ((0.0, 1.1), (2.2, 2.85), (3.7, 4.45), (4.6, 5.4), (6.8, 7.9), (11.6, 12.6))]
+    gurgles = [fft_filter(g, low=180.0, high=2600.0) for g in gurgles]
+    breaths = [load("alba_breathing_injured")[int(a * SR):int(b * SR)] for a, b in ((0.0, 1.3), (2.35, 3.6))]
+    lab = load("alba_breathing_laboured")
+    breaths += [lab[int(a * SR):int(b * SR)] for a, b in ((0.0, 0.85), (2.7, 3.4), (8.2, 8.95))]
+    breaths += [load("breath_tired")[int(0.25 * SR):int(1.35 * SR)]]
+    out = []
+    for k, b in enumerate(breaths):
+        b = trim(b)
+        env = envelope(b, 25.0)
+        env = env / max(env.max(), 1e-6)
+        g = gurgles[k % len(gurgles)]
+        g = np.resize(g, len(b)) * env * 1.4
+        x = fft_filter(b, high=4500.0) * 0.8 + g
+        out.append(x)
+    cough = load("cough")
+    for a, b in ((0.0, 0.92), (0.95, 1.65), (1.65, 2.6)):
+        c = trim(cough[int(a * SR):int(b * SR)])
+        g = np.resize(gurgles[(len(out)) % len(gurgles)], len(c)) * 0.55
+        out.append(c + g * envelope(c, 20.0) / max(envelope(c, 20.0).max(), 1e-6))
+    sick = load("sickness")
+    for a, b in ((0.0, 0.48), (2.18, 2.62)):
+        c = trim(sick[int(a * SR):int(b * SR)])
+        out.append(c + np.resize(gurgles[2], len(c)) * 0.4)
+    for k, x in enumerate(out):
+        save("gore/gurgle%d" % (k + 1), fade(x[: int(1.6 * SR)], 0.01, 0.25), highpass=70.0)
+    # ---- bone: the horror library's cracks with the others
+    for k in range(4):
+        x = trim(load("hr_Bonecrack_%02d" % k))[: int(0.8 * SR)]
+        save("gore/bone%d" % (7 + k), fade(x, 0.001, 0.15), highpass=60.0)
 
 if __name__ == "__main__":
     main()

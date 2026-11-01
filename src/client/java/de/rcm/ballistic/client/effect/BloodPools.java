@@ -63,6 +63,7 @@ public final class BloodPools {
 		float shown;
 		long fed;
 		float drip;
+		long lastDripSound;
 		/** Faces (bit per horizontal direction) the blood has run down over a step. */
 		int runs;
 		/** Sides where there is no same-level ground: the pool stays on its own block there. */
@@ -239,6 +240,12 @@ public final class BloodPools {
 								double ex = c.pos.getX() + 0.5 + d.getStepX() * 0.52 + (RANDOM.nextDouble() - 0.5) * 0.5 * Math.abs(d.getStepZ());
 								double ez = c.pos.getZ() + 0.5 + d.getStepZ() * 0.52 + (RANDOM.nextDouble() - 0.5) * 0.5 * Math.abs(d.getStepX());
 								BloodClient.drop(new Vec3(ex, c.top - 0.04, ez), new Vec3(d.getStepX() * 0.01, -0.02, d.getStepZ() * 0.01), 0.04F + RANDOM.nextFloat() * 0.02F);
+								if (now - c.lastDripSound > 12) {
+									// heard close by: drop after drop hitting the ground below
+									c.lastDripSound = now;
+									level.playLocalSound(ex, c.top - 1.0, ez, de.rcm.ballistic.ModRegistry.GORE_DRIP, net.minecraft.sounds.SoundSource.NEUTRAL, 0.22F,
+										0.85F + RANDOM.nextFloat() * 0.3F, false);
+								}
 							}
 						}
 					}

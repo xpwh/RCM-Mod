@@ -919,6 +919,7 @@ public final class ModRegistry {
 	public static final SoundEvent GORE_DEATH = sound("gore.death");
 	public static final SoundEvent GORE_SPURT = sound("gore.spurt");
 	public static final SoundEvent GORE_GURGLE = sound("gore.gurgle");
+	public static final SoundEvent GORE_DRIP = sound("gore.drip");
 	public static final SoundEvent SHELL_DROP = sound("ak.shell");
 	public static final SoundEvent PLAYER_BREATH = sound("player.breath");
 	public static final SoundEvent KNIFE_SWISH = sound("knife.swish");
