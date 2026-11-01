@@ -1,4 +1,7 @@
 {
+	"message.ballisticmissiles.find_found": "Nearest \"%s\": %s – %s blocks away (click to teleport)",
+	"message.ballisticmissiles.find_none": "No \"%s\" found within %s blocks (only in newly generated terrain).",
+	"message.ballisticmissiles.find_unknown": "Unknown place: %s",
 	"options.ballisticmissiles.patch_notes_show": "Show what's new",
 	"options.ballisticmissiles.patch_notes.tooltip": "After an update, a window at start-up shows what changed since the version you last played.",
 	"options.ballisticmissiles.patch_notes": "What's new after updates",

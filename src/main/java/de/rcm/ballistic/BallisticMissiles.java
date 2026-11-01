@@ -68,6 +68,8 @@ public class BallisticMissiles implements ModInitializer {
 			de.rcm.ballistic.injury.GoreCommand.register(dispatcher));
 		net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) ->
 			de.rcm.ballistic.explosion.WorldCommand.register(dispatcher));
+		net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) ->
+			de.rcm.ballistic.base.FindCommand.register(dispatcher));
 		ServerLifecycleEvents.SERVER_STARTED.register(RadiationManager::load);
 		ServerLifecycleEvents.SERVER_STARTED.register(de.rcm.ballistic.explosion.Regrowth::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(de.rcm.ballistic.explosion.Regrowth::save);

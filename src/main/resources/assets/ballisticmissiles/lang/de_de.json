@@ -1,4 +1,7 @@
 {
+	"message.ballisticmissiles.find_found": "Nächster Ort „%s“: %s – %s Blöcke entfernt (anklicken zum Teleportieren)",
+	"message.ballisticmissiles.find_none": "Kein Ort „%s“ im Umkreis von %s Blöcken gefunden (nur in neu erzeugtem Gelände).",
+	"message.ballisticmissiles.find_unknown": "Unbekannter Ort: %s",
 	"options.ballisticmissiles.patch_notes_show": "Neuerungen anzeigen",
 	"options.ballisticmissiles.patch_notes.tooltip": "Nach einem Update zeigt ein Fenster beim Start, was sich seit deiner letzten Version geändert hat.",
 	"options.ballisticmissiles.patch_notes": "Neuerungen nach Updates",

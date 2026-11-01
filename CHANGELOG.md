@@ -1,8 +1,13 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.38.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.38.1** (01.11.2026).
 
 ---
+
+### 12.38.1 – Große Stadt auffindbar
+- Neuer Befehl `/bmfinden <ort>` (auch `/bmlocate`) mit Vorschlägen beim Tippen: Stadt, Militärbasis, Flugzeugträger, Geheimlabor und alle anderen Mod-Orte. Er sucht 2,5-mal so weit wie `/locate`, die Koordinaten in der Antwort sind anklickbar.
+- Städte entstehen öfter: dichteres Raster und weniger strenge Ansprüche an ebenes, trockenes Gelände.
+- Neue Struktur-Tags `#ballisticmissiles:city` und `#ballisticmissiles:all` für `/locate`.
 
 ### 12.38.0 – Ladehemmungen, KI lädt realistisch nach, Neuerungen im Spiel
 - Ladehemmungen bei AK und Glock: Ab und zu bleibt die leere Hülse in der Auswurföffnung stecken. Häufiger bei langen Feuerstößen, Regen oder Wasser und mit Schalldämpfer.
