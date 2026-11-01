@@ -2,8 +2,8 @@
 
 Sub space (block space turned to the block's facing): +z is the bow, origin at the bottom centre of the silo block,
 which lies in the keel; the hull axis runs along z at y = AXIS_Y. The 24 missile tubes stand in two rows under the
-turtleback; the live tube (the block's) is the starboard-aft one of the fourth pair... at the origin's x/z, so the
-hull's centreline lies HX to the side.
+turtleback; the live tube (the block's) stands at the origin's x/z in the +x row, so the hull's centreline lies HX to
+the side.
 
 Parts:
   hull   the whole boat: pressure hull under its anechoic tiles, the turtleback with 23 closed hatches and the
