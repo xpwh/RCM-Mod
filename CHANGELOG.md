@@ -1,8 +1,16 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.39.1** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.40.0** (01.11.2026).
 
 ---
+
+### 12.40.0 – Einstellungsmenü im Profi-Look
+- Einstellungen stehen jetzt untereinander in Karten, eine Karte pro Abschnitt, mit feinen Trennlinien.
+- Jede Option zeigt unter ihrem Namen, was sie macht. Die Tooltip-Texte stehen direkt in der Zeile.
+- Die ganze Zeile ist klickbar. Rechts sitzen Schalter, Auswahlfelder mit Pfeilen oder Regler mit Wertanzeige.
+- Seitenleiste in zwei Gruppen („Dein Spiel“, „Welt & Werkzeuge“), Symbole auf farbigen Kacheln, Version und Alpha-Abzeichen unten.
+- Kopfbereich mit Seitensymbol, großem Titel und Beschreibung. Hinweise mit „i“-Symbol, Suchfeld im selben Stil.
+- „Fertig“-Knopf in der Farbe der Seite. Die Liste blendet oben und unten weich aus. Das Fenster ist zentriert und in der Größe begrenzt.
 
 ### 12.39.1 – Keine Zufalls-Explosionen mehr beim Spawnen
 - Tiere und Monster lösen die Landminen in den Minenfeldern der Schützengraben-Basen nur noch aus, wenn ein Spieler in der Nähe ist (48 Blöcke). Spieler, Soldaten und Fahrzeuge lösen sie wie bisher immer aus.

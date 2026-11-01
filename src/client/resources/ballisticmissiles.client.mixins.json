@@ -3,6 +3,8 @@
 	"package": "de.rcm.ballistic.client.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
+		"AbstractWidgetAccessor",
+		"TooltipAccessor",
 		"AbstractClientPlayerMixin",
 		"AtmosphericFogMixin",
 		"AvatarRendererMixin",
