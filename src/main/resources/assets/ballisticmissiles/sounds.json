@@ -1857,6 +1857,16 @@
 				"name": "ballisticmissiles:storm/thunder_near3",
 				"attenuation_distance": 16,
 				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_near4",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_near5",
+				"attenuation_distance": 16,
+				"stream": true
 			}
 		]
 	},
@@ -1875,6 +1885,21 @@
 			},
 			{
 				"name": "ballisticmissiles:storm/thunder_far3",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far4",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far5",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far6",
 				"attenuation_distance": 16,
 				"stream": true
 			}

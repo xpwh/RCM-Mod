@@ -221,3 +221,11 @@ The heartbeat of the dying player is synthesized by `tools/gen_sounds_v13.py`.
 Modelled in Blender after the photograph "AK-47 type II noBG.png" on Wikimedia Commons
 (https://commons.wikimedia.org/wiki/File:AK-47_type_II_noBG.png), used only as a reference for the
 outlines and proportions; the photograph itself is not shipped.
+
+## Thunder (`tools/import_thunder_sounds.py`)
+
+| Sound | Source | Author | License |
+|---|---|---|---|
+| Close strike | https://opengameart.org/content/thunder-very-close-rain-01 "Thunder, Very Close, Rain, 01" | InspectorJ (www.jshaw.co.uk) | CC BY 3.0 |
+| Close strike, long roll | https://opengameart.org/content/rain-long-thunder "Rain + Long Thunder" | wuxiascrub | CC0 1.0 |
+| Close and distant thunder | https://opengameart.org/node/140426 "Thunder / Lightning Ambience - Field Recording" | Gregor Quendel | CC BY 4.0 |

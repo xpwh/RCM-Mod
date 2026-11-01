@@ -1,7 +1,7 @@
 """Thunder: a close strike's tearing crack - the channel heating in microseconds, a ripping, crackling report
 from the stepped leader's branches arriving one after another - then the deep boom and a long rumble rolling
 away off the hills; from far off only the low rolling rumble, the highs gone.
-python3 gen_sounds_storm.py
+python3 gen_sounds_storm.py  (replaced: the thunder now comes from real recordings, tools/import_thunder_sounds.py)
 """
 import numpy as np
 

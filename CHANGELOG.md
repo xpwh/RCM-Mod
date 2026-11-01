@@ -1,8 +1,14 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.40.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.41.0** (01.11.2026).
 
 ---
+
+### 12.41.0 – Echter Donner
+- Der künstlich erzeugte Donner ist durch echte Gewitter-Aufnahmen ersetzt.
+- In der Nähe: 5 echte Einschläge mit Krachen, Knall und nachrollendem Grollen.
+- In der Ferne: 6 echte rollende Donner, gefiltert wie über große Entfernung.
+- Quellen in CREDITS.md (InspectorJ, Gregor Quendel, wuxiascrub).
 
 ### 12.40.0 – Einstellungsmenü im Profi-Look
 - Einstellungen stehen jetzt untereinander in Karten, eine Karte pro Abschnitt, mit feinen Trennlinien.
