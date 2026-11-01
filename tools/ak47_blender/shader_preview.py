@@ -48,12 +48,12 @@ PI = math.pi
 
 def env(d, rough):
     y = d[:, 1:2]
-    sky = np.where(True, 0, 0) + (np.array([0.95, 0.96, 0.98]) * 1.35 * (1 - sstep(0, 0.7, y)) + np.array([0.38, 0.47, 0.62]) * sstep(0, 0.7, y))
+    sky = np.where(True, 0, 0) + (np.array([0.62, 0.64, 0.66]) * (1 - sstep(0, 0.7, y)) + np.array([0.34, 0.4, 0.5]) * sstep(0, 0.7, y))
     gm = sstep(0, 0.5, -y)
-    ground = np.array([0.42, 0.38, 0.33]) * (1 - gm) + np.array([0.12, 0.11, 0.1]) * gm
-    band = np.exp(-np.abs(y - 0.06) * (28 + (3 - 28) * rough)) * (1.1 + (0.3 - 1.1) * rough)
+    ground = np.array([0.3, 0.28, 0.24]) * (1 - gm) + np.array([0.09, 0.085, 0.08]) * gm
+    band = np.exp(-np.abs(y - 0.06) * (18 + (3 - 18) * rough)) * (0.35 + (0.08 - 0.35) * rough)
     e = np.where(y > 0, sky, ground) + band
-    return e + (np.array([0.55, 0.58, 0.62]) - e) * (rough * rough * 0.85)
+    return e + (np.array([0.36, 0.37, 0.38]) - e) * (rough * rough * 0.85)
 
 
 def sstep(a, b, x):
@@ -92,20 +92,22 @@ def key(nrm, vv, l, colour, base, metal, rough, coat):
 
 def shade(alb, mat, nrm, pos):
     base = alb ** 2.2
-    metal, rough, ao, coat = mat[:, 0:1], np.clip(mat[:, 1:2] + 0.14 * mat[:, 0:1], 0.04, 1), mat[:, 2:3], mat[:, 3:4]
+    metal, ao, coat = mat[:, 0:1], mat[:, 2:3], mat[:, 3:4] * 0.3
+    wear = sstep(0.35, 0.75, alb.mean(1, keepdims=True))
+    rough = np.clip(np.maximum(mat[:, 1:2], 0.52 + (0.68 - 0.52) * metal) - 0.12 * wear * metal, 0.3, 1)
     vv = -pos / np.linalg.norm(pos, axis=1, keepdims=True)
     flip = (nrm * vv).sum(1, keepdims=True) < 0
     nrm = np.where(flip, -nrm, nrm)
     nv = np.maximum((nrm * vv).sum(1, keepdims=True), 1e-3)
-    col = key(nrm, vv, L0, np.array([1.0, 0.96, 0.9]) * 3.4, base, metal, rough, coat)
-    col += key(nrm, vv, L1, np.array([0.85, 0.9, 1.0]) * 1.5, base, metal, rough, coat)
+    col = key(nrm, vv, L0, np.array([1.0, 0.96, 0.9]) * 2.6, base, metal, rough, coat)
+    col += key(nrm, vv, L1, np.array([0.85, 0.9, 1.0]) * 1.1, base, metal, rough, coat)
     t = nrm[:, 1:2] * 0.5 + 0.5
     hemi = (np.array([0.32, 0.29, 0.25]) * (1 - t) + np.array([0.66, 0.69, 0.74]) * t) * 0.9
     f0 = 0.04 + (base - 0.04) * metal
     fr = f0 + (np.maximum(1 - rough, f0) - f0) * (1 - nv) ** 5
     col += (1 - fr) * (1 - metal) * base * hemi * ao
     r = -vv - 2 * (( -vv * nrm).sum(1, keepdims=True)) * nrm
-    col += env(r, rough) * fr * ao * (0.6 + 0.25 * metal)
+    col += env(r, rough) * fr * ao * (0.35 + 0.2 * metal)
     fc = 0.04 + 0.96 * (1 - nv) ** 5
     col += coat * fc * env(r, 0.22) * ao * 0.7
     col = np.clip((col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14), 0, 1)

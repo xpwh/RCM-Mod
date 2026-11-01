@@ -961,89 +961,95 @@ public final class ModRegistry {
 	public static final SimpleParticleType WATER_MIST = particle("water_mist");
 
 	// ---------- Creative tabs ----------
-	/** Every missile and warhead. */
+	// The creative tabs, in this order: missiles, launching and command, weapons, aircraft and drones, air defence,
+	// gear (armour, medicine, protection), blocks and bunker. Each sorted by kind, smallest first.
+	/** Every missile and warhead: conventional, cruise and drones, nuclear, the exotic ones, then bombs and the rest. */
 	public static final CreativeModeTab TAB = tab("main", () -> missileItem(MissileType.NUCLEAR), output -> {
-		for (MissileType type : MissileType.values()) {
+		for (MissileType type : new MissileType[] {
+			MissileType.CONVENTIONAL, MissileType.BUNKER_BUSTER, MissileType.CLUSTER, MissileType.INCENDIARY, MissileType.THERMOBARIC,
+			MissileType.HYPERSONIC, MissileType.EMP,
+			MissileType.CRUISE, MissileType.JET_CRUISE, MissileType.ANTI_RADAR, MissileType.KH31PD, MissileType.DRONE,
+			MissileType.TACTICAL_NUKE, MissileType.NUCLEAR, MissileType.MIRV, MissileType.SLBM, MissileType.HYDROGEN, MissileType.TSAR,
+			MissileType.ANTIMATTER, MissileType.MOON}) {
 			output.accept(missileItem(type));
 		}
+		// anything added to MissileType later still shows up
+		for (MissileType type : MissileType.values()) {
+			if (!java.util.Set.of(MissileType.CONVENTIONAL, MissileType.BUNKER_BUSTER, MissileType.CLUSTER, MissileType.INCENDIARY,
+				MissileType.THERMOBARIC, MissileType.HYPERSONIC, MissileType.EMP, MissileType.CRUISE, MissileType.JET_CRUISE, MissileType.ANTI_RADAR,
+				MissileType.KH31PD, MissileType.DRONE, MissileType.TACTICAL_NUKE, MissileType.NUCLEAR, MissileType.MIRV, MissileType.SLBM,
+				MissileType.HYDROGEN, MissileType.TSAR, MissileType.ANTIMATTER, MissileType.MOON).contains(type)) {
+				output.accept(missileItem(type));
+			}
+		}
+		output.accept(B61_BOMB);
+		output.accept(POSEIDON_ITEM);
+		output.accept(TUNGSTEN_ROD);
 	});
-	/** Launchers, targeting and command: everything needed to fire. */
+	/** Launchers, then targeting and command: everything needed to fire. */
 	public static final CreativeModeTab TAB_LAUNCH = tab("launch", () -> LAUNCH_PAD_ITEM, output -> {
 		output.accept(LAUNCH_PAD_ITEM);
 		output.accept(INCLINED_LAUNCHER_ITEM);
+		output.accept(MOBILE_LAUNCHER_ITEM);
 		output.accept(MISSILE_SILO_ITEM);
 		output.accept(HATCH_SILO_ITEM);
 		output.accept(SUBMARINE_ITEM);
-		output.accept(MOBILE_LAUNCHER_ITEM);
-		output.accept(B61_BOMB);
-		output.accept(POSEIDON_ITEM);
 		output.accept(ORBITAL_UPLINK_ITEM);
-		output.accept(TUNGSTEN_ROD);
+		output.accept(COMMAND_CENTER_ITEM);
+		output.accept(TARGET_DESIGNATOR);
+		output.accept(AIRSTRIKE_RADIO);
+	});
+	/** Each gun with its ammunition, then the explosives, the knife and the attachments. */
+	public static final CreativeModeTab TAB_WEAPONS = tab("weapons", () -> AK47, output -> {
 		output.accept(AK47);
+		output.accept(AK_MAG);
+		output.accept(AK_MAG_TRACER);
+		output.accept(AK_MAG_TRACER_RED);
+		output.accept(de.rcm.ballistic.gun.GlockItem.loaded(GLOCK, de.rcm.ballistic.gun.GlockMagazineItem.STANDARD));
+		output.accept(GLOCK_MAG);
+		output.accept(GLOCK_MAG_EXTENDED);
 		ItemStack loadedShotgun = new ItemStack(SHOTGUN);
 		loadedShotgun.set(GUN_STATE, de.rcm.ballistic.gun.GunState.DEFAULT.withRounds(de.rcm.ballistic.gun.ShotgunItem.CAPACITY));
 		output.accept(loadedShotgun);
 		output.accept(SHOTGUN_SHELL);
-		output.accept(de.rcm.ballistic.gun.GlockItem.loaded(GLOCK, de.rcm.ballistic.gun.GlockMagazineItem.STANDARD));
-		output.accept(GLOCK_MAG);
-		output.accept(GLOCK_MAG_EXTENDED);
+		output.accept(ROCKET_LAUNCHER);
+		output.accept(RPG_ROCKET);
+		output.accept(GRENADE);
+		output.accept(SMOKE_GRENADE);
+		output.accept(FLASHBANG);
+		output.accept(KARAMBIT);
 		output.accept(WEAPONS_WORKBENCH_ITEM);
 		output.accept(SUPPRESSOR);
 		output.accept(WEAPON_LIGHT);
 		output.accept(LASER_MODULE);
 		output.accept(IR_LASER_MODULE);
-		output.accept(AK_MAG);
-		output.accept(AK_MAG_TRACER);
-		output.accept(AK_MAG_TRACER_RED);
-		output.accept(GRENADE);
-		output.accept(SMOKE_GRENADE);
-		output.accept(FLASHBANG);
-		output.accept(ROCKET_LAUNCHER);
-		output.accept(RPG_ROCKET);
+	});
+	/** Drones, the jets you fly and the runway they need. */
+	public static final CreativeModeTab TAB_VEHICLES = tab("vehicles", () -> F35_ITEM, output -> {
 		output.accept(FPV_DRONE_ITEM);
 		output.accept(FPV_RACER_ITEM);
 		output.accept(FPV_FIBER_ITEM);
-		output.accept(TARGET_DESIGNATOR);
 		output.accept(F35_ITEM);
 		output.accept(F22_ITEM);
 		output.accept(RUNWAY_ITEM);
 		output.accept(RUNWAY_ASPHALT_ITEM);
 		output.accept(RUNWAY_MARKING_ITEM);
 		output.accept(RUNWAY_LIGHT_ITEM);
-		output.accept(COMMAND_CENTER_ITEM);
-		output.accept(AIRSTRIKE_RADIO);
 	});
 	/** Air defense: radar, interceptors, guns, lasers, decoys, jammers, mines. */
 	public static final CreativeModeTab TAB_DEFENSE = tab("defense", () -> AIR_DEFENSE_ITEM, output -> {
 		output.accept(RADAR_ITEM);
 		output.accept(AIR_DEFENSE_ITEM);
-		output.accept(CIWS_ITEM);
 		output.accept(IRON_DOME_ITEM);
 		output.accept(TAMIR_POD);
-		output.accept(DECOY_LAUNCHER_ITEM);
+		output.accept(CIWS_ITEM);
 		output.accept(LASER_DEFENSE_ITEM);
+		output.accept(DECOY_LAUNCHER_ITEM);
 		output.accept(JAMMER_ITEM);
 		output.accept(SEA_MINE_ITEM);
 	});
-	/** Shelter and radiation protection. */
-	public static final CreativeModeTab TAB_PROTECTION = tab("protection", () -> HAZMAT_HELMET, output -> {
-		output.accept(BUNKER_ITEM);
-		output.accept(FIRST_AID_KIT);
-		output.accept(TOURNIQUET);
-		output.accept(KARAMBIT);
-		output.accept(CIGARETTES);
-		output.accept(LIGHTER);
-		output.accept(AIR_FILTER_ITEM);
-		output.accept(EMERGENCY_GENERATOR_ITEM);
-		output.accept(REINFORCED_CONCRETE_ITEM);
-		output.accept(BLAST_DOOR_ITEM);
-		output.accept(HAZMAT_HELMET);
-		output.accept(HAZMAT_SUIT);
-		output.accept(HAZMAT_LEGGINGS);
-		output.accept(HAZMAT_BOOTS);
-		output.accept(GEIGER_COUNTER);
-		output.accept(WEATHER_MAP);
-		output.accept(NIGHT_VISION_GOGGLES);
+	/** What you wear and carry: armour by tier, the radiation suit, the gadgets, medicine, and the smokes. */
+	public static final CreativeModeTab TAB_PROTECTION = tab("protection", () -> ARMOR_HEAVY_VEST, output -> {
 		output.accept(ARMOR_LIGHT_VEST);
 		output.accept(ARMOR_STANDARD_HELMET);
 		output.accept(ARMOR_STANDARD_VEST);
@@ -1059,9 +1065,25 @@ public final class ModRegistry {
 		output.accept(ARMOR_JUGGERNAUT_VEST);
 		output.accept(ARMOR_JUGGERNAUT_LEGGINGS);
 		output.accept(ARMOR_JUGGERNAUT_BOOTS);
+		output.accept(HAZMAT_HELMET);
+		output.accept(HAZMAT_SUIT);
+		output.accept(HAZMAT_LEGGINGS);
+		output.accept(HAZMAT_BOOTS);
+		output.accept(NIGHT_VISION_GOGGLES);
+		output.accept(GEIGER_COUNTER);
+		output.accept(WEATHER_MAP);
+		output.accept(FIRST_AID_KIT);
+		output.accept(TOURNIQUET);
+		output.accept(CIGARETTES);
+		output.accept(LIGHTER);
 	});
-	/** Building blocks of the wasteland blasts leave behind. */
+	/** The bunker and what goes in it, then the blocks of the wasteland blasts leave behind. */
 	public static final CreativeModeTab TAB_BLOCKS = tab("blocks", () -> SMOLDERING_EARTH_ITEM, output -> {
+		output.accept(BUNKER_ITEM);
+		output.accept(BLAST_DOOR_ITEM);
+		output.accept(REINFORCED_CONCRETE_ITEM);
+		output.accept(AIR_FILTER_ITEM);
+		output.accept(EMERGENCY_GENERATOR_ITEM);
 		output.accept(SCORCHED_EARTH_ITEM);
 		output.accept(SMOLDERING_EARTH_ITEM);
 		output.accept(CHARRED_LOG_ITEM);

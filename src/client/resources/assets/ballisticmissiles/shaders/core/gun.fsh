@@ -34,12 +34,12 @@ vec3 toLinear(vec3 c) {
 // the surroundings the metal reflects, by direction; rough surfaces see a blurred version of it
 vec3 environment(vec3 dir, float rough) {
     float y = dir.y;
-    vec3 sky = mix(vec3(0.95, 0.96, 0.98) * 1.35, vec3(0.38, 0.47, 0.62), smoothstep(0.0, 0.7, y));
-    vec3 ground = mix(vec3(0.42, 0.38, 0.33), vec3(0.12, 0.11, 0.1), smoothstep(0.0, 0.5, -y));
-    // the bright band at the horizon, sharp on polished steel, spread out on rough
-    float band = exp(-abs(y - 0.06) * mix(28.0, 3.0, rough)) * mix(1.1, 0.3, rough);
+    // an outdoor surround, not a photo studio: a dull sky, darker ground, only a faint horizon band
+    vec3 sky = mix(vec3(0.62, 0.64, 0.66), vec3(0.34, 0.4, 0.5), smoothstep(0.0, 0.7, y));
+    vec3 ground = mix(vec3(0.3, 0.28, 0.24), vec3(0.09, 0.085, 0.08), smoothstep(0.0, 0.5, -y));
+    float band = exp(-abs(y - 0.06) * mix(18.0, 3.0, rough)) * mix(0.35, 0.08, rough);
     vec3 env = (y > 0.0 ? sky : ground) + vec3(band);
-    vec3 average = vec3(0.55, 0.58, 0.62);
+    vec3 average = vec3(0.36, 0.37, 0.38);
     return mix(env, average, rough * rough * 0.85);
 }
 
@@ -86,10 +86,13 @@ void main() {
     vec4 mat = texture(Sampler3, texCoord0);
     vec3 base = toLinear(albedo.rgb);
     float metal = mat.r;
-    // blued steel is satin, not chrome
-    float rough = clamp(mat.g + 0.14 * mat.r, 0.04, 1.0);
+    // a service rifle's steel is blued or phosphated and handled: matte with a soft sheen, never chrome; a little
+    // worn shine where hands rub (the lighter, smoother texels), the rest dull
+    float wear = smoothstep(0.35, 0.75, dot(albedo.rgb, vec3(0.333)));
+    float rough = clamp(max(mat.g, mix(0.52, 0.68, metal)) - 0.12 * wear * metal, 0.3, 1.0);
     float ao = mat.b;
-    float coat = mat.a;
+    // the wood is oiled, not varnished: only a faint coat
+    float coat = mat.a * 0.3;
 
     vec3 n = normalize(normal);
     vec3 v = normalize(-eyePos);
@@ -99,8 +102,8 @@ void main() {
     float nv = max(dot(n, v), 1.0e-3);
 
     // the two entity lights as keys: the first warm and strong, the second a cooler fill
-    vec3 col = keyLight(n, v, normalize(Light0_Direction), vec3(1.0, 0.96, 0.9) * 3.4, base, metal, rough, coat);
-    col += keyLight(n, v, normalize(Light1_Direction), vec3(0.85, 0.9, 1.0) * 1.5, base, metal, rough, coat);
+    vec3 col = keyLight(n, v, normalize(Light0_Direction), vec3(1.0, 0.96, 0.9) * 2.6, base, metal, rough, coat);
+    col += keyLight(n, v, normalize(Light1_Direction), vec3(0.85, 0.9, 1.0) * 1.1, base, metal, rough, coat);
 
     // soft light from the sky above and the ground below
     vec3 hemi = mix(vec3(0.32, 0.29, 0.25), vec3(0.66, 0.69, 0.74), n.y * 0.5 + 0.5) * 0.9;
@@ -111,7 +114,7 @@ void main() {
     // what the surface mirrors
     vec3 r = reflect(-v, n);
     vec3 env = environment(r, rough);
-    col += env * fr * ao * mix(0.6, 0.85, metal);
+    col += env * fr * ao * mix(0.35, 0.55, metal);
     if (coat > 0.0) {
         float fc = 0.04 + 0.96 * pow(1.0 - nv, 5.0);
         col += coat * fc * environment(r, 0.22) * ao * 0.7;

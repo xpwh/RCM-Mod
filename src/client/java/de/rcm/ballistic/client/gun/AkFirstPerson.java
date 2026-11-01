@@ -27,10 +27,15 @@ public final class AkFirstPerson {
 	 * post - the classic sight picture, the post standing in the U of the notch, its tip flush with the
 	 * notch's top edges, with a sliver of light either side of it.
 	 */
-	private static final Vector3f NOTCH = new Vector3f(0.0F, 0.1473F, -0.2025F);
-	private static final Vector3f SIGHT_LINE = new Vector3f(0.0F, -0.002F, -0.4764F).normalize();
-	/** Cheek on the stock: the eye well behind the rear sight, as on the real rifle. */
-	private static final Vector3f EYE = new Vector3f(NOTCH).sub(new Vector3f(SIGHT_LINE).mul(0.32F));
+	// the Blender model (ak47.mesh.gz): the notch is cut in the front end of the rear sight leaf (its ears 0.1473 high),
+	// the front post's tip stands 0.1453 high, 39 cm further on
+	private static final Vector3f NOTCH = new Vector3f(0.0F, 0.1473F, -0.288F);
+	private static final Vector3f SIGHT_LINE = new Vector3f(0.0F, -0.002F, -0.391F).normalize();
+	/**
+	 * The eye on the sight line, 16 cm behind the notch: close enough that the leaf and the notch fill the lower
+	 * middle of the view, not the long dust cover seen from two fingers above it.
+	 */
+	private static final Vector3f EYE = new Vector3f(NOTCH).sub(new Vector3f(SIGHT_LINE).mul(0.16F));
 	/** Camera position in the hand space vanilla sets up for the main hand. */
 	private static final Vector3f CAMERA = new Vector3f(-0.56F, 0.52F, 0.72F);
 
