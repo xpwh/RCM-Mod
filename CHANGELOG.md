@@ -1,8 +1,13 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.42.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **12.42.1** (01.11.2026).
 
 ---
+
+### 12.42.1 – Thermometer immer sichtbar
+- Das Thermometer rechts neben der Hotbar ist jetzt immer da, nicht nur bei großer Hitze oder Kälte.
+- Neues Aussehen: ein kleines Glasthermometer, das je nach Temperatur steigt und die Farbe wechselt (blau bei Frost bis rot bei Hitze), die Gradzahl daneben.
+- Darunter ein Balken für den Körper: links unterkühlt, Mitte gut, rechts überhitzt. Wird es gefährlich, blinkt die Markierung.
 
 ### 12.42.0 – Realistischer Regen
 - Statt der blauen Regenwände fallen einzelne Tropfen: dünne, blasse, halbdurchsichtige Streifen, durch die Fallbewegung verwischt, unterschiedlich groß und schnell. In der Ferne verblassen sie ins Grau.
