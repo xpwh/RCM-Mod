@@ -109,7 +109,9 @@ public enum MissileType {
 		/** A tungsten rod from orbit striking the ground. */
 		KINETIC_ROD,
 		/** Not a missile: a thrown RGD-5 hand grenade. */
-		GRENADE
+		GRENADE,
+		/** Not a missile: a C4 charge set off by its firing device. */
+		C4
 	}
 
 	public enum Model {

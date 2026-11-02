@@ -249,3 +249,30 @@ outlines and proportions; the photograph itself is not shipped.
 | Tired breathing | https://opengameart.org/content/breathing-tired | mikeask | CC0 1.0 |
 | Spurting (squish) | https://opengameart.org/content/squish-sounds-effects | ezduzziteh | CC0 1.0 |
 | Blood drips, bone cracks | https://opengameart.org/content/horror-sound-effects-library | Little Robot Sound Factory | CC BY 3.0 |
+
+## C4 and its firing device (`tools/import_c4_sounds.py`)
+
+Real recordings from freesound.org, cut, filtered and levelled for the game.
+
+| Sound | Source | Author | Licence |
+|---|---|---|---|
+| Close blast | https://freesound.org/s/866989/ (Centennial Mills water tower demolition) | tim.kahn | CC BY 4.0 |
+| Close blast | https://freesound.org/s/253095/ (explosion, a rock blasting, stones pattering) | YleArkisto | CC BY 4.0 |
+| Close blast | https://freesound.org/s/165808/ (explosion with debris, 4 kg TNT) | sidohzen | CC0 1.0 |
+| Close blast | https://freesound.org/s/189778/ (Explosive.flac) | qubodup | CC0 1.0 |
+| Blast at a distance | https://freesound.org/s/251401/ (dynamite explosion in the mountain) | felix.blume | CC0 1.0 |
+| Blast at a distance | https://freesound.org/s/125937/ (Merrimack St demolition) | alienistcog | CC0 1.0 |
+| Blast at a distance | https://freesound.org/s/768370/ (power plant chimney detonation) | julujanus | CC0 1.0 |
+| Far blast | https://freesound.org/s/82682/ (quarry blasting) | juskiddink | CC BY 4.0 |
+| Far blast | https://freesound.org/s/108640/ (distant explosion) | juskiddink | CC BY 4.0 |
+| Far blast | https://freesound.org/s/584594/ (explosive works) | tosha73 | CC BY 4.0 |
+| Far blast | https://freesound.org/s/64647/ (military exercise) | juskiddink | CC BY 4.0 |
+| Receiver beep | https://freesound.org/s/154953/ (microwave beep) | KeyKrusher | CC BY 4.0 |
+| Receiver beep | https://freesound.org/s/96063/ (alarm beep electronic) | reecord2 | CC0 1.0 |
+| Pressing it on | https://freesound.org/s/696020/ (clay soft slaps) | Funky_Audio | CC0 1.0 |
+| Pressing it on | https://freesound.org/s/460805/ (trowel, mortar thrown on a wall) | be_a_hero_not_a_patriot | CC0 1.0 |
+| Tape | https://freesound.org/s/245199/ (duct tape unroll 6) | AlaskaRobotics | CC0 1.0 |
+| Arming switch | https://freesound.org/s/795663/ (toggle switch 1) | TheTechTinkerer | CC0 1.0 |
+| Safety cover, switch | https://freesound.org/s/418329/ (detonator switching) | cambrianman | CC0 1.0 |
+| Fire button | https://freesound.org/s/513862/ (clicker training) | EricsSoundschmiede | CC0 1.0 |
+| Fire button | https://freesound.org/s/360492/ (stapler 2) | giddster | CC0 1.0 |

@@ -70,6 +70,7 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		BlockEntityRenderers.register(ModRegistry.ORBITAL_UPLINK_BE, de.rcm.ballistic.client.render.OrbitalUplinkRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.BULLET, de.rcm.ballistic.client.render.BulletRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.GRENADE_ENTITY, de.rcm.ballistic.client.render.GrenadeRenderers.EntityRendererImpl::new);
+		EntityRendererRegistry.register(ModRegistry.C4_CHARGE, de.rcm.ballistic.client.render.C4Models.ChargeRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.RPG_GRENADE, de.rcm.ballistic.client.render.RpgGrenadeRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.FPV_DRONE, de.rcm.ballistic.client.render.FpvDroneRenderer::new);
 		EntityRendererRegistry.register(ModRegistry.SOLDIER, de.rcm.ballistic.client.ai.SoldierRenderer::new);
@@ -105,6 +106,8 @@ public class BallisticMissilesClient implements ClientModInitializer {
 		de.rcm.ballistic.client.render.ShotgunItemRenderer.register();
 		de.rcm.ballistic.client.render.GlockItemRenderer.register();
 		de.rcm.ballistic.client.render.GrenadeRenderers.register();
+		de.rcm.ballistic.client.render.C4Models.register();
+		de.rcm.ballistic.client.gun.C4Client.init();
 		de.rcm.ballistic.client.render.PropItemRenderer.register();
 		ClientTickEvents.END_CLIENT_TICK.register(de.rcm.ballistic.client.render.GroundProps::tick);
 		de.rcm.ballistic.client.render.FpvDroneItemRenderer.register();

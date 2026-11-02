@@ -1,8 +1,16 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.7.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.8.0** (01.11.2026).
 
 ---
+
+### 13.8.0 – C4 mit Fernzünder
+- **C4-Sprengladung**: vier M112-Blöcke in olivgrüner Folie mit gelber Aufschrift, mit Klebeband gebündelt, oben ein Funkempfänger (Display, Tastenfeld, rote LED, Antenne), zwei Sprengkapseln mit roten und schwarzen Drähten – in Blender modelliert. Rechtsklick gedrückt halten: Die Hand drückt sie an Wand, Boden oder Decke, die linke Hand streicht das Klebeband glatt. Danach ist sie scharf, die LED blinkt und der Empfänger piept leise.
+- **Fernzünder**: olivgrünes Gerät mit Gummigriffen, Display, Betriebs- und Scharf-LED, Kippschalter SAFE/ARMED und rotem FIRE-Knopf unter einer roten Schutzklappe, ebenfalls aus Blender. Rechtsklick: Der Daumen legt den Schalter auf ARMED, klappt die Abdeckung hoch und drückt FIRE. Die Ladungen piepen ein letztes Mal und gehen mit kurzer Funkverzögerung hoch. Schleichen + Rechtsklick: alle Ladungen zünden oder eine bestimmte (in Reihenfolge des Anbringens).
+- Reichweite 400 Blöcke; Störsender blockieren das Zündsignal. Explosionen in der Nähe lassen C4 mitzünden. Abnehmen: mit leerer Hand Rechtsklick (oder abschlagen) – C4 geht davon nicht los.
+- Starke Ladung ohne Splitterhülle: reißt Löcher in Wände, harter Druckstoß, wenig Splitter.
+- **Echte Sounds**: Sprengungen aus der Nähe (Wasserturm-Sprengung, Felssprengung, 4 kg TNT, Kampfmittelräumung), aus mittlerer Entfernung mit Echo (Dynamit im Gebirge, Abriss, Schornstein) und aus der Ferne (Steinbruch aus 800 m, Militärübung) – je nach Abstand, mit Schallverzögerung. Dazu echter Piepser, Ton-Klatscher und Klebeband beim Anbringen, Kippschalter, Schutzklappe und Zündknopf.
+- Herstellen: Werkbank oder Waffen-Werkbank (C4: TNT, Ton, Schwarzpulver, Redstone; Fernzünder: Eisen, Redstone, Knopf, Blitzableiter).
 
 ### 13.7.0 – Voxel-Stile auch für Explosionen
 - „Voxel“ und „Voxel 2“ gelten jetzt für jeden Rauch und jedes Feuer der Mod, nicht nur für Raketen- und Jet-Spuren: Feuerbälle, Explosionswolken, Atompilze, Staub vom Boden, Brandrauch und Flammen.

@@ -104,6 +104,12 @@ public final class ModRegistry {
 		BallisticMissiles.id("mag_rounds"),
 		DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build()
 	);
+	/** The C4 firing device's selector: 0 all charges, n the n-th placed. */
+	public static final DataComponentType<Integer> DETONATOR_MODE = Registry.register(
+		BuiltInRegistries.DATA_COMPONENT_TYPE,
+		BallisticMissiles.id("detonator_mode"),
+		DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build()
+	);
 	/** Which aircraft the airstrike radio calls (index into {@link de.rcm.ballistic.item.AirstrikeRadioItem.Mode}). */
 	public static final DataComponentType<Integer> AIRSTRIKE_MODE = Registry.register(
 		BuiltInRegistries.DATA_COMPONENT_TYPE,
@@ -218,6 +224,11 @@ public final class ModRegistry {
 		"supply_rocket",
 		EntityType.Builder.<de.rcm.ballistic.entity.SupplyRocketEntity>of(de.rcm.ballistic.entity.SupplyRocketEntity::new, MobCategory.MISC).sized(0.6F, 0.6F)
 			.clientTrackingRange(64).updateInterval(1).fireImmune().noLootTable()
+	);
+	public static final EntityType<de.rcm.ballistic.gun.C4ChargeEntity> C4_CHARGE = registerEntity(
+		"c4_charge",
+		EntityType.Builder.<de.rcm.ballistic.gun.C4ChargeEntity>of(de.rcm.ballistic.gun.C4ChargeEntity::new, MobCategory.MISC).sized(0.34F, 0.34F)
+			.clientTrackingRange(10).updateInterval(20).fireImmune().noLootTable()
 	);
 	public static final EntityType<de.rcm.ballistic.gun.GrenadeEntity> GRENADE_ENTITY = registerEntity(
 		"grenade",
@@ -732,6 +743,12 @@ public final class ModRegistry {
 	public static final Item GRENADE = registerItem(
 		"grenade", de.rcm.ballistic.gun.GrenadeItem::new, new Item.Properties().stacksTo(8)
 	);
+	public static final Item C4 = registerItem(
+		"c4", de.rcm.ballistic.gun.C4Item::new, new Item.Properties().stacksTo(8).rarity(Rarity.UNCOMMON)
+	);
+	public static final Item C4_DETONATOR = registerItem(
+		"c4_detonator", de.rcm.ballistic.gun.C4DetonatorItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)
+	);
 	public static final Item SMOKE_GRENADE = registerItem(
 		"smoke_grenade", props -> new de.rcm.ballistic.gun.GrenadeItem(props, de.rcm.ballistic.gun.GrenadeItem.SMOKE), new Item.Properties().stacksTo(8)
 	);
@@ -937,6 +954,13 @@ public final class ModRegistry {
 	public static final SoundEvent GRENADE_SPOON = sound("grenade.spoon");
 	public static final SoundEvent GRENADE_BOUNCE = sound("grenade.bounce");
 	public static final SoundEvent GRENADE_EXPLODE = sound("grenade.explode");
+	public static final SoundEvent C4_NEAR = sound("c4.near");
+	public static final SoundEvent C4_MID = sound("c4.mid");
+	public static final SoundEvent C4_FAR = sound("c4.far");
+	public static final SoundEvent C4_BEEP = sound("c4.beep");
+	public static final SoundEvent C4_PLACE = sound("c4.place");
+	public static final SoundEvent C4_SWITCH = sound("c4.switch");
+	public static final SoundEvent C4_CLICK = sound("c4.click");
 	public static final SoundEvent FLASHBANG_BANG = sound("flashbang.bang");
 	public static final SoundEvent FLASHBANG_FAR = sound("flashbang.far");
 	public static final SoundEvent THUNDER_NEAR = sound("storm.thunder_near");
@@ -1024,6 +1048,8 @@ public final class ModRegistry {
 		output.accept(GRENADE);
 		output.accept(SMOKE_GRENADE);
 		output.accept(FLASHBANG);
+		output.accept(C4);
+		output.accept(C4_DETONATOR);
 		output.accept(KARAMBIT);
 		output.accept(WEAPONS_WORKBENCH_ITEM);
 		output.accept(SUPPRESSOR);

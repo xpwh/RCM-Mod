@@ -2618,5 +2618,120 @@
 				"attenuation_distance": 8
 			}
 		]
+	},
+	"c4.near": {
+		"subtitle": "subtitles.ballisticmissiles.c4_explode",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:c4/near1",
+				"attenuation_distance": 200
+			},
+			{
+				"name": "ballisticmissiles:c4/near2",
+				"attenuation_distance": 200
+			},
+			{
+				"name": "ballisticmissiles:c4/near3",
+				"attenuation_distance": 200
+			},
+			{
+				"name": "ballisticmissiles:c4/near4",
+				"attenuation_distance": 200
+			}
+		]
+	},
+	"c4.mid": {
+		"subtitle": "subtitles.ballisticmissiles.c4_explode",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:c4/mid1",
+				"attenuation_distance": 600
+			},
+			{
+				"name": "ballisticmissiles:c4/mid2",
+				"attenuation_distance": 600
+			},
+			{
+				"name": "ballisticmissiles:c4/mid3",
+				"attenuation_distance": 600
+			}
+		]
+	},
+	"c4.far": {
+		"subtitle": "subtitles.ballisticmissiles.c4_explode_far",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:c4/far1",
+				"attenuation_distance": 1600
+			},
+			{
+				"name": "ballisticmissiles:c4/far2",
+				"attenuation_distance": 1600
+			},
+			{
+				"name": "ballisticmissiles:c4/far3",
+				"attenuation_distance": 1600
+			},
+			{
+				"name": "ballisticmissiles:c4/far4",
+				"attenuation_distance": 1600
+			}
+		]
+	},
+	"c4.beep": {
+		"subtitle": "subtitles.ballisticmissiles.c4_beep",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:c4/beep1",
+				"attenuation_distance": 14
+			}
+		]
+	},
+	"c4.place": {
+		"subtitle": "subtitles.ballisticmissiles.c4_place",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:c4/place1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:c4/place2",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:c4/place3",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"c4.switch": {
+		"subtitle": "subtitles.ballisticmissiles.c4_switch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:c4/switch1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:c4/switch2",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:c4/switch3",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"c4.click": {
+		"subtitle": "subtitles.ballisticmissiles.c4_click",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:c4/click1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:c4/click2",
+				"attenuation_distance": 12
+			}
+		]
 	}
 }

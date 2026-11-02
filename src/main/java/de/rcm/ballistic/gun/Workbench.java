@@ -96,6 +96,9 @@ public final class Workbench {
 			add("rpg_rocket", AMMO, () -> ModRegistry.RPG_ROCKET, 3, FUSE, of(Items.TNT, 1), of(Items.GUNPOWDER, 1), of(Items.IRON_INGOT, 1));
 			// grenades
 			add("grenade", GRENADES, () -> ModRegistry.GRENADE, 3, FUSE, of(Items.IRON_INGOT, 2), of(Items.IRON_NUGGET, 1), of(Items.GUNPOWDER, 1));
+			add("c4", GRENADES, () -> ModRegistry.C4, 2, FUSE, of(Items.TNT, 1), of(Items.CLAY_BALL, 2), of(Items.REDSTONE, 1));
+			add("c4_detonator", GRENADES, () -> ModRegistry.C4_DETONATOR, 1, FUSE, of(Items.IRON_INGOT, 2), of(Items.REDSTONE, 2),
+				of(Items.LIGHTNING_ROD, 1));
 			add("smoke_grenade", GRENADES, () -> ModRegistry.SMOKE_GRENADE, 3, FUSE, of(Items.IRON_INGOT, 1), of(Items.CHARCOAL, 2), of(Items.GUNPOWDER, 1));
 			add("flashbang", GRENADES, () -> ModRegistry.FLASHBANG, 3, FUSE, of(Items.IRON_INGOT, 2), of(Items.GLOWSTONE_DUST, 1), of(Items.GUNPOWDER, 1));
 		}

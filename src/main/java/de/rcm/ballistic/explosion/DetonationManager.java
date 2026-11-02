@@ -611,6 +611,25 @@ public final class DetonationManager {
 		scorch(level, BlockPos.containing(pos), 1, level.getRandom(), 0.02F);
 	}
 
+	/**
+	 * C4: four M112 blocks, 2.3 kg of Composition C-4 - more than twenty hand grenades of high explosive, with no
+	 * casing: a violent, sharp shock that tears a hole in a wall it is stuck to, only the bits of the receiver, the
+	 * tape and the wall as fragments. Other charges close by go off with it.
+	 */
+	public static void detonateC4(ServerLevel level, Vec3 pos, @Nullable Entity source) {
+		broadcast(level, pos, Warhead.C4);
+		Blasts.explode(level, source, pos.x, pos.y, pos.z, 4.4F, false, Level.ExplosionInteraction.TNT);
+		BlastPhysics.overpressure(level, pos, source, 4.5F);
+		BlastPhysics.fragments(level, pos, source, 16, 14.0, 3.5F);
+		BlastPhysics.shatter(level, pos, 0.0, 14.0, 50, 0.95F);
+		FlyingDebris.launch(level, pos, 1.6, 7, 0.85);
+		scorch(level, BlockPos.containing(pos), 1, level.getRandom(), 0.04F);
+		for (de.rcm.ballistic.gun.C4ChargeEntity other : level.getEntitiesOfClass(de.rcm.ballistic.gun.C4ChargeEntity.class,
+			new AABB(pos, pos).inflate(3.5))) {
+			other.trigger(1 + level.getRandom().nextInt(2), false);
+		}
+	}
+
 	/** Small high-explosive round: 40 mm Bofors, 30 mm chain gun, Hydra 70 rocket. */
 	public static void detonateSmallRound(ServerLevel level, Vec3 pos, Entity source, float power) {
 		broadcast(level, pos, Warhead.BOMBLET);
@@ -727,6 +746,7 @@ public final class DetonationManager {
 			: warhead == Warhead.TSAR ? HYDROGEN_EFFECT_RANGE * 1.4
 			: warhead == Warhead.BOMBLET ? 600.0
 			: warhead == Warhead.GRENADE ? 800.0 // a hand grenade or a mine: not heard across the whole map
+			: warhead == Warhead.C4 ? 1500.0
 			: EFFECT_RANGE;
 		if (warhead == Warhead.MIRV_WARHEAD) {
 			range = 4000.0;

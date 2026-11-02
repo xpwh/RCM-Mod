@@ -22,6 +22,12 @@ public final class ClientHooks {
 	public static Consumer<Entity> projectileClientTick = entity -> {};
 	public static Consumer<JetEntity> jetClientTick = jet -> {};
 	public static Consumer<de.rcm.ballistic.entity.FpvDroneEntity> droneClientTick = drone -> {};
+	/** The local player used the C4 firing device (true: the selector, false: FIRE) - for the hand's animation. */
+	public static Consumer<Boolean> detonatorAnimation = sneak -> {};
+
+	public static void detonatorUsed(boolean sneak) {
+		detonatorAnimation.accept(sneak);
+	}
 
 	/** The camera's view while flying a drone: the pilot's look (null = the drone's own rotation). */
 	public interface DroneView {

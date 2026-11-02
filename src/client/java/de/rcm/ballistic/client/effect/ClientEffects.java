@@ -90,6 +90,7 @@ public final class ClientEffects {
 			}
 			case BOMBLET -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.25, 0xFFB060);
 			case GRENADE -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.3, 0xFFC070);
+			case C4 -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.42, 0xFFD080);
 			default -> BlastShader.blast(BlastShader.Kind.FIRE, pos, 0.5, 0xFFB060);
 		}
 		// the fireball lights up everything round it
@@ -105,6 +106,7 @@ public final class ClientEffects {
 			case CLUSTER_RELEASE, MIRV_RELEASE, INCENDIARY_RELEASE, POSEIDON, EARTH_PENETRATOR -> {
 			}
 			case BOMBLET, GRENADE -> DynamicLights.explosion(pos, 0.15, 0xFFC070);
+			case C4 -> DynamicLights.explosion(pos, 0.3, 0xFFD080);
 			case INTERCEPT -> DynamicLights.explosion(pos, 0.5, 0xFFB060);
 			case SEA_MINE -> DynamicLights.explosion(pos, 0.4, 0xFFD0A0);
 			default -> DynamicLights.explosion(pos, 0.7, 0xFFB060);
@@ -118,6 +120,7 @@ public final class ClientEffects {
 			case CLUSTER -> new BlastEffect(pos, 0.6);
 			case BOMBLET -> new BlastEffect(pos, 0.32);
 			case GRENADE -> new BlastEffect(pos, 0.45, true);
+			case C4 -> new BlastEffect(pos, 0.58, false, true);
 			case CLUSTER_RELEASE, MIRV_RELEASE -> new ReleaseEffect(pos);
 			case HYPERSONIC -> new BlastEffect(pos, 1.25);
 			case MIRV -> new NukeEffect(pos, 1.0);
@@ -684,13 +687,20 @@ public final class ClientEffects {
 
 		/** A hand grenade: the same fireball, earth and smoke, with its own recorded report. */
 		private final boolean grenade;
+		/** C4: a sharper, heavier crack than a grenade, recorded close, at a distance and far off. */
+		private final boolean c4;
 
 		BlastEffect(Vec3 pos, double scale) {
 			this(pos, scale, false);
 		}
 
 		BlastEffect(Vec3 pos, double scale, boolean grenade) {
+			this(pos, scale, grenade, false);
+		}
+
+		BlastEffect(Vec3 pos, double scale, boolean grenade, boolean c4) {
 			this.grenade = grenade;
+			this.c4 = c4;
 			this.pos = pos;
 			this.scale = scale;
 			Minecraft mc = Minecraft.getInstance();
@@ -704,7 +714,27 @@ public final class ClientEffects {
 			int t = this.age++;
 			double s = this.scale;
 			Vec3 c = this.pos.add(0, 1, 0);
-			if (t == this.soundDelay && this.grenade) {
+			if (t == this.soundDelay && this.c4) {
+				float pitch = 0.96F + rand() * 0.08F;
+				if (this.distance < 90.0) {
+					// right by it: the crack, the slam of the shock in the chest, the ears ringing
+					playDistant(mc, ModRegistry.C4_NEAR, this.pos, 1.0F, pitch);
+					playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, (float) (1.0 - this.distance / 140.0), pitch * 0.9F);
+					playDistant(mc, ModRegistry.EXPLOSION_DEBRIS, this.pos, (float) Math.max(0.0, 0.7 - this.distance / 70.0), 1.1F);
+					if (this.distance > 45.0) {
+						playDistant(mc, ModRegistry.C4_MID, this.pos, (float) ((this.distance - 45.0) / 45.0 * 0.6), pitch);
+					}
+					deafen(mc, (float) (1.0 - this.distance / 35.0), 70);
+				} else if (this.distance < 450.0) {
+					// a boom and its echo off the land round it
+					playDistant(mc, ModRegistry.C4_MID, this.pos, (float) Math.min(1.0, 1.15 - this.distance / 600.0), pitch);
+					playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, (float) (0.8 - this.distance / 700.0), pitch * 0.9F);
+				} else {
+					// far off: a dull thud, rolling on
+					playDistant(mc, ModRegistry.C4_FAR, this.pos, (float) Math.max(0.15, 1.2 - this.distance / 1500.0), pitch);
+				}
+				addShake((float) Mth.clamp(3.0 - this.distance / 22.0, 0.0, 3.0));
+			} else if (t == this.soundDelay && this.grenade) {
 				float pitch = 0.95F + rand() * 0.1F;
 				if (this.distance < 140.0) {
 					playDistant(mc, ModRegistry.GRENADE_EXPLODE, this.pos, (float) Math.min(1.0, 1.15 - this.distance / 160.0), pitch);
