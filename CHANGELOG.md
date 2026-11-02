@@ -1,8 +1,11 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.9.1** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.9.2** (01.11.2026).
 
 ---
+
+### 13.9.2 – Absturz beim Welt-Hosten behoben
+- Behoben: Beim Generieren der Grenzgräben (Militärbasen) stürzte die Weltgenerierung ab, weil die Warnschilder beschriftet wurden, bevor sie zur Welt gehörten („Feature placement“, NullPointerException). Danach hing das Spiel beim Speichern („Saving world“). Die Schilder werden jetzt direkt beschriftet, ohne Block-Update.
 
 ### 13.9.1 – Echte C4-Explosionen
 - Die C4-Explosionen sind jetzt echte C4-Aufnahmen statt Dynamit und Gebäudesprengungen: Aufnahmen der US-Armee und der Marines (gemeinfrei) von C4-Ladungen auf dem Sprengplatz, Breach-Ladungen an einer Übungswand, Türsprengungen beim Häuserkampf und C-4 an Fahrzeugwracks.

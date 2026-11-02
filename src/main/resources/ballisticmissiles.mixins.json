@@ -16,7 +16,8 @@
 		"PlayerReachMixin",
 		"VehicleMoveMixin",
 		"StructureTreesMixin",
-		"LightningTargetMixin"
+		"LightningTargetMixin",
+		"SignBlockEntityAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

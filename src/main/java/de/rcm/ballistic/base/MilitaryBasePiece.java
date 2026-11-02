@@ -1221,8 +1221,10 @@ public class MilitaryBasePiece extends StructurePiece {
 			if (this.inside(x, y, z) && this.level.getBlockEntity(this.at(x, y, z)) instanceof SignBlockEntity sign) {
 				SignText text = new SignText().setMessage(1, Component.translatable(key + ".1")).setMessage(2, Component.translatable(key + ".2"))
 					.setColor(DyeColor.RED);
-				sign.setText(text, true);
-				sign.setText(text, false);
+				// straight into the sign: it is not in a world yet while the chunk generates, and setText would send it a block update
+				((de.rcm.ballistic.mixin.SignBlockEntityAccessor) sign).ballisticmissiles$setFrontText(text);
+				((de.rcm.ballistic.mixin.SignBlockEntityAccessor) sign).ballisticmissiles$setBackText(text);
+				sign.setChanged();
 			}
 		}
 
