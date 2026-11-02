@@ -1,8 +1,14 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.8.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.9.0** (01.11.2026).
 
 ---
+
+### 13.9.0 – C4: neue Haltung und Animationen
+- C4 liegt jetzt quer in beiden Händen, der Empfänger zeigt zu dir (vorher schräg nach vorn wie eine Waffe). Beim Ziehen kommt sie von unten hoch, sie bewegt sich leicht mit dem Atmen.
+- Anbringen (1,5 s): anheben, umdrehen und an die Wand drücken (mit Ruck), die linke Hand streicht das Klebeband glatt, die rechte tippt dreimal den Code auf dem Empfänger (mit Piepen), dann lassen die Hände los und die nächste Ladung wird gezogen.
+- Fernzünder größer und gut sichtbar in der Faust, das Display zu dir. Zünden: Gerät hochnehmen, Schalter auf ARMED (Klick, rote LED an), Schutzkappe hochklappen (Klick), FIRE kräftig drücken – die Hand zittert, dann wird das Gerät wieder gesenkt und die Kappe klappt zu. Wahlschalter: das Gerät wird zum Ablesen hochgekippt.
+- Alle Animationen im Offline-Studio mit demselben Code geprüft (tools/anim_studio/C4Studio.java).
 
 ### 13.8.0 – C4 mit Fernzünder
 - **C4-Sprengladung**: vier M112-Blöcke in olivgrüner Folie mit gelber Aufschrift, mit Klebeband gebündelt, oben ein Funkempfänger (Display, Tastenfeld, rote LED, Antenne), zwei Sprengkapseln mit roten und schwarzen Drähten – in Blender modelliert. Rechtsklick gedrückt halten: Die Hand drückt sie an Wand, Boden oder Decke, die linke Hand streicht das Klebeband glatt. Danach ist sie scharf, die LED blinkt und der Empfänger piept leise.
