@@ -2637,6 +2637,10 @@
 			{
 				"name": "ballisticmissiles:c4/near4",
 				"attenuation_distance": 200
+			},
+			{
+				"name": "ballisticmissiles:c4/near5",
+				"attenuation_distance": 200
 			}
 		]
 	},
@@ -2654,6 +2658,10 @@
 			{
 				"name": "ballisticmissiles:c4/mid3",
 				"attenuation_distance": 600
+			},
+			{
+				"name": "ballisticmissiles:c4/mid4",
+				"attenuation_distance": 600
 			}
 		]
 	},
@@ -2670,10 +2678,6 @@
 			},
 			{
 				"name": "ballisticmissiles:c4/far3",
-				"attenuation_distance": 1600
-			},
-			{
-				"name": "ballisticmissiles:c4/far4",
 				"attenuation_distance": 1600
 			}
 		]

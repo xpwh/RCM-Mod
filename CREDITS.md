@@ -252,21 +252,14 @@ outlines and proportions; the photograph itself is not shipped.
 
 ## C4 and its firing device (`tools/import_c4_sounds.py`)
 
-Real recordings from freesound.org, cut, filtered and levelled for the game.
+The blasts are real C-4 and breaching-charge detonations from US military footage (DVIDS); the rest are real recordings from freesound.org. Cut, filtered and levelled for the game; the far blasts are the mid ones as heard from far off (filtered, echo).
 
 | Sound | Source | Author | Licence |
 |---|---|---|---|
-| Close blast | https://freesound.org/s/866989/ (Centennial Mills water tower demolition) | tim.kahn | CC BY 4.0 |
-| Close blast | https://freesound.org/s/253095/ (explosion, a rock blasting, stones pattering) | YleArkisto | CC BY 4.0 |
-| Close blast | https://freesound.org/s/165808/ (explosion with debris, 4 kg TNT) | sidohzen | CC0 1.0 |
-| Close blast | https://freesound.org/s/189778/ (Explosive.flac) | qubodup | CC0 1.0 |
-| Blast at a distance | https://freesound.org/s/251401/ (dynamite explosion in the mountain) | felix.blume | CC0 1.0 |
-| Blast at a distance | https://freesound.org/s/125937/ (Merrimack St demolition) | alienistcog | CC0 1.0 |
-| Blast at a distance | https://freesound.org/s/768370/ (power plant chimney detonation) | julujanus | CC0 1.0 |
-| Far blast | https://freesound.org/s/82682/ (quarry blasting) | juskiddink | CC BY 4.0 |
-| Far blast | https://freesound.org/s/108640/ (distant explosion) | juskiddink | CC BY 4.0 |
-| Far blast | https://freesound.org/s/584594/ (explosive works) | tosha73 | CC BY 4.0 |
-| Far blast | https://freesound.org/s/64647/ (military exercise) | juskiddink | CC BY 4.0 |
+| Close blasts | https://www.dvidshub.net/video/937739 (U.S. Army Reserves conduct breach charge training, Fort McCoy) | U.S. Army video by Staff Sgt. Avery Cunningham, 181st Multifunctional Training Brigade | Public domain (U.S. Government work) |
+| Close and mid blasts | https://www.dvidshub.net/video/931351 (C4 explosive training, Camp Santiago) | Sgt. Hassani Ribera, 113th Mobile Public Affairs Detachment | Public domain (U.S. Government work) |
+| Close blasts | https://www.dvidshub.net/video/547906 (combat engineer, Marines explosive door breach, Schofield Barracks) | Staff Sgt. Armando R. Limon, 3rd BCT, 25th Infantry Division | Public domain (U.S. Government work) |
+| Mid blasts, and the far ones made from them | https://www.dvidshub.net/video/966064 (blow in place, C-4 charges, Fort Stewart) | Staff Sgt. Dean Johnson, 3rd Combat Aviation Brigade, 3rd Infantry Division | Public domain (U.S. Government work) |
 | Receiver beep | https://freesound.org/s/154953/ (microwave beep) | KeyKrusher | CC BY 4.0 |
 | Receiver beep | https://freesound.org/s/96063/ (alarm beep electronic) | reecord2 | CC0 1.0 |
 | Pressing it on | https://freesound.org/s/696020/ (clay soft slaps) | Funky_Audio | CC0 1.0 |

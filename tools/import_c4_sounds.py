@@ -1,13 +1,15 @@
-"""C4 sounds from real recordings (freesound.org, CC0 / CC BY 4.0 - see CREDITS.md): the charge going off close
-by, at a distance and far off; the receiver's beep; pressing it onto a wall and taping it; the firing device's
-switch, safety cover and FIRE button.
+"""C4 sounds from real recordings - see CREDITS.md: the charge going off close by, at a distance and far off (only
+real C-4 / military breaching-charge detonations, from US military footage on DVIDS, public domain); the
+receiver's beep; pressing it onto a wall and taping it; the firing device's switch, safety cover and FIRE button
+(freesound.org, CC0 / CC BY 4.0).
 
-usage: python3 import_c4_sounds.py <dir with the 44.1 kHz mono WAVs, named as below>
-  c4_near_1..4  demolition charges / TNT close by (tim.kahn, YleArkisto, sidohzen, qubodup)
-  c4_mid_1..3   dynamite in the mountains with its echoes, demolition charges across a lot, a chimney blast
-                (felix.blume, alienistcog, julujanus)
-  c4_far_1..4   quarry blasts from 800 m, a distant explosion, quarry works, an exercise behind a hill
-                (juskiddink, tosha73)
+usage: python3 import_c4_sounds.py <dir with the foley WAVs> <dir with the C4 blast WAVs>   (44.1 kHz mono)
+  blasts (second dir, each starting 20 ms before the blast):
+  c4_near_1..5  breach charges on a breach wall, C4 on a demolition range, explosive door breaches
+  c4_mid_1..4   C4 with a long echo down a valley, C-4 blow-in-place charges on vehicle hulks, C4 behind trees
+  (far: there is no documented far-off C4 recording - the far sounds are the mid C4 recordings as heard from far
+  away: the highs gone in the air, the crack softened, the echo longer)
+  foley (first dir):
   beep_1, beep_3  a microwave's beep (KeyKrusher), an alarm clock's (reecord2)
   place_1..3    wet clay slapped down, mortar thrown on a wall (Funky_Audio, be_a_hero_not_a_patriot)
   place_4       duct tape torn off the roll (AlaskaRobotics)
@@ -15,6 +17,8 @@ usage: python3 import_c4_sounds.py <dir with the 44.1 kHz mono WAVs, named as be
                 cambrianman "detonator switching")
   click_1..2    a training clicker's snap, a stapler's heavy clunk (EricsSoundschmiede, giddster)
 """
+import sys
+
 import numpy as np
 
 from gen_sounds import fade, fft_filter, limiter
@@ -37,15 +41,41 @@ def blast(name, x, seconds, tail, highpass):
     save(name, fade(x, 0.002, tail), highpass=highpass)
 
 
+def blast_wav(name):
+    """A blast recording from the second directory (the C4 footage)."""
+    import os
+    import wave
+    with wave.open(os.path.join(sys.argv[2], name + ".wav")) as w:
+        assert w.getframerate() == SR and w.getnchannels() == 1 and w.getsampwidth() == 2, name
+        return np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(float) / 32768.0
+
+
+def body(x):
+    """Camera mics lose the low end of a blast: give back the pressure under the crack (the recording's own lows)."""
+    return x + 1.4 * fft_filter(x, high=160.0, slope=1.5)
+
+
+def far(x, k):
+    """The same blast heard from far off: the highs gone in the air, the crack softened, the roll of it longer."""
+    x = fft_filter(body(x), high=900.0 - 150.0 * k, slope=2.0)
+    n = int(1.8 * SR)
+    tail = np.zeros(len(x) + n)
+    rng = np.random.default_rng(7 + k)
+    for i in range(14):
+        d = int((0.08 + 0.12 * i + 0.05 * rng.random()) * SR)
+        g = 0.55 * np.exp(-i / 4.5)
+        tail[d:d + len(x)] += x * g
+    tail[:len(x)] += x * 0.6
+    return fft_filter(tail, high=700.0, slope=1.5)
+
+
 def main():
-    for i, (sec, tail) in enumerate(((6.0, 1.5), (6.5, 2.0), (7.0, 2.5), (4.3, 1.0))):
-        blast("c4/near%d" % (i + 1), load("c4_near_%d" % (i + 1)), sec, tail, 25.0)
-    for i, (sec, tail) in enumerate(((9.0, 3.0), (7.0, 2.0), (5.5, 1.5))):
-        blast("c4/mid%d" % (i + 1), load("c4_mid_%d" % (i + 1)), sec, tail, 25.0)
-    for i, (sec, tail) in enumerate(((4.5, 1.2), (3.0, 1.0), (6.0, 1.8), (3.4, 0.8))):
-        # far off the highs are gone in the air
-        x = fft_filter(load("c4_far_%d" % (i + 1)), high=2500.0, slope=2.0)
-        blast("c4/far%d" % (i + 1), x, sec, tail, 20.0)
+    for i, (sec, tail) in enumerate(((5.5, 1.5), (2.45, 0.8), (1.85, 0.6), (1.95, 0.6), (2.15, 0.7))):
+        blast("c4/near%d" % (i + 1), body(blast_wav("c4_near_%d" % (i + 1))), sec, tail, 25.0)
+    for i, (sec, tail) in enumerate(((8.0, 3.0), (7.6, 2.5), (8.0, 2.5), (3.2, 1.0))):
+        blast("c4/mid%d" % (i + 1), body(blast_wav("c4_mid_%d" % (i + 1))), sec, tail, 25.0)
+    for k, (src, sec) in enumerate((("c4_mid_1", 7.0), ("c4_mid_3", 6.0), ("c4_mid_2", 6.0))):
+        blast("c4/far%d" % (k + 1), far(blast_wav(src), k), sec, 2.0, 20.0)
     # the receiver's beep: short, a little release so it does not click off
     for i, n in enumerate(("beep_1", "beep_3")):
         x = load(n)

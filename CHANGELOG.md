@@ -1,8 +1,12 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.9.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.9.1** (01.11.2026).
 
 ---
+
+### 13.9.1 – Echte C4-Explosionen
+- Die C4-Explosionen sind jetzt echte C4-Aufnahmen statt Dynamit und Gebäudesprengungen: Aufnahmen der US-Armee und der Marines (gemeinfrei) von C4-Ladungen auf dem Sprengplatz, Breach-Ladungen an einer Übungswand, Türsprengungen beim Häuserkampf und C-4 an Fahrzeugwracks.
+- Nah: harter, trockener Knall; mittlere Entfernung: Knall mit langem Echo; fern: dumpfes Grollen. Der Druck im Tiefbass, den Kamera-Mikrofone verlieren, ist wiederhergestellt.
 
 ### 13.9.0 – C4: neue Haltung und Animationen
 - C4 liegt jetzt quer in beiden Händen, der Empfänger zeigt zu dir (vorher schräg nach vorn wie eine Waffe). Beim Ziehen kommt sie von unten hoch, sie bewegt sich leicht mit dem Atmen.
