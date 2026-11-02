@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": [
+		"LRL",
+		"WPW",
+		"LLL"
+	],
+	"key": {
+		"L": "minecraft:leather",
+		"R": "minecraft:red_dye",
+		"W": "minecraft:white_wool",
+		"P": "minecraft:paper"
+	},
+	"result": {
+		"id": "ballisticmissiles:first_aid_kit",
+		"count": 1
+	}
+}

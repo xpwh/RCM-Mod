@@ -1,0 +1,40 @@
+{
+	"schemaVersion": 1,
+	"id": "ballisticmissiles",
+	"version": "${version}",
+	"name": "Ballistic Missiles",
+	"description": "Ballistic missiles and nuclear ICBMs with real 3D models, target designation, massive explosions, mushroom clouds and heavy sounds.",
+	"authors": [
+		"Alex"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/ballisticmissiles/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"de.rcm.ballistic.BallisticMissiles"
+		],
+		"client": [
+			"de.rcm.ballistic.client.BallisticMissilesClient"
+		],
+		"modmenu": [
+			"de.rcm.ballistic.client.gui.ModMenuIntegration"
+		]
+	},
+	"mixins": [
+		"ballisticmissiles.mixins.json",
+		{
+			"config": "ballisticmissiles.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"distanthorizons": "*"
+	}
+}

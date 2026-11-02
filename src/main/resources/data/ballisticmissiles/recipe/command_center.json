@@ -1,0 +1,20 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"GMG",
+		"RCR",
+		"III"
+	],
+	"key": {
+		"G": "minecraft:glass_pane",
+		"M": "minecraft:map",
+		"R": "minecraft:redstone_block",
+		"C": "minecraft:compass",
+		"I": "minecraft:iron_block"
+	},
+	"result": {
+		"id": "ballisticmissiles:command_center",
+		"count": 1
+	}
+}

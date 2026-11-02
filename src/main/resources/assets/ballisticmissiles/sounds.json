@@ -1,0 +1,2622 @@
+{
+	"missile.siren": {
+		"subtitle": "subtitles.ballisticmissiles.siren",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/siren",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"missile.beep": {
+		"subtitle": "subtitles.ballisticmissiles.beep",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/beep",
+				"attenuation_distance": 32
+			}
+		]
+	},
+	"missile.ignition": {
+		"subtitle": "subtitles.ballisticmissiles.ignition",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/ignition",
+				"attenuation_distance": 256
+			}
+		]
+	},
+	"missile.engine": {
+		"subtitle": "subtitles.ballisticmissiles.engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/engine",
+				"stream": true
+			}
+		]
+	},
+	"missile.incoming": {
+		"subtitle": "subtitles.ballisticmissiles.incoming",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/incoming"
+			}
+		]
+	},
+	"explosion.near": {
+		"subtitle": "subtitles.ballisticmissiles.explosion",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/near1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/near2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/near3",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/near4",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/near5",
+				"stream": true
+			}
+		]
+	},
+	"explosion.far": {
+		"subtitle": "subtitles.ballisticmissiles.explosion",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/far1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/far2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/far3",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/far4",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/far5",
+				"stream": true
+			}
+		]
+	},
+	"nuke.near": {
+		"subtitle": "subtitles.ballisticmissiles.nuke",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:nuke/near1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/near2",
+				"stream": true
+			}
+		]
+	},
+	"nuke.far": {
+		"subtitle": "subtitles.ballisticmissiles.nuke",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:nuke/far1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/far2",
+				"stream": true
+			}
+		]
+	},
+	"nuke.wind": {
+		"subtitle": "subtitles.ballisticmissiles.shockwave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:nuke/wind1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/wind2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/wind3",
+				"stream": true
+			}
+		]
+	},
+	"designator.lock": {
+		"subtitle": "subtitles.ballisticmissiles.lock",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:designator/lock"
+			}
+		]
+	},
+	"missile.ignition_sub": {
+		"subtitle": "subtitles.ballisticmissiles.ignition",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/ignition_sub",
+				"attenuation_distance": 256
+			}
+		]
+	},
+	"missile.crackle": {
+		"subtitle": "subtitles.ballisticmissiles.engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/crackle",
+				"stream": true
+			}
+		]
+	},
+	"explosion.sub": {
+		"subtitle": "subtitles.ballisticmissiles.explosion",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/sub1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/sub2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/sub3",
+				"stream": true
+			}
+		]
+	},
+	"explosion.debris": {
+		"subtitle": "subtitles.ballisticmissiles.debris",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/debris1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/debris2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/debris3",
+				"stream": true
+			}
+		]
+	},
+	"nuke.sub": {
+		"subtitle": "subtitles.ballisticmissiles.nuke",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:nuke/sub1",
+				"stream": true
+			}
+		]
+	},
+	"missile.jet": {
+		"subtitle": "subtitles.ballisticmissiles.jet",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/jet",
+				"stream": true
+			}
+		]
+	},
+	"missile.cluster_pop": {
+		"subtitle": "subtitles.ballisticmissiles.cluster",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/cluster_pop1",
+				"attenuation_distance": 192
+			},
+			{
+				"name": "ballisticmissiles:missile/cluster_pop2",
+				"attenuation_distance": 192
+			}
+		]
+	},
+	"explosion.thermobaric": {
+		"subtitle": "subtitles.ballisticmissiles.thermobaric",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/thermobaric1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/thermobaric2",
+				"stream": true
+			}
+		]
+	},
+	"explosion.bunker": {
+		"subtitle": "subtitles.ballisticmissiles.bunker",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/bunker1",
+				"stream": true,
+				"attenuation_distance": 320
+			},
+			{
+				"name": "ballisticmissiles:explosion/bunker2",
+				"stream": true,
+				"attenuation_distance": 320
+			}
+		]
+	},
+	"explosion.mid": {
+		"subtitle": "subtitles.ballisticmissiles.explosion",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/mid1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/mid2",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:explosion/mid3",
+				"stream": true
+			}
+		]
+	},
+	"nuke.mid": {
+		"subtitle": "subtitles.ballisticmissiles.nuke",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:nuke/mid1",
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:nuke/mid2",
+				"stream": true
+			}
+		]
+	},
+	"ear.ringing": {
+		"subtitle": "subtitles.ballisticmissiles.ringing",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ear/ringing",
+				"stream": true
+			}
+		]
+	},
+	"missile.sonic_boom": {
+		"subtitle": "subtitles.ballisticmissiles.sonic_boom",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/sonic_boom"
+			}
+		]
+	},
+	"radar.alarm": {
+		"subtitle": "subtitles.ballisticmissiles.radar",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:radar/alarm",
+				"attenuation_distance": 64
+			}
+		]
+	},
+	"air_defense.launch": {
+		"subtitle": "subtitles.ballisticmissiles.sam",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:air_defense/launch",
+				"attenuation_distance": 160
+			}
+		]
+	},
+	"geiger.click": {
+		"subtitle": "subtitles.ballisticmissiles.geiger",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:geiger/click",
+				"attenuation_distance": 8
+			}
+		]
+	},
+	"ciws.fire": {
+		"subtitle": "subtitles.ballisticmissiles.ciws",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ciws/fire",
+				"attenuation_distance": 160
+			}
+		]
+	},
+	"jet.fighter": {
+		"subtitle": "subtitles.ballisticmissiles.fighter",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/fighter",
+				"stream": true
+			}
+		]
+	},
+	"jet.fighter_far": {
+		"subtitle": "subtitles.ballisticmissiles.fighter",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/fighter_far",
+				"stream": true
+			}
+		]
+	},
+	"jet.afterburner": {
+		"subtitle": "subtitles.ballisticmissiles.afterburner",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/afterburner",
+				"stream": true
+			}
+		]
+	},
+	"jet.boom": {
+		"subtitle": "subtitles.ballisticmissiles.sonic_boom",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/boom"
+			}
+		]
+	},
+	"laser.beam": {
+		"subtitle": "subtitles.ballisticmissiles.laser",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:laser/beam",
+				"attenuation_distance": 64
+			}
+		]
+	},
+	"jet.sub": {
+		"subtitle": "subtitles.ballisticmissiles.fighter",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/sub",
+				"stream": true
+			}
+		]
+	},
+	"a10.gun": {
+		"subtitle": "subtitles.ballisticmissiles.a10_gun",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:a10/gun",
+				"attenuation_distance": 400
+			}
+		]
+	},
+	"a10.gun_tail": {
+		"subtitle": "subtitles.ballisticmissiles.a10_gun",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:a10/gun_tail"
+			}
+		]
+	},
+	"a10.flyby": {
+		"subtitle": "subtitles.ballisticmissiles.a10_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:a10/flyby"
+			}
+		]
+	},
+	"a10.engine": {
+		"subtitle": "subtitles.ballisticmissiles.a10_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:a10/engine",
+				"stream": true
+			}
+		]
+	},
+	"b2.engine": {
+		"subtitle": "subtitles.ballisticmissiles.b2_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:b2/engine",
+				"stream": true
+			}
+		]
+	},
+	"ac130.engine": {
+		"subtitle": "subtitles.ballisticmissiles.ac130_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ac130/engine",
+				"stream": true
+			}
+		]
+	},
+	"reaper.engine": {
+		"subtitle": "subtitles.ballisticmissiles.reaper_engine",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:reaper/engine",
+				"stream": true
+			}
+		]
+	},
+	"apache.rotor": {
+		"subtitle": "subtitles.ballisticmissiles.apache_rotor",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:apache/rotor",
+				"stream": true
+			}
+		]
+	},
+	"ac130.gun_105": {
+		"subtitle": "subtitles.ballisticmissiles.gun_105",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ac130/gun_105",
+				"attenuation_distance": 384
+			}
+		]
+	},
+	"ac130.gun_40": {
+		"subtitle": "subtitles.ballisticmissiles.gun_40",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ac130/gun_40",
+				"attenuation_distance": 256
+			}
+		]
+	},
+	"apache.chain_gun": {
+		"subtitle": "subtitles.ballisticmissiles.chain_gun",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:apache/chain_gun",
+				"attenuation_distance": 192
+			}
+		]
+	},
+	"explosion.shock_he": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
+			}
+		]
+	},
+	"explosion.shock_heavy": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
+			}
+		]
+	},
+	"explosion.shock_thermo": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
+			}
+		]
+	},
+	"explosion.shock_bunker": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
+			}
+		]
+	},
+	"explosion.shock_nuke": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
+			}
+		]
+	},
+	"explosion.shock_emp": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
+			}
+		]
+	},
+	"explosion.shock_antimatter": {
+		"subtitle": "subtitles.ballisticmissiles.shock_wave",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:explosion/shock1"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock2"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock3"
+			},
+			{
+				"name": "ballisticmissiles:explosion/shock4"
+			}
+		]
+	},
+	"bomb.whistle": {
+		"subtitle": "subtitles.ballisticmissiles.bomb_whistle",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bomb/whistle",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"uplink.servo": {
+		"subtitle": "subtitles.ballisticmissiles.uplink_servo",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:uplink/servo",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"uplink.data": {
+		"subtitle": "subtitles.ballisticmissiles.uplink_data",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:uplink/data",
+				"attenuation_distance": 32
+			}
+		]
+	},
+	"uplink.confirm": {
+		"subtitle": "subtitles.ballisticmissiles.uplink_confirm",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:uplink/confirm",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"uplink.alarm": {
+		"subtitle": "subtitles.ballisticmissiles.uplink_alarm",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:uplink/alarm",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"rod.reentry": {
+		"subtitle": "subtitles.ballisticmissiles.rod_reentry",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rod/reentry",
+				"attenuation_distance": 600
+			}
+		]
+	},
+	"supply.launch": {
+		"subtitle": "subtitles.ballisticmissiles.supply_launch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:supply/launch",
+				"attenuation_distance": 400
+			}
+		]
+	},
+	"ak.shot": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/shot1"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot2"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot3"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot4"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot5"
+			}
+		]
+	},
+	"ak.shot_mid": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/shot_mid1"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot_mid2"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot_mid3"
+			}
+		]
+	},
+	"ak.shot_far": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot_far",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/shot_far1"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot_far2"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot_far3"
+			},
+			{
+				"name": "ballisticmissiles:ak/shot_far4"
+			}
+		]
+	},
+	"ak.tail_outdoor": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/tail_outdoor1"
+			},
+			{
+				"name": "ballisticmissiles:ak/tail_outdoor2"
+			},
+			{
+				"name": "ballisticmissiles:ak/tail_outdoor3"
+			}
+		]
+	},
+	"ak.tail_indoor": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/tail_indoor1"
+			},
+			{
+				"name": "ballisticmissiles:ak/tail_indoor2"
+			}
+		]
+	},
+	"ak.tail_cave": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/tail_cave1"
+			},
+			{
+				"name": "ballisticmissiles:ak/tail_cave2"
+			}
+		]
+	},
+	"rpg.shot": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/shot1"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot2"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot3"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot4"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot5"
+			}
+		]
+	},
+	"rpg.shot_far": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_shot_far",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/shot_far1"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot_far2"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot_far3"
+			},
+			{
+				"name": "ballisticmissiles:rpg/shot_far4"
+			}
+		]
+	},
+	"rpg.motor": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_motor",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/motor1"
+			},
+			{
+				"name": "ballisticmissiles:rpg/motor2"
+			}
+		]
+	},
+	"ak.dry": {
+		"subtitle": "subtitles.ballisticmissiles.ak_click",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/dry",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.selector": {
+		"subtitle": "subtitles.ballisticmissiles.ak_click",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/selector1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/selector2",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/selector3",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/selector4",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.mag_out": {
+		"subtitle": "subtitles.ballisticmissiles.ak_reload",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/mag_out1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/mag_out2",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.mag_in": {
+		"subtitle": "subtitles.ballisticmissiles.ak_reload",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/mag_in1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/mag_in2",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.charge": {
+		"subtitle": "subtitles.ballisticmissiles.ak_reload",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/charge1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/charge2",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/charge3",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"ak.shell": {
+		"subtitle": "subtitles.ballisticmissiles.ak_shell",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:ak/shell1",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/shell2",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/shell3",
+				"attenuation_distance": 16
+			},
+			{
+				"name": "ballisticmissiles:ak/shell4",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"bullet.crack": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_crack",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/crack1"
+			}
+		]
+	},
+	"bullet.whiz": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_whiz",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/whiz1"
+			}
+		]
+	},
+	"bullet.ricochet": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_ricochet",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/ricochet4",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"bullet.impact_dirt": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "minecraft:dig/gravel1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/gravel2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/gravel3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/gravel4",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"bullet.impact_stone": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "minecraft:dig/stone1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/stone2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/stone3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/stone4",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"bullet.impact_metal": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bullet/impact_metal1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:bullet/impact_metal2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:bullet/impact_metal3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:bullet/impact_metal4",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"bullet.impact_wood": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "minecraft:dig/wood1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/wood2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/wood3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "minecraft:dig/wood4",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"bullet.impact_flesh": {
+		"subtitle": "subtitles.ballisticmissiles.bullet_impact",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/hit1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/hit2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/hit3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/hit4",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/hit5",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/hit6",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"grenade.pin": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_pin",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/pin",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"grenade.spoon": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_spoon",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/spoon",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"grenade.bounce": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_bounce",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/bounce1",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:grenade/bounce2",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:grenade/bounce3",
+				"attenuation_distance": 20
+			}
+		]
+	},
+	"grenade.explode": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_explode",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/explode1",
+				"attenuation_distance": 120
+			},
+			{
+				"name": "ballisticmissiles:grenade/explode2",
+				"attenuation_distance": 120
+			}
+		]
+	},
+	"grenade.explode_far": {
+		"subtitle": "subtitles.ballisticmissiles.grenade_explode",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/explode_far1",
+				"attenuation_distance": 400
+			}
+		]
+	},
+	"player.breath": {
+		"subtitle": "subtitles.ballisticmissiles.breath",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:player/breath1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath2",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath3",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath4",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath5",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:player/breath6",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"command.air_raid": {
+		"subtitle": "subtitles.ballisticmissiles.air_raid",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:missile/siren",
+				"attenuation_distance": 200,
+				"stream": true
+			}
+		]
+	},
+	"drone.buzz": {
+		"subtitle": "subtitles.ballisticmissiles.drone",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:drone/buzz",
+				"attenuation_distance": 64
+			}
+		]
+	},
+	"drone.fpv": {
+		"subtitle": "subtitles.ballisticmissiles.drone",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:drone/fpv"
+			}
+		]
+	},
+	"drone.arm": {
+		"subtitle": "subtitles.ballisticmissiles.drone_arm",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:drone/arm",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"water.splash_small": {
+		"subtitle": "subtitles.ballisticmissiles.splash_small",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:water/splash_small1"
+			},
+			{
+				"name": "ballisticmissiles:water/splash_small2"
+			}
+		]
+	},
+	"water.splash": {
+		"subtitle": "subtitles.ballisticmissiles.splash",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:water/splash1"
+			},
+			{
+				"name": "ballisticmissiles:water/splash2"
+			}
+		]
+	},
+	"water.splash_huge": {
+		"subtitle": "subtitles.ballisticmissiles.splash_huge",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:water/splash_huge1"
+			},
+			{
+				"name": "ballisticmissiles:water/splash_huge2"
+			}
+		]
+	},
+	"metal.thud": {
+		"subtitle": "subtitles.ballisticmissiles.metal_thud",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:metal/thud1"
+			},
+			{
+				"name": "ballisticmissiles:metal/thud2"
+			}
+		]
+	},
+	"metal.crash": {
+		"subtitle": "subtitles.ballisticmissiles.metal_crash",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:metal/crash1"
+			},
+			{
+				"name": "ballisticmissiles:metal/crash2"
+			}
+		]
+	},
+	"hydraulic.extend": {
+		"subtitle": "subtitles.ballisticmissiles.hydraulic",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:hydraulic/extend1"
+			},
+			{
+				"name": "ballisticmissiles:hydraulic/extend2"
+			}
+		]
+	},
+	"hydraulic.retract": {
+		"subtitle": "subtitles.ballisticmissiles.hydraulic",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:hydraulic/retract1"
+			},
+			{
+				"name": "ballisticmissiles:hydraulic/retract2"
+			}
+		]
+	},
+	"air.release": {
+		"subtitle": "subtitles.ballisticmissiles.air_release",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:air/release1"
+			},
+			{
+				"name": "ballisticmissiles:air/release2"
+			},
+			{
+				"name": "ballisticmissiles:air/release3"
+			}
+		]
+	},
+	"air.launch": {
+		"subtitle": "subtitles.ballisticmissiles.air_launch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:air/launch1"
+			},
+			{
+				"name": "ballisticmissiles:air/launch2"
+			}
+		]
+	},
+	"door.heavy_open": {
+		"subtitle": "subtitles.ballisticmissiles.door_open",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:door/heavy_open1"
+			},
+			{
+				"name": "ballisticmissiles:door/heavy_open2"
+			}
+		]
+	},
+	"door.heavy_close": {
+		"subtitle": "subtitles.ballisticmissiles.door_close",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:door/heavy_close1"
+			},
+			{
+				"name": "ballisticmissiles:door/heavy_close2"
+			}
+		]
+	},
+	"chain.rattle": {
+		"subtitle": "subtitles.ballisticmissiles.chain",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:chain/rattle1"
+			},
+			{
+				"name": "ballisticmissiles:chain/rattle2"
+			}
+		]
+	},
+	"truck.diesel": {
+		"subtitle": "subtitles.ballisticmissiles.truck",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:truck/diesel"
+			}
+		]
+	},
+	"bunker.generator": {
+		"subtitle": "subtitles.ballisticmissiles.generator",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bunker/generator"
+			}
+		]
+	},
+	"bunker.vent": {
+		"subtitle": "subtitles.ballisticmissiles.vent",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:bunker/vent"
+			}
+		]
+	},
+	"rpg.load": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_load",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/load"
+			}
+		]
+	},
+	"rpg.knock": {
+		"subtitle": "subtitles.ballisticmissiles.rpg_knock",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:rpg/knock1"
+			},
+			{
+				"name": "ballisticmissiles:rpg/knock2"
+			}
+		]
+	},
+	"mag.drop": {
+		"subtitle": "subtitles.ballisticmissiles.mag_drop",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:mag/drop1"
+			},
+			{
+				"name": "ballisticmissiles:mag/drop2"
+			},
+			{
+				"name": "ballisticmissiles:mag/drop3"
+			},
+			{
+				"name": "ballisticmissiles:mag/drop4"
+			},
+			{
+				"name": "ballisticmissiles:mag/drop5"
+			}
+		]
+	},
+	"gear.rustle": {
+		"subtitle": "subtitles.ballisticmissiles.gear",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gear/rustle1"
+			},
+			{
+				"name": "ballisticmissiles:gear/rustle2"
+			},
+			{
+				"name": "ballisticmissiles:gear/rustle3"
+			},
+			{
+				"name": "ballisticmissiles:gear/rustle4"
+			}
+		]
+	},
+	"drone.place": {
+		"subtitle": "subtitles.ballisticmissiles.drone_place",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:drone/place"
+			}
+		]
+	},
+	"radio.click": {
+		"subtitle": "subtitles.ballisticmissiles.radio_click",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:radio/click"
+			}
+		]
+	},
+	"radio.squelch": {
+		"subtitle": "subtitles.ballisticmissiles.radio_squelch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:radio/squelch1"
+			},
+			{
+				"name": "ballisticmissiles:radio/squelch2"
+			}
+		]
+	},
+	"flare.launch": {
+		"subtitle": "subtitles.ballisticmissiles.flare_launch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:flare/launch1"
+			},
+			{
+				"name": "ballisticmissiles:flare/launch2"
+			}
+		]
+	},
+	"silence": {
+		"sounds": []
+	},
+	"jet.startup": {
+		"subtitle": "subtitles.ballisticmissiles.jet_startup",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/startup",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"jet.shutdown": {
+		"subtitle": "subtitles.ballisticmissiles.jet_shutdown",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/shutdown",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"jet.wind": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/wind"
+			}
+		]
+	},
+	"jet.growl": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/growl"
+			}
+		]
+	},
+	"jet.lock": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/lock"
+			}
+		]
+	},
+	"jet.warn_stall": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/warn_stall"
+			}
+		]
+	},
+	"jet.warn_pullup": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/warn_pullup"
+			}
+		]
+	},
+	"jet.tyre": {
+		"subtitle": "subtitles.ballisticmissiles.jet_tyre",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:jet/tyre1",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "ballisticmissiles:jet/tyre2",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "ballisticmissiles:jet/tyre3",
+				"attenuation_distance": 64
+			}
+		]
+	},
+	"player.heartbeat": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:player/heartbeat"
+			}
+		]
+	},
+	"shotgun.shot": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/shot1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot3"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot4"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot5"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot6"
+			}
+		]
+	},
+	"shotgun.shot_mid": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/shot_mid1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot_mid2"
+			}
+		]
+	},
+	"shotgun.shot_far": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/shot_far1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot_far2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shot_far3"
+			}
+		]
+	},
+	"shotgun.pump_back": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_pump",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/pump_back1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_back2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_back3"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_back4"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_back5"
+			}
+		]
+	},
+	"shotgun.pump_forward": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_pump",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward3"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward4"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/pump_forward5"
+			}
+		]
+	},
+	"shotgun.shell_in": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_shell",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/shell_in1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shell_in2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shell_in3"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shell_in4"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/shell_in5"
+			}
+		]
+	},
+	"shotgun.dry": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_dry",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/dry1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/dry2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/dry3"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/dry4"
+			}
+		]
+	},
+	"shotgun.hull": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_hull",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/hull1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/hull2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/hull3"
+			}
+		]
+	},
+	"shotgun.handle": {
+		"subtitle": "subtitles.ballisticmissiles.shotgun_handle",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:shotgun/handle1"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/handle2"
+			},
+			{
+				"name": "ballisticmissiles:shotgun/handle3"
+			}
+		]
+	},
+	"glock.shot": {
+		"subtitle": "subtitles.ballisticmissiles.glock_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/shot1"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot2"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot3"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot4"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot5"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot6"
+			}
+		]
+	},
+	"glock.shot_mid": {
+		"subtitle": "subtitles.ballisticmissiles.glock_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/shot_mid1"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_mid2"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_mid3"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_mid4"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_mid5"
+			}
+		]
+	},
+	"glock.shot_far": {
+		"subtitle": "subtitles.ballisticmissiles.glock_shot",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/shot_far1"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_far2"
+			},
+			{
+				"name": "ballisticmissiles:glock/shot_far3"
+			}
+		]
+	},
+	"glock.slide_back": {
+		"subtitle": "subtitles.ballisticmissiles.glock_slide",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/slide_back1"
+			},
+			{
+				"name": "ballisticmissiles:glock/slide_back2"
+			},
+			{
+				"name": "ballisticmissiles:glock/slide_back3"
+			}
+		]
+	},
+	"glock.slide_forward": {
+		"subtitle": "subtitles.ballisticmissiles.glock_slide",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/slide_forward1"
+			},
+			{
+				"name": "ballisticmissiles:glock/slide_forward2"
+			},
+			{
+				"name": "ballisticmissiles:glock/slide_forward3"
+			}
+		]
+	},
+	"glock.mag_out": {
+		"subtitle": "subtitles.ballisticmissiles.glock_mag_out",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/mag_out1"
+			},
+			{
+				"name": "ballisticmissiles:glock/mag_out2"
+			}
+		]
+	},
+	"glock.mag_in": {
+		"subtitle": "subtitles.ballisticmissiles.glock_mag_in",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/mag_in1"
+			},
+			{
+				"name": "ballisticmissiles:glock/mag_in2"
+			},
+			{
+				"name": "ballisticmissiles:glock/mag_in3"
+			},
+			{
+				"name": "ballisticmissiles:glock/mag_in4"
+			}
+		]
+	},
+	"glock.dry": {
+		"subtitle": "subtitles.ballisticmissiles.glock_dry",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/dry1"
+			},
+			{
+				"name": "ballisticmissiles:glock/dry2"
+			},
+			{
+				"name": "ballisticmissiles:glock/dry3"
+			}
+		]
+	},
+	"glock.case": {
+		"subtitle": "subtitles.ballisticmissiles.glock_case",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:glock/case1"
+			},
+			{
+				"name": "ballisticmissiles:glock/case2"
+			},
+			{
+				"name": "ballisticmissiles:glock/case3"
+			},
+			{
+				"name": "ballisticmissiles:glock/case4"
+			},
+			{
+				"name": "ballisticmissiles:glock/case5"
+			},
+			{
+				"name": "ballisticmissiles:glock/case6"
+			}
+		]
+	},
+	"silo.lid_drive": {
+		"subtitle": "subtitles.ballisticmissiles.silo_lid_drive",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:silo/lid_drive1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "ballisticmissiles:silo/lid_drive2",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"silo.lid_lock": {
+		"subtitle": "subtitles.ballisticmissiles.silo_lid_lock",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:silo/lid_lock1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "ballisticmissiles:silo/lid_lock2",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"silo.lid_seat": {
+		"subtitle": "subtitles.ballisticmissiles.silo_lid_seat",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:silo/lid_seat1",
+				"attenuation_distance": 48
+			},
+			{
+				"name": "ballisticmissiles:silo/lid_seat2",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"flashbang.bang": {
+		"subtitle": "subtitles.ballisticmissiles.flashbang_bang",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/flashbang_bang",
+				"attenuation_distance": 40
+			}
+		]
+	},
+	"flashbang.far": {
+		"subtitle": "subtitles.ballisticmissiles.flashbang_bang",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:grenade/flashbang_far",
+				"attenuation_distance": 16
+			}
+		]
+	},
+	"storm.thunder_near": {
+		"subtitle": "subtitles.ballisticmissiles.thunder",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:storm/thunder_near1",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_near2",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_near3",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_near4",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_near5",
+				"attenuation_distance": 16,
+				"stream": true
+			}
+		]
+	},
+	"storm.thunder_far": {
+		"subtitle": "subtitles.ballisticmissiles.thunder",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:storm/thunder_far1",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far2",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far3",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far4",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far5",
+				"attenuation_distance": 16,
+				"stream": true
+			},
+			{
+				"name": "ballisticmissiles:storm/thunder_far6",
+				"attenuation_distance": 16,
+				"stream": true
+			}
+		]
+	},
+	"gun.suppressed_rifle": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressed_rifle",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressed_rifle1"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_rifle2"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_rifle3"
+			}
+		]
+	},
+	"gun.suppressed_pistol": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressed_pistol",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressed_pistol1"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_pistol2"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_pistol3"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_pistol4"
+			}
+		]
+	},
+	"gun.suppressed_shotgun": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressed_shotgun",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressed_shotgun1"
+			},
+			{
+				"name": "ballisticmissiles:gun/suppressed_shotgun2"
+			}
+		]
+	},
+	"gun.suppressed_far": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressed_far",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressed_far"
+			}
+		]
+	},
+	"gun.suppressor_on": {
+		"subtitle": "subtitles.ballisticmissiles.gun_suppressor_on",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gun/suppressor_on"
+			}
+		]
+	},
+	"workbench.open": {
+		"subtitle": "subtitles.ballisticmissiles.workbench_open",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:workbench/open"
+			}
+		]
+	},
+	"workbench.craft_metal": {
+		"subtitle": "subtitles.ballisticmissiles.workbench_craft_metal",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:workbench/craft_metal"
+			}
+		]
+	},
+	"workbench.craft_ammo": {
+		"subtitle": "subtitles.ballisticmissiles.workbench_craft_ammo",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:workbench/craft_ammo"
+			}
+		]
+	},
+	"workbench.craft_grenade": {
+		"subtitle": "subtitles.ballisticmissiles.workbench_craft_grenade",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:workbench/craft_grenade"
+			}
+		]
+	},
+	"soldier.drop_weapon": {
+		"subtitle": "subtitles.ballisticmissiles.soldier_drop_weapon",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:soldier/drop_weapon1"
+			},
+			{
+				"name": "ballisticmissiles:soldier/drop_weapon2"
+			},
+			{
+				"name": "ballisticmissiles:soldier/drop_weapon3"
+			},
+			{
+				"name": "ballisticmissiles:soldier/drop_weapon4"
+			}
+		]
+	},
+	"soldier.surrender": {
+		"subtitle": "subtitles.ballisticmissiles.soldier_surrender",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:soldier/surrender"
+			}
+		]
+	},
+	"soldier.zip_tie": {
+		"subtitle": "subtitles.ballisticmissiles.soldier_zip_tie",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:soldier/zip_tie"
+			}
+		]
+	},
+	"smoke.pack_open": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_pack",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/pack_open1",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:smoke/pack_open2",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"smoke.pack_pull": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_pack",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/pack_pull1",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:smoke/pack_pull2",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"smoke.zippo_light": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_zippo",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/zippo_light1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_light2",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_light3",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_light4",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_light5",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"smoke.zippo_close": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_zippo_close",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/zippo_close1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:smoke/zippo_close2",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"smoke.drag": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_drag",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/drag1",
+				"attenuation_distance": 6
+			},
+			{
+				"name": "ballisticmissiles:smoke/drag2",
+				"attenuation_distance": 6
+			},
+			{
+				"name": "ballisticmissiles:smoke/drag3",
+				"attenuation_distance": 6
+			}
+		]
+	},
+	"smoke.exhale": {
+		"subtitle": "subtitles.ballisticmissiles.smoke_exhale",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:smoke/exhale1",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:smoke/exhale2",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:smoke/exhale3",
+				"attenuation_distance": 8
+			}
+		]
+	},
+	"knife.swish": {
+		"subtitle": "subtitles.ballisticmissiles.knife_swish",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/swish1",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish2",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish3",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish4",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish5",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish6",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish7",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish8",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish9",
+				"attenuation_distance": 12
+			},
+			{
+				"name": "ballisticmissiles:knife/swish10",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"knife.spin": {
+		"subtitle": "subtitles.ballisticmissiles.knife_spin",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/spin",
+				"attenuation_distance": 8
+			}
+		]
+	},
+	"knife.draw": {
+		"subtitle": "subtitles.ballisticmissiles.knife_draw",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/draw1",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:knife/draw2",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"knife.catch": {
+		"subtitle": "subtitles.ballisticmissiles.knife_catch",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/catch",
+				"attenuation_distance": 8
+			}
+		]
+	},
+	"knife.hit": {
+		"subtitle": "subtitles.ballisticmissiles.knife_hit",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:knife/hit",
+				"attenuation_distance": 12
+			}
+		]
+	},
+	"night.cricket": {
+		"subtitle": "subtitles.ballisticmissiles.cricket",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/cricket1",
+				"attenuation_distance": 14
+			},
+			{
+				"name": "ballisticmissiles:night/cricket2",
+				"attenuation_distance": 14
+			},
+			{
+				"name": "ballisticmissiles:night/cricket3",
+				"attenuation_distance": 14
+			},
+			{
+				"name": "ballisticmissiles:night/cricket4",
+				"attenuation_distance": 14
+			}
+		]
+	},
+	"night.frog": {
+		"subtitle": "subtitles.ballisticmissiles.frog",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/frog1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:night/frog2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:night/frog3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:night/frog4",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"night.frog_chorus": {
+		"subtitle": "subtitles.ballisticmissiles.frog",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/frog_chorus1",
+				"attenuation_distance": 40
+			},
+			{
+				"name": "ballisticmissiles:night/frog_chorus2",
+				"attenuation_distance": 40
+			}
+		]
+	},
+	"night.owl": {
+		"subtitle": "subtitles.ballisticmissiles.owl",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/owl1",
+				"attenuation_distance": 72
+			},
+			{
+				"name": "ballisticmissiles:night/owl2",
+				"attenuation_distance": 72
+			},
+			{
+				"name": "ballisticmissiles:night/owl3",
+				"attenuation_distance": 72
+			}
+		]
+	},
+	"night.owl_female": {
+		"subtitle": "subtitles.ballisticmissiles.owl",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:night/owl_female1",
+				"attenuation_distance": 64
+			},
+			{
+				"name": "ballisticmissiles:night/owl_female2",
+				"attenuation_distance": 64
+			}
+		]
+	},
+	"nether.ash_storm": {
+		"sounds": [
+			{
+				"name": "ballisticmissiles:nether/ash_storm",
+				"stream": true
+			}
+		]
+	},
+	"gore.bone": {
+		"subtitle": "subtitles.ballisticmissiles.gore_bone",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/bone1",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone2",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone3",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone4",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone5",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone6",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone7",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone8",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone9",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/bone10",
+				"attenuation_distance": 20
+			}
+		]
+	},
+	"gore.vest": {
+		"subtitle": "subtitles.ballisticmissiles.gore_vest",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/vest1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/vest2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/vest3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/vest4",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"gore.pain": {
+		"subtitle": "subtitles.ballisticmissiles.gore_pain",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/pain1",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain2",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain3",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain4",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain5",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain6",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain7",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain8",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain9",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain10",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain11",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain12",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain13",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain14",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain15",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain16",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain17",
+				"attenuation_distance": 20
+			},
+			{
+				"name": "ballisticmissiles:gore/pain18",
+				"attenuation_distance": 20
+			}
+		]
+	},
+	"gore.death": {
+		"subtitle": "subtitles.ballisticmissiles.gore_death",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/death1",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death2",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death3",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death4",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death5",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death6",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death7",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "ballisticmissiles:gore/death8",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"gore.spurt": {
+		"subtitle": "subtitles.ballisticmissiles.gore_spurt",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/spurt1",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt2",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt3",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt4",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt5",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/spurt6",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"gore.gurgle": {
+		"subtitle": "subtitles.ballisticmissiles.gore_gurgle",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/gurgle1",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle2",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle3",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle4",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle5",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle6",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle7",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle8",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle9",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle10",
+				"attenuation_distance": 10
+			},
+			{
+				"name": "ballisticmissiles:gore/gurgle11",
+				"attenuation_distance": 10
+			}
+		]
+	},
+	"gore.drip": {
+		"subtitle": "subtitles.ballisticmissiles.gore_drip",
+		"sounds": [
+			{
+				"name": "ballisticmissiles:gore/drip1",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip2",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip3",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip4",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip5",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip6",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip7",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip8",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip9",
+				"attenuation_distance": 8
+			},
+			{
+				"name": "ballisticmissiles:gore/drip10",
+				"attenuation_distance": 8
+			}
+		]
+	}
+}

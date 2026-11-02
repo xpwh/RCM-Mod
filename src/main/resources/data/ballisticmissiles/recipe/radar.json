@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "redstone",
+	"pattern": [
+		" G ",
+		"ICI",
+		"IRI"
+	],
+	"key": {
+		"G": "minecraft:iron_trapdoor",
+		"I": "minecraft:iron_ingot",
+		"C": "minecraft:compass",
+		"R": "minecraft:redstone_block"
+	},
+	"result": {
+		"id": "ballisticmissiles:radar",
+		"count": 1
+	}
+}

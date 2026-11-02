@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/cube_bottom_top",
+	"textures": {
+		"top": "ballisticmissiles:block/runway_kit_top",
+		"bottom": "ballisticmissiles:block/runway_kit_side",
+		"side": "ballisticmissiles:block/runway_kit_side"
+	}
+}

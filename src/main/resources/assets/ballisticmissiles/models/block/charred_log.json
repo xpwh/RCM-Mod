@@ -1,0 +1,7 @@
+{
+	"parent": "minecraft:block/cube_column",
+	"textures": {
+		"end": "ballisticmissiles:block/charred_log_top",
+		"side": "ballisticmissiles:block/charred_log"
+	}
+}

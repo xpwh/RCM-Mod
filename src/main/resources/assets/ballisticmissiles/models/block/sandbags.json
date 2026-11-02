@@ -1,0 +1,7 @@
+{
+	"parent": "minecraft:block/cube_column",
+	"textures": {
+		"side": "ballisticmissiles:block/sandbags",
+		"end": "ballisticmissiles:block/sandbags_top"
+	}
+}

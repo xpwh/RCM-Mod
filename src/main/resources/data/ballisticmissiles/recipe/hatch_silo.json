@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"TTT",
+		"CLC",
+		"CRC"
+	],
+	"key": {
+		"T": "minecraft:iron_trapdoor",
+		"C": "minecraft:polished_deepslate",
+		"L": "ballisticmissiles:missile_silo",
+		"R": "minecraft:piston"
+	},
+	"result": {
+		"id": "ballisticmissiles:hatch_silo",
+		"count": 1
+	}
+}

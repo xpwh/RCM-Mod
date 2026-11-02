@@ -1,0 +1,19 @@
+{
+	"variants": {
+		"phase=0": {
+			"model": "ballisticmissiles:block/traffic_light_0"
+		},
+		"phase=1": {
+			"model": "ballisticmissiles:block/traffic_light_1"
+		},
+		"phase=2": {
+			"model": "ballisticmissiles:block/traffic_light_2"
+		},
+		"phase=3": {
+			"model": "ballisticmissiles:block/traffic_light_3"
+		},
+		"phase=4": {
+			"model": "ballisticmissiles:block/traffic_light_4"
+		}
+	}
+}

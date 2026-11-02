@@ -1,0 +1,16 @@
+{
+	"variants": {
+		"age=0": {
+			"model": "ballisticmissiles:block/smoldering_earth"
+		},
+		"age=1": {
+			"model": "ballisticmissiles:block/smoldering_earth"
+		},
+		"age=2": {
+			"model": "ballisticmissiles:block/smoldering_earth"
+		},
+		"age=3": {
+			"model": "ballisticmissiles:block/smoldering_earth"
+		}
+	}
+}

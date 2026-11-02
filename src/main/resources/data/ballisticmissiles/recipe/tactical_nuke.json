@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		" N ",
+		"TMT",
+		" S "
+	],
+	"key": {
+		"N": "minecraft:nether_star",
+		"S": "minecraft:netherite_scrap",
+		"T": "minecraft:tnt",
+		"M": "ballisticmissiles:ballistic_missile"
+	},
+	"result": {
+		"id": "ballisticmissiles:tactical_nuke",
+		"count": 1
+	}
+}

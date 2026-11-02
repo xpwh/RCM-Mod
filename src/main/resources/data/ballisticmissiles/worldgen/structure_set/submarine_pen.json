@@ -1,0 +1,14 @@
+{
+	"placement": {
+		"type": "minecraft:random_spread",
+		"salt": 1200443,
+		"spacing": 48,
+		"separation": 16
+	},
+	"structures": [
+		{
+			"structure": "ballisticmissiles:submarine_pen",
+			"weight": 1
+		}
+	]
+}

@@ -1,0 +1,24 @@
+{
+	"model": {
+		"type": "minecraft:select",
+		"property": "minecraft:display_context",
+		"cases": [
+			{
+				"when": [
+					"gui"
+				],
+				"model": {
+					"type": "minecraft:model",
+					"model": "ballisticmissiles:item/fpv_fiber"
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:special",
+			"base": "ballisticmissiles:item/fpv_fiber_in_hand",
+			"model": {
+				"type": "ballisticmissiles:fpv_drone"
+			}
+		}
+	}
+}

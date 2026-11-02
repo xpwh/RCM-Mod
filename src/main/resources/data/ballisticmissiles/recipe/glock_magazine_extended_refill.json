@@ -1,0 +1,14 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "combat",
+	"ingredients": [
+		"ballisticmissiles:glock_magazine_extended",
+		"minecraft:gunpowder",
+		"minecraft:gunpowder",
+		"minecraft:copper_ingot"
+	],
+	"result": {
+		"id": "ballisticmissiles:glock_magazine_extended",
+		"count": 1
+	}
+}

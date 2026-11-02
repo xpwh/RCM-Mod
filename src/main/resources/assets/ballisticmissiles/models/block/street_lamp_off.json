@@ -1,0 +1,106 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "ballisticmissiles:block/street_lamp_housing",
+		"housing": "ballisticmissiles:block/street_lamp_housing",
+		"glass": "ballisticmissiles:block/street_lamp_glass_off"
+	},
+	"elements": [
+		{
+			"from": [
+				7,
+				0,
+				7
+			],
+			"to": [
+				9,
+				9,
+				9
+			],
+			"faces": {
+				"north": {
+					"texture": "#housing"
+				},
+				"south": {
+					"texture": "#housing"
+				},
+				"east": {
+					"texture": "#housing"
+				},
+				"west": {
+					"texture": "#housing"
+				},
+				"up": {
+					"texture": "#housing"
+				},
+				"down": {
+					"texture": "#housing"
+				}
+			}
+		},
+		{
+			"from": [
+				3,
+				10,
+				3
+			],
+			"to": [
+				13,
+				14,
+				13
+			],
+			"faces": {
+				"north": {
+					"texture": "#housing"
+				},
+				"south": {
+					"texture": "#housing"
+				},
+				"east": {
+					"texture": "#housing"
+				},
+				"west": {
+					"texture": "#housing"
+				},
+				"up": {
+					"texture": "#housing"
+				},
+				"down": {
+					"texture": "#housing"
+				}
+			}
+		},
+		{
+			"from": [
+				4,
+				9,
+				4
+			],
+			"to": [
+				12,
+				10,
+				12
+			],
+			"faces": {
+				"north": {
+					"texture": "#glass"
+				},
+				"south": {
+					"texture": "#glass"
+				},
+				"east": {
+					"texture": "#glass"
+				},
+				"west": {
+					"texture": "#glass"
+				},
+				"up": {
+					"texture": "#glass"
+				},
+				"down": {
+					"texture": "#glass"
+				}
+			}
+		}
+	]
+}

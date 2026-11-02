@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		"Y Y",
+		"X X"
+	],
+	"key": {
+		"X": "minecraft:iron_ingot",
+		"Y": "minecraft:iron_block"
+	},
+	"result": {
+		"id": "ballisticmissiles:armor_medium_boots",
+		"count": 1
+	}
+}

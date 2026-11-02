@@ -1,0 +1,16 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "ballisticmissiles:block/iron_dome_world"
+		},
+		"facing=east": {
+			"model": "ballisticmissiles:block/iron_dome_world"
+		},
+		"facing=south": {
+			"model": "ballisticmissiles:block/iron_dome_world"
+		},
+		"facing=west": {
+			"model": "ballisticmissiles:block/iron_dome_world"
+		}
+	}
+}

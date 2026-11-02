@@ -1,0 +1,38 @@
+package de.rcm.ballistic.client.render;
+
+/**
+ * Carried on a player's render state: the legs and arms gone (bit sets of {@code Wounds.LEFT/RIGHT}) and
+ * the head wound ({@code Wounds.GRAZED}, {@code Wounds.SHATTERED}).
+ */
+public interface LostLeg {
+	int ballisticmissiles$lostLeg();
+
+	void ballisticmissiles$setLostLeg(int side);
+
+	int ballisticmissiles$lostArm();
+
+	void ballisticmissiles$setLostArm(int side);
+
+	int ballisticmissiles$head();
+
+	void ballisticmissiles$setHead(int head);
+
+	/** Ticks into the collapse after a shot through the head (-1 none), and which way the body falls. */
+	float ballisticmissiles$collapse();
+
+	int ballisticmissiles$fall();
+
+	void ballisticmissiles$setCollapse(float t, int fall);
+
+	/** Rounds in the body (0..3) and the seed picking each wound's version. */
+	int ballisticmissiles$torso();
+
+	int ballisticmissiles$seed();
+
+	void ballisticmissiles$setTorso(int torso, int seed);
+
+	/** {@code Wounds.extra}: the jaw shot away, a hole right through the body. */
+	int ballisticmissiles$extra();
+
+	void ballisticmissiles$setExtra(int extra);
+}

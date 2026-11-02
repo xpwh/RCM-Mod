@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": [
+		"S S",
+		"LTL",
+		" S "
+	],
+	"key": {
+		"S": "minecraft:string",
+		"L": "minecraft:leather",
+		"T": "minecraft:stick"
+	},
+	"result": {
+		"id": "ballisticmissiles:tourniquet",
+		"count": 2
+	}
+}

@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:item/handheld",
+	"textures": {
+		"layer0": "ballisticmissiles:item/anti_radar_missile"
+	}
+}

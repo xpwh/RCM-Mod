@@ -1,0 +1,24 @@
+{
+	"required": true,
+	"package": "de.rcm.ballistic.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"ChunkMapAccessor",
+		"ChunkMapMixin",
+		"GrowthMixin",
+		"TrackedEntityMixin",
+		"PlayerPoseMixin",
+		"MannequinAccessor",
+		"LivingEntityCorpseMixin",
+		"LivingEntityDimensionsMixin",
+		"ServerExplosionMixin",
+		"CraterLogMixin",
+		"PlayerReachMixin",
+		"VehicleMoveMixin",
+		"StructureTreesMixin",
+		"LightningTargetMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

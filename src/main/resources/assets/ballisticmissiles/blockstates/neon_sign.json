@@ -1,0 +1,40 @@
+{
+	"variants": {
+		"color=0,lit=true": {
+			"model": "ballisticmissiles:block/neon_sign_0"
+		},
+		"color=0,lit=false": {
+			"model": "ballisticmissiles:block/neon_sign_0_off"
+		},
+		"color=1,lit=true": {
+			"model": "ballisticmissiles:block/neon_sign_1"
+		},
+		"color=1,lit=false": {
+			"model": "ballisticmissiles:block/neon_sign_1_off"
+		},
+		"color=2,lit=true": {
+			"model": "ballisticmissiles:block/neon_sign_2"
+		},
+		"color=2,lit=false": {
+			"model": "ballisticmissiles:block/neon_sign_2_off"
+		},
+		"color=3,lit=true": {
+			"model": "ballisticmissiles:block/neon_sign_3"
+		},
+		"color=3,lit=false": {
+			"model": "ballisticmissiles:block/neon_sign_3_off"
+		},
+		"color=4,lit=true": {
+			"model": "ballisticmissiles:block/neon_sign_4"
+		},
+		"color=4,lit=false": {
+			"model": "ballisticmissiles:block/neon_sign_4_off"
+		},
+		"color=5,lit=true": {
+			"model": "ballisticmissiles:block/neon_sign_5"
+		},
+		"color=5,lit=false": {
+			"model": "ballisticmissiles:block/neon_sign_5_off"
+		}
+	}
+}

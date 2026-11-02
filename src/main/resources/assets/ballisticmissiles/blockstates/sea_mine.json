@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"waterlogged=false": {
+			"model": "ballisticmissiles:block/sea_mine"
+		},
+		"waterlogged=true": {
+			"model": "ballisticmissiles:block/sea_mine"
+		}
+	}
+}

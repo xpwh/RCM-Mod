@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"powered=false": {
+			"model": "ballisticmissiles:block/radar"
+		},
+		"powered=true": {
+			"model": "ballisticmissiles:block/radar_alert"
+		}
+	}
+}

@@ -1,0 +1,74 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "ballisticmissiles:block/fuel_drum",
+		"s": "ballisticmissiles:block/fuel_drum",
+		"t": "ballisticmissiles:block/fuel_drum_top"
+	},
+	"elements": [
+		{
+			"from": [
+				2,
+				0,
+				3
+			],
+			"to": [
+				14,
+				15,
+				13
+			],
+			"faces": {
+				"north": {
+					"texture": "#s"
+				},
+				"south": {
+					"texture": "#s"
+				},
+				"east": {
+					"texture": "#s"
+				},
+				"west": {
+					"texture": "#s"
+				},
+				"up": {
+					"texture": "#t"
+				},
+				"down": {
+					"texture": "#t"
+				}
+			}
+		},
+		{
+			"from": [
+				3,
+				0,
+				2
+			],
+			"to": [
+				13,
+				15,
+				14
+			],
+			"faces": {
+				"north": {
+					"texture": "#s"
+				},
+				"south": {
+					"texture": "#s"
+				},
+				"east": {
+					"texture": "#s"
+				},
+				"west": {
+					"texture": "#s"
+				},
+				"up": {
+					"texture": "#t"
+				},
+				"down": {
+					"texture": "#t"
+				}
+			}
+		}
+	]
+}

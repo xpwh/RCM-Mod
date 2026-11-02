@@ -1,0 +1,42 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "ballisticmissiles:block/card_reader_side",
+		"front": "ballisticmissiles:block/card_reader",
+		"side": "ballisticmissiles:block/card_reader_side"
+	},
+	"elements": [
+		{
+			"from": [
+				5,
+				3,
+				5
+			],
+			"to": [
+				11,
+				13,
+				11
+			],
+			"faces": {
+				"north": {
+					"texture": "#front"
+				},
+				"south": {
+					"texture": "#front"
+				},
+				"east": {
+					"texture": "#side"
+				},
+				"west": {
+					"texture": "#side"
+				},
+				"up": {
+					"texture": "#side"
+				},
+				"down": {
+					"texture": "#side"
+				}
+			}
+		}
+	]
+}

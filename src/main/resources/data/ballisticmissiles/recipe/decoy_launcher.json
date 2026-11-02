@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"FFF",
+		"GRG",
+		"III"
+	],
+	"key": {
+		"F": "minecraft:firework_rocket",
+		"G": "minecraft:gunpowder",
+		"R": "minecraft:redstone",
+		"I": "minecraft:iron_ingot"
+	},
+	"result": {
+		"id": "ballisticmissiles:decoy_launcher",
+		"count": 1
+	}
+}
