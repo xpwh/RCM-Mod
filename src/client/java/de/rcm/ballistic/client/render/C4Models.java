@@ -133,18 +133,20 @@ public final class C4Models {
 	// ------------------------------------------------------------------ in the hand
 
 	/** The charge as an item: lying in the hand, its receiver up. */
-	public static final class ChargeItem implements SpecialModelRenderer<Void> {
+	public static final class ChargeItem implements SpecialModelRenderer<ItemStack> {
 		@Override
-		public void submit(Void state, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil,
+		public void submit(ItemStack stack, ItemDisplayContext context, PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay, boolean foil,
 			int outline) {
 			poseStack.pushPose();
 			poseStack.translate(0.5F, 0.5F, 0.5F);
-			boolean flat = context == ItemDisplayContext.GUI || context == ItemDisplayContext.GROUND || context == ItemDisplayContext.FIXED;
-			if (!flat) {
-				poseStack.translate(C4Client.CHARGE_AT.x, C4Client.CHARGE_AT.y, C4Client.CHARGE_AT.z);
+			if (context == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || context == ItemDisplayContext.FIRST_PERSON_LEFT_HAND) {
+				// across both hands, tipped up at you (C4Motion), or turned onto the wall while placing it
+				poseStack.mulPose(de.rcm.ballistic.client.gun.C4Motion.chargeModel(C4Client.placing(stack)));
+			} else if (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND) {
+				// carried like a brick, the long side forward
+				poseStack.translate(0.0F, -0.04F, -0.04F);
+				poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
 			}
-			// the long side forward, the receiver up
-			poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
 			CHARGE.submit("charge", poseStack, collector, light);
 			poseStack.popPose();
 		}
@@ -156,8 +158,8 @@ public final class C4Models {
 		}
 
 		@Override
-		public Void extractArgument(ItemStack stack) {
-			return null;
+		public ItemStack extractArgument(ItemStack stack) {
+			return stack;
 		}
 
 		public record Unbaked() implements SpecialModelRenderer.Unbaked {
@@ -184,6 +186,9 @@ public final class C4Models {
 			poseStack.pushPose();
 			poseStack.translate(0.5F, 0.5F, 0.5F);
 			boolean flat = context == ItemDisplayContext.GUI || context == ItemDisplayContext.GROUND || context == ItemDisplayContext.FIXED;
+			if (context == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || context == ItemDisplayContext.FIRST_PERSON_LEFT_HAND) {
+				poseStack.mulPose(de.rcm.ballistic.client.gun.C4Motion.deviceModel());
+			}
 			DETONATOR.submit("body", poseStack, collector, light);
 			poseStack.pushPose();
 			poseStack.translate(COVER_HINGE.x, COVER_HINGE.y, COVER_HINGE.z);

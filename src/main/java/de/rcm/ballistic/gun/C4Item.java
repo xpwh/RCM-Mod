@@ -29,8 +29,10 @@ import org.jspecify.annotations.Nullable;
  * Set it off with the firing device (C4DetonatorItem).
  */
 public class C4Item extends Item {
-	/** Ticks of pressing it on. */
-	public static final int PLACE_TICKS = 16;
+	/** Ticks of pressing it on: brought to the wall, pushed on, taped, the code keyed in (C4Motion draws it). */
+	public static final int PLACE_TICKS = 30;
+	private static final int T_SLAP = 7;
+	private static final int[] T_KEYS = {19, 22, 24};
 
 	public C4Item(Properties properties) {
 		super(properties);
@@ -56,10 +58,19 @@ public class C4Item extends Item {
 	@Override
 	public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remaining) {
 		int t = this.getUseDuration(stack, entity) - remaining;
-		if (t == 5 && !level.isClientSide()) {
-			// the block meets the wall
+		if (level.isClientSide()) {
+			return;
+		}
+		if (t == T_SLAP) {
+			// the block meets the wall, the tape torn and pressed down
 			level.playSound(null, entity.getX(), entity.getEyeY(), entity.getZ(), ModRegistry.C4_PLACE, SoundSource.PLAYERS, 0.8F,
 				0.95F + level.getRandom().nextFloat() * 0.1F);
+		}
+		for (int k : T_KEYS) {
+			if (t == k) {
+				// a digit keyed in on the receiver
+				level.playSound(null, entity.getX(), entity.getEyeY(), entity.getZ(), ModRegistry.C4_BEEP, SoundSource.PLAYERS, 0.45F, 1.5F);
+			}
 		}
 	}
 

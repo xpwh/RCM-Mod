@@ -26,7 +26,7 @@ import net.minecraft.world.level.Level;
  */
 public class C4DetonatorItem extends Item {
 	/** Ticks from the click to the signal going out: the cover flicked up, the button pressed (C4Client draws it). */
-	public static final int FIRE_TICKS = 7;
+	public static final int FIRE_TICKS = 10;
 	public static final int COOLDOWN = 18;
 
 	public C4DetonatorItem(Properties properties) {
@@ -49,7 +49,7 @@ public class C4DetonatorItem extends Item {
 		}
 		player.getCooldowns().addCooldown(stack, player.isShiftKeyDown() ? 6 : COOLDOWN);
 		if (!(level instanceof ServerLevel server) || !(player instanceof ServerPlayer sp)) {
-			return InteractionResult.SUCCESS;
+			return InteractionResult.CONSUME;
 		}
 		List<C4ChargeEntity> charges = C4ChargeEntity.charges(sp);
 		if (player.isShiftKeyDown()) {
@@ -61,15 +61,19 @@ public class C4DetonatorItem extends Item {
 			stack.set(ModRegistry.DETONATOR_MODE, next);
 			server.playSound(null, player.getX(), player.getEyeY(), player.getZ(), ModRegistry.C4_SWITCH, SoundSource.PLAYERS, 0.6F, 1.2F);
 			player.displayClientMessage(describe(next, charges.size()), true);
-			return InteractionResult.SUCCESS;
+			return InteractionResult.CONSUME;
 		}
-		server.playSound(null, player.getX(), player.getEyeY(), player.getZ(), ModRegistry.C4_SWITCH, SoundSource.PLAYERS, 0.7F, 0.85F);
+		// the hand brings it up, the thumb throws the switch to ARMED, flips the cover up, presses FIRE (C4Motion)
+		DetonationManager.later(server, 3, () -> server.playSound(null, player.getX(), player.getEyeY(), player.getZ(), ModRegistry.C4_SWITCH,
+			SoundSource.PLAYERS, 0.75F, 1.0F));
+		DetonationManager.later(server, 5, () -> server.playSound(null, player.getX(), player.getEyeY(), player.getZ(), ModRegistry.C4_SWITCH,
+			SoundSource.PLAYERS, 0.7F, 0.8F));
 		int mode = mode(stack);
 		DetonationManager.later(server, FIRE_TICKS - 1, () -> {
 			server.playSound(null, player.getX(), player.getEyeY(), player.getZ(), ModRegistry.C4_CLICK, SoundSource.PLAYERS, 0.8F, 1.0F);
 			fire(server, sp, mode);
 		});
-		return InteractionResult.SUCCESS;
+		return InteractionResult.CONSUME;
 	}
 
 	/** FIRE pressed with the selector at {@code mode}: the signal goes out to the charges. */
