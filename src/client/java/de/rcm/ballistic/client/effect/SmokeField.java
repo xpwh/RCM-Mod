@@ -214,6 +214,7 @@ public final class SmokeField {
 
 	public static void clear() {
 		count = 0;
+		de.rcm.ballistic.client.particle.CloudParticle.forgetAll();
 		TRAILS.clear();
 		fog = 0.0F;
 	}
@@ -272,6 +273,7 @@ public final class SmokeField {
 		}
 		clock++;
 		long gameTime = mc.level.getGameTime();
+		de.rcm.ballistic.client.particle.CloudParticle.live(gameTime, true);
 		Vec3 cam = mc.gameRenderer.getMainCamera().position();
 		// wind sampled once per 8-block height band this tick
 		int bandMin = mc.level.getMinY() - 64;
@@ -442,7 +444,12 @@ public final class SmokeField {
 
 	public static void render(WorldRenderContext context) {
 		Minecraft mc = Minecraft.getInstance();
-		if (count == 0 || mc.level == null) {
+		if (mc.level == null) {
+			return;
+		}
+		// in the voxel and pixel-art styles the explosions' clouds are drawn here too, not by the particle engine
+		boolean clouds = de.rcm.ballistic.client.particle.CloudParticle.styled() && !de.rcm.ballistic.client.particle.CloudParticle.live(0L, false).isEmpty();
+		if (count == 0 && !clouds) {
 			return;
 		}
 		Camera camera = mc.gameRenderer.getMainCamera();
@@ -484,6 +491,12 @@ public final class SmokeField {
 			return;
 		}
 		voxelsBuilt = -1L;
+		if (clouds) {
+			cloudPixels(context, cam, fwd, right, up, partial);
+		}
+		if (count == 0) {
+			return;
+		}
 
 		// back to front
 		int n = 0;
@@ -558,7 +571,22 @@ public final class SmokeField {
 	 * each puff's ball as big as its smoke is thick - thinning smoke does not fade, it shrinks and crumbles.
 	 */
 	private static void buildVoxels(Vec3 cam, float day) {
+		java.util.List<de.rcm.ballistic.client.particle.CloudParticle> clouds = de.rcm.ballistic.client.particle.CloudParticle.live(0L, false);
+		if (voxelOrder.length < count + clouds.size()) {
+			voxelOrder = new long[count + clouds.size() + 1024];
+		}
 		int n = 0;
+		// the explosions' clouds, numbered after the puffs
+		for (int c = 0; c < clouds.size(); c++) {
+			de.rcm.ballistic.client.particle.CloudParticle p = clouds.get(c);
+			double dx = p.x(1.0F) - cam.x;
+			double dy = p.y(1.0F) - cam.y;
+			double dz = p.z(1.0F) - cam.z;
+			double d2 = dx * dx + dy * dy + dz * dz;
+			if (d2 < MAX_DISTANCE * MAX_DISTANCE && p.opacity() >= 0.03F) {
+				voxelOrder[n++] = (long) Float.floatToIntBits((float) d2) << 32 | (CAP + c);
+			}
+		}
 		for (int i = 0; i < count; i++) {
 			double dx = X[i] - cam.x;
 			double dy = Y[i] - cam.y;
@@ -573,6 +601,17 @@ public final class SmokeField {
 		SmokeVoxels.begin(cam);
 		for (int k = 0; k < n && !SmokeVoxels.full(); k++) {
 			int i = (int) voxelOrder[k];
+			double distance = Math.sqrt(Float.intBitsToFloat((int) (voxelOrder[k] >>> 32)));
+			if (i >= CAP) {
+				// a cloud of an explosion: in its own light (dark at night, in a cave), or burning by itself
+				de.rcm.ballistic.client.particle.CloudParticle p = clouds.get(i - CAP);
+				float a = p.opacity();
+				float filled = p.getQuadSize(1.0F) * 0.7F * (0.3F + 0.7F * (float) Math.sqrt(Math.min(1.0F, a * 1.4F)));
+				boolean burning = p.burning();
+				SmokeVoxels.add(p.x(1.0F), p.y(1.0F), p.z(1.0F), filled, p.rgb(), 0.0F, distance,
+					burning ? net.minecraft.client.renderer.LightTexture.FULL_BRIGHT : p.light(1.0F), burning);
+				continue;
+			}
 			float age = clock - BORN[i];
 			float t = Math.min(1.0F, age / LIFE[i]);
 			float a = opacity(i, t, age) * VEIL[i];
@@ -592,9 +631,62 @@ public final class SmokeField {
 			int lit = (int) (Mth.clamp(cr, 0.0F, 1.0F) * 255.0F) << 16 | (int) (Mth.clamp(cg, 0.0F, 1.0F) * 255.0F) << 8
 				| (int) (Mth.clamp(cb, 0.0F, 1.0F) * 255.0F);
 			float hot = GLOW[i] * Mth.clamp(1.0F - age / 6.0F, 0.0F, 1.0F);
-			SmokeVoxels.add(X[i], Y[i], Z[i], filled, lit, hot, Math.sqrt(Float.intBitsToFloat((int) (voxelOrder[k] >>> 32))));
+			SmokeVoxels.add(X[i], Y[i], Z[i], filled, lit, hot, distance);
 		}
 		SmokeVoxels.finish();
+	}
+
+	/**
+	 * The explosions' clouds as pixel-art puffs ("Voxel 2"), like the trails: square to the screen, cut out, in their
+	 * own light (fire glowing by itself), crumbling pixel by pixel as they thin.
+	 */
+	private static void cloudPixels(WorldRenderContext context, Vec3 cam, Vector3f fwd, Vector3f right, Vector3f up, float partial) {
+		PoseStack.Pose pose = context.matrices().last();
+		VertexConsumer consumer = context.consumers().getBuffer(PIXEL_TYPE);
+		for (de.rcm.ballistic.client.particle.CloudParticle p : de.rcm.ballistic.client.particle.CloudParticle.live(0L, false)) {
+			float a = p.opacity();
+			if (a < 0.01F) {
+				continue;
+			}
+			float size = p.getQuadSize(partial);
+			float px = (float) (p.x(partial) - cam.x);
+			float py = (float) (p.y(partial) - cam.y);
+			float pz = (float) (p.z(partial) - cam.z);
+			if (px * fwd.x + py * fwd.y + pz * fwd.z < -size) {
+				continue;
+			}
+			float dist = (float) Math.sqrt(px * px + py * py + pz * pz);
+			if (dist < size * 1.1F) {
+				// inside it: the screen's smoke haze takes over
+				a *= Mth.clamp((dist - size * 0.4F) / (size * 0.7F), 0.0F, 1.0F);
+				if (a < 0.01F) {
+					continue;
+				}
+			}
+			int argb = (int) (Mth.clamp(a * 1.8F, 0.0F, 1.0F) * 255.0F) << 24 | p.rgb();
+			int light = p.burning() ? LightTexture.FULL_BRIGHT : p.light(partial);
+			float u0 = (p.variant() & 7) * 0.125F;
+			float u1 = u0 + 0.125F;
+			float k = size * 0.85F;
+			float rx = right.x * k;
+			float ry = right.y * k;
+			float rz = right.z * k;
+			float ux = up.x * k;
+			float uy = up.y * k;
+			float uz = up.z * k;
+			lit(consumer, pose, px - rx - ux, py - ry - uy, pz - rz - uz, u0, 1.0F, argb, light);
+			lit(consumer, pose, px + rx - ux, py + ry - uy, pz + rz - uz, u1, 1.0F, argb, light);
+			lit(consumer, pose, px + rx + ux, py + ry + uy, pz + rz + uz, u1, 0.0F, argb, light);
+			lit(consumer, pose, px - rx + ux, py - ry + uy, pz - rz + uz, u0, 0.0F, argb, light);
+		}
+		if (context.consumers() instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers) {
+			buffers.endBatch(PIXEL_TYPE);
+		}
+	}
+
+	private static void lit(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float z, float u, float v, int argb, int light) {
+		consumer.addVertex(pose, x, y, z).setColor(argb).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F,
+			0.0F);
 	}
 
 	/** Marks a puff in the sort order as raymarched (the order holds the index in its low bits). */

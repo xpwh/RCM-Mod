@@ -1,10 +1,14 @@
 package de.rcm.ballistic.client.particle;
 
+import java.util.ArrayList;
+import java.util.List;
+import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.client.renderer.state.QuadParticleRenderState;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -27,6 +31,14 @@ public class CloudParticle extends SingleQuadParticle {
 	public static final int STAGES = 4;
 	public static final int SMOKE_SHAPES = 8;
 	public static final int FIRE_SHAPES = 4;
+
+	/**
+	 * Every cloud alive, for the voxel and pixel-art smoke styles, which draw them themselves (as cubes or as flat
+	 * pixel puffs) instead of the particle engine. A cloud the engine dropped without removing it (over its limit,
+	 * a new world) stops ticking and is let go a few ticks later.
+	 */
+	private static final List<CloudParticle> LIVE = new ArrayList<>();
+	private long seen;
 
 	/** Smoke sprites, so fire particles can turn into smoke. Set when the smoke provider is created. */
 	private static @Nullable SpriteSet smokeSprites;
@@ -93,6 +105,71 @@ public class CloudParticle extends SingleQuadParticle {
 		}
 		this.oRoll = this.roll;
 		this.updateSprite();
+		this.seen = level.getGameTime();
+		LIVE.add(this);
+	}
+
+	// ------------------------------------------------------------------ the voxel / pixel-art smoke styles
+
+	/** Whether clouds are drawn by the smoke field as voxels or pixel art instead of as soft sprites. */
+	public static boolean styled() {
+		de.rcm.ballistic.client.ModConfig.SmokeStyle s = de.rcm.ballistic.client.ModConfig.smokeStyle;
+		return s == de.rcm.ballistic.client.ModConfig.SmokeStyle.VOXEL || s == de.rcm.ballistic.client.ModConfig.SmokeStyle.PIXEL;
+	}
+
+	/** The clouds alive now (call once a tick to let go of the dead ones). */
+	public static List<CloudParticle> live(long gameTime, boolean prune) {
+		if (prune) {
+			LIVE.removeIf(p -> !p.isAlive() || gameTime - p.seen > 3 || p.level != net.minecraft.client.Minecraft.getInstance().level);
+		}
+		return LIVE;
+	}
+
+	public static void forgetAll() {
+		LIVE.clear();
+	}
+
+	public double x(float partial) {
+		return Mth.lerp(partial, this.xo, this.x);
+	}
+
+	public double y(float partial) {
+		return Mth.lerp(partial, this.yo, this.y);
+	}
+
+	public double z(float partial) {
+		return Mth.lerp(partial, this.zo, this.z);
+	}
+
+	/** How thick it is now, 0-1. */
+	public float opacity() {
+		return this.alpha;
+	}
+
+	public int rgb() {
+		return (int) (Mth.clamp(this.rCol, 0.0F, 1.0F) * 255.0F) << 16 | (int) (Mth.clamp(this.gCol, 0.0F, 1.0F) * 255.0F) << 8
+			| (int) (Mth.clamp(this.bCol, 0.0F, 1.0F) * 255.0F);
+	}
+
+	/** Still burning: glows by itself. */
+	public boolean burning() {
+		return this.emissive;
+	}
+
+	public int light(float partial) {
+		return this.getLightColor(partial);
+	}
+
+	public int variant() {
+		return this.shape;
+	}
+
+	@Override
+	public void extract(QuadParticleRenderState state, Camera camera, float partial) {
+		if (styled()) {
+			return; // drawn by the smoke field (SmokeField / SmokeVoxels)
+		}
+		super.extract(state, camera, partial);
 	}
 
 	// ------------------------------------------------------------------ fluent setup
@@ -212,6 +289,7 @@ public class CloudParticle extends SingleQuadParticle {
 
 	@Override
 	public void tick() {
+		this.seen = this.level.getGameTime();
 		this.xo = this.x;
 		this.yo = this.y;
 		this.zo = this.z;

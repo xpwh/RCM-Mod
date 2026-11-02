@@ -1,8 +1,15 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.6.0** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.7.0** (01.11.2026).
 
 ---
+
+### 13.7.0 – Voxel-Stile auch für Explosionen
+- „Voxel“ und „Voxel 2“ gelten jetzt für jeden Rauch und jedes Feuer der Mod, nicht nur für Raketen- und Jet-Spuren: Feuerbälle, Explosionswolken, Atompilze, Staub vom Boden, Brandrauch und Flammen.
+- Voxel: Feuerbälle aus selbst leuchtenden Würfeln (nicht schattiert, auch nachts hell), die beim Abkühlen zu dunklem Würfelrauch werden; Explosionsrauch, Pilz und Staub als kantige Würfelwolken, die sich mit den Rauchspuren ein Raster teilen.
+- Voxel 2: dieselben Wolken als flache Pixel-Art-Wölkchen, Feuer leuchtend orange-gelb, Rauch zerfällt Pixel für Pixel.
+- Explosionsrauch nimmt das Licht der Welt an: nachts und in Höhlen dunkel, neben Feuer heller.
+- In „Volumetrisch“ und „Klassisch“ bleibt alles wie bisher.
 
 ### 13.6.0 – Voxel 2: Pixel-Art-Rauch
 - Vierte Rauch-Darstellung **Voxel 2** (Einstellungen → Effekte → Rauch-Darstellung): flacher Pixel-Art-Rauch wie Minecrafts eigene Partikel statt 3D-Würfeln.

@@ -40,6 +40,12 @@ public final class SmokeVoxels {
 	private static int[] rgb = new int[4096];
 	private static float[] hot = new float[4096];
 	private static float[] shade = new float[4096];
+	/** The light on each cube (packed lightmap, as for blocks), and whether it burns (glows by itself). */
+	private static int[] light = new int[4096];
+	private static boolean[] burns = new boolean[4096];
+	// what the puff being added brings with it
+	private static int addLight = LightTexture.FULL_BRIGHT;
+	private static boolean addBurns;
 	private static int count;
 	private static double ox;
 	private static double oy;
@@ -88,6 +94,8 @@ public final class SmokeVoxels {
 		rgb = java.util.Arrays.copyOf(rgb, n);
 		hot = java.util.Arrays.copyOf(hot, n);
 		shade = java.util.Arrays.copyOf(shade, n);
+		light = java.util.Arrays.copyOf(light, n);
+		burns = java.util.Arrays.copyOf(burns, n);
 	}
 
 	/**
@@ -95,6 +103,20 @@ public final class SmokeVoxels {
 	 * (0-1), how far it is from the camera.
 	 */
 	public static void add(double x, double y, double z, float radius, int colour, float glow, double distance) {
+		add(x, y, z, radius, colour, glow, distance, LightTexture.FULL_BRIGHT, false);
+	}
+
+	/**
+	 * A puff in the world's own light ({@code packedLight}, its colour unlit), or one that is fire and glows by itself
+	 * ({@code burning}: its colour as it is, unshaded).
+	 */
+	public static void add(double x, double y, double z, float radius, int colour, float glow, double distance, int packedLight, boolean burning) {
+		addLight = packedLight;
+		addBurns = burning;
+		addCells(x, y, z, radius, colour, glow, distance);
+	}
+
+	private static void addCells(double x, double y, double z, float radius, int colour, float glow, double distance) {
 		if (radius < 0.03F) {
 			return;
 		}
@@ -170,6 +192,8 @@ public final class SmokeVoxels {
 		level[count] = (byte) l;
 		rgb[count] = colour;
 		hot[count] = glow;
+		light[count] = addLight;
+		burns[count] = addBurns;
 		CELLS.put(key, count);
 		count++;
 		return true;
@@ -233,9 +257,10 @@ public final class SmokeVoxels {
 				continue;
 			}
 			int c = rgb[n];
-			float r = (c >> 16 & 255) / 255.0F * shade[n];
-			float g = (c >> 8 & 255) / 255.0F * shade[n];
-			float b = (c & 255) / 255.0F * shade[n];
+			float sh = burns[n] ? 1.0F : shade[n];
+			float r = (c >> 16 & 255) / 255.0F * sh;
+			float g = (c >> 8 & 255) / 255.0F * sh;
+			float b = (c & 255) / 255.0F * sh;
 			float glow = hot[n];
 			for (int f = 0; f < 6; f++) {
 				int[] d = STEP[f];
@@ -251,7 +276,7 @@ public final class SmokeVoxels {
 				if (!towards || CELLS.containsKey(key(l, ix[n] + d[0], iy[n] + d[1], iz[n] + d[2]))) {
 					continue;
 				}
-				float k = faceShade[f];
+				float k = burns[n] ? 0.86F + 0.14F * faceShade[f] / 1.05F : faceShade[f];
 				float fr = r * k;
 				float fg = g * k;
 				float fb = b * k;
@@ -267,7 +292,7 @@ public final class SmokeVoxels {
 				for (int v = 0; v < 4; v++) {
 					float[] p = corners[v];
 					consumer.addVertex(pose, x0 + p[0] * s, y0 + p[1] * s, z0 + p[2] * s).setColor(argb).setUv(UV[v][0], UV[v][1])
-						.setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(pose, 0.0F, 1.0F, 0.0F);
+						.setOverlay(OverlayTexture.NO_OVERLAY).setLight(burns[n] ? LightTexture.FULL_BRIGHT : light[n]).setNormal(pose, 0.0F, 1.0F, 0.0F);
 				}
 			}
 		}
