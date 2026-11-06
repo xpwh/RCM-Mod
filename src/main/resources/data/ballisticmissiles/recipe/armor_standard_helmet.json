@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		"XYX",
+		"X X"
+	],
+	"key": {
+		"X": "minecraft:iron_ingot",
+		"Y": "minecraft:leather"
+	},
+	"result": {
+		"id": "ballisticmissiles:armor_standard_helmet",
+		"count": 1
+	}
+}

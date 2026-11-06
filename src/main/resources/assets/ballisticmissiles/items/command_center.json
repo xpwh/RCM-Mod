@@ -1,0 +1,6 @@
+{
+	"model": {
+		"type": "minecraft:model",
+		"model": "ballisticmissiles:block/command_center"
+	}
+}

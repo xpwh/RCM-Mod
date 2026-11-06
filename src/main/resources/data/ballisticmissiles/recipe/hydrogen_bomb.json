@@ -1,0 +1,21 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"NSN",
+		"DMD",
+		"BFB"
+	],
+	"key": {
+		"N": "minecraft:nether_star",
+		"S": "minecraft:heavy_core",
+		"D": "minecraft:diamond_block",
+		"M": "ballisticmissiles:nuclear_missile",
+		"B": "minecraft:netherite_block",
+		"F": "minecraft:firework_rocket"
+	},
+	"result": {
+		"id": "ballisticmissiles:hydrogen_bomb",
+		"count": 1
+	}
+}

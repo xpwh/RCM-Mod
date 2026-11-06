@@ -1,0 +1,7 @@
+{
+	"type": "ballisticmissiles:city",
+	"biomes": "#ballisticmissiles:has_structure/city",
+	"step": "top_layer_modification",
+	"terrain_adaptation": "beard_thin",
+	"spawn_overrides": {}
+}

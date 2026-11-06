@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/orientable",
+	"textures": {
+		"front": "ballisticmissiles:block/car_headlight_off",
+		"side": "ballisticmissiles:block/car_headlight_side",
+		"top": "ballisticmissiles:block/car_headlight_side"
+	}
+}

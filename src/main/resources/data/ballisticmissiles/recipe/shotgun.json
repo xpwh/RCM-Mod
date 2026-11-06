@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"I  ",
+		" IW",
+		"  W"
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"W": "minecraft:oak_planks"
+	},
+	"result": {
+		"id": "ballisticmissiles:shotgun",
+		"count": 1
+	}
+}

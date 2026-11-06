@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		" O ",
+		"OMO",
+		" A "
+	],
+	"key": {
+		"O": "minecraft:obsidian",
+		"M": "ballisticmissiles:ballistic_missile",
+		"A": "minecraft:anvil"
+	},
+	"result": {
+		"id": "ballisticmissiles:bunker_buster",
+		"count": 1
+	}
+}

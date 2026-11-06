@@ -1,0 +1,12 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "combat",
+	"ingredients": [
+		"ballisticmissiles:ak_magazine",
+		"minecraft:glowstone_dust"
+	],
+	"result": {
+		"id": "ballisticmissiles:ak_magazine_tracer",
+		"count": 1
+	}
+}

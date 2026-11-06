@@ -1,0 +1,73 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "ballisticmissiles:block/landmine",
+		"mine": "ballisticmissiles:block/landmine"
+	},
+	"elements": [
+		{
+			"from": [
+				4,
+				0,
+				4
+			],
+			"to": [
+				12,
+				1,
+				12
+			],
+			"faces": {
+				"north": {
+					"texture": "#mine"
+				},
+				"south": {
+					"texture": "#mine"
+				},
+				"east": {
+					"texture": "#mine"
+				},
+				"west": {
+					"texture": "#mine"
+				},
+				"up": {
+					"texture": "#mine"
+				},
+				"down": {
+					"texture": "#mine"
+				}
+			}
+		},
+		{
+			"from": [
+				7,
+				1,
+				7
+			],
+			"to": [
+				9,
+				1.6,
+				9
+			],
+			"faces": {
+				"north": {
+					"texture": "#mine"
+				},
+				"south": {
+					"texture": "#mine"
+				},
+				"east": {
+					"texture": "#mine"
+				},
+				"west": {
+					"texture": "#mine"
+				},
+				"up": {
+					"texture": "#mine"
+				},
+				"down": {
+					"texture": "#mine"
+				}
+			}
+		}
+	]
+}
