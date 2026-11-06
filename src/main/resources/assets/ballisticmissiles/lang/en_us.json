@@ -1178,7 +1178,7 @@
 	"options.ballisticmissiles.nature.gewittervorhersage": "Storm forecast",
 	"options.ballisticmissiles.nature.gewittervorhersage.tooltip": "Thunderstorms show on the horizon minutes ahead.",
 	"item.ballisticmissiles.c4": "C4 Charge",
-	"item.ballisticmissiles.c4.tooltip": "Hold right-click: stick it to a wall, floor or ceiling. Set it off with the firing device. Right-click it with an empty hand to take it off again.",
+	"item.ballisticmissiles.c4.tooltip": "Hold right-click: stick it to a wall, floor or ceiling - or to a mob, a player, a vehicle, a helicopter or a jet, and it rides along. Set it off with the firing device. Right-click it with an empty hand to take it off again.",
 	"item.ballisticmissiles.c4_detonator": "C4 Firing Device",
 	"item.ballisticmissiles.c4_detonator.tooltip": "Right-click: fire. Sneak + right-click: choose all charges or a single one. Range 400 blocks; jammers block the signal.",
 	"item.ballisticmissiles.c4_detonator.all": "Fires: all charges",

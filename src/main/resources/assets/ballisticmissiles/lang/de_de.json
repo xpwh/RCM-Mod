@@ -1178,7 +1178,7 @@
 	"options.ballisticmissiles.nature.gewittervorhersage": "Gewitter-Vorhersage",
 	"options.ballisticmissiles.nature.gewittervorhersage.tooltip": "Gewitter kündigen sich Minuten vorher am Horizont an.",
 	"item.ballisticmissiles.c4": "C4-Sprengladung",
-	"item.ballisticmissiles.c4.tooltip": "Rechtsklick gedrückt halten: an Wand, Boden oder Decke anbringen. Zünden mit dem Fernzünder. Mit leerer Hand Rechtsklick: wieder abnehmen.",
+	"item.ballisticmissiles.c4.tooltip": "Rechtsklick gedrückt halten: an Wand, Boden oder Decke anbringen – oder an Mobs, Spieler, Fahrzeuge, Hubschrauber und Jets, dann fährt und fliegt sie mit. Zünden mit dem Fernzünder. Mit leerer Hand Rechtsklick: wieder abnehmen.",
 	"item.ballisticmissiles.c4_detonator": "C4-Fernzünder",
 	"item.ballisticmissiles.c4_detonator.tooltip": "Rechtsklick: zünden. Schleichen + Rechtsklick: alle Ladungen oder eine bestimmte wählen. Reichweite 400 Blöcke, Störsender blockieren das Signal.",
 	"item.ballisticmissiles.c4_detonator.all": "Zündet: alle Ladungen",

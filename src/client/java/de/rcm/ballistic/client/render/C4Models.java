@@ -97,6 +97,9 @@ public final class C4Models {
 			public boolean triggered;
 			public int age;
 			public int seed;
+			/** On a host: its turn in the world (it is drawn where the host is this frame), else null. */
+			public Quaternionf onHost;
+			public boolean hidden;
 		}
 
 		@Override
@@ -112,12 +115,37 @@ public final class C4Models {
 			state.triggered = entity.triggered();
 			state.age = entity.tickCount;
 			state.seed = entity.getId();
+			state.onHost = null;
+			state.hidden = false;
+			C4ChargeEntity.Pose pose = entity.onHost() ? entity.hostPose(partialTick) : null;
+			if (pose != null) {
+				state.x = pose.pos().x;
+				state.y = pose.pos().y;
+				state.z = pose.pos().z;
+				state.onHost = pose.rotation();
+				// on your own back in first person: out of the way of the camera
+				net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+				state.hidden = entity.host() == mc.getCameraEntity() && mc.options.getCameraType().isFirstPerson();
+			}
+		}
+
+		@Override
+		public boolean shouldRender(C4ChargeEntity entity, net.minecraft.client.renderer.culling.Frustum frustum, double x, double y, double z) {
+			// a jet carries it faster than its own box keeps up: drawn whenever it is near enough
+			return entity.onHost() ? entity.shouldRender(x, y, z) : super.shouldRender(entity, frustum, x, y, z);
 		}
 
 		@Override
 		public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+			if (state.hidden) {
+				return;
+			}
 			poseStack.pushPose();
-			orient(poseStack, state.face, state.spin);
+			if (state.onHost != null) {
+				poseStack.mulPose(state.onHost);
+			} else {
+				orient(poseStack, state.face, state.spin);
+			}
 			CHARGE.submit("charge", poseStack, collector, state.lightCoords);
 			// the LED: a short red blink every second, steady once the signal came
 			int phase = (state.age + state.seed * 7) % 20;

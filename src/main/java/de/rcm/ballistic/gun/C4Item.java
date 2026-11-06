@@ -26,7 +26,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * C4: a bundle of four M112 blocks with a radio receiver. Hold right-click on a wall, a floor or a ceiling: the hand
  * presses it on and smooths the tape down ({@value #PLACE_TICKS} ticks), it sticks there, armed, its LED blinking.
- * Set it off with the firing device (C4DetonatorItem).
+ * Set it off with the firing device (C4DetonatorItem). It sticks to things that move as well - a mob, a player, a truck,
+ * a helicopter or a jet (onto the fuselage itself) - and rides along with them (C4Mount).
  */
 public class C4Item extends Item {
 	/** Ticks of pressing it on: brought to the wall, pushed on, taped, the code keyed in (C4Motion draws it). */
@@ -46,9 +47,19 @@ public class C4Item extends Item {
 		return hit.getType() == HitResult.Type.BLOCK ? hit : null;
 	}
 
+	/** Something that moves, within reach and nearer than the block behind it, or null. */
+	public static C4Mount.@Nullable Spot targetEntity(Player player) {
+		BlockHitResult block = target(player);
+		double reach = player.entityInteractionRange();
+		if (block != null) {
+			reach = Math.min(reach, player.getEyePosition().distanceTo(block.getLocation()));
+		}
+		return C4Mount.aim(player, reach);
+	}
+
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		if (target(player) == null) {
+		if (target(player) == null && targetEntity(player) == null) {
 			return InteractionResult.PASS;
 		}
 		player.startUsingItem(hand);
@@ -79,20 +90,29 @@ public class C4Item extends Item {
 		if (!(entity instanceof Player player) || !(level instanceof ServerLevel server)) {
 			return stack;
 		}
-		BlockHitResult hit = target(player);
-		if (hit == null) {
-			return stack;
+		C4Mount.Spot spot = targetEntity(player);
+		C4ChargeEntity charge;
+		if (spot != null) {
+			charge = C4ChargeEntity.placeOn(server, spot, player);
+		} else {
+			BlockHitResult hit = target(player);
+			if (hit == null) {
+				return stack;
+			}
+			Direction face = hit.getDirection();
+			// on a floor or a ceiling it lies across the way you look; on a wall, level
+			float spin = face.getAxis() == Direction.Axis.Y ? player.getYRot() : 0.0F;
+			charge = C4ChargeEntity.place(server, hit.getLocation(), face, spin, player);
 		}
-		Direction face = hit.getDirection();
-		// on a floor or a ceiling it lies across the way you look; on a wall, level
-		float spin = face.getAxis() == Direction.Axis.Y ? player.getYRot() : 0.0F;
-		C4ChargeEntity.place(server, hit.getLocation(), face, spin, player);
-		// armed: the receiver's two beeps
-		server.playSound(null, hit.getLocation().x, hit.getLocation().y, hit.getLocation().z, ModRegistry.C4_SWITCH, SoundSource.PLAYERS, 0.6F, 1.1F);
-		de.rcm.ballistic.explosion.DetonationManager.later(server, 5, () -> server.playSound(null, hit.getLocation().x, hit.getLocation().y,
-			hit.getLocation().z, ModRegistry.C4_BEEP, SoundSource.BLOCKS, 0.5F, 1.2F));
-		de.rcm.ballistic.explosion.DetonationManager.later(server, 9, () -> server.playSound(null, hit.getLocation().x, hit.getLocation().y,
-			hit.getLocation().z, ModRegistry.C4_BEEP, SoundSource.BLOCKS, 0.5F, 1.2F));
+		// armed: the receiver's two beeps (from the charge, wherever it has gone by then)
+		server.playSound(null, charge.getX(), charge.getY(), charge.getZ(), ModRegistry.C4_SWITCH, SoundSource.PLAYERS, 0.6F, 1.1F);
+		for (int delay : new int[] {5, 9}) {
+			de.rcm.ballistic.explosion.DetonationManager.later(server, delay, () -> {
+				if (!charge.isRemoved()) {
+					server.playSound(null, charge.getX(), charge.getY(), charge.getZ(), ModRegistry.C4_BEEP, SoundSource.BLOCKS, 0.5F, 1.2F);
+				}
+			});
+		}
 		if (!player.getAbilities().instabuild) {
 			stack.shrink(1);
 		}

@@ -1,8 +1,15 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.9.3** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.10.0** (06.11.2026).
 
 ---
+
+### 13.10.0 – C4 auf Fahrzeugen und Mobs
+- C4 lässt sich jetzt auch an alles kleben, was sich bewegt: Mobs, Spieler, Soldaten, den Raketen-Lkw, FPV-Drohnen, Raketen auf der Startrampe, Hubschrauber und Jets. Die Ladung fährt, läuft und fliegt mit und dreht sich mit dem Träger (auch Neigung und Schräglage bei Jets).
+- Bei Flugzeugen und Hubschraubern sitzt sie auf dem Rumpf selbst, flach auf dem Blech, längs zum Rumpf ausgerichtet, nicht in der Luft neben dem Modell. Dafür kennt die Mod die Rumpfformen von F-22, F-35, Strike-Jet, A-10, B-2, Gunship, Apache und Reaper.
+- Mit C4 in der Hand löst ein Rechtsklick auf einen Jet, ein Pferd oder einen Dorfbewohner nicht mehr Einsteigen oder Handeln aus, sondern bringt die Ladung an.
+- Geht die Ladung hoch, trifft fast die ganze Wucht den Träger. Stirbt der Träger vorher oder verschwindet er, fällt die Ladung als Item herunter. Der Platz auf dem Träger bleibt auch nach dem Speichern erhalten.
+- Auf dem eigenen Körper ist die Ladung in der Ego-Ansicht ausgeblendet.
 
 ### 13.9.3 – C4-Explosion passt sich der Umgebung an
 - Die C4-Explosion tastet vorher ihre Umgebung ab: Wo ist die Wand, wo die offene Luft, wie weit ist der Boden darunter, woraus besteht die Wand.

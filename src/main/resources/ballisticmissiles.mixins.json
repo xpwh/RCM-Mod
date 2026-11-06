@@ -17,7 +17,8 @@
 		"VehicleMoveMixin",
 		"StructureTreesMixin",
 		"LightningTargetMixin",
-		"SignBlockEntityAccessor"
+		"SignBlockEntityAccessor",
+		"C4InteractMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
