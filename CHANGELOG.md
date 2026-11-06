@@ -1,8 +1,13 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.9.2** (01.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.9.3** (01.11.2026).
 
 ---
+
+### 13.9.3 – C4-Explosion passt sich der Umgebung an
+- Die C4-Explosion tastet vorher ihre Umgebung ab: Wo ist die Wand, wo die offene Luft, wie weit ist der Boden darunter, woraus besteht die Wand.
+- An einer Hauswand oder hoch an einem Hochhaus: Feuerball und Rauch schießen aus der Wand heraus ins Freie, dazu ein Strahl aus Staub in der Farbe der Wand (Beton grau, Ziegel rötlich, Holz braun) und Brocken des Wandmaterials, die herunterfallen. Staub rieselt eine Weile an der Wand herunter, der Rauch steigt vom Loch aus auf. Kein Staubring und keine Rauchsäule mehr am Boden darunter.
+- Nur wenn die Ladung am oder dicht über dem Boden hängt, fliegt Erde hoch, läuft der Staubring über den Boden und qualmt danach eine Grube. Gilt mit allen Rauch-Arten (Volumetrisch, Klassisch, Voxel, Voxel 2).
 
 ### 13.9.2 – Absturz beim Welt-Hosten behoben
 - Behoben: Beim Generieren der Grenzgräben (Militärbasen) stürzte die Weltgenerierung ab, weil die Warnschilder beschriftet wurden, bevor sie zur Welt gehörten („Feature placement“, NullPointerException). Danach hing das Spiel beim Speichern („Saving world“). Die Schilder werden jetzt direkt beschriftet, ohne Block-Update.

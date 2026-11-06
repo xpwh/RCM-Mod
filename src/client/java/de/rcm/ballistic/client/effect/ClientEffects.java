@@ -120,7 +120,7 @@ public final class ClientEffects {
 			case CLUSTER -> new BlastEffect(pos, 0.6);
 			case BOMBLET -> new BlastEffect(pos, 0.32);
 			case GRENADE -> new BlastEffect(pos, 0.45, true);
-			case C4 -> new BlastEffect(pos, 0.58, false, true);
+			case C4 -> new C4BlastEffect(pos);
 			case CLUSTER_RELEASE, MIRV_RELEASE -> new ReleaseEffect(pos);
 			case HYPERSONIC -> new BlastEffect(pos, 1.25);
 			case MIRV -> new NukeEffect(pos, 1.0);
@@ -687,20 +687,13 @@ public final class ClientEffects {
 
 		/** A hand grenade: the same fireball, earth and smoke, with its own recorded report. */
 		private final boolean grenade;
-		/** C4: a sharper, heavier crack than a grenade, recorded close, at a distance and far off. */
-		private final boolean c4;
 
 		BlastEffect(Vec3 pos, double scale) {
 			this(pos, scale, false);
 		}
 
 		BlastEffect(Vec3 pos, double scale, boolean grenade) {
-			this(pos, scale, grenade, false);
-		}
-
-		BlastEffect(Vec3 pos, double scale, boolean grenade, boolean c4) {
 			this.grenade = grenade;
-			this.c4 = c4;
 			this.pos = pos;
 			this.scale = scale;
 			Minecraft mc = Minecraft.getInstance();
@@ -714,27 +707,7 @@ public final class ClientEffects {
 			int t = this.age++;
 			double s = this.scale;
 			Vec3 c = this.pos.add(0, 1, 0);
-			if (t == this.soundDelay && this.c4) {
-				float pitch = 0.96F + rand() * 0.08F;
-				if (this.distance < 90.0) {
-					// right by it: the crack, the slam of the shock in the chest, the ears ringing
-					playDistant(mc, ModRegistry.C4_NEAR, this.pos, 1.0F, pitch);
-					playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, (float) (1.0 - this.distance / 140.0), pitch * 0.9F);
-					playDistant(mc, ModRegistry.EXPLOSION_DEBRIS, this.pos, (float) Math.max(0.0, 0.7 - this.distance / 70.0), 1.1F);
-					if (this.distance > 45.0) {
-						playDistant(mc, ModRegistry.C4_MID, this.pos, (float) ((this.distance - 45.0) / 45.0 * 0.6), pitch);
-					}
-					deafen(mc, (float) (1.0 - this.distance / 35.0), 70);
-				} else if (this.distance < 450.0) {
-					// a boom and its echo off the land round it
-					playDistant(mc, ModRegistry.C4_MID, this.pos, (float) Math.min(1.0, 1.15 - this.distance / 600.0), pitch);
-					playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, (float) (0.8 - this.distance / 700.0), pitch * 0.9F);
-				} else {
-					// far off: a dull thud, rolling on
-					playDistant(mc, ModRegistry.C4_FAR, this.pos, (float) Math.max(0.15, 1.2 - this.distance / 1500.0), pitch);
-				}
-				addShake((float) Mth.clamp(3.0 - this.distance / 22.0, 0.0, 3.0));
-			} else if (t == this.soundDelay && this.grenade) {
+			if (t == this.soundDelay && this.grenade) {
 				float pitch = 0.95F + rand() * 0.1F;
 				if (this.distance < 140.0) {
 					playDistant(mc, ModRegistry.GRENADE_EXPLODE, this.pos, (float) Math.min(1.0, 1.15 - this.distance / 160.0), pitch);
@@ -810,6 +783,196 @@ public final class ClientEffects {
 				}
 			}
 			return t > Math.max(this.soundDelay, s >= 0.45 ? 60 + 500 * s : 100 * s) + 1;
+		}
+	}
+
+	// ------------------------------------------------------------------ C4
+
+	/**
+	 * C4 going off where it was stuck: on a floor, a wall high up a tower, a ceiling. It looks round itself first -
+	 * which way the open air is, how far down the ground is, what the wall is made of - and the blast follows: the
+	 * fireball and the smoke burst out of the face into the open, a jet of the wall's own dust and rubble with it,
+	 * chunks of it tumbling down, dust trickling down the wall below the hole; the smoke rises from there, not from
+	 * the ground. Only a charge on (or right over) the ground throws up earth and a dust ring along it and leaves a
+	 * smouldering pit.
+	 */
+	static final class C4BlastEffect implements Effect {
+		private final Vec3 pos;
+		/** The way out into the open, from the face it was stuck to. */
+		private final Vec3 out;
+		/** How far below the ground is (blocks, 99: none near), and the ground under it. */
+		private final double groundBelow;
+		private final Vec3 ground;
+		private final boolean onGround;
+		private final @Nullable BlockState wall;
+		private final int dustColor;
+		private final double distance;
+		private final int soundDelay;
+		private int age;
+
+		C4BlastEffect(Vec3 pos) {
+			this.pos = pos;
+			Minecraft mc = Minecraft.getInstance();
+			this.distance = distanceToCamera(mc, pos);
+			this.soundDelay = (int) (this.distance / SPEED_OF_SOUND);
+			Vec3 out = Vec3.ZERO;
+			BlockState wall = null;
+			if (mc.level != null) {
+				for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+					BlockPos b = BlockPos.containing(pos.x + d.getStepX() * 0.6, pos.y + d.getStepY() * 0.6, pos.z + d.getStepZ() * 0.6);
+					BlockState st = mc.level.getBlockState(b);
+					if (!st.getCollisionShape(mc.level, b).isEmpty()) {
+						out = out.subtract(d.getStepX(), d.getStepY(), d.getStepZ());
+						if (wall == null || d.getAxis() != net.minecraft.core.Direction.Axis.Y) {
+							wall = st;
+						}
+					}
+				}
+			}
+			this.out = out.lengthSqr() < 1.0E-4 ? new Vec3(0, 1, 0) : out.normalize();
+			this.wall = wall;
+			double below = 99.0;
+			if (mc.level != null) {
+				for (int k = 0; k <= 14; k++) {
+					BlockPos b = BlockPos.containing(pos.x, pos.y - 0.3 - k, pos.z);
+					if (!mc.level.getBlockState(b).getCollisionShape(mc.level, b).isEmpty()) {
+						below = pos.y - (b.getY() + 1.0);
+						break;
+					}
+				}
+			}
+			this.groundBelow = Math.max(0.0, below);
+			this.ground = new Vec3(pos.x + this.out.x * 0.8, pos.y - this.groundBelow, pos.z + this.out.z * 0.8);
+			this.onGround = this.groundBelow < 2.5;
+			int col = 0x9A948C;
+			if (wall != null && mc.level != null) {
+				int map = wall.getMapColor(mc.level, BlockPos.containing(pos)).col;
+				if (map != 0) {
+					col = map;
+				}
+			}
+			this.dustColor = col;
+			setFlash((float) (Mth.clamp(0.8 - this.distance / 290.0, 0.0, 0.8) * 0.75), 0xFFE6B0);
+		}
+
+		@Override
+		public Vec3 origin() {
+			return this.pos;
+		}
+
+		/** A colour between the wall's dust and smoke-black. */
+		private int dust(float dark) {
+			int r = (int) Mth.lerp(dark, (this.dustColor >> 16 & 255) * 0.85F + 30, 52);
+			int g = (int) Mth.lerp(dark, (this.dustColor >> 8 & 255) * 0.85F + 28, 48);
+			int b = (int) Mth.lerp(dark, (this.dustColor & 255) * 0.85F + 26, 44);
+			return Mth.clamp(r, 0, 255) << 16 | Mth.clamp(g, 0, 255) << 8 | Mth.clamp(b, 0, 255);
+		}
+
+		/** A direction out of the face, spread round it by {@code spread}. */
+		private Vec3 cone(double spread) {
+			return this.out.add(gauss() * spread, gauss() * spread, gauss() * spread).normalize();
+		}
+
+		@Override
+		public boolean tick(Minecraft mc) {
+			int t = this.age++;
+			Vec3 c = this.pos.add(this.out.scale(0.5));
+			if (t == this.soundDelay) {
+				report(mc);
+			}
+			if (t == 0) {
+				// the flash: a short, white-hot fireball bursting out of the face
+				fireball(c.add(this.out.scale(0.8)), 2.2, 30, 2.6F, 0.9, 10);
+				embers(c, 22, 0.9);
+				// the wall's own dust and smoke blasted out into the open in a cone, slowing in the air
+				for (int i = 0; i < 46; i++) {
+					Vec3 v = this.cone(0.45);
+					double sp = 0.45 + rand() * 0.9;
+					CloudParticle p = cloud(false, c.x + v.x * 0.5, c.y + v.y * 0.5, c.z + v.z * 0.5, v.x * sp, v.y * sp, v.z * sp);
+					if (p != null) {
+						p.configure(110 + RANDOM.nextInt(70), 1.0F + rand() * 0.8F, 4.0F + rand() * 3.0F, this.dust(0.15F + rand() * 0.25F), this.dust(0.55F), 0.85F)
+							.physics(0.86F, 0.0015F).litFrom(c.x, c.y + 2.0, c.z).turbulence(0.025F);
+					}
+				}
+				// chunks of the wall flung out, falling and bouncing; grit with them
+				for (int i = 0; i < 18 && CLODS.size() < MAX_CLODS; i++) {
+					Vec3 v = this.cone(0.6).add(0, 0.25, 0);
+					CLODS.add(new Clod(c, v.scale(0.35 + rand() * 0.7), 0.35F + rand() * 0.6F, this.wall));
+				}
+				if (this.wall != null) {
+					for (int i = 0; i < 70; i++) {
+						Vec3 v = this.cone(0.55);
+						double sp = 0.3 + rand() * 0.9;
+						vanilla(new BlockParticleOption(ParticleTypes.BLOCK, this.wall), c.x, c.y, c.z, v.x * sp, v.y * sp + 0.1, v.z * sp);
+					}
+				}
+				if (this.onGround) {
+					// on the ground: earth thrown up as well
+					dirtBurst(this.ground.add(0, 0.5, 0), 26, 0.7, 0.55);
+					debrisJets(mc, this.ground, 10, 1.4, 1.2F);
+				}
+			}
+			if (t >= 1 && t <= 3) {
+				shockSphere(c, (2 + t * 4) * 0.6, 18);
+			}
+			// the shock running along the ground - only if the ground is close below
+			if (t < 10 && this.groundBelow < 6.0) {
+				double weak = 1.0 - this.groundBelow / 6.0;
+				groundRing(mc, this.ground, (2.5 + t * 2.2) * (0.5 + 0.5 * weak), (int) (22 * weak) + 2, 3.0F, 0.5 * weak, this.dust(0.2F));
+			}
+			// smoke pouring out of the hole and rising up the wall
+			if (t < 70) {
+				int n = t < 15 ? 5 : 2;
+				for (int i = 0; i < n; i++) {
+					Vec3 o = this.out.scale(0.8 + rand() * 1.4);
+					CloudParticle p = cloud(false, c.x + o.x + gauss() * 0.6, c.y + o.y + gauss() * 0.6, c.z + o.z + gauss() * 0.6,
+						this.out.x * 0.06 + gauss() * 0.02, 0.12 + rand() * 0.12 + Math.max(0.0, this.out.y) * 0.1, this.out.z * 0.06 + gauss() * 0.02);
+					if (p != null) {
+						p.configure(160 + RANDOM.nextInt(90), 1.6F, 6.0F + rand() * 3.0F, t < 12 ? this.dust(0.45F) : 0x3E3A36, 0x2C2A28, 0.85F)
+							.physics(0.95F, 0.0035F).litFrom(c.x, c.y + 3.0 + t * 0.2, c.z).turbulence(0.03F);
+					}
+				}
+			}
+			// dust trickling down the wall from the hole for a while, settling below it
+			if (t > 4 && t < 120 && this.out.y < 0.7 && t % 2 == 0) {
+				CloudParticle p = cloud(false, c.x + this.out.x * 0.35 + gauss() * 0.5, c.y - 0.3 + gauss() * 0.3, c.z + this.out.z * 0.35 + gauss() * 0.5,
+					0, -0.03 - rand() * 0.03, 0);
+				if (p != null) {
+					p.configure(70 + RANDOM.nextInt(40), 0.4F, 1.6F + rand(), this.dust(0.1F), this.dust(0.2F), 0.45F).physics(0.97F, -0.0025F).wind(0.3F);
+				}
+			}
+			// the hole smoulders: thin wisps from where it was - the ground only if it was on the ground
+			if (t > 50 && t < 400 && t % 6 == 0) {
+				Vec3 w = this.onGround ? this.ground.add(gauss() * 1.2, 0.2, gauss() * 1.2) : c.add(this.out.scale(0.4)).add(gauss() * 0.3, gauss() * 0.3, gauss() * 0.3);
+				CloudParticle p = cloud(false, w.x, w.y, w.z, this.out.x * 0.02, 0.05 + rand() * 0.04, this.out.z * 0.02);
+				if (p != null) {
+					p.configure(140 + RANDOM.nextInt(60), 0.5F, 3.0F, 0x5C5650, 0x8A8680, 0.45F).physics(0.98F, 0.004F).turbulence(0.03F);
+				}
+			}
+			return t > Math.max(this.soundDelay, 400) + 1;
+		}
+
+		/** The report, recorded close, at a distance and far off (real C4). */
+		private void report(Minecraft mc) {
+			float pitch = 0.96F + rand() * 0.08F;
+			if (this.distance < 90.0) {
+				// right by it: the crack, the slam of the shock in the chest, the ears ringing
+				playDistant(mc, ModRegistry.C4_NEAR, this.pos, 1.0F, pitch);
+				playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, (float) (1.0 - this.distance / 140.0), pitch * 0.9F);
+				playDistant(mc, ModRegistry.EXPLOSION_DEBRIS, this.pos, (float) Math.max(0.0, 0.7 - this.distance / 70.0), 1.1F);
+				if (this.distance > 45.0) {
+					playDistant(mc, ModRegistry.C4_MID, this.pos, (float) ((this.distance - 45.0) / 45.0 * 0.6), pitch);
+				}
+				deafen(mc, (float) (1.0 - this.distance / 35.0), 70);
+			} else if (this.distance < 450.0) {
+				// a boom and its echo off the land round it
+				playDistant(mc, ModRegistry.C4_MID, this.pos, (float) Math.min(1.0, 1.15 - this.distance / 600.0), pitch);
+				playDistant(mc, ModRegistry.EXPLOSION_SUB, this.pos, (float) (0.8 - this.distance / 700.0), pitch * 0.9F);
+			} else {
+				// far off: a dull thud, rolling on
+				playDistant(mc, ModRegistry.C4_FAR, this.pos, (float) Math.max(0.15, 1.2 - this.distance / 1500.0), pitch);
+			}
+			addShake((float) Mth.clamp(3.0 - this.distance / 22.0, 0.0, 3.0));
 		}
 	}
 
