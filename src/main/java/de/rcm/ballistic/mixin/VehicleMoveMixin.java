@@ -20,7 +20,7 @@ public class VehicleMoveMixin {
 	private Vec3 ballisticmissiles$jetAllowance(Entity vehicle, Operation<Vec3> original) {
 		Vec3 v = original.call(vehicle);
 		if (vehicle instanceof FighterEntity jet) {
-			return new Vec3(0.0, Math.max(v.length(), jet.type().maxSpeed * 3.0), 0.0);
+			return new Vec3(0.0, Math.max(v.length(), jet.type().maxSpeed() * 3.0), 0.0);
 		}
 		return v;
 	}

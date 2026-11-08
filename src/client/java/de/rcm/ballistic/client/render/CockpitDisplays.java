@@ -63,7 +63,7 @@ public final class CockpitDisplays {
 		d.ammo = jet.ammo() / (float) jet.type().gunRounds;
 		d.flares = jet.flares() / 24.0F;
 		d.warning = jet.warning() > 0;
-		d.caution = !jet.onGround() && jet.speed() < jet.type().stallSpeed || jet.health() < jet.type().maxHealth * 0.35F;
+		d.caution = !jet.onGround() && jet.speed() < jet.stallSpeedHere() || jet.health() < jet.type().maxHealth * 0.35F;
 		d.blink = (jet.tickCount / 5) % 2 == 0;
 		d.contactCount = 0;
 		Minecraft mc = Minecraft.getInstance();

@@ -59,6 +59,19 @@ import org.jspecify.annotations.Nullable;
  * target you have locked (hold it in the HUD circle), or at the point you are looking at on the ground.
  * F: flares. Opening the bay makes the jet briefly far easier for radar to see.
  * <p>
+ * <b>Physics and the world.</b> The flight model is worked out in real units (m/s, g) through a standard
+ * atmosphere: the world's height maps onto real altitude ({@link #altitude}: sea level at y 63, about 10 km at
+ * the build limit), so the air thins as it climbs - less drag and less thrust, a higher true airspeed for the
+ * same lift, a lower speed of sound. But the world could never load its terrain under a jet doing 700 m/s, so
+ * the distance it covers per tick is compressed ({@link #worldSpeed}): slow speeds are close to real (taxiing,
+ * the take-off roll), Mach 1 covers some 3.3 blocks a tick and Mach 2.2 about 5. Everything shown - airspeed,
+ * Mach, g, altitude - is the real value; sound travels the compressed world at the compressed speed of sound,
+ * so a supersonic jet still passes in silence and its boom follows.
+ * <p>
+ * <b>Engine.</b> The throttle sets where the core should spool to; like a real turbofan it takes some four
+ * seconds from idle to full military power, faster at the top of the range. Pushing through the gate at full
+ * power lights the afterburner, zone by zone over a second and a half.
+ * <p>
  * <b>Radar.</b> Both are stealthy: the radar cross section is a tiny fraction of an ordinary jet's, so
  * ground radars only pick them up close in. Defenses fire at it unless it belongs to their owner, and
  * the pilot hears the missile warning when something is launched at him.
@@ -66,7 +79,13 @@ import org.jspecify.annotations.Nullable;
 public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic.launch.Ownership.Owned {
 	/** 9.81 m/s^2 in blocks per tick per tick. */
 	public static final double GRAVITY = 0.0245;
-	public static final double SOUND_SPEED = 17.15;
+	/** Sea level in the world, and real metres of altitude per block above it. */
+	public static final double SEA_LEVEL = 63.0;
+	public static final double METRES_PER_BLOCK_UP = 40.0;
+	/** The speed of sound in the compressed world, blocks per tick, at sea level (see {@link #worldSpeed}). */
+	public static final double WORLD_SOUND_SPEED = worldSpeed(340.3 / 20.0);
+	/** Core spool at idle (the throttle's bottom stop). */
+	public static final float IDLE = 0.22F;
 	/** Height of the jet's centreline above its wheels (the model is built around the centreline). */
 	public static final double CENTRE = 2.3;
 
@@ -131,8 +150,16 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	private int engagements;
 	private @Nullable UUID owner;
 	private int crashAge;
+	// the engine, on every side (from the throttle and afterburner everyone is told about)
+	private float rpm;
+	private float rpmO;
+	private float burner;
+	private float burnerO;
+	private int burnerDelay;
 	// client
 	public float rollO;
+	/** Client: the afterburner just lit (for the light-off thump), consumed by the sound. */
+	public boolean clientBurnerLit;
 	public boolean clientInMachCone;
 	public boolean clientSoundStarted;
 
@@ -219,7 +246,48 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 	}
 
 	public float mach() {
-		return (float) (this.speed() / SOUND_SPEED);
+		return (float) (this.speed() * 20.0 / soundSpeed(this.getY()));
+	}
+
+	// ------------------------------------------------------------------ the atmosphere and the world's scale
+
+	/** Real altitude in metres of a world height. */
+	public static double altitude(double y) {
+		return Math.max(0.0, y - SEA_LEVEL) * METRES_PER_BLOCK_UP;
+	}
+
+	/** Air density relative to sea level. */
+	public static double sigma(double y) {
+		return Math.exp(-altitude(y) / 8500.0);
+	}
+
+	/** The speed of sound, m/s: 340 at sea level, 295 in the stratosphere. */
+	public static double soundSpeed(double y) {
+		return Math.max(295.0, 340.3 - 0.0041 * altitude(y));
+	}
+
+	/**
+	 * Blocks a tick covered in the world at a real speed of {@code real} blocks (metres/20 s) a tick: real up to
+	 * walking pace, then compressed - 80 m/s (take-off) covers 1.4 b/t, Mach 1 3.3, Mach 2.2 about 5.
+	 */
+	public static double worldSpeed(double real) {
+		double ms = real * 20.0;
+		return ms <= 6.1 ? real : 0.1045 * Math.pow(ms, 0.592);
+	}
+
+	/** The compressed speed of sound at height {@code y}, blocks a tick: a jet outruns it exactly when it is supersonic. */
+	public static double worldSoundSpeed(double y) {
+		return worldSpeed(soundSpeed(y) / 20.0);
+	}
+
+	/** How far the core has spooled, 0 (off) .. IDLE .. 1 (full military power). */
+	public float rpm(float partial) {
+		return Mth.lerp(partial, this.rpmO, this.rpm);
+	}
+
+	/** How much of the afterburner is lit, 0 .. 1 (it lights zone by zone). */
+	public float burner(float partial) {
+		return Mth.lerp(partial, this.burnerO, this.burner);
 	}
 
 	public float gLoad() {
@@ -319,7 +387,12 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 	/** Speed at which the nose can be lifted off the runway (b/t). */
 	public double rotateSpeed() {
-		return this.type().stallSpeed * 0.85;
+		return this.type().stallSpeed * 1.15 / Math.sqrt(sigma(this.getY()));
+	}
+
+	/** True airspeed below which the wings cannot hold it up any more, here (b/t real). */
+	public double stallSpeedHere() {
+		return this.type().stallSpeed / Math.sqrt(sigma(this.getY()));
 	}
 
 	/** Pilot's client: true once, after the jet hit something it could not survive (the server then wrecks it). */
@@ -368,11 +441,11 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		this.throttleL = Mth.clamp(throttle, 0.0F, 1.0F);
 		this.abL = afterburner && this.throttleL > 0.95F;
 		this.rollL = Mth.wrapDegrees(roll);
-		this.speed = Mth.clamp(speed, 0.0F, type.maxSpeed * 1.3F);
+		this.speed = Mth.clamp(speed, 0.0F, (float) type.maxSpeed() * 1.3F);
 		this.gL = Mth.clamp(g, 0.0F, 15.0F);
 		this.gearL = gear;
 		double v = velocity.length();
-		double cap = type.maxSpeed * 1.5;
+		double cap = worldSpeed(type.maxSpeed()) * 1.5;
 		this.setDeltaMovement(v > cap ? velocity.scale(cap / v) : velocity);
 		this.trigger = trigger;
 		this.lastInput = this.tickCount;
@@ -393,6 +466,7 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		this.rollO = this.roll();
 		super.tick();
 		this.interpolation.interpolate();
+		this.spoolEngine();
 		boolean authority = this.isLocalInstanceAuthoritative();
 		if (authority && !this.hadAuthority) {
 			// taking over the flight (boarding, or the server after an ejection): carry on from where it is
@@ -471,12 +545,43 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 			return;
 		}
 		if (pilot != null || !this.onGround()) {
-			Vec3 ahead = this.forward().scale(this.speed * 12.0);
+			Vec3 ahead = this.forward().scale(worldSpeed(this.speed) * 12.0);
 			level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, this.chunkPosition(), 2);
 			level.getChunkSource().addTicketWithRadius(TicketType.ENDER_PEARL, new ChunkPos(BlockPos.containing(this.position().add(ahead))), 2);
 		}
 		if (this.isActiveThreat()) {
 			ThreatTracker.report(level, this);
+		}
+	}
+
+	/**
+	 * The engine follows the throttle like a real turbofan: slow off idle, quicker near the top; the
+	 * afterburner lights a moment after it is called for and then zone by zone. Run on every side from
+	 * the state everyone knows, so the nozzles, the flame and the sound all match the thrust.
+	 */
+	private void spoolEngine() {
+		this.rpmO = this.rpm;
+		this.burnerO = this.burner;
+		float target = this.engineRunning() ? IDLE + (1.0F - IDLE) * this.throttle() : IDLE * this.spool() * this.spool();
+		if (this.isCrashing()) {
+			target = 0.0F;
+		}
+		if (target > this.rpm) {
+			this.rpm = Math.min(target, this.rpm + 0.004F + 0.012F * this.rpm);
+		} else {
+			this.rpm = Math.max(target, this.rpm - 0.01F - 0.01F * this.rpm);
+		}
+		if (this.isAfterburner() && this.rpm > 0.93F) {
+			if (this.burner <= 0.0F && ++this.burnerDelay < 4) {
+				return; // the fuel goes in, the igniter fires...
+			}
+			if (this.burner <= 0.0F && this.level().isClientSide()) {
+				this.clientBurnerLit = true;
+			}
+			this.burner = Math.min(1.0F, this.burner + 0.04F);
+		} else {
+			this.burnerDelay = 0;
+			this.burner = Math.max(0.0F, this.burner - 0.12F);
 		}
 	}
 
@@ -489,6 +594,12 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		FighterType type = this.type();
 		boolean flown = this.getControllingPassenger() != null;
 		boolean grounded = this.onGround();
+		double sigma = sigma(this.getY());
+		double vMs = this.speed * 20.0;
+		double vs = type.stallSpeed * 20.0;
+		// the most the wings can hold up here: 1 at the stall, rising with the square of speed
+		double liftCap = sigma * (vMs / vs) * (vMs / vs);
+		double liftFrac = Math.min(1.0, liftCap);
 
 		// throttle and afterburner
 		float throttle = this.throttleL;
@@ -542,7 +653,7 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 				// roll about the nose: the F-22 and F-35 roll at some 180 degrees a second
 				roll(frame, Math.toRadians(type == FighterType.F22 ? 9.0 : 8.0) * this.rollStick);
 				// pitch: the stick pulls the nose towards the jet's own up, as hard as the g limit allows
-				pitch(frame, Math.toRadians(this.turnRate(type)) * this.pitchStick);
+				pitch(frame, Math.toRadians(this.turnRate(type, sigma)) * this.pitchStick);
 			} else {
 				// nobody at the stick (or shot to pieces): it rolls off and the nose sags
 				roll(frame, Math.toRadians(this.isCrashing() ? 2.0 : 0.5));
@@ -555,8 +666,8 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 				turnY(frame, -GRAVITY * bank / v);
 				double lost = GRAVITY * (1.0 - frame[1].y) / v;
 				// below flying speed the wings stop holding it up at all and the nose drops
-				if (this.speed < type.stallSpeed) {
-					lost += Math.toRadians(1.5) * (1.0 - this.speed / type.stallSpeed);
+				if (liftFrac < 1.0) {
+					lost += Math.toRadians(1.5) * (1.0 - liftFrac);
 				}
 				pitchDown(frame, lost);
 			}
@@ -573,15 +684,15 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		r0 = r0.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : r0.normalize();
 		Vec3 u0 = r0.cross(newFwd).normalize();
 		this.rollL = (float) Math.toDegrees(Math.atan2(up.dot(r0), up.dot(u0)));
-		// speed: thrust, drag rising with the square of speed, gravity along the climb or dive
-		// even at idle a jet engine pushes: the jet creeps forward with the brakes off
-		// a jet engine gives most thrust standing still and loses some as the air rams in: off the brakes it
-		// pushes like a real one (about 0.7 g dry, 1.1 g with afterburner), up high it balances the drag
-		double base = this.abL ? type.afterburnerThrust : type.dryThrust();
-		double ram = Math.max(0.0, 1.0 - this.speed / (type.stallSpeed * 2.0));
-		double thrust = this.isCrashing() || !running ? 0.0
-			: Math.max(throttle, 0.03F) * (base + Math.max(0.0, (this.abL ? 0.03 : 0.02) - base) * ram);
-		double drag = type.drag() * this.speed * this.speed + (this.gearL ? 0.0004 * this.speed : 0.0);
+		// speed, in real units: thrust (falling off with height, gaining with ram), drag (rising with the
+		// square of speed and steeply through Mach 1), the induced drag of pulling g (a hard turn bleeds
+		// speed), gravity along the climb or dive. Even at idle a jet engine pushes: it creeps with the brakes off
+		double mach = vMs / soundSpeed(this.getY());
+		double thrustG = this.isCrashing() ? 0.0 : type.thrust(this.rpm, this.burner, mach, sigma);
+		double induced = 0.16 * this.gL * this.gL / Math.max(0.5, liftCap);
+		double dragG = type.drag(vMs, mach, sigma) + (grounded ? 0.0 : induced);
+		double thrust = thrustG * GRAVITY;
+		double drag = dragG * GRAVITY + (this.gearL ? 0.0004 * this.speed : 0.0);
 		if (grounded) {
 			// brakes on with the throttle closed; otherwise rolling resistance - small on a runway, on grass and
 			// dirt the wheels sink in and the jet barely gets to flying speed
@@ -592,8 +703,8 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 		// lift: at flying speed it goes where the nose points; slower, it sinks
 		Vec3 vel = newFwd.scale(this.speed);
-		if (!grounded && this.speed < type.stallSpeed) {
-			this.sink += GRAVITY * (1.0 - this.speed / type.stallSpeed);
+		if (!grounded && liftFrac < 1.0) {
+			this.sink += GRAVITY * (1.0 - liftFrac);
 		} else {
 			this.sink = Math.max(0.0, this.sink - GRAVITY * 2.0);
 		}
@@ -603,12 +714,15 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		}
 		Vec3 before = this.position();
 		double fallSpeed = -vel.y;
-		this.move(MoverType.SELF, vel.add(0.0, grounded ? -0.05 : 0.0, 0.0));
+		// through the world at the compressed speed (see worldSpeed): the real velocity's direction, a shorter step
+		double real = vel.length();
+		Vec3 step = real < 1.0E-9 ? Vec3.ZERO : vel.scale(worldSpeed(real) / real);
+		this.move(MoverType.SELF, step.add(0.0, grounded ? -0.05 : 0.0, 0.0));
 		this.setDeltaMovement(this.position().subtract(before));
 
 		// touching down gently on the gear is a landing; anything else is a crash
 		if (this.horizontalCollision && this.speed > 1.5 || this.verticalCollision && !grounded && this.onGround()
-			&& !(this.gearL && fallSpeed < 0.45 && Math.abs(this.getXRot()) < 18.0F && this.speed < 7.5) && this.speed > 1.0) {
+			&& !(this.gearL && fallSpeed < 0.4 && Math.abs(this.getXRot()) < 18.0F && this.speed < 7.5) && this.speed > 1.0) {
 			return true;
 		}
 		if (this.onGround() && !grounded) {
@@ -624,8 +738,8 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 
 		// g: how hard the flight path is being bent
 		double omegaMs = turned * 20.0;
-		double vMs = this.speed * 20.0;
-		this.gL = (float) Math.sqrt(1.0 + Math.pow(vMs * omegaMs / 9.81, 2));
+		double vNow = this.speed * 20.0;
+		this.gL = (float) Math.sqrt(1.0 + Math.pow(vNow * omegaMs / 9.81, 2));
 		return false;
 	}
 
@@ -669,12 +783,18 @@ public class FighterEntity extends Entity implements AirThreat, de.rcm.ballistic
 		frame[1] = rot(frame[1], axis, angle).normalize();
 	}
 
-	/** How fast the nose can turn now, degrees per tick: the g limit at speed, control authority when slow. */
-	private double turnRate(FighterType type) {
-		double vMs = Math.max(60.0, this.speed * 20.0);
-		double byG = Math.toDegrees(type.maxG * 9.81 / vMs) / 20.0;
-		double authority = Mth.clamp((this.speed - type.stallSpeed * 0.5) / type.stallSpeed, 0.15, 1.0);
-		return Math.min(type.maxTurn, byG) * authority;
+	/**
+	 * How fast the flight path can be bent now, degrees per tick: as hard as the wings can pull (rising with
+	 * the square of speed, thinner air up high) up to the 9 g limit - the corner speed is where the two meet.
+	 * Slow, the tail (and the Raptor's vectoring nozzles) can still point the nose a little.
+	 */
+	private double turnRate(FighterType type, double sigma) {
+		double vMs = Math.max(15.0, this.speed * 20.0);
+		double vs = type.stallSpeed * 20.0;
+		double n = Math.min(type.maxG, sigma * (vMs / vs) * (vMs / vs));
+		double byLift = Math.toDegrees(n * 9.81 / vMs) / 20.0;
+		double pointing = (type == FighterType.F22 ? 0.9 : 0.5) * Mth.clamp(vMs / vs, 0.2, 1.0);
+		return Math.max(byLift, pointing);
 	}
 
 	private static Vec3 rotateTowards(Vec3 from, Vec3 to, double maxAngle) {

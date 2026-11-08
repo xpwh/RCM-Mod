@@ -220,12 +220,12 @@ public final class FighterClient {
 			return;
 		}
 		float speed = jet.speed();
-		if (speed < jet.type().stallSpeed && jet.tickCount % 12 == 0) {
+		if (speed < jet.stallSpeedHere() && jet.tickCount % 12 == 0) {
 			mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(ModRegistry.JET_WARN_STALL, 1.0F, 0.45F));
 		}
 		Vec3 f = jet.forward();
 		double agl = jet.getY() - mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(jet.getX()), Mth.floor(jet.getZ()));
-		if (f.y < -0.2 && agl / Math.max(0.1, -f.y * speed) < 60.0 && jet.tickCount % 16 == 0) {
+		if (f.y < -0.2 && agl / Math.max(0.1, -f.y * FighterEntity.worldSpeed(speed)) < 60.0 && jet.tickCount % 16 == 0) {
 			mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(ModRegistry.JET_WARN_PULLUP, 1.0F, 0.5F));
 		}
 	}
@@ -453,12 +453,12 @@ public final class FighterClient {
 			String warn = "MISSILE";
 			g.drawString(font, warn, cx - font.width(warn) / 2, cy - 50, WARN, true);
 		}
-		if (!jet.onGround() && speed < type.stallSpeed && blink) {
+		if (!jet.onGround() && speed < jet.stallSpeedHere() && blink) {
 			g.drawString(font, "STALL", cx - font.width("STALL") / 2, cy + 40, WARN, true);
 		}
 		Vec3 f = jet.forward();
 		double agl = jet.getY() - ground;
-		if (!jet.onGround() && f.y < -0.2 && agl / Math.max(0.1, -f.y * speed) < 60.0 && blink) {
+		if (!jet.onGround() && f.y < -0.2 && agl / Math.max(0.1, -f.y * FighterEntity.worldSpeed(speed)) < 60.0 && blink) {
 			g.drawString(font, "PULL UP", cx - font.width("PULL UP") / 2, cy + 52, WARN, true);
 		}
 		// on the ground: the controls, and the call to rotate once fast enough

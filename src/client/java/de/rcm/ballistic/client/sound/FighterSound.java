@@ -159,14 +159,14 @@ public class FighterSound extends AbstractTickableSoundInstance {
 		int found = -1;
 		for (int i = n - 1; i >= 0; i--) {
 			Sample sample = this.history.get(i);
-			if (sample.pos().distanceTo(ear) <= (this.age - sample.time() + 1) * FighterEntity.SOUND_SPEED) {
+			if (sample.pos().distanceTo(ear) <= (this.age - sample.time() + 1) * FighterEntity.worldSoundSpeed(sample.pos().y)) {
 				found = i;
 				break;
 			}
 		}
 		if (found < 0) {
 			this.volume = 0.0F;
-			if (this.jet.isRemoved() && (n == 0 || this.age - this.history.get(n - 1).time() > AUDIBLE_RANGE / FighterEntity.SOUND_SPEED)) {
+			if (this.jet.isRemoved() && (n == 0 || this.age - this.history.get(n - 1).time() > AUDIBLE_RANGE / FighterEntity.WORLD_SOUND_SPEED)) {
 				this.stop();
 			}
 			return;
@@ -184,7 +184,8 @@ public class FighterSound extends AbstractTickableSoundInstance {
 		double d = toEar.length();
 		Vec3 velocity = found + 1 < n ? this.history.get(found + 1).pos().subtract(p) : found > 0 ? p.subtract(this.history.get(found - 1).pos()) : Vec3.ZERO;
 		double closing = d > 1.0E-3 ? velocity.dot(toEar.scale(1.0 / d)) : 0.0;
-		float doppler = (float) (FighterEntity.SOUND_SPEED / Math.max(3.0, FighterEntity.SOUND_SPEED - closing));
+		double c = FighterEntity.worldSoundSpeed(p.y);
+		float doppler = (float) (c / Math.max(c * 0.2, c - closing));
 		float falloff = (float) Math.pow(Mth.clamp(1.0 - d / AUDIBLE_RANGE, 0.0, 1.0), 1.3);
 		float near = 1.0F - smoothstep(50.0F, 320.0F, (float) d);
 		float weight = switch (this.layer) {
