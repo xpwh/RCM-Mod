@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"T",
+		"G",
+		"I"
+	],
+	"key": {
+		"T": "minecraft:tnt",
+		"G": "minecraft:gunpowder",
+		"I": "minecraft:iron_ingot"
+	},
+	"result": {
+		"id": "ballisticmissiles:rpg_rocket",
+		"count": 2
+	}
+}

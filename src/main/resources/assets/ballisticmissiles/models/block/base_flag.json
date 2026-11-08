@@ -1,0 +1,73 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "ballisticmissiles:block/base_flag",
+		"p": "ballisticmissiles:block/base_flag"
+	},
+	"elements": [
+		{
+			"from": [
+				4,
+				0,
+				4
+			],
+			"to": [
+				12,
+				2,
+				12
+			],
+			"faces": {
+				"north": {
+					"texture": "#p"
+				},
+				"south": {
+					"texture": "#p"
+				},
+				"east": {
+					"texture": "#p"
+				},
+				"west": {
+					"texture": "#p"
+				},
+				"up": {
+					"texture": "#p"
+				},
+				"down": {
+					"texture": "#p"
+				}
+			}
+		},
+		{
+			"from": [
+				7,
+				2,
+				7
+			],
+			"to": [
+				9,
+				16,
+				9
+			],
+			"faces": {
+				"north": {
+					"texture": "#p"
+				},
+				"south": {
+					"texture": "#p"
+				},
+				"east": {
+					"texture": "#p"
+				},
+				"west": {
+					"texture": "#p"
+				},
+				"up": {
+					"texture": "#p"
+				},
+				"down": {
+					"texture": "#p"
+				}
+			}
+		}
+	]
+}

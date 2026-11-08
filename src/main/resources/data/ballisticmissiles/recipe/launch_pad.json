@@ -1,0 +1,7 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": ["I I", "RSR", "BBB"],
+	"key": {"I": "minecraft:iron_bars", "R": "minecraft:redstone", "S": "minecraft:smooth_stone", "B": "minecraft:iron_block"},
+	"result": {"id": "ballisticmissiles:launch_pad", "count": 1}
+}

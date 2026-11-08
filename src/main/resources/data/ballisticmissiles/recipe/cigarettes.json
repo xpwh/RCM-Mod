@@ -1,0 +1,14 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		"minecraft:paper",
+		"minecraft:paper",
+		"minecraft:wheat",
+		"minecraft:brown_dye"
+	],
+	"result": {
+		"id": "ballisticmissiles:cigarettes",
+		"count": 1
+	}
+}

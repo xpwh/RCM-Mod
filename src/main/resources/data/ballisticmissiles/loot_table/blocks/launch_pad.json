@@ -1,0 +1,5 @@
+{
+	"type": "minecraft:block",
+	"pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "ballisticmissiles:launch_pad"}], "conditions": [{"condition": "minecraft:survives_explosion"}]}],
+	"random_sequence": "ballisticmissiles:blocks/launch_pad"
+}

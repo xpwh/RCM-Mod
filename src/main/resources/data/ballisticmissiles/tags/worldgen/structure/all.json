@@ -1,0 +1,15 @@
+{
+	"values": [
+		"ballisticmissiles:city",
+		"ballisticmissiles:military_base",
+		"ballisticmissiles:checkpoint",
+		"ballisticmissiles:sam_site",
+		"ballisticmissiles:weapons_cache",
+		"ballisticmissiles:aircraft_carrier",
+		"ballisticmissiles:war_zone",
+		"ballisticmissiles:crash_site",
+		"ballisticmissiles:submarine_pen",
+		"ballisticmissiles:secret_lab",
+		"ballisticmissiles:border_trenches"
+	]
+}

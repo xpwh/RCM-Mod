@@ -1,0 +1,19 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "ballisticmissiles:block/weapons_workbench"
+		},
+		"facing=east": {
+			"model": "ballisticmissiles:block/weapons_workbench",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "ballisticmissiles:block/weapons_workbench",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "ballisticmissiles:block/weapons_workbench",
+			"y": 270
+		}
+	}
+}

@@ -1,0 +1,7 @@
+{
+	"parent": "minecraft:block/cube_column",
+	"textures": {
+		"side": "ballisticmissiles:block/hesco_barrier",
+		"end": "ballisticmissiles:block/hesco_barrier_top"
+	}
+}

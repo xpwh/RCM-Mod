@@ -1,0 +1,12 @@
+{
+	"parent": "minecraft:block/cube",
+	"textures": {
+		"particle": "ballisticmissiles:block/traffic_light_top",
+		"up": "ballisticmissiles:block/traffic_light_top",
+		"down": "ballisticmissiles:block/traffic_light_top",
+		"east": "ballisticmissiles:block/traffic_light_dark",
+		"west": "ballisticmissiles:block/traffic_light_dark",
+		"north": "ballisticmissiles:block/traffic_light_dark",
+		"south": "ballisticmissiles:block/traffic_light_dark"
+	}
+}

@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "redstone",
+	"pattern": [
+		"  I",
+		"IIR",
+		"SSS"
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"R": "minecraft:redstone",
+		"S": "minecraft:smooth_stone"
+	},
+	"result": {
+		"id": "ballisticmissiles:inclined_launcher",
+		"count": 1
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"GDG",
+		"BRB",
+		"IBI"
+	],
+	"key": {
+		"G": "minecraft:glass",
+		"D": "minecraft:diamond_block",
+		"B": "minecraft:redstone_block",
+		"R": "minecraft:beacon",
+		"I": "minecraft:iron_block"
+	},
+	"result": {
+		"id": "ballisticmissiles:laser_defense",
+		"count": 1
+	}
+}

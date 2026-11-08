@@ -1,0 +1,19 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "ballisticmissiles:block/elevator_panel"
+		},
+		"facing=east": {
+			"model": "ballisticmissiles:block/elevator_panel",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "ballisticmissiles:block/elevator_panel",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "ballisticmissiles:block/elevator_panel",
+			"y": 270
+		}
+	}
+}

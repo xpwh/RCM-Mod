@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"S S",
+		"CRC",
+		"STS"
+	],
+	"key": {
+		"S": "minecraft:stick",
+		"C": "minecraft:copper_ingot",
+		"R": "minecraft:redstone",
+		"T": "ballisticmissiles:rpg_rocket"
+	},
+	"result": {
+		"id": "ballisticmissiles:fpv_drone",
+		"count": 1
+	}
+}

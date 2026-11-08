@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"SIS",
+		"ICI",
+		"SIS"
+	],
+	"key": {
+		"S": "minecraft:smooth_stone",
+		"I": "minecraft:iron_bars",
+		"C": "minecraft:gray_concrete"
+	},
+	"result": {
+		"id": "ballisticmissiles:reinforced_concrete",
+		"count": 8
+	}
+}

@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"open=false": {
+			"model": "ballisticmissiles:block/hatch_silo"
+		},
+		"open=true": {
+			"model": "ballisticmissiles:block/hatch_silo_open"
+		}
+	}
+}

@@ -1,0 +1,5 @@
+{
+	"type": "minecraft:block",
+	"pools": [],
+	"random_sequence": "ballisticmissiles:blocks/landmine"
+}

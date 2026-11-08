@@ -1,0 +1,105 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "ballisticmissiles:block/jersey_barrier",
+		"c": "ballisticmissiles:block/jersey_barrier"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				2
+			],
+			"to": [
+				16,
+				4,
+				14
+			],
+			"faces": {
+				"north": {
+					"texture": "#c"
+				},
+				"south": {
+					"texture": "#c"
+				},
+				"east": {
+					"texture": "#c"
+				},
+				"west": {
+					"texture": "#c"
+				},
+				"up": {
+					"texture": "#c"
+				},
+				"down": {
+					"texture": "#c"
+				}
+			}
+		},
+		{
+			"from": [
+				0,
+				4,
+				4
+			],
+			"to": [
+				16,
+				9,
+				12
+			],
+			"faces": {
+				"north": {
+					"texture": "#c"
+				},
+				"south": {
+					"texture": "#c"
+				},
+				"east": {
+					"texture": "#c"
+				},
+				"west": {
+					"texture": "#c"
+				},
+				"up": {
+					"texture": "#c"
+				},
+				"down": {
+					"texture": "#c"
+				}
+			}
+		},
+		{
+			"from": [
+				0,
+				9,
+				5.5
+			],
+			"to": [
+				16,
+				15,
+				10.5
+			],
+			"faces": {
+				"north": {
+					"texture": "#c"
+				},
+				"south": {
+					"texture": "#c"
+				},
+				"east": {
+					"texture": "#c"
+				},
+				"west": {
+					"texture": "#c"
+				},
+				"up": {
+					"texture": "#c"
+				},
+				"down": {
+					"texture": "#c"
+				}
+			}
+		}
+	]
+}

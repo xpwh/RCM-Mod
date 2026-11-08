@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"CTC",
+		"GRG",
+		"CTC"
+	],
+	"key": {
+		"C": "minecraft:clay_ball",
+		"T": "minecraft:tnt",
+		"G": "minecraft:gunpowder",
+		"R": "minecraft:redstone"
+	},
+	"result": {
+		"id": "ballisticmissiles:c4",
+		"count": 2
+	}
+}

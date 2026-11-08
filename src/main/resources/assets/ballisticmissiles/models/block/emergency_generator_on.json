@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/orientable",
+	"textures": {
+		"top": "ballisticmissiles:block/emergency_generator_top",
+		"front": "ballisticmissiles:block/emergency_generator_front_on",
+		"side": "ballisticmissiles:block/emergency_generator_side"
+	}
+}

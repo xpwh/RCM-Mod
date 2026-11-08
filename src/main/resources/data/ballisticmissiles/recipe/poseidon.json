@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"IPI",
+		"PNP",
+		"IHI"
+	],
+	"key": {
+		"I": "minecraft:iron_block",
+		"P": "minecraft:prismarine",
+		"N": "ballisticmissiles:nuclear_missile",
+		"H": "minecraft:heart_of_the_sea"
+	},
+	"result": {
+		"id": "ballisticmissiles:poseidon",
+		"count": 1
+	}
+}

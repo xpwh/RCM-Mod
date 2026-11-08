@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"LCL",
+		"RMR",
+		"LCL"
+	],
+	"key": {
+		"L": "minecraft:lightning_rod",
+		"C": "minecraft:copper_block",
+		"R": "minecraft:redstone_block",
+		"M": "ballisticmissiles:ballistic_missile"
+	},
+	"result": {
+		"id": "ballisticmissiles:emp_missile",
+		"count": 1
+	}
+}

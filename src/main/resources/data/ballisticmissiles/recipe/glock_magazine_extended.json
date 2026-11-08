@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"ICI",
+		"IGI",
+		"IGI"
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"C": "minecraft:copper_ingot",
+		"G": "minecraft:gunpowder"
+	},
+	"result": {
+		"id": "ballisticmissiles:glock_magazine_extended",
+		"count": 1
+	}
+}

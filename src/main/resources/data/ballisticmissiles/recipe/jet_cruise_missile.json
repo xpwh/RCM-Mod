@@ -1,0 +1,20 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"  E",
+		"ITI",
+		"GF "
+	],
+	"key": {
+		"E": "minecraft:ender_eye",
+		"I": "minecraft:iron_ingot",
+		"T": "minecraft:tnt",
+		"G": "minecraft:gunpowder",
+		"F": "minecraft:blaze_powder"
+	},
+	"result": {
+		"id": "ballisticmissiles:jet_cruise_missile",
+		"count": 1
+	}
+}
