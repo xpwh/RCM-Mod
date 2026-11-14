@@ -149,6 +149,37 @@ public final class ClientEffects {
 			case METEOR -> mc -> true;
 			default -> new BlastEffect(pos, 1.0);
 		});
+		// volumetric smoke: the blast wave running out along the ground, raising its dust (GroundShock)
+		double surge = surgeSize(warhead);
+		if (surge > 0.0 && SmokeVolume.enabled()) {
+			EFFECTS.add(new GroundShock(pos, surge, warhead == Warhead.THERMOBARIC ? 6 : 0));
+		}
+	}
+
+	/** How big a ground blast wave a warhead raises (BlastEffect's scale), 0: none of its own (small, buried, or drawn otherwise). */
+	static double surgeSize(Warhead warhead) {
+		return switch (warhead) {
+			case HIGH_EXPLOSIVE -> 1.0;
+			case CRUISE -> 0.85;
+			case CLUSTER -> 0.6;
+			case HYPERSONIC -> 1.25;
+			case INCENDIARY -> 0.7;
+			case ANTI_RADAR -> 0.8;
+			case DRONE -> 0.55;
+			case AERIAL_BOMB -> 0.5;
+			case METEOR_IMPACT -> 0.75;
+			case THERMOBARIC -> 2.2;
+			case MOAB -> 1.7;
+			case TACTICAL_NUKE, MIRV_WARHEAD -> 2.5;
+			case NUCLEAR, MIRV -> 4.0;
+			case HYDROGEN -> 6.4;
+			default -> 0.0;
+		};
+	}
+
+	/** Does GroundShock draw this blast's ground wave (so the effect leaves out its old dust ring)? */
+	static boolean surgeDrawn(double scale) {
+		return SmokeVolume.enabled() && scale > 0.0;
 	}
 
 	public static float flashAlpha(float partialTick) {
@@ -749,8 +780,8 @@ public final class ClientEffects {
 			if (t >= 1 && t <= 3 && s > 0.5) {
 				shockSphere(c, (3 + t * 5) * s, (int) (30 * s));
 			}
-			// Ground shockwave ring of dust
-			if (t < 12) {
+			// Ground shockwave ring of dust (with volumetric smoke, GroundShock runs it)
+			if (t < 12 && !(!this.grenade && this.scale >= 0.5 && surgeDrawn(this.scale))) {
 				groundRing(mc, this.pos, (4 + t * 3.0) * s, (int) (34 * s) + 4, (float) (5.0 * s) + 1, 0.8 * s, 0xB8A890);
 			}
 			// Rising smoke column, fed by the burning crater
@@ -1201,7 +1232,7 @@ public final class ClientEffects {
 			if (t >= 7 && t <= 10) {
 				shockSphere(c, 10 + (t - 7) * 9, 70);
 			}
-			if (t > 6 && t < 26) {
+			if (t > 6 && t < 26 && !surgeDrawn(2.2)) {
 				groundRing(mc, this.pos, 26 + (t - 6) * 3.5, 50, 7.0F, 1.2, 0xB09878);
 			}
 			if (t > 10 && t < 140) {
@@ -1798,7 +1829,7 @@ public final class ClientEffects {
 			}
 
 			// ---- ground surge / shockwave ring
-			if (t < 70) {
+			if (t < 70 && !(surgeDrawn(s) && !this.frontSound)) {
 				groundRing(mc, this.pos, (10 + t * 4.2) * s, 45, 11.0F * ps, 1.4 * ps, 0xC9B79C);
 			}
 

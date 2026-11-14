@@ -1,8 +1,15 @@
 # Ballistic Missiles – Änderungsprotokoll
 
-Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.10.0** (06.11.2026).
+Änderungen von der realistischen AK-47 (Version 12.14.0) bis heute, neueste zuerst. Stand: Version **13.11.0** (14.11.2026).
 
 ---
+
+### 13.11.0 – Druckwelle am Boden (Rauch-Art Volumetrisch)
+- Große Explosionen schicken jetzt eine echte Druckwelle über den Boden, wenn als Rauch-Art „Volumetrisch“ eingestellt ist. Das gilt für Raketen, Marschflugkörper, Hyperschall, Drohnen, Fliegerbomben, Streumunition, Brandbomben, Meteore, thermobarische Waffen, MOAB und Atombomben.
+- Zuerst rast die Stoßfront mit Schallgeschwindigkeit nach außen und reißt einen dünnen, hellen Staubschleier vom Boden, der nach außen schwächer wird. Sie erreicht dich zusammen mit dem Knall.
+- Dahinter rollt die Staubwand nach außen: erst schnell, dann immer langsamer. Sie türmt sich auf und überschlägt sich oben. Danach bleibt ein Staubschleier, der mit dem Wind treibt und sich legt.
+- Der Staub kommt vom Boden selbst: braun von Gras und Erde, gelb von Sand, grau von Stein und Beton, weiß von Schnee, Gischt über Wasser. Er läuft gegen Häuser und Mauern und kommt nicht über Hügel, die höher liegen als die Explosion. Bei hohen Luftdetonationen gibt es keine Bodenwelle.
+- Mit den anderen Rauch-Arten bleibt der bisherige Staubring.
 
 ### 13.10.0 – C4 auf Fahrzeugen und Mobs
 - C4 lässt sich jetzt auch an alles kleben, was sich bewegt: Mobs, Spieler, Soldaten, den Raketen-Lkw, FPV-Drohnen, Raketen auf der Startrampe, Hubschrauber und Jets. Die Ladung fährt, läuft und fliegt mit und dreht sich mit dem Träger (auch Neigung und Schräglage bei Jets).
