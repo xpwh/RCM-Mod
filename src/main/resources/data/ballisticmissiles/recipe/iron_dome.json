@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"FFF",
+		"RAR",
+		"III"
+	],
+	"key": {
+		"F": "minecraft:firework_rocket",
+		"R": "minecraft:redstone_block",
+		"A": "ballisticmissiles:air_defense",
+		"I": "minecraft:iron_block"
+	},
+	"result": {
+		"id": "ballisticmissiles:iron_dome",
+		"count": 1
+	}
+}

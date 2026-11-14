@@ -1,0 +1,7 @@
+{
+	"parent": "minecraft:block/cube_column",
+	"textures": {
+		"side": "ballisticmissiles:block/military_crate",
+		"end": "ballisticmissiles:block/military_crate_top"
+	}
+}

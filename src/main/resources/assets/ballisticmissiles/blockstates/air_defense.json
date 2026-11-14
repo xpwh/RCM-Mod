@@ -1,0 +1,19 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "ballisticmissiles:block/air_defense"
+		},
+		"facing=east": {
+			"model": "ballisticmissiles:block/air_defense",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "ballisticmissiles:block/air_defense",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "ballisticmissiles:block/air_defense",
+			"y": 270
+		}
+	}
+}

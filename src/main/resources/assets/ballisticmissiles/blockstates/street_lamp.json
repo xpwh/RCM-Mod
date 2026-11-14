@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"lit=true": {
+			"model": "ballisticmissiles:block/street_lamp"
+		},
+		"lit=false": {
+			"model": "ballisticmissiles:block/street_lamp_off"
+		}
+	}
+}

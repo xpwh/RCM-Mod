@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"III",
+		"SMS",
+		"IHI"
+	],
+	"key": {
+		"I": "minecraft:iron_block",
+		"S": "ballisticmissiles:missile_silo",
+		"M": "minecraft:heart_of_the_sea",
+		"H": "minecraft:nautilus_shell"
+	},
+	"result": {
+		"id": "ballisticmissiles:submarine",
+		"count": 1
+	}
+}

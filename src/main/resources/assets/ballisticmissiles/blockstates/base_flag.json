@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"captured=false": {
+			"model": "ballisticmissiles:block/base_flag"
+		},
+		"captured=true": {
+			"model": "ballisticmissiles:block/base_flag"
+		}
+	}
+}

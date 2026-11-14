@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "combat",
+	"ingredients": [
+		"ballisticmissiles:fpv_drone",
+		"minecraft:string",
+		"minecraft:string",
+		"minecraft:string",
+		"minecraft:string",
+		"minecraft:glass_pane"
+	],
+	"result": {
+		"id": "ballisticmissiles:fpv_fiber",
+		"count": 1
+	}
+}

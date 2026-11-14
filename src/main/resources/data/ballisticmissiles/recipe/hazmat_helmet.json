@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"YYY",
+		"YGY"
+	],
+	"key": {
+		"Y": "minecraft:yellow_wool",
+		"G": "minecraft:glass_pane"
+	},
+	"result": {
+		"id": "ballisticmissiles:hazmat_helmet",
+		"count": 1
+	}
+}

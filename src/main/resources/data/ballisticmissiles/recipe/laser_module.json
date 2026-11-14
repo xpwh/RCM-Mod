@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"IAI",
+		"ERI"
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"A": "minecraft:amethyst_shard",
+		"E": "minecraft:red_stained_glass_pane",
+		"R": "minecraft:redstone"
+	},
+	"result": {
+		"id": "ballisticmissiles:laser_module",
+		"count": 1
+	}
+}

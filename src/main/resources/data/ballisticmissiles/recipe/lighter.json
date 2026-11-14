@@ -1,0 +1,13 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		"minecraft:iron_ingot",
+		"minecraft:flint",
+		"minecraft:string"
+	],
+	"result": {
+		"id": "ballisticmissiles:lighter",
+		"count": 1
+	}
+}

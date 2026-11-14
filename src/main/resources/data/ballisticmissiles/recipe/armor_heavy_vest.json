@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		"X X",
+		"XYX",
+		"XXX"
+	],
+	"key": {
+		"X": "minecraft:diamond",
+		"Y": "minecraft:iron_block"
+	},
+	"result": {
+		"id": "ballisticmissiles:armor_heavy_vest",
+		"count": 1
+	}
+}

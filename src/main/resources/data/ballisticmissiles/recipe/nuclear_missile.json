@@ -1,0 +1,7 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": ["TNT", "UMU", "IFI"],
+	"key": {"T": "minecraft:tnt", "N": "minecraft:nether_star", "U": "minecraft:netherite_ingot", "M": "ballisticmissiles:ballistic_missile", "I": "minecraft:iron_block", "F": "minecraft:firework_rocket"},
+	"result": {"id": "ballisticmissiles:nuclear_missile", "count": 1}
+}

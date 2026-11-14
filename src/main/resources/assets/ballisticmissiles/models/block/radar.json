@@ -1,0 +1,42 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "ballisticmissiles:block/radar_base",
+		"base": "ballisticmissiles:block/radar_base",
+		"top": "ballisticmissiles:block/radar_mast"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				0
+			],
+			"to": [
+				16,
+				16,
+				16
+			],
+			"faces": {
+				"north": {
+					"texture": "#base"
+				},
+				"south": {
+					"texture": "#base"
+				},
+				"east": {
+					"texture": "#base"
+				},
+				"west": {
+					"texture": "#base"
+				},
+				"up": {
+					"texture": "#top"
+				},
+				"down": {
+					"texture": "#base"
+				}
+			}
+		}
+	]
+}

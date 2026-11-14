@@ -1,0 +1,16 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "ballisticmissiles:block/orbital_uplink"
+		},
+		"facing=south": {
+			"model": "ballisticmissiles:block/orbital_uplink"
+		},
+		"facing=east": {
+			"model": "ballisticmissiles:block/orbital_uplink"
+		},
+		"facing=west": {
+			"model": "ballisticmissiles:block/orbital_uplink"
+		}
+	}
+}

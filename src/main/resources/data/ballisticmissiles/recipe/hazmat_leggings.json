@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"YYY",
+		"Y Y",
+		"Y Y"
+	],
+	"key": {
+		"Y": "minecraft:yellow_wool"
+	},
+	"result": {
+		"id": "ballisticmissiles:hazmat_leggings",
+		"count": 1
+	}
+}

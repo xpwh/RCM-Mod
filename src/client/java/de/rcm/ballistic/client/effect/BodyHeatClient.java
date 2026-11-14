@@ -1,0 +1,141 @@
+package de.rcm.ballistic.client.effect;
+
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * What heat and cold (the server's BodyHeat) do to you that you see and feel: in the cold you shiver - the view,
+ * and so your aim, trembles, worse the colder you are - and every breath hangs white in the air (everyone's does,
+ * out where it is cold); in the heat the sweat runs into your eyes. And a small thermometer by the hotbar when the
+ * air turns hard.
+ */
+public final class BodyHeatClient {
+	private static final RandomSource R = RandomSource.create();
+	private static float body;
+	private static float shownBody;
+	private static float air = 15.0F;
+	private static float wet;
+	private static float lastYaw;
+	private static float lastPitch;
+
+	private BodyHeatClient() {
+	}
+
+	public static void init() {
+		ClientTickEvents.END_CLIENT_TICK.register(BodyHeatClient::tick);
+		WorldRenderEvents.START_MAIN.register(context -> shiver(Minecraft.getInstance()));
+	}
+
+	/** How stiff with cold the body is, 0-1 (the hands shake with it). */
+	public static float cold() {
+		return Mth.clamp((-shownBody - 0.3F) / 0.5F, 0.0F, 1.0F);
+	}
+
+	public static void receive(float b, float a, float w) {
+		body = b;
+		air = a;
+		wet = w;
+	}
+
+	/** How wet you are, 0-1 (as the server last said). */
+	public static float wet() {
+		return wet;
+	}
+
+	private static void tick(Minecraft mc) {
+		if (mc.level == null || mc.player == null) {
+			body = shownBody = 0.0F;
+			wet = 0.0F;
+			return;
+		}
+		if (mc.isPaused()) {
+			return;
+		}
+		shownBody += (body - shownBody) * 0.05F;
+		long now = mc.level.getGameTime();
+		// breath in the cold air: yours, and everyone's out there
+		Vec3 cam = mc.gameRenderer.getMainCamera().position();
+		for (Entity e : mc.level.entitiesForRendering()) {
+			if (!(e instanceof Player || e instanceof Villager) || e.distanceToSqr(cam) > 24.0 * 24.0 || !((LivingEntity) e).isAlive()) {
+				continue;
+			}
+			boolean me = e == mc.player;
+			boolean cold = me ? air < 4.0F : coldAt(mc, e.blockPosition());
+			int period = me && shownBody < -0.4F ? 40 : 60;
+			if (cold && de.rcm.ballistic.client.ModConfig.breath && (now + e.getId() * 13L) % period == 0 && !e.isUnderWater()) {
+				breathe(e, me && mc.options.getCameraType().isFirstPerson());
+			}
+		}
+		// sweat running into the eyes
+		if (shownBody > 0.5F && R.nextFloat() < 0.01F * (shownBody - 0.4F) * 10.0F) {
+			BlastShader.drench(0.05F + 0.08F * shownBody);
+		}
+	}
+
+	/** Cold enough out to see your breath. */
+	private static boolean coldAt(Minecraft mc, BlockPos at) {
+		if (mc.level.dimension() == Level.END) {
+			return true;
+		}
+		if (mc.level.dimension() == Level.NETHER) {
+			return false;
+		}
+		float t = mc.level.getBiome(at).value().getBaseTemperature() - Math.max(0, at.getY() - 80) * 0.00125F;
+		long time = mc.level.getDayTime() % 24000L;
+		boolean night = time > 13000L && time < 23000L;
+		return t < 0.2F || night && t < 0.45F;
+	}
+
+	/** A breath out: a small white cloud from the mouth, drifting forward and fading. */
+	private static void breathe(Entity e, boolean firstPerson) {
+		Vec3 look = e.getLookAngle();
+		Vec3 mouth = e.getEyePosition().add(0.0, -0.12, 0.0).add(look.scale(firstPerson ? 0.45 : 0.3));
+		for (int i = 0; i < 3; i++) {
+			SmokeField.puff(mouth.x, mouth.y, mouth.z, look.x * 0.035 + (R.nextFloat() - 0.5F) * 0.01, 0.004 + look.y * 0.02,
+				look.z * 0.035 + (R.nextFloat() - 0.5F) * 0.01, 26 + R.nextInt(10), 0.05F, 0.32F, 0xEEF2F6, 0.28F, 0.0F, 0.001F);
+		}
+	}
+
+	/** Shivering: the view (and the aim with it) trembles - small, quick, uneven. Applied every frame. */
+	private static void shiver(Minecraft mc) {
+		if (mc.player == null || mc.isPaused()) {
+			lastYaw = lastPitch = 0.0F;
+			return;
+		}
+		float amount = Mth.clamp((-shownBody - 0.3F) / 0.55F, 0.0F, 1.0F);
+		float t = (System.nanoTime() % 1_000_000_000_000L) / 1.0E9F;
+		float yaw = 0.0F;
+		float pitch = 0.0F;
+		if (amount > 0.0F) {
+			// bursts of shivering, not a steady buzz
+			float burst = 0.55F + 0.45F * Mth.sin(t * 0.9F) * Mth.sin(t * 0.37F + 1.0F);
+			float k = amount * burst;
+			yaw = k * (0.22F * Mth.sin(t * 41.0F) + 0.12F * Mth.sin(t * 67.0F + 1.3F));
+			pitch = k * (0.18F * Mth.sin(t * 37.0F + 0.7F) + 0.1F * Mth.sin(t * 59.0F + 2.1F));
+		}
+		mc.player.setYRot(mc.player.getYRot() + yaw - lastYaw);
+		mc.player.setXRot(Mth.clamp(mc.player.getXRot() + pitch - lastPitch, -90.0F, 90.0F));
+		lastYaw = yaw;
+		lastPitch = pitch;
+	}
+
+	/** The thermometer right of the hotbar, always there: flames in the heat, frost in the cold ({@link de.rcm.ballistic.client.gui.ThermoHud}). */
+	public static void hud(GuiGraphics g) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player == null || mc.options.hideGui || mc.player.isCreative() || mc.player.isSpectator() || !de.rcm.ballistic.client.ModConfig.temperatureHud) {
+			return;
+		}
+		de.rcm.ballistic.client.gui.ThermoHud.render(g, air, shownBody, wet);
+	}
+}

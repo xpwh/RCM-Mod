@@ -1,0 +1,117 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "ballisticmissiles:block/air_defense_side",
+		"base": "ballisticmissiles:block/air_defense_base",
+		"side": "ballisticmissiles:block/air_defense_side",
+		"front": "ballisticmissiles:block/air_defense_front",
+		"top": "ballisticmissiles:block/air_defense_top"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				0
+			],
+			"to": [
+				16,
+				5,
+				16
+			],
+			"faces": {
+				"north": {
+					"texture": "#base"
+				},
+				"south": {
+					"texture": "#base"
+				},
+				"east": {
+					"texture": "#base"
+				},
+				"west": {
+					"texture": "#base"
+				},
+				"up": {
+					"texture": "#base"
+				},
+				"down": {
+					"texture": "#base"
+				}
+			}
+		},
+		{
+			"from": [
+				2,
+				5,
+				2
+			],
+			"to": [
+				14,
+				15,
+				14
+			],
+			"rotation": {
+				"angle": 22.5,
+				"axis": "x",
+				"origin": [
+					8,
+					5,
+					8
+				]
+			},
+			"faces": {
+				"north": {
+					"texture": "#side"
+				},
+				"south": {
+					"texture": "#side"
+				},
+				"east": {
+					"texture": "#side"
+				},
+				"west": {
+					"texture": "#side"
+				},
+				"up": {
+					"texture": "#front"
+				},
+				"down": {
+					"texture": "#top"
+				}
+			}
+		},
+		{
+			"from": [
+				6,
+				5,
+				6
+			],
+			"to": [
+				10,
+				8,
+				10
+			],
+			"faces": {
+				"north": {
+					"texture": "#top"
+				},
+				"south": {
+					"texture": "#top"
+				},
+				"east": {
+					"texture": "#top"
+				},
+				"west": {
+					"texture": "#top"
+				},
+				"up": {
+					"texture": "#top"
+				},
+				"down": {
+					"texture": "#top"
+				}
+			}
+		}
+	]
+}

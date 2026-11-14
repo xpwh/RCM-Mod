@@ -1,0 +1,20 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		"GRG",
+		"IMI",
+		"ICI"
+	],
+	"key": {
+		"G": "minecraft:glass_pane",
+		"R": "minecraft:redstone",
+		"I": "minecraft:iron_ingot",
+		"M": "minecraft:map",
+		"C": "minecraft:compass"
+	},
+	"result": {
+		"id": "ballisticmissiles:weather_map",
+		"count": 1
+	}
+}

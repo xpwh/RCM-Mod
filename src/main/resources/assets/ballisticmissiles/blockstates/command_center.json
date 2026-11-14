@@ -1,0 +1,28 @@
+{
+	"variants": {
+		"facing=north,powered=false": {
+			"model": "ballisticmissiles:block/command_center_world"
+		},
+		"facing=north,powered=true": {
+			"model": "ballisticmissiles:block/command_center_world"
+		},
+		"facing=east,powered=false": {
+			"model": "ballisticmissiles:block/command_center_world"
+		},
+		"facing=east,powered=true": {
+			"model": "ballisticmissiles:block/command_center_world"
+		},
+		"facing=south,powered=false": {
+			"model": "ballisticmissiles:block/command_center_world"
+		},
+		"facing=south,powered=true": {
+			"model": "ballisticmissiles:block/command_center_world"
+		},
+		"facing=west,powered=false": {
+			"model": "ballisticmissiles:block/command_center_world"
+		},
+		"facing=west,powered=true": {
+			"model": "ballisticmissiles:block/command_center_world"
+		}
+	}
+}

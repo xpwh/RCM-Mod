@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": [
+		"III",
+		"SCS",
+		"I I"
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"S": "minecraft:smithing_table",
+		"C": "minecraft:crafting_table"
+	},
+	"result": {
+		"id": "ballisticmissiles:weapons_workbench",
+		"count": 1
+	}
+}

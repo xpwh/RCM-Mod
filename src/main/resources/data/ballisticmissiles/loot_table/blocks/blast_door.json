@@ -1,0 +1,27 @@
+{
+	"type": "minecraft:block",
+	"pools": [
+		{
+			"rolls": 1,
+			"entries": [
+				{
+					"type": "minecraft:item",
+					"name": "ballisticmissiles:blast_door"
+				}
+			],
+			"conditions": [
+				{
+					"condition": "minecraft:survives_explosion"
+				},
+				{
+					"condition": "minecraft:block_state_property",
+					"block": "ballisticmissiles:blast_door",
+					"properties": {
+						"half": "lower"
+					}
+				}
+			]
+		}
+	],
+	"random_sequence": "ballisticmissiles:blocks/blast_door"
+}

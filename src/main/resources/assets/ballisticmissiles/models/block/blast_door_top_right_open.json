@@ -1,0 +1,7 @@
+{
+	"parent": "minecraft:block/door_top_right_open",
+	"textures": {
+		"bottom": "ballisticmissiles:block/blast_door_bottom",
+		"top": "ballisticmissiles:block/blast_door_top"
+	}
+}

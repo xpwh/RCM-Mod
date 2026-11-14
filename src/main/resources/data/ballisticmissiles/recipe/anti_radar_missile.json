@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		" E ",
+		"CRC",
+		" A "
+	],
+	"key": {
+		"E": "minecraft:ender_eye",
+		"C": "minecraft:comparator",
+		"R": "ballisticmissiles:cruise_missile",
+		"A": "minecraft:amethyst_shard"
+	},
+	"result": {
+		"id": "ballisticmissiles:anti_radar_missile",
+		"count": 1
+	}
+}

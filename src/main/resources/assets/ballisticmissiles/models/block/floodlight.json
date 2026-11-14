@@ -1,0 +1,269 @@
+{
+	"parent": "minecraft:block/block",
+	"ambientocclusion": false,
+	"textures": {
+		"particle": "ballisticmissiles:block/floodlight_housing",
+		"h": "ballisticmissiles:block/floodlight_housing",
+		"lens": "ballisticmissiles:block/floodlight_lens"
+	},
+	"elements": [
+		{
+			"from": [
+				5,
+				0,
+				5
+			],
+			"to": [
+				11,
+				1,
+				11
+			],
+			"faces": {
+				"north": {
+					"texture": "#h"
+				},
+				"south": {
+					"texture": "#h"
+				},
+				"east": {
+					"texture": "#h"
+				},
+				"west": {
+					"texture": "#h"
+				},
+				"up": {
+					"texture": "#h"
+				},
+				"down": {
+					"texture": "#h"
+				}
+			}
+		},
+		{
+			"from": [
+				7,
+				1,
+				7
+			],
+			"to": [
+				9,
+				5,
+				9
+			],
+			"faces": {
+				"north": {
+					"texture": "#h"
+				},
+				"south": {
+					"texture": "#h"
+				},
+				"east": {
+					"texture": "#h"
+				},
+				"west": {
+					"texture": "#h"
+				},
+				"up": {
+					"texture": "#h"
+				},
+				"down": {
+					"texture": "#h"
+				}
+			}
+		},
+		{
+			"from": [
+				3,
+				5,
+				7
+			],
+			"to": [
+				13,
+				6,
+				9
+			],
+			"faces": {
+				"north": {
+					"texture": "#h"
+				},
+				"south": {
+					"texture": "#h"
+				},
+				"east": {
+					"texture": "#h"
+				},
+				"west": {
+					"texture": "#h"
+				},
+				"up": {
+					"texture": "#h"
+				},
+				"down": {
+					"texture": "#h"
+				}
+			}
+		},
+		{
+			"from": [
+				3,
+				6,
+				7
+			],
+			"to": [
+				4,
+				11,
+				9
+			],
+			"faces": {
+				"north": {
+					"texture": "#h"
+				},
+				"south": {
+					"texture": "#h"
+				},
+				"east": {
+					"texture": "#h"
+				},
+				"west": {
+					"texture": "#h"
+				},
+				"up": {
+					"texture": "#h"
+				},
+				"down": {
+					"texture": "#h"
+				}
+			}
+		},
+		{
+			"from": [
+				12,
+				6,
+				7
+			],
+			"to": [
+				13,
+				11,
+				9
+			],
+			"faces": {
+				"north": {
+					"texture": "#h"
+				},
+				"south": {
+					"texture": "#h"
+				},
+				"east": {
+					"texture": "#h"
+				},
+				"west": {
+					"texture": "#h"
+				},
+				"up": {
+					"texture": "#h"
+				},
+				"down": {
+					"texture": "#h"
+				}
+			}
+		},
+		{
+			"from": [
+				4,
+				6,
+				5
+			],
+			"to": [
+				12,
+				13,
+				12
+			],
+			"faces": {
+				"north": {
+					"texture": "#h"
+				},
+				"south": {
+					"texture": "#h"
+				},
+				"east": {
+					"texture": "#h"
+				},
+				"west": {
+					"texture": "#h"
+				},
+				"up": {
+					"texture": "#h"
+				},
+				"down": {
+					"texture": "#h"
+				}
+			}
+		},
+		{
+			"from": [
+				4,
+				13,
+				3
+			],
+			"to": [
+				12,
+				13.5,
+				6
+			],
+			"faces": {
+				"north": {
+					"texture": "#h"
+				},
+				"south": {
+					"texture": "#h"
+				},
+				"east": {
+					"texture": "#h"
+				},
+				"west": {
+					"texture": "#h"
+				},
+				"up": {
+					"texture": "#h"
+				},
+				"down": {
+					"texture": "#h"
+				}
+			}
+		},
+		{
+			"from": [
+				4.5,
+				6.5,
+				4.5
+			],
+			"to": [
+				11.5,
+				12.5,
+				5
+			],
+			"faces": {
+				"north": {
+					"texture": "#lens"
+				},
+				"south": {
+					"texture": "#lens"
+				},
+				"east": {
+					"texture": "#lens"
+				},
+				"west": {
+					"texture": "#lens"
+				},
+				"up": {
+					"texture": "#lens"
+				},
+				"down": {
+					"texture": "#lens"
+				}
+			},
+			"light_emission": 15,
+			"shade": false
+		}
+	]
+}

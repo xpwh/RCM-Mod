@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		" R ",
+		"IBI",
+		"ICI"
+	],
+	"key": {
+		"R": "minecraft:lightning_rod",
+		"I": "minecraft:iron_ingot",
+		"B": "minecraft:stone_button",
+		"C": "minecraft:redstone"
+	},
+	"result": {
+		"id": "ballisticmissiles:c4_detonator",
+		"count": 1
+	}
+}

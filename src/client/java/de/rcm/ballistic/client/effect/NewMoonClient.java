@@ -1,0 +1,72 @@
+package de.rcm.ballistic.client.effect;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.Level;
+
+/**
+ * Client side of the new-moon night ({@link de.rcm.ballistic.explosion.NewMoon}): as night falls the moon,
+ * the stars and the sky's own light go, and whatever nothing lights sinks into black ({@link DynamicLights}
+ * draws the darkness, so torches, fires and the dynamic lights still show).
+ */
+public final class NewMoonClient {
+	private static boolean active;
+	/** How dark the server wants it, 1-100. */
+	private static int darkness = 100;
+	/** The event eased in and out over a few seconds. */
+	private static float shown;
+
+	private NewMoonClient() {
+	}
+
+	public static void receive(boolean value, boolean cutscene, int level) {
+		active = value;
+		darkness = level;
+		if (cutscene) {
+			NewMoonCutscene.start(value);
+		}
+	}
+
+	public static boolean active() {
+		return active;
+	}
+
+	public static int darknessSetting() {
+		return darkness;
+	}
+
+	public static void clear() {
+		active = false;
+		shown = 0.0F;
+		NewMoonCutscene.clear();
+	}
+
+	public static void tick(Minecraft mc) {
+		boolean overworld = mc.level != null && mc.level.dimension() == Level.OVERWORLD;
+		if (NewMoonCutscene.playing()) {
+			// the cutscene sets the pace: the moon goes out (or comes back) on its cue
+			shown = NewMoonCutscene.darkness();
+			return;
+		}
+		float target = active && overworld ? 1.0F : 0.0F;
+		shown += Mth.clamp(target - shown, -0.01F, 0.01F);
+	}
+
+	/** How far the moon has gone out (0-1): at any hour, it is simply gone. */
+	public static float moonGone() {
+		return shown;
+	}
+
+	/** How dark it is now, 0-1: the event, as far as night has fallen (dusk darkens into it), times the setting. */
+	public static float amount() {
+		Minecraft mc = Minecraft.getInstance();
+		if (shown <= 0.0F || mc.level == null) {
+			return 0.0F;
+		}
+		float dark = Mth.clamp(mc.level.getSkyDarken() / 11.0F, 0.0F, 1.0F);
+		float x = Mth.clamp((dark - 0.3F) / 0.55F, 0.0F, 1.0F);
+		// through night vision or a thermal camera the dark is no obstacle (the picture is amplified instead)
+		float seen = 1.0F - Math.max(0.8F * Vision.nightVision(0.0F), Vision.thermal(0.0F));
+		return shown * x * x * (3.0F - 2.0F * x) * Mth.clamp(darkness / 100.0F, 0.01F, 1.0F) * seen;
+	}
+}

@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "combat",
+	"pattern": [
+		"III",
+		"ICB",
+		" B "
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"C": "minecraft:copper_ingot",
+		"B": "minecraft:black_dye"
+	},
+	"result": {
+		"id": "ballisticmissiles:glock19",
+		"count": 1
+	}
+}
